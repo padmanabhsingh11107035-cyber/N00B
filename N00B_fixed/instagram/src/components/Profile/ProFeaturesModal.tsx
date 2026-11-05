@@ -62,12 +62,14 @@ const TIERS: ProTier[] = [
 const YEARLY_DISCOUNT = 0.17;
 
 // The colour of each plan's card (cheapest to dearest): silver, blue, violet, gold, black.
-const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string; glow: string; sub: string }> = {
-  starter: { bg: 'linear-gradient(140deg,#f4f6f9 0%,#c4cbd5 38%,#8d96a3 100%)', ink: '#1b2027', chip: 'linear-gradient(135deg,#ffffff,#a3abb6)', glow: 'rgba(120,132,150,0.55)', sub: 'rgba(27,32,39,0.62)' },
-  plus: { bg: 'linear-gradient(140deg,#5aa0ff 0%,#2f64f0 45%,#14308f 100%)', ink: '#ffffff', chip: 'linear-gradient(135deg,#e7f0ff,#7ea8f7)', glow: 'rgba(37,99,235,0.55)', sub: 'rgba(255,255,255,0.72)' },
-  pro: { bg: 'linear-gradient(140deg,#b18cff 0%,#7c3aed 46%,#3b1285 100%)', ink: '#ffffff', chip: 'linear-gradient(135deg,#f1eaff,#a98af5)', glow: 'rgba(124,58,237,0.55)', sub: 'rgba(255,255,255,0.74)' },
-  elite: { bg: 'linear-gradient(140deg,#fff0b8 0%,#e3b84e 42%,#9a6f17 100%)', ink: '#2b1f05', chip: 'linear-gradient(135deg,#fff8d6,#c9a13f)', glow: 'rgba(201,161,63,0.6)', sub: 'rgba(43,31,5,0.66)' },
-  ultimate: { bg: 'linear-gradient(140deg,#3a3a40 0%,#111114 48%,#000000 100%)', ink: '#f7dc8f', chip: 'linear-gradient(135deg,#f7dc8f,#8a6d1f)', glow: 'rgba(30,30,36,0.7)', sub: 'rgba(247,220,143,0.68)' },
+const metal = (c: string[]): string => `conic-gradient(from 200deg at 28% 18%, ${c[0]}, ${c[1]} 18%, ${c[2]} 32%, ${c[3]} 50%, ${c[4]} 66%, ${c[5]} 82%, ${c[0]})`;
+// Real metals, one for each plan (cheapest to dearest): silver, bronze, rose gold, gold, black with gold. The card is a sweep of light and dark bands, like polished metal.
+const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string; glow: string; sub: string; shade: string }> = {
+  starter: { bg: metal(['#fbfbfd', '#a9afb9', '#f0f2f5', '#7f8793', '#e6e9ee', '#9aa1ac']), ink: '#1d2229', chip: 'linear-gradient(135deg,#ffffff,#9ea6b2)', glow: 'rgba(110,118,132,0.55)', sub: 'rgba(29,34,41,0.62)', shade: '0 1px 0 rgba(255,255,255,0.55)' },
+  plus: { bg: metal(['#fbd6ae', '#b0642b', '#efb07a', '#6a3510', '#e29c62', '#9b5520']), ink: '#2c1506', chip: 'linear-gradient(135deg,#ffe2bf,#b8743a)', glow: 'rgba(160,90,36,0.6)', sub: 'rgba(44,21,6,0.64)', shade: '0 1px 0 rgba(255,225,190,0.5)' },
+  pro: { bg: metal(['#ffe9e3', '#c4796b', '#fbd3c8', '#8a4a40', '#f4c0b3', '#b46b5e']), ink: '#3a1710', chip: 'linear-gradient(135deg,#fff0ec,#c98578)', glow: 'rgba(190,110,98,0.6)', sub: 'rgba(58,23,16,0.64)', shade: '0 1px 0 rgba(255,235,228,0.55)' },
+  elite: { bg: metal(['#fff6c9', '#c2901f', '#f8df86', '#86600f', '#f1cf68', '#b7851c']), ink: '#2b1e04', chip: 'linear-gradient(135deg,#fff7d6,#c9a13f)', glow: 'rgba(201,150,43,0.65)', sub: 'rgba(43,30,4,0.66)', shade: '0 1px 0 rgba(255,246,200,0.55)' },
+  ultimate: { bg: metal(['#4d4d56', '#121216', '#34343c', '#040406', '#2b2b32', '#0b0b0e']), ink: '#f4d27a', chip: 'linear-gradient(135deg,#f7dc8f,#8a6d1f)', glow: 'rgba(0,0,0,0.7)', sub: 'rgba(244,210,122,0.7)', shade: '0 1px 2px rgba(0,0,0,0.7)' },
 };
 
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated, allUsers = [], focusTier, focusBilling }) => {
@@ -270,7 +272,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             }`}
           >
             Yearly
-            <span className="text-[10px] font-black text-noob bg-noob/15 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full" style={{ background: '#fbbf24', color: '#3b2a00' }}>
               Save 17%
             </span>
           </button>
@@ -371,15 +373,16 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   data-testid={`pro-card-${tier.id}`}
                   onClick={() => railTo(i)}
                   className={`snap-center shrink-0 w-[78%] aspect-[1.4] rounded-[26px] p-[18px] relative overflow-hidden flex flex-col justify-between transition-all duration-300 cursor-pointer ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
-                  style={{ background: look.bg, color: look.ink, boxShadow: `0 22px 38px -16px ${look.glow}, 0 8px 14px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14)` }}
+                  style={{ background: look.bg, color: look.ink, textShadow: look.shade, boxShadow: `0 22px 38px -16px ${look.glow}, 0 8px 14px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.22)` }}
                 >
                   {/* the glossy finish: a bright spot top left, a soft diagonal sheen, a darker foot */}
-                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 70% at 12% -10%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%), linear-gradient(112deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.22) 44%, rgba(255,255,255,0) 58%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.22) 100%)' }} />
+                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.05) 2px)', mixBlendMode: 'overlay' }} />
+                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 75% at 10% -12%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 55%), linear-gradient(112deg, rgba(255,255,255,0) 34%, rgba(255,255,255,0.7) 44%, rgba(255,255,255,0.12) 49%, rgba(255,255,255,0) 56%), linear-gradient(180deg, rgba(0,0,0,0) 52%, rgba(0,0,0,0.3) 100%)' }} />
                   <div className="relative flex items-start justify-between">
                     <span className="text-[22px] font-black tracking-[0.2em] leading-none">NOOB</span>
                     {isCurrentTier
                       ? <span className="text-[9px] font-black tracking-wider px-2 py-1 rounded-full bg-black/70 text-white">YOUR PLAN</span>
-                      : <span className="w-9 h-7 rounded-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]" style={{ background: look.chip }} aria-hidden="true" />}
+                      : <span className="w-10 h-7 rounded-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.35)]" style={{ background: `repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 7px), ${look.chip}` }} aria-hidden="true" />}
                   </div>
                   <div className="relative">
                     <p className="text-[10px] font-bold tracking-[0.24em]" style={{ color: look.sub }}>NOOB PRO</p>

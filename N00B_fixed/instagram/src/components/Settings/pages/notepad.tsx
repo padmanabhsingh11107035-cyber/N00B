@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bold, ChevronLeft, CheckSquare, Copy, Download, Italic, List, ListOrdered, Mic, MoreVertical, NotebookPen, Plus, Redo2, Save, Search, Share2, Trash2, Type, Underline as UnderlineIcon, Undo2 } from 'lucide-react';
 import { useFlash } from '../kit';
@@ -14,6 +15,9 @@ const SIZES = [14, 16, 18, 21];
 const when = (iso: string): string => { try { return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 const isTemp = (id: string | null): boolean => !!id && id.startsWith('tmp-');
 const round = 'w-11 h-11 rounded-full bg-[#13523d] hover:bg-[#1a6249] text-[#ffffff] ring-1 ring-white/10 shadow-[0_6px_16px_rgba(0,0,0,0.25)] flex items-center justify-center cursor-pointer transition-colors shrink-0';
+
+// The Notepad is drawn straight onto the page, not inside the Settings page that opened it: that page slides in with an animation, and on a phone a full-screen layer inside an animated page can be cut to a size of nothing (a blank screen).
+const onTop = (node: React.ReactElement): React.ReactElement => (typeof document !== 'undefined' ? createPortal(node, document.body) : node);
 
 export const NotepadPage: React.FC<PageProps> = ({ back }) => {
   const [notes, setNotes] = useState<Note[] | null>(null);
@@ -166,7 +170,7 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
 const shell = 'notepad-shell fixed inset-0 z-[46] overflow-y-auto overscroll-contain text-[#ffffff] bg-[#082e23] bg-[radial-gradient(120%_70%_at_50%_-10%,#16704f_0%,#0e4937_38%,#07271e_100%)]';
 
   if (openId) {
-    return (
+    return onTop(
       <div className={shell} data-noob-keep="1" data-testid="notepad-editor">
         <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-8">
           <header className="flex items-center gap-3 mb-3.5">
@@ -223,7 +227,7 @@ const shell = 'notepad-shell fixed inset-0 z-[46] overflow-y-auto overscroll-con
     );
   }
 
-  return (
+  return onTop(
     <div className={shell} data-noob-keep="1" data-testid="notepad-list">
       <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-24">
         <header className="flex items-center gap-2.5 mb-4">

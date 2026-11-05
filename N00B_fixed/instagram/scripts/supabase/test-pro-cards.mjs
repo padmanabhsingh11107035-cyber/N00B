@@ -23,7 +23,9 @@ const cards = html.split('data-testid="pro-card-').slice(1).filter((c) => /^(sta
 check(cards.length === 5, 'five card blocks found');
 check(cards.every((c) => /NOOB PRO<\/p>/.test(c) && /tabular-nums whitespace-nowrap/.test(c) && /noobs/.test(c)), 'each card: NOOB, the plan name, then the price on its own line with "noobs" under it');
 check(cards.every((c) => !/justify-between gap-2/.test(c.split('data-testid=')[0])), 'no name and price side by side in a row');
-check(/radial-gradient\(120% 70% at 12% -10%/.test(html) && /inset 0 1px 0 rgba\(255,255,255,0\.55\)/.test(html), 'the glossy finish: a bright spot, a diagonal sheen and a light edge');
+check(/radial-gradient\(120% 75% at 10% -12%/.test(html) && /rgba\(255,255,255,0\.7\) 44%/.test(html) && /repeating-linear-gradient\(90deg/.test(html) && /conic-gradient\(from 200deg/.test(html), 'metal and glossy: a sweep of light and dark bands, a brushed grain, a bright spot and a sharp streak of light');
+check(!/#(3b82f6|1d4ed8|2563eb|8b5cf6|5b21b6|7c3aed)/i.test(src.slice(src.indexOf('const metal'), src.indexOf('export const ProFeaturesModal'))), 'no blue or violet in the card colours');
+check(/background:#fbbf24;color:#3b2a00/.test(html) && />Save 17%</.test(html), 'the "Save 17%" tag is always shown, in its own colour, whichever of Monthly and Yearly is chosen');
 
 console.log('\n2. The features and the buy button');
 check(/data-testid="pro-card-detail"/.test(html) && /WHAT YOU GET WITH/.test(html) && /Choose /.test(html) && /data-testid="pro-choose"/.test(html), 'the features are listed under the card, with the buy button');

@@ -1,20 +1,30 @@
-// "Send to Calculator": a post, a reel or a video can be sent to the calculator from its Share sheet. The calculator opens and says what was sent (the kind of content), nothing more.
-// The Share sheet is drawn on many pages, so it only calls sendToCalculator; the App listens once and opens the calculator on top of everything.
+// "Send to Calculator": a post, a reel or a video can be sent to the calculator from its Share sheet. Nothing opens: the kind of content is put in the calculator's list
+// ("Reel sent to Calculator"), which is there the next time the calculator is opened. Kept on this phone, the last few only.
 export type CalculatorItemType = 'post' | 'reel' | 'video';
-export interface CalculatorItem { type: CalculatorItemType; itemId: string }
+export interface CalculatorItem { type: CalculatorItemType; itemId: string; at?: number }
 
-export const CALC_SEND_EVENT = 'noob:send-to-calculator';
 export const CALC_TYPE_LABEL: Record<CalculatorItemType, string> = { post: 'Post', reel: 'Reel', video: 'Video' };
+const KEY = 'noob.calc.sent.v1';
+const KEEP = 8;
 
-export function sendToCalculator(item: CalculatorItem): void {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent<CalculatorItem>(CALC_SEND_EVENT, { detail: item }));
+const valid = (x: unknown): x is CalculatorItem => !!x && typeof x === 'object' && !!CALC_TYPE_LABEL[(x as CalculatorItem).type] && typeof (x as CalculatorItem).itemId === 'string';
+
+export function readCalculatorSent(): CalculatorItem[] {
+  try {
+    const raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter(valid).slice(0, KEEP) : [];
+  } catch { return []; }
 }
 
-/** Calls `cb` whenever something is sent to the calculator; returns the way to stop listening. */
-export function onCalculatorSend(cb: (item: CalculatorItem) => void): () => void {
-  if (typeof window === 'undefined') return () => undefined;
-  const h = (e: Event) => { const d = (e as CustomEvent<CalculatorItem>).detail; if (d && CALC_TYPE_LABEL[d.type]) cb(d); };
-  window.addEventListener(CALC_SEND_EVENT, h);
-  return () => window.removeEventListener(CALC_SEND_EVENT, h);
+export function sendToCalculator(item: CalculatorItem): void {
+  if (!valid(item)) return;
+  try {
+    const rest = readCalculatorSent().filter((x) => !(x.type === item.type && x.itemId === item.itemId));
+    localStorage.setItem(KEY, JSON.stringify([{ type: item.type, itemId: item.itemId, at: Date.now() }, ...rest].slice(0, KEEP)));
+  } catch { /* storage not available: nothing is kept */ }
+}
+
+export function clearCalculatorSent(): void {
+  try { localStorage.removeItem(KEY); } catch { /* nothing to clear */ }
 }

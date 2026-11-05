@@ -59,6 +59,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string[] | null>(null);
   const [copied, setCopied] = useState(false);
+  const [calcSent, setCalcSent] = useState(false);
   const [note, setNote] = useState('');
 
   const url = contentUrl(type === 'video' ? 'video' : type, itemId);
@@ -192,7 +193,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}
               <ShareIcon label={copied ? 'Copied!' : 'Copy link'} look="bg-zinc-700 text-white" onClick={() => void copy()} testId="share-copy">{copied ? <Check className="w-5 h-5" /> : <Link2 className="w-5 h-5" />}</ShareIcon>
-              <ShareIcon label="Calculator" look="bg-zinc-700 text-white" onClick={() => { sendToCalculator({ type, itemId }); onClose(); }} testId="share-calculator"><CalcIcon className="w-5 h-5" /></ShareIcon>
+              <ShareIcon label={calcSent ? 'Sent!' : 'Calculator'} look="bg-zinc-700 text-white" onClick={() => { sendToCalculator({ type, itemId }); setCalcSent(true); setNote(`${TYPE_LABEL[type]} sent to Calculator`); window.setTimeout(() => setCalcSent(false), 2500); }} testId="share-calculator">{calcSent ? <Check className="w-5 h-5" /> : <CalcIcon className="w-5 h-5" />}</ShareIcon>
               {APP_ORDER.slice(1).map((a) => (
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}
@@ -207,8 +208,8 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
 };
 
 const ShareIcon: React.FC<{ label: string; look: string; onClick: () => void; testId: string; children: React.ReactNode }> = ({ label, look, onClick, testId, children }) => (
-  <button onClick={onClick} className="flex flex-col items-center gap-1.5 w-[4.25rem] shrink-0 snap-start cursor-pointer" data-testid={testId}>
+  <button onClick={onClick} className="flex flex-col items-center gap-1.5 w-[5rem] shrink-0 snap-start cursor-pointer" data-testid={testId}>
     <span className={`w-12 h-12 rounded-full flex items-center justify-center ${look}`}>{children}</span>
-    <span className="text-[10.5px] text-zinc-300 leading-tight text-center">{label}</span>
+    <span className="w-full text-[10px] text-zinc-300 leading-tight text-center truncate">{label}</span>
   </button>
 );

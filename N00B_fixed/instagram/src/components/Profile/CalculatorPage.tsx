@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Delete } from 'lucide-react';
 import { isCalcLocked, CALC_LOCK_TEXT } from '../../utils/features';
-import { CALC_TYPE_LABEL, type CalculatorItem } from '../../utils/calculatorSend';
+import { CALC_TYPE_LABEL, clearCalculatorSent, readCalculatorSent, type CalculatorItem } from '../../utils/calculatorSend';
 
 interface CalculatorPageProps {
   onClose: () => void;
-  /** what was sent here from a Share sheet (a post, a reel or a video): only its kind is shown */
-  sent?: CalculatorItem | null;
 }
 
 type Operator = '+' | '−' | '×' | '÷';
@@ -51,7 +49,9 @@ function formatValue(value: number): string {
 // Every handler below reads and writes the whole state object in one
 // functional setState call, so rapid input (fast typing/tapping) can never
 // act on a stale `display`/`operator` from a previous render.
-export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose, sent }) => {
+export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
+  // what was sent here from a Share sheet (a post, a reel or a video): only its kind is shown
+  const [sent, setSent] = useState<CalculatorItem[]>(() => readCalculatorSent());
   const [state, setState] = useState<CalcState>(INITIAL_STATE);
   const [flashKey, setFlashKey] = useState<string | null>(null);
   const [pulseEquals, setPulseEquals] = useState(false);
@@ -248,12 +248,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose, sent })
       {/* Body */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-sm mx-auto space-y-5">
-          {sent && (
-            <div className="flex items-center justify-center" data-testid="calc-sent">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 px-4 py-2 text-xs font-bold text-white">
-                <span className="w-2 h-2 rounded-full bg-noob" aria-hidden="true" />
-                {CALC_TYPE_LABEL[sent.type]} sent to Calculator
-              </span>
+          {sent.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2" data-testid="calc-sent">
+              {sent.map((x) => (
+                <span key={`${x.type}-${x.itemId}`} className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 px-3.5 py-1.5 text-[11px] font-bold text-white">
+                  <span className="w-1.5 h-1.5 rounded-full bg-noob" aria-hidden="true" />
+                  {CALC_TYPE_LABEL[x.type]} sent to Calculator
+                </span>
+              ))}
+              <button type="button" onClick={() => { clearCalculatorSent(); setSent([]); }} className="text-[11px] font-bold text-zinc-400 hover:text-white px-2 py-1 cursor-pointer" data-testid="calc-sent-clear">Clear</button>
             </div>
           )}
 

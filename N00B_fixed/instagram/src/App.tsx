@@ -1,4 +1,3 @@
-import { onCalculatorSend, type CalculatorItem } from './utils/calculatorSend';
 import { SignupSourceCard } from './components/Common/SignupSourceCard';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
@@ -174,7 +173,6 @@ const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./co
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
 import { BackToTop } from './components/Common/BackToTop';
 const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
-const CalculatorPage = React.lazy(() => import('./components/Profile/CalculatorPage').then((m) => ({ default: m.CalculatorPage })));
 const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
@@ -495,9 +493,6 @@ export default function App() {
   // Profile ⋮ menu — same underlying modals, just a second entry point for a wider screen.
   const [showNoobAiPage, setShowNoobAiPage] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  // something sent to the calculator from a Share sheet (a post, a reel or a video)
-  const [calcSent, setCalcSent] = useState<CalculatorItem | null>(null);
-  useEffect(() => onCalculatorSend((item) => setCalcSent(item)), []);
   const [showSubscriptionsModal, setShowSubscriptionsModal] = useState(false);
   const [liveLoungeInviteRoomId, setLiveLoungeInviteRoomId] = useState<string | null>(null);
   const [showProfessionalDashboardModal, setShowProfessionalDashboardModal] = useState(false);
@@ -2328,12 +2323,6 @@ export default function App() {
       {showNoobAiPage && (
         <React.Suspense fallback={<LazyFallback />}>
           <NoobAiPage onClose={() => setShowNoobAiPage(false)} isMainAdmin={isMainAdmin(currentUser)} />
-        </React.Suspense>
-      )}
-
-      {calcSent && (
-        <React.Suspense fallback={<LazyFallback />}>
-          <CalculatorPage sent={calcSent} onClose={() => setCalcSent(null)} />
         </React.Suspense>
       )}
 

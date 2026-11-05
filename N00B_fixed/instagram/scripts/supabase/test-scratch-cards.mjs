@@ -56,7 +56,8 @@ check(/\/brand\/doodle-white\.webp/.test(canvas), 'the foil wears the NOOB doodl
 
 // ---- the menu
 const feed = read('src/components/Feed/FeedView.tsx');
-check(/featOn\('scratch'\)/.test(feed) && /tone="scratch"/.test(feed) && /setShowScratch\(true\)/.test(feed) && /<ScratchPage onClose=\{\(\) => setShowScratch\(false\)\}/.test(feed), 'Scratch Reveal is a button of the three-line menu and opens the page');
+const prof = read('src/components/Profile/ProfileView.tsx');
+check(/data-testid="profile-scratch"/.test(prof) && /useFeatureOn\('scratch'\)/.test(prof) && /<ScratchPage onClose=\{\(\) => setShowScratch\(false\)\}/.test(prof) && !/ScratchPage/.test(feed), 'Scratch Reveal is a button (with its icon) on the profile page and opens the page; it is no longer in the Home menu');
 check(/key: 'scratch'/.test(read('src/utils/features.ts')), 'the administrator can switch the page off (Pages tab)');
 check(/'scratch'/.test(read('src/components/Feed/MenuBanner.tsx')) && /scratch: \{ border/.test(read('src/components/Feed/MenuBanner.tsx')), 'the menu button has its own colours');
 check(/images\.unsplash\.com/.test(read('public/_headers')), 'the preset pictures may be fetched (security policy)');

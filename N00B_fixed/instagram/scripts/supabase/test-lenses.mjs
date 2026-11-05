@@ -155,7 +155,7 @@ check(/"@mediapipe\/tasks-vision": "0\.10\.35"/.test(read('package.json')) && fs
 
 section('8. Where it opens from');
 const feed = read('src/components/Feed/FeedView.tsx'), chooser = read('src/components/PostCreation/CreateChooser.tsx'), appTsx = read('src/App.tsx'), host = read('src/components/Lenses/LensHost.tsx'), feats = read('src/utils/features.ts');
-check(/data-testid="menu-lenses"/.test(feed) && /featOn\('lenses'\) && \(/.test(feed) && /openLenses\(\)/.test(feed), 'the Home menu has a NOOB Lenses button (only while the page is on)');
+check(/data-testid="profile-lenses"/.test(read('src/components/Profile/ProfileView.tsx')) && /useFeatureOn\('lenses'\)/.test(read('src/components/Profile/ProfileView.tsx')) && /openLenses/.test(read('src/components/Profile/ProfileView.tsx')) && !/data-testid="menu-lenses"/.test(feed), 'the profile page has a NOOB Lenses button with its icon (only while the page is on); it is no longer in the Home menu');
 check(/kind: 'lenses'/.test(chooser) && /kind === 'lenses'\) \{ if \(featOn\('lenses'\)\) openLenses\(\); \}/.test(appTsx), 'the Create sheet has "Lenses"');
 check(/key: 'lenses'/.test(feats) && /closeLenses\(\)/.test(appTsx), 'the administrator can switch it off (Admin > Pages)');
 check(/<LensHost onUse=/.test(appTsx), 'it is drawn once, by LensHost, in the app');

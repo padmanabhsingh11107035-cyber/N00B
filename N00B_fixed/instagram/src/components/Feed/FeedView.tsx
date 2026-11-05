@@ -37,8 +37,8 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, ScanFace, MapPinned } from 'lucide-react';
-import { openLenses, useLensOpen } from '../Lenses/lensStore';
+import { Wand2, MapPinned } from 'lucide-react';
+import { useLensOpen } from '../Lenses/lensStore';
 import { openFamily, preloadFamily } from '../Family/familyStore';
 import { VenetianMask } from 'lucide-react';
 import { FileText } from 'lucide-react';
@@ -75,7 +75,6 @@ import { AdBanner } from '../Ads/AdBanner';
 import { useFeaturesOff } from '../../utils/featureFlags';
 import { funFeatureKey } from '../../utils/features';
 import { MoreCreationsPage } from './MoreCreationsPage';
-import { ScratchPage } from '../Scratch/ScratchPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -223,7 +222,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
   const [showOurTeam, setShowOurTeam] = useState(false);
   const [showCreations, setShowCreations] = useState(false);
-  const [showScratch, setShowScratch] = useState(false);
   // Anonymous Messages has its own address (/anonymous) so it can be opened and shared directly; the menu entry opens it, closing goes back to the home address.
   const [showAnonymous, setShowAnonymous] = useState(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   const openAnonymous = () => {
@@ -308,7 +306,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // comes back exactly as it was: same posts, same place (the scroll is noted when the menu is opened, which is always before any of its pages).
   const drawOpen = useNoobDrawOpen();
   const studyOpen = useStudyNav().open;
-  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || showScratch || openPage || drawOpen || studyOpen);
+  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || openPage || drawOpen || studyOpen);
   useFullPage(menuPageOpen);
   const homeSnapshot = useRef<ScrollSnapshot | null>(null);
   useEffect(() => { if (showNoobMenu) homeSnapshot.current = captureScroll(containerRef.current, 'feed'); }, [showNoobMenu]);
@@ -953,24 +951,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   </div>
                 </button>
               )}
-              {/* NOOB Lenses: the camera with face filters (a picture, saved or shared with the NOOB tag; everything happens on the device) */}
-              {featOn('lenses') && (
-                <button
-                  onClick={() => { markMenuEntry('lenses'); setShowNoobMenu(false); openLenses(); }}
-                  data-menu-entry="lenses"
-                  data-testid="menu-lenses"
-                  className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/40 active:scale-[0.99] transition-transform"
-                  style={{ background: 'linear-gradient(120deg, rgba(251,146,60,0.28), rgba(244,114,182,0.22) 60%, rgba(250,204,21,0.14))' }}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-pink-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(251,146,60,0.5)]">
-                    <ScanFace className="w-[18px] h-[18px] text-black" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Lenses <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
-                    <span className="text-[10px] text-zinc-300 block truncate">Face filters: take a picture, save it or share it anywhere</span>
-                  </div>
-                </button>
-              )}
               {/* Family Map: a room for a family or friends where everybody sees everybody's live place on a map (free, optional; the place is shown only to the people in the room) */}
               {featOn('family') && (
                 <button
@@ -1077,8 +1057,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {featOn('suggestions') && (<MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />)}
               {/* NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app) */}
               {featOn('drinks') && (<MenuBanner tone="drinks" entryId="drinks" icon={<CupSoda className="w-[18px] h-[18px]" />} title="NOOB Cold Drinks" blurb="Ten cans, ten flavours — scroll to explore in 3D" onClick={() => { markMenuEntry('drinks'); setShowNoobMenu(false); window.location.assign('/cold-drinks/'); }} />)}
-              {/* Scratch Reveal: people post a picture sealed under scratch foil, everybody else scratches it away */}
-              {featOn('scratch') && (<MenuBanner tone="scratch" entryId="scratch" icon={<Sparkles className="w-[18px] h-[18px]" />} title="Scratch Reveal" blurb="Scratch the foil to unveil secret photos" onClick={() => { markMenuEntry('scratch'); setShowNoobMenu(false); setShowScratch(true); }} />)}
               {featOn('creations') && (<MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />)}
               </div>
             </div>
@@ -1110,7 +1088,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </React.Suspense>
       )}
       {showCreations && <MoreCreationsPage onClose={() => setShowCreations(false)} />}
-      {showScratch && <ScratchPage onClose={() => setShowScratch(false)} onNavigateToProfile={onNavigateToProfile} />}
       {showDailyNoob && (
         <React.Suspense fallback={<LazyFallback />}>
           <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />

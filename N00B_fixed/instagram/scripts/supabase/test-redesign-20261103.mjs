@@ -10,7 +10,7 @@ check(/loginStage === 'form'[\s\S]{0,1200}<HatBoy covering=/.test(auth) && /onFo
 check(/translateY\(30px\)/.test(boy) && /data-covering/.test(boy), 'the hat slides over his eyes');
 console.log('\n2. NOOB Pro cards');
 check(/data-testid="pro-cards"/.test(pro) && /snap-x/.test(pro) && /NOOB<\/span>/.test(pro), 'a sideways row of cards with NOOB written on them');
-check(['starter', 'plus', 'pro', 'elite', 'ultimate'].every((t) => new RegExp(`${t}: \{ bg:`).test(pro)), 'every plan has its own colour');
+check(['starter', 'plus', 'pro', 'elite', 'ultimate'].every((t) => new RegExp(`${t}: \{ bg:`).test(read('src/components/Profile/proCardLook.ts'))), 'every plan has its own colour');
 check(/Choose \$\{tier\.name\}/.test(pro) && /Confirm order/.test(pro) && /ProReceipt/.test(pro) && /upgradeProTier/.test(pro), 'Choose -> Confirm order -> receipt, same payment logic');
 console.log('\n3. Wallet');
 check(/data-testid="wallet-card"/.test(wal) && /data-testid="wallet-actions"/.test(wal) && /setShowSendPoints\(true\)/.test(wal) && /setShowPaymentRequests\(true\)/.test(wal) && /setShowCoupons\(true\)/.test(wal), 'balance card and round Send / Requests / Coupons buttons, all still wired');

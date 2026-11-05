@@ -27,6 +27,8 @@ import { CouponsModal } from './CouponsModal';
 import { SendPointsPage } from './SendPointsPage';
 import { ProfileQrModal } from './ProfileQrModal';
 import { PaymentRequestsModal } from './PaymentRequestsModal';
+import { ProMetalCard } from './ProMetalCard';
+import { TIER_LOOK } from './proCardLook';
 
 interface AccountsStatisticsModalProps {
   currentUser: User;
@@ -228,6 +230,18 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               <div className="wl-bar"><div style={{ width: `${Math.min(100, Math.round((exactPoints / milestone) * 100))}%` }} /></div>
             </div>
           </div>
+
+          {/* The plan you bought: its card, with your name on it */}
+          {currentUser.proTier && TIER_LOOK[currentUser.proTier] && (
+            <div className="space-y-2" data-testid="wallet-plan-card">
+              <p className="wl-lab-dim px-1">Your plan</p>
+              <ProMetalCard
+                tier={currentUser.proTier}
+                owner={currentUser.displayName || currentUser.username}
+                detail={<>{currentUser.proBilling === 'yearly' ? 'Yearly' : 'Monthly'}{currentUser.proRenewsAt ? ` · ${currentUser.proAutoRenew === false ? 'Ends' : 'Renews'} ${new Date(currentUser.proRenewsAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''} · Auto-renew {currentUser.proAutoRenew === false ? 'off' : 'on'}</>}
+              />
+            </div>
+          )}
 
           {/* Actions, one row each */}
           <div className="wl-panel divide-y divide-[var(--wl-line)]" data-testid="wallet-actions">

@@ -24,6 +24,10 @@ check(/data-testid="wallet-card"/.test(html) && /Sabbir Hossain/.test(html) && /
 check(/data-testid="wallet-actions"/.test(html) && />Send<\/button>/.test(html) && (html.match(/>Open<\/button>/g) || []).length === 2, 'Send, Requests and Coupons are one row each with a green button');
 check(/role="tab"/.test(html) && /Overview/.test(html) && /Badges \(/.test(html) && /Transactions/.test(html), 'the three tabs are there');
 
+const html2 = renderToStaticMarkup(React.createElement(M.AccountsStatisticsModal, { currentUser: { ...user, proTier: 'elite', proBilling: 'monthly', proAutoRenew: true, proRenewsAt: '2027-01-05T00:00:00Z' }, allUsers: [], onClose() {}, onUserUpdated() {} }));
+check(/data-testid="wallet-plan-card"/.test(html2) && /ELITE|Elite/.test(html2) && /Sabbir Hossain/.test(html2) && /Auto-renew on/.test(html2), 'a bought plan shows its card with the name of the owner and when it renews');
+check(!/data-testid="wallet-plan-card"/.test(html), 'no plan, no card');
+
 console.log('\n2. Dark and light');
 const css = read('src/index.css');
 check(/\.wl \{[^}]*--wl-bg: #0a0e0c[^}]*--wl-surface: #141b17[^}]*--wl-text: #f2f7f4/.test(css), 'dark: a near-black green page with dark panels and light words');

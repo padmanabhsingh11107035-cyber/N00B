@@ -68,9 +68,10 @@ export const ScratchUpload: React.FC<Props> = ({ onClose, onPosted }) => {
     if (!failed(r)) { onPosted(r.card); onClose(); } else { setError(r.error); setBusy(false); }
   };
 
+  // On a phone this is a full, solid page (not a see-through sheet): when the keyboard opens, the page under a see-through sheet showed in the gap above and below it.
   return createPortal(
-    <div className="fixed inset-0 z-[260] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm" onClick={() => { if (!busy) onClose(); }} role="dialog" aria-modal="true" aria-label="Create Scratch Post" data-testid="scratch-upload">
-      <form onSubmit={submit} className="force-dark w-full sm:max-w-md max-h-[92dvh] flex flex-col rounded-t-[28px] sm:rounded-[28px] bg-zinc-950 ring-1 ring-white/20 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[260] flex items-end sm:items-center justify-center bg-zinc-950 sm:bg-black/75 sm:backdrop-blur-sm" onClick={() => { if (!busy) onClose(); }} role="dialog" aria-modal="true" aria-label="Create Scratch Post" data-testid="scratch-upload">
+      <form onSubmit={submit} className="force-dark w-full sm:max-w-md h-full sm:h-auto max-h-full sm:max-h-[92dvh] pt-[env(safe-area-inset-top)] sm:pt-0 flex flex-col rounded-none sm:rounded-[28px] bg-zinc-950 ring-1 ring-white/20 shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="shrink-0 flex items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-9 h-9 rounded-full bg-yellow-300 text-black flex items-center justify-center shrink-0"><Camera className="w-4 h-4" /></span>

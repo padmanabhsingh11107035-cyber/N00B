@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ProReceipt, type ProReceiptData } from './ProReceipt';
+import { ProMetalCard } from './ProMetalCard';
+import { TIER_LOOK } from './proCardLook';
 import { X, Sparkles, Check, Crown, Loader2, RefreshCw, HeartHandshake, Search, Timer, Wallet, Ticket } from 'lucide-react';
 import { User } from '../../types';
 import { redeemCouponCode, upgradeProTier, toggleProAutoRenew, requestProPayment, fetchMySentPaymentRequests, cancelPaymentRequest, fetchCurrentUser } from '../../services/api';
@@ -62,16 +64,6 @@ const TIERS: ProTier[] = [
 const YEARLY_DISCOUNT = 0.17;
 
 // The colour of each plan's card (cheapest to dearest): silver, blue, violet, gold, black.
-const metal = (c: string[]): string => `conic-gradient(from 200deg at 28% 18%, ${c[0]}, ${c[1]} 18%, ${c[2]} 32%, ${c[3]} 50%, ${c[4]} 66%, ${c[5]} 82%, ${c[0]})`;
-// Real metals, one for each plan (cheapest to dearest): silver, bronze, rose gold, gold, black with gold. The card is a sweep of light and dark bands, like polished metal.
-const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string; glow: string; sub: string; shade: string }> = {
-  starter: { bg: metal(['#fbfbfd', '#a9afb9', '#f0f2f5', '#7f8793', '#e6e9ee', '#9aa1ac']), ink: '#1d2229', chip: 'linear-gradient(135deg,#ffffff,#9ea6b2)', glow: 'rgba(110,118,132,0.55)', sub: 'rgba(29,34,41,0.62)', shade: '0 1px 0 rgba(255,255,255,0.55)' },
-  plus: { bg: metal(['#fbd6ae', '#b0642b', '#efb07a', '#6a3510', '#e29c62', '#9b5520']), ink: '#2c1506', chip: 'linear-gradient(135deg,#ffe2bf,#b8743a)', glow: 'rgba(160,90,36,0.6)', sub: 'rgba(44,21,6,0.64)', shade: '0 1px 0 rgba(255,225,190,0.5)' },
-  pro: { bg: metal(['#ffe9e3', '#c4796b', '#fbd3c8', '#8a4a40', '#f4c0b3', '#b46b5e']), ink: '#3a1710', chip: 'linear-gradient(135deg,#fff0ec,#c98578)', glow: 'rgba(190,110,98,0.6)', sub: 'rgba(58,23,16,0.64)', shade: '0 1px 0 rgba(255,235,228,0.55)' },
-  elite: { bg: metal(['#fff6c9', '#c2901f', '#f8df86', '#86600f', '#f1cf68', '#b7851c']), ink: '#2b1e04', chip: 'linear-gradient(135deg,#fff7d6,#c9a13f)', glow: 'rgba(201,150,43,0.65)', sub: 'rgba(43,30,4,0.66)', shade: '0 1px 0 rgba(255,246,200,0.55)' },
-  ultimate: { bg: metal(['#4d4d56', '#121216', '#34343c', '#040406', '#2b2b32', '#0b0b0e']), ink: '#f4d27a', chip: 'linear-gradient(135deg,#f7dc8f,#8a6d1f)', glow: 'rgba(0,0,0,0.7)', sub: 'rgba(244,210,122,0.7)', shade: '0 1px 2px rgba(0,0,0,0.7)' },
-};
-
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated, allUsers = [], focusTier, focusBilling }) => {
   const railRef = useRef<HTMLDivElement>(null);
   const [cardIdx, setCardIdx] = useState(() => { const i = TIERS.findIndex((t) => t.id === (focusTier || currentUser.proTier || 'pro')); return i < 0 ? 2 : i; });
@@ -291,7 +283,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   <RefreshCw className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white">Reload {word}</h4>
+                  <h4 className="text-xs font-bold text-white">Auto-renew {word}</h4>
                   <p className="text-[10px] text-zinc-400">
                     {on
                       ? `Your Wallet is billed automatically each ${per} to keep Pro active.`
@@ -301,16 +293,19 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   </p>
                 </div>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={on}
-                  disabled={isCurrentPlanTab && savingAutoRenew}
-                  onChange={(e) => (isCurrentPlanTab ? handleToggleCurrentAutoRenew() : setAutoRenew(e.target.checked))}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
-              </label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={on}
+                aria-label={`Auto-renew ${word}`}
+                data-testid="pro-autorenew"
+                disabled={isCurrentPlanTab && savingAutoRenew}
+                onClick={() => (isCurrentPlanTab ? handleToggleCurrentAutoRenew() : setAutoRenew(!on))}
+                className="relative shrink-0 w-[52px] h-[30px] rounded-full cursor-pointer transition-colors duration-200 disabled:opacity-60"
+                style={{ background: on ? '#111111' : '#c9c6bd' }}
+              >
+                <span className="absolute top-[3px] w-6 h-6 rounded-full shadow-md transition-all duration-200" style={{ left: on ? 25 : 3, background: '#ffffff' }} />
+              </button>
             </div>
           );
         })()}
@@ -363,37 +358,20 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-5 px-[11%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {TIERS.map((tier, i) => {
-              const look = TIER_LOOK[tier.id];
               const price = priceFor(tier);
               const isCurrentTier = currentUser.proTier === tier.id;
               return (
-                <div
+                <ProMetalCard
                   key={tier.id}
                   id={`pro-plan-${tier.id}`}
-                  data-testid={`pro-card-${tier.id}`}
+                  testId={`pro-card-${tier.id}`}
+                  tier={tier.id}
+                  name={tier.name}
+                  badge={isCurrentTier ? 'YOUR PLAN' : undefined}
                   onClick={() => railTo(i)}
-                  className={`snap-center shrink-0 w-[78%] aspect-[1.4] rounded-[26px] p-[18px] relative overflow-hidden flex flex-col justify-between transition-all duration-300 cursor-pointer ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
-                  style={{ background: look.bg, color: look.ink, textShadow: look.shade, boxShadow: `0 22px 38px -16px ${look.glow}, 0 8px 14px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.22)` }}
-                >
-                  {/* the glossy finish: a bright spot top left, a soft diagonal sheen, a darker foot */}
-                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.05) 2px)', mixBlendMode: 'overlay' }} />
-                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 75% at 10% -12%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 55%), linear-gradient(112deg, rgba(255,255,255,0) 34%, rgba(255,255,255,0.7) 44%, rgba(255,255,255,0.12) 49%, rgba(255,255,255,0) 56%), linear-gradient(180deg, rgba(0,0,0,0) 52%, rgba(0,0,0,0.3) 100%)' }} />
-                  <div className="relative flex items-start justify-between">
-                    <span className="text-[22px] font-black tracking-[0.2em] leading-none">NOOB</span>
-                    {isCurrentTier
-                      ? <span className="text-[9px] font-black tracking-wider px-2 py-1 rounded-full bg-black/70 text-white">YOUR PLAN</span>
-                      : <span className="w-10 h-7 rounded-md shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.35)]" style={{ background: `repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 7px), ${look.chip}` }} aria-hidden="true" />}
-                  </div>
-                  <div className="relative">
-                    <p className="text-[10px] font-bold tracking-[0.24em]" style={{ color: look.sub }}>NOOB PRO</p>
-                    <p className="text-[28px] font-black leading-[1.05] tracking-tight">{tier.name}{tier.highlight ? ' ★' : ''}</p>
-                  </div>
-                  <div className="relative">
-                    {appliedCoupon && <span className="text-[10px] line-through block" style={{ color: look.sub }}>{price.base.toLocaleString()}</span>}
-                    <p className="text-[21px] font-black leading-none tabular-nums whitespace-nowrap">{price.display.toLocaleString()}</p>
-                    <p className="mt-1 text-[10px] font-semibold tracking-wide" style={{ color: look.sub }}>noobs{price.suffix}</p>
-                  </div>
-                </div>
+                  className={`snap-center shrink-0 w-[78%] transition-all duration-300 cursor-pointer ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
+                  detail={<>{appliedCoupon && <span className="line-through opacity-70 mr-1.5">{price.base.toLocaleString()}</span>}{price.display.toLocaleString()} noobs{price.suffix}</>}
+                />
               );
             })}
           </div>

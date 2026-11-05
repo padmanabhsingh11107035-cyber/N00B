@@ -18,13 +18,14 @@ const src = fs.readFileSync('src/components/Profile/ProFeaturesModal.tsx', 'utf8
 const html = renderToStaticMarkup(React.createElement(M.ProFeaturesModal, { currentUser: { id: 'u1', username: 'a', displayName: 'A', noobPoints: 5 }, onClose() {}, allUsers: [] }));
 console.log('\n1. The cards');
 check(['starter', 'plus', 'pro', 'elite', 'ultimate'].every((t) => html.includes(`data-testid="pro-card-${t}"`)), 'all five plans have a card');
-check(!/aspect-\[1\.586\]/.test(html) && /aspect-\[1\.4\]/.test(html), 'the cards are taller, so the name and the price have room');
+check(/aspect-\[1\.586\]/.test(html), 'the cards are the size of a bank card, laid out in rows so the name and the price have room');
 const cards = html.split('data-testid="pro-card-').slice(1).filter((c) => /^(starter|plus|pro|elite|ultimate)"/.test(c));
 check(cards.length === 5, 'five card blocks found');
 check(cards.every((c) => /NOOB PRO<\/p>/.test(c) && /tabular-nums whitespace-nowrap/.test(c) && /noobs/.test(c)), 'each card: NOOB, the plan name, then the price on its own line with "noobs" under it');
 check(cards.every((c) => !/justify-between gap-2/.test(c.split('data-testid=')[0])), 'no name and price side by side in a row');
-check(/radial-gradient\(120% 75% at 10% -12%/.test(html) && /rgba\(255,255,255,0\.7\) 44%/.test(html) && /repeating-linear-gradient\(90deg/.test(html) && /conic-gradient\(from 200deg/.test(html), 'metal and glossy: a sweep of light and dark bands, a brushed grain, a bright spot and a sharp streak of light');
-check(!/#(3b82f6|1d4ed8|2563eb|8b5cf6|5b21b6|7c3aed)/i.test(src.slice(src.indexOf('const metal'), src.indexOf('export const ProFeaturesModal'))), 'no blue or violet in the card colours');
+check(/radial-gradient\(120% 75% at 10% -12%/.test(html) && /rgba\(255,255,255,0\.62\) 44%/.test(html) && /repeating-linear-gradient\(90deg/.test(html) && /conic-gradient\(from 205deg/.test(html), 'metal and glossy: a sweep of light and dark bands, a brushed grain, a bright spot and a sharp streak of light');
+check(!/#(3b82f6|1d4ed8|2563eb|8b5cf6|5b21b6|7c3aed)/i.test(fs.readFileSync('src/components/Profile/proCardLook.ts', 'utf8')), 'no blue or violet in the card colours');
+check(/role="switch"/.test(html) && /data-testid="pro-autorenew"/.test(html) && /Auto-renew Monthly/.test(html), 'a visible Auto-renew switch');
 check(/background:#fbbf24;color:#3b2a00/.test(html) && />Save 17%</.test(html), 'the "Save 17%" tag is always shown, in its own colour, whichever of Monthly and Yearly is chosen');
 
 console.log('\n2. The features and the buy button');

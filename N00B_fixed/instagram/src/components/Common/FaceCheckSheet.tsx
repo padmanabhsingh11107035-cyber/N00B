@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ScanFace, X, Loader2 } from 'lucide-react';
 import { enrollFace, verifyOwnerFace, type Progress } from '../../face/faceId';
 
@@ -41,9 +42,10 @@ export const FaceCheckSheet: React.FC<{ userId: string; mode: 'enroll' | 'verify
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
-  return (
-    <div className="fixed inset-0 z-[450] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center gap-4 px-6 text-white text-center" role="dialog" aria-modal="true" aria-label={title || 'Face check'} data-testid="face-check-sheet">
-      <button onClick={() => onDone(false)} aria-label="Close" className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"><X className="w-5 h-5" /></button>
+  // drawn straight onto the page (not inside the page that opened it): a page that slides in carries a transform, and a full-screen layer inside it is cut to its size and its buttons can be covered
+  const sheet = (
+    <div data-noob-keep="1" className="fixed inset-0 z-[450] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center gap-4 px-6 pt-[env(safe-area-inset-top)] text-white text-center" role="dialog" aria-modal="true" aria-label={title || 'Face check'} data-testid="face-check-sheet">
+      <button type="button" onClick={() => onDone(false)} aria-label="Close" data-testid="face-check-close" className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 z-10 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"><X className="w-5 h-5" /></button>
       <h2 className="text-lg font-black">{title || (mode === 'enroll' ? 'Remember my face' : 'Face check')}</h2>
       <div className={`relative w-64 h-64 rounded-full overflow-hidden border-4 ${progress.phase === 'done' ? 'border-emerald-400' : error ? 'border-rose-400' : 'border-white/60'}`}>
         <video ref={videoRef} className="w-full h-full object-cover [transform:scaleX(-1)]" playsInline muted />
@@ -58,4 +60,5 @@ export const FaceCheckSheet: React.FC<{ userId: string; mode: 'enroll' | 'verify
       )}
     </div>
   );
+  return typeof document !== 'undefined' ? createPortal(sheet, document.body) : sheet;
 };

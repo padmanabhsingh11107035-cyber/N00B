@@ -45,6 +45,8 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'fun-mood', label: 'Mood Status', blurb: 'Share how you feel', group: 'Fun & community' },
   { key: 'fun-polls', label: 'Public Polls', blurb: 'Ask the community', group: 'Fun & community' },
 
+  { key: 'calc', label: 'Calculator answers', blurb: 'Switched OFF = the calculator still opens, but pressing = shows "idk ask chatgpt" (applies to everyone, also you)', group: 'Fun & community' },
+
   { key: 'support', label: 'Customer Support', blurb: 'The round help button and the support chat', group: 'Help' },
   { key: 'suggestions', label: 'Suggestion Box', blurb: 'Ideas and problems from users', group: 'Help' }
 ];
@@ -61,3 +63,10 @@ export const funFeatureKey = (id: string): string => (id === 'forms' || id === '
 export function disabledFeatureSet(list: unknown): ReadonlySet<string> {
   return new Set(Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []);
 }
+
+// The calculator lock: with the 'calc' switch OFF (Admin Control Panel -> Pages) the calculator answers "=" with a joke instead of a result. Unlike the page switches this applies to
+// the administrator too (so it can be tried). App.tsx keeps this up to date from the platform settings.
+let calcLocked = false;
+export const setCalcLocked = (locked: boolean): void => { calcLocked = locked; };
+export const isCalcLocked = (): boolean => calcLocked;
+export const CALC_LOCK_TEXT = 'idk ask chatgpt';

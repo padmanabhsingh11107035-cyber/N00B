@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Delete } from 'lucide-react';
+import { isCalcLocked, CALC_LOCK_TEXT } from '../../utils/features';
 
 interface CalculatorPageProps {
   onClose: () => void;
@@ -89,7 +90,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
   };
 
   const toggleSign = () => {
-    setState((prev) => ({
+    setState((prev) => prev.display === CALC_LOCK_TEXT ? prev : ({
       ...prev,
       display: prev.display.startsWith('-')
         ? prev.display.slice(1)
@@ -100,12 +101,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
   };
 
   const inputPercent = () => {
-    setState((prev) => ({ ...prev, display: formatValue(parseFloat(prev.display) / 100) }));
+    setState((prev) => (prev.display === CALC_LOCK_TEXT ? prev : { ...prev, display: formatValue(parseFloat(prev.display) / 100) }));
   };
 
   const chooseOperator = (nextOp: Operator) => {
     setState((prev) => {
-      const inputValue = parseFloat(prev.display);
+      const inputValue = prev.display === CALC_LOCK_TEXT ? 0 : parseFloat(prev.display);
 
       if (prev.previousValue !== null && prev.operator && !prev.waitingForNewValue) {
         const result = calculate(prev.previousValue, inputValue, prev.operator);
@@ -131,6 +132,12 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
   const handleEquals = () => {
     setState((prev) => {
       if (prev.operator === null || prev.previousValue === null) return prev;
+      // the administrator has switched the calculator's answers off: "=" gives no result
+      if (isCalcLocked()) {
+        setPulseEquals(true);
+        setTimeout(() => setPulseEquals(false), 400);
+        return { display: CALC_LOCK_TEXT, expression: '', previousValue: null, operator: null, waitingForNewValue: true };
+      }
       const inputValue = parseFloat(prev.display);
       const result = calculate(prev.previousValue, inputValue, prev.operator);
       setPulseEquals(true);
@@ -245,7 +252,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
             </div>
             <div
               className={`text-right font-black tracking-tight text-noob drop-shadow-[0_0_18px_rgba(255,255,255,0.45)] truncate transition-all ${
-                display.length > 9 ? 'text-4xl' : 'text-6xl'
+                display === CALC_LOCK_TEXT ? 'text-3xl' : display.length > 9 ? 'text-4xl' : 'text-6xl'
               }`}
             >
               {display}

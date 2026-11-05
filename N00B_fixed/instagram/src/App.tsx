@@ -126,7 +126,7 @@ import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './util
 import { LogoLightbox } from './components/Common/LogoLightbox';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { FeatureFlagsContext } from './utils/featureFlags';
-import { TAB_FEATURE, disabledFeatureSet, funFeatureKey } from './utils/features';
+import { TAB_FEATURE, disabledFeatureSet, funFeatureKey, setCalcLocked } from './utils/features';
 import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery, tabFromPath, FEATURE_PAGES, type ContentRoute } from './utils/routes';
 import { afterHistoryIdle } from './utils/historyGate';
 import { showTabAddress, tabFromHistoryEntry } from './utils/addressBar';
@@ -322,6 +322,7 @@ export default function App() {
   const offList = platformSettings?.disabledFeatures?.join(',') ?? '';
   const featuresOff = useMemo<ReadonlySet<string>>(() => (adminSeesAll ? new Set<string>() : disabledFeatureSet(offList ? offList.split(',') : [])), [adminSeesAll, offList]);
   const featOn = (key: string) => !featuresOff.has(key);
+  useEffect(() => { setCalcLocked(!!platformSettings?.disabledFeatures?.includes('calc')); }, [offList]);   // the calculator lock (it also applies to the administrator)
   useEffect(() => {
     const key = TAB_FEATURE[activeTab];
     if (key && featuresOff.has(key)) setActiveTab('feed');

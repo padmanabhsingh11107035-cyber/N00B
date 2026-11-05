@@ -35,6 +35,17 @@ export default defineConfig(() => {
         }
       },
       {
+        // A build whose main stylesheet has no layout classes (".flex", ".fixed", ".w-full" ...) would put an unstyled app on the website: it is refused here, so the
+        // last good version stays online instead.
+        name: 'refuse-unstyled-build',
+        writeBundle(options: { dir?: string }) {
+          const dir = path.join(options.dir || 'dist', 'assets');
+          const css = fs.readdirSync(dir).filter((f) => /^main-.*\.css$/.test(f)).map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join(' ');
+          const missing = ['.flex{', '.fixed{', '.w-full{', '.items-center{', '.rounded-full{'].filter((k) => !css.includes(k));
+          if (css.length < 300000 || missing.length) throw new Error(`The main stylesheet is broken (${css.length} bytes, missing ${missing.join(' ')}): the build is refused so the website keeps its last good version.`);
+        }
+      },
+      {
         name: 'write-build-version',
         writeBundle(options: { dir?: string }) {
           const outDir = options.dir || 'dist';

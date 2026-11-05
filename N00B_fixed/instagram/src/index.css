@@ -1,4 +1,9 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "../index.html";
+@source "../family.html";
+@source "../booth.html";
+@source "../lenses.html";
+@source "../src";   /* only the app's own files are read for class names (not the big folders of the games, which made the build slow and, once, produced a page with no layout) */
 @import "./lightAccents.css"; /* light mode: deeper versions of the pale accent colours (generated: scripts/gen-light-accents.mjs) */
 
 /* ============================================================================================================
@@ -1374,3 +1379,9 @@ html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper
   }
   html body.light .sd-root { background-color: #e8ebf0 !important; }
 }
+
+/* the help desk hides the whole page behind it (visibility is inherited, so only the help desk itself is switched back on) */
+html.sd-open { background-color: #e8ebf0 !important; }
+html.sd-open body::after { display: none !important; }
+html.sd-open body * { visibility: hidden; }
+html.sd-open .sd-root, html.sd-open .sd-root * { visibility: visible; }

@@ -1784,8 +1784,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
             refreshKey={instantsRefreshKey}
           />
 
-          {/* the strip behind the clock / notch / Dynamic Island is painted like the header, so the page reaches the very top of the screen */}
-          <div aria-hidden="true" className="fixed top-0 inset-x-0 z-[30] pointer-events-none" style={{ height: 'env(safe-area-inset-top)', background: 'var(--msg-strip, #0E4B37)' }} data-testid="messages-top-strip" />
           {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
           <div ref={listRef} className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
           <div ref={headRef} className="msg-head force-dark px-5 pb-[calc(20px+var(--msg-r))] will-change-transform" data-testid="messages-header">

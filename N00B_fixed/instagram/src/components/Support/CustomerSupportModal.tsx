@@ -101,6 +101,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const reportSearchSeq = useRef(0);
   const reportFieldRef = useRef<HTMLDivElement>(null);
 
+  // while the help desk is open the page behind it is hidden completely (not just covered), so nothing of it shows under the keyboard or around the panel
+  useEffect(() => {
+    document.documentElement.classList.add('sd-open');
+    return () => { document.documentElement.classList.remove('sd-open'); };
+  }, []);
   useEffect(() => {
     if (!reportSearchOpen) return;
     const mine = ++reportSearchSeq.current;

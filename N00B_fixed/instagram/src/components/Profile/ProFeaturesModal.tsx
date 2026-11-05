@@ -370,7 +370,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   badge={isCurrentTier ? 'YOUR PLAN' : undefined}
                   onClick={() => railTo(i)}
                   className={`snap-center shrink-0 w-[78%] transition-all duration-300 cursor-pointer ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
-                  detail={<>{appliedCoupon && <span className="line-through opacity-70 mr-1.5">{price.base.toLocaleString()}</span>}{price.display.toLocaleString()} noobs{price.suffix}</>}
+                  detail={<>{appliedCoupon && <span className="block line-through opacity-70">{price.base.toLocaleString()}</span>}<span className="block text-[14px] font-bold leading-tight">{price.display.toLocaleString()}</span><span className="block text-[10px]">noobs{price.suffix}</span></>}
                 />
               );
             })}

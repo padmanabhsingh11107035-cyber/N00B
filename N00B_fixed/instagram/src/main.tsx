@@ -14,6 +14,7 @@ import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
 import { installMediaGuard } from './utils/mediaGuard.ts';
 import { rewriteDirectMedia } from './services/supabase.ts';
 import { installPageFrames } from './utils/pageFrames.ts';
+import { installKeyboardCover } from './utils/keyboardCover.ts';
 import { installKeyboardFill } from './utils/keyboardFill.ts';
 import { initStatusStrip } from './utils/statusStrip';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
@@ -76,6 +77,7 @@ console.log(
 installHistoryGate();   // lets the address bar wait while the browser is still walking back through history (utils/historyGate.ts)
 installMediaGuard(rewriteDirectMedia);   // a picture, video or song that is handed Supabase's own address is changed to the cached /m/ address before the browser asks (utils/mediaGuard.ts)
 installOverlayScrollLock();   // pages that cover the screen are pages of their own: the page behind them does not scroll (utils/overlayScrollLock.ts)
+installKeyboardCover();   // with the keyboard open in a solid full-screen page, the page underneath is hidden (utils/keyboardCover.ts)
 installPageFrames();   // a tall window that floated over a dimmed page becomes a page of its own, with "<" to go back (utils/pageFrames.ts)
 installKeyboardFill();         // the phone's see-through keyboard shows the colour of the screen above it, never the page behind (utils/keyboardFill.ts)
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)

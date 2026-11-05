@@ -1312,6 +1312,10 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 
 /* Pages of their own (utils/pageFrames.ts): a tall window that used to float over a dimmed page is a full page now (solid page colour, nothing of the page behind it), and the "X" of its
    top row is a "<" at the left (the same button). On a computer the page keeps a readable width in the middle. Small pop-ups, sheets, and picture or video screens are not touched. */
+/* The keyboard is open in a solid full-screen page: the page under it is hidden, so no strip of it shows above the keyboard (utils/keyboardCover.ts). */
+html[data-cover-app] #root { visibility: hidden; }
+html[data-cover-app] [data-cover-layer] { visibility: visible; }
+html[data-cover-app], html[data-cover-app] body { background-color: var(--page); }
 [data-noob-page='card'], [data-noob-page='page'] { background: var(--page) !important; background-image: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0 !important; align-items: stretch !important; justify-content: center !important; overscroll-behavior: contain; }
 [data-noob-page='card'] > [data-noob-card] { width: 100% !important; max-width: min(100%, 760px) !important; height: 100% !important; max-height: none !important; margin: 0 auto !important; border-radius: 0 !important; border-width: 0 !important; box-shadow: none !important; }
 [data-noob-close] { order: -1 !important; position: static !important; inset: auto !important; margin: 0 6px 0 0 !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; }

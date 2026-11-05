@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Delete } from 'lucide-react';
 import { isCalcLocked, CALC_LOCK_TEXT } from '../../utils/features';
+import { CALC_TYPE_LABEL, type CalculatorItem } from '../../utils/calculatorSend';
 
 interface CalculatorPageProps {
   onClose: () => void;
+  /** what was sent here from a Share sheet (a post, a reel or a video): only its kind is shown */
+  sent?: CalculatorItem | null;
 }
 
 type Operator = '+' | '−' | '×' | '÷';
@@ -48,7 +51,7 @@ function formatValue(value: number): string {
 // Every handler below reads and writes the whole state object in one
 // functional setState call, so rapid input (fast typing/tapping) can never
 // act on a stale `display`/`operator` from a previous render.
-export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
+export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose, sent }) => {
   const [state, setState] = useState<CalcState>(INITIAL_STATE);
   const [flashKey, setFlashKey] = useState<string | null>(null);
   const [pulseEquals, setPulseEquals] = useState(false);
@@ -245,6 +248,15 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
       {/* Body */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-sm mx-auto space-y-5">
+          {sent && (
+            <div className="flex items-center justify-center" data-testid="calc-sent">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/10 px-4 py-2 text-xs font-bold text-white">
+                <span className="w-2 h-2 rounded-full bg-noob" aria-hidden="true" />
+                {CALC_TYPE_LABEL[sent.type]} sent to Calculator
+              </span>
+            </div>
+          )}
+
           {/* Display */}
           <div className="rounded-[28px] bg-white/[0.04] border border-white/10 backdrop-blur-xl px-6 py-8 shadow-[0_8px_40px_rgba(0,0,0,0.4)] overflow-hidden">
             <div className="h-5 text-right text-xs font-medium text-zinc-500 truncate tracking-wide">

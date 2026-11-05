@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2 } from 'lucide-react';
+import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2, Calculator as CalcIcon } from 'lucide-react';
 import { User } from '../../types';
 import { fetchChats, sendMessage } from '../../services/api';
 import { copyText } from '../../utils/clipboard';
 import { contentUrl } from '../../utils/routes';
+import { sendToCalculator } from '../../utils/calculatorSend';
 import { AvatarMedia } from './AvatarMedia';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { useKeyboardMetrics } from '../../utils/useVisualViewport';
@@ -191,6 +192,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}
               <ShareIcon label={copied ? 'Copied!' : 'Copy link'} look="bg-zinc-700 text-white" onClick={() => void copy()} testId="share-copy">{copied ? <Check className="w-5 h-5" /> : <Link2 className="w-5 h-5" />}</ShareIcon>
+              <ShareIcon label="Calculator" look="bg-zinc-700 text-white" onClick={() => { sendToCalculator({ type, itemId }); onClose(); }} testId="share-calculator"><CalcIcon className="w-5 h-5" /></ShareIcon>
               {APP_ORDER.slice(1).map((a) => (
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}

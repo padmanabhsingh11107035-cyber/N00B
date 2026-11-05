@@ -357,38 +357,19 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                       autoFocus
                     />
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="send-people">
-                    {candidates.slice(0, 14).map((u) => (
-                      <button key={u.id} onClick={() => setRecipient(u)} className="flex flex-col items-center gap-1 shrink-0 w-14 cursor-pointer">
-                        <img src={u.avatar || '/noob-logo.svg.jpeg'} alt="" loading="lazy" className="w-12 h-12 rounded-full object-cover border-2 border-zinc-800" referrerPolicy="no-referrer" />
-                        <span className="text-[10px] text-zinc-400 truncate w-full text-center">{u.displayName || u.username}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="max-h-56 overflow-y-auto rounded-xl border border-zinc-900 divide-y divide-zinc-900">
-                    {candidates.length === 0 ? (
-                      <p className="text-xs text-zinc-500 py-4 text-center">No matching users.</p>
-                    ) : (
-                      candidates.map((u) => (
-                        <button
-                          key={u.id}
-                          onClick={() => setRecipient(u)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
-                        >
-                          <img
-                            src={u.avatar || '/noob-logo.svg.jpeg'}
-                            alt={u.username}
-                            className="w-9 h-9 rounded-full object-cover border border-zinc-800"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-white block truncate">{u.displayName}</span>
-                            <span className="text-[10px] text-zinc-500 block truncate">@{u.username}</span>
-                          </div>
+                  {/* the people, in one row that slides sideways (the search above narrows it); no long list under it, so the amount stays near the top */}
+                  {candidates.length === 0 ? (
+                    <p className="text-xs text-zinc-500 py-3 text-center">No matching users.</p>
+                  ) : (
+                    <div className="flex gap-3 overflow-x-auto snap-x pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="send-people">
+                      {candidates.slice(0, 40).map((u) => (
+                        <button key={u.id} onClick={() => setRecipient(u)} className="snap-start flex flex-col items-center gap-1.5 shrink-0 w-[68px] cursor-pointer active:scale-95 transition-transform">
+                          <img src={u.avatar || '/noob-logo.svg.jpeg'} alt="" loading="lazy" className="w-14 h-14 rounded-full object-cover border-2 border-zinc-700" referrerPolicy="no-referrer" />
+                          <span className="text-[10px] font-semibold text-zinc-300 truncate w-full text-center">{u.displayName || u.username}</span>
                         </button>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>

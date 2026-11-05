@@ -57,6 +57,9 @@ function poke(colour: string): void {
       if (old && old.getAttribute('content') === colour) old.replaceWith(old.cloneNode());
       const bar = edgeBar();
       if (bar) bar.style.height = bar.style.height === '3px' ? '2px' : '3px';
+      // a changed viewport tag (same meaning) makes an iPhone measure the top of the screen again
+      const vp = document.querySelector('meta[name="viewport"]');
+      if (vp) { const c = vp.getAttribute('content') || ''; vp.setAttribute('content', /viewport-fit=auto/.test(c) ? c.replace(/,\s*viewport-fit=auto/, '') : c + ', viewport-fit=auto'); }
     } catch { /* a nudge is never a reason to fail */ }
   }, ms));
 }

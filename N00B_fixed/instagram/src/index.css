@@ -1341,3 +1341,17 @@ body.light .doodle-surface {
    see-through so it shows. The sign-in page keeps its own look (.doodle-wallpaper-login). */
 body, .doodle-wallpaper { background-image: none; }
 .doodle-wallpaper-feed, .chat-wallpaper, .doodle-wallpaper { background-image: none; background-color: transparent; }
+
+/* the page colour comes from <html>; <body> must not paint its own, or it would cover the doodle layer that sits behind the content */
+body, body.light { background-color: transparent !important; }
+
+/* Full-screen layers that sit ON TOP of the page (loading screens, Settings, fun pages, the chat) cannot be see-through: they wear the same doodle themselves, on the page colour. */
+.fixed.doodle-wallpaper, .fixed.doodle-wallpaper-feed, .chat-wallpaper {
+  background-color: var(--page) !important;
+  background-image: linear-gradient(rgba(10, 10, 10, 0.80), rgba(10, 10, 10, 0.80)), url('/brand/doodle-white.webp') !important;
+  background-size: auto, 490px auto !important;
+  background-repeat: no-repeat, repeat !important;
+}
+body.light .fixed.doodle-wallpaper, body.light .fixed.doodle-wallpaper-feed, body.light .chat-wallpaper {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.80)), url('/brand/doodle-dark.webp') !important;
+}

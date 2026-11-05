@@ -173,9 +173,9 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
   return (
     <div
       id="accounts-statistics-modal"
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-zinc-950 flex items-stretch justify-center p-0 animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-xl bg-zinc-950 border border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div className="w-full h-full max-w-none bg-zinc-950 p-5 sm:py-6 sm:px-[max(1.5rem,calc((100vw-40rem)/2))] space-y-5 overflow-y-auto pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

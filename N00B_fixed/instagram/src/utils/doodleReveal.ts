@@ -26,7 +26,7 @@ export function revealDoodle(): void {
       seen.add(el);
       if (el.hasAttribute(SEE)) continue;
       const cs = getComputedStyle(el);
-      if (cs.position === 'fixed' && el.getBoundingClientRect().height < h * 0.9) continue;
+      if (cs.position === 'fixed' || cs.position === 'sticky' || el.closest('[class*="fixed"], [role="dialog"], [aria-modal="true"]')) { if (el.hasAttribute(SEE)) el.removeAttribute(SEE); continue; }
       if (cs.backgroundImage !== 'none' || !plain(cs.backgroundColor)) continue;
       if (parseFloat(cs.borderTopLeftRadius) > 0 || cs.boxShadow !== 'none') continue;
       if (el.matches('video, canvas, img, picture, svg, input, textarea, button, [role="dialog"], [aria-modal="true"]')) continue;

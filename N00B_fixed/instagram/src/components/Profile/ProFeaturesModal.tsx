@@ -238,10 +238,10 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-[#f1f0ec] flex items-stretch justify-center p-0" onClick={onClose}>
       {receipt && <ProReceipt receipt={receipt} onDone={() => setReceipt(null)} />}
       <div
-        className="pro-light w-full max-w-md bg-[#f1f0ec] border border-black/5 rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
+        className="pro-light w-full h-full max-w-none bg-[#f1f0ec] p-5 sm:px-[max(1.25rem,calc((100vw-30rem)/2))] space-y-4 overflow-y-auto pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

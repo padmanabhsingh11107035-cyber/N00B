@@ -1695,7 +1695,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     root.style.setProperty('--msg-strip', green ? '#0E4B37' : '#0a0c0e');
     setStripColour(green ? '#0E4B37' : '#0a0c0e', () => document.querySelector('[data-testid="messages-header"]')?.closest('.msg-page') ?? null, nudge);
   };
-  useEffect(() => {
+  useLayoutEffect(() => {   // in the same moment as the page change (before the phone draws it), so the strip is right at once
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
@@ -3321,7 +3321,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </>
               )}
 
-              <div className="flex-1 min-w-0 flex items-center bg-black/60 border border-white/10 rounded-full pl-4 pr-1 py-1 focus-within:border-white/40 transition-colors">
+              <div className="chat-pill flex-1 min-w-0 flex items-center bg-black/60 border border-white/10 rounded-full pl-4 pr-1 py-1 focus-within:border-white/40 transition-colors">
                 <input
                   type="text"
                   placeholder="Aa"

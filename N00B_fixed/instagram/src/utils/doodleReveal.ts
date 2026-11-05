@@ -42,7 +42,14 @@ export function startDoodleReveal(): void {
   if (started || typeof window === 'undefined' || typeof MutationObserver === 'undefined') return;
   started = true;
   let timer = 0;
-  const queue = () => { if (timer) return; timer = window.setTimeout(() => { timer = 0; requestAnimationFrame(revealDoodle); }, 250); };
+  // a new full-page layer is made see-through before it is first drawn (the next frame, at most every 80 ms), and checked again after a moment: a layer that was drawn
+  // solid for a quarter of a second first made the background flash
+  let raf = 0, lastRun = 0;
+  const queue = () => {
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; const t = Date.now(); if (t - lastRun < 80) return; lastRun = t; revealDoodle(); });
+    if (timer) return;
+    timer = window.setTimeout(() => { timer = 0; requestAnimationFrame(revealDoodle); }, 250);
+  };
   const begin = () => { new MutationObserver(queue).observe(document.body, { childList: true, subtree: true }); window.addEventListener('resize', queue); queue(); };
   if (document.body) begin(); else window.addEventListener('DOMContentLoaded', begin, { once: true });
 }

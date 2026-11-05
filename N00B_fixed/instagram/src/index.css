@@ -1322,6 +1322,8 @@ body::after {
   pointer-events: none;
   background: url('/brand/doodle-white.webp') 0 0 / 490px auto repeat;
   opacity: 0.17;
+  /* its own graphics layer: the phone no longer draws the pattern again while a page scrolls over it (that made it flash) */
+  transform: translate3d(0, 0, 0); will-change: transform; backface-visibility: hidden; -webkit-backface-visibility: hidden; contain: strict;
 }
 body.light::after { background-image: url('/brand/doodle-dark.webp'); opacity: 0.14; }
 html[data-doodle="off"] body::after { display: none; }
@@ -1399,6 +1401,14 @@ html body.light [class*="hover:text-white"]:hover:not([class*="hover:bg-noob"]):
 html body.light [class*="hover:bg-white"]:hover:not([class*="text-black"]):not([class*="bg-white "]):not(.force-dark):not(.force-dark *) { background-color: #ececec; }
 /* the accent is black in Light mode: text on it is white, also while hovered */
 html body.light [class*="bg-noob"]:not([class*="bg-noob/"]):hover, html body.light [class*="hover:bg-noob"]:not([class*="hover:bg-noob/"]):hover { color: #ffffff; }
+
+/* Light mode: the box where a message is typed is light grey with dark text (it was a dark box with grey text) */
+@layer base {
+  html body.light .chat-pill { background-color: #e9e9ec !important; border-color: #d8d8dc !important; }
+  html body.light .chat-pill:focus-within { border-color: #9a9aa2 !important; }
+  html body.light .chat-pill input, html body.light .chat-pill input.text-white { color: #0a0a0a !important; }
+  html body.light .chat-pill input::placeholder { color: #7a7a82 !important; }
+}
 
 /* Light mode: the chat page is white, the doodle only a whisper on it */
 html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), url('/brand/doodle-dark.webp') !important; }

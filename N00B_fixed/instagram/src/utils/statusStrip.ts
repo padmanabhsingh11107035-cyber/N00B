@@ -22,7 +22,7 @@ function colourAtTop(): string | null {
     el = el.parentElement;
   }
   // nothing solid at the top: the page's own colour (never the <html> colour, which is the one this file writes)
-  return document.documentElement.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0a0a';
+  return pageColour();
 }
 
 // A phone can miss a change of the page's background colour (iOS reads the colour of the strip from what sits at the top edge of the screen, and only looks again after some
@@ -45,20 +45,24 @@ function edgeBar(): HTMLElement | null {
   return edge;
 }
 
-// A phone only looks at the colour behind the clock again after certain events, so after every CHANGE of colour the page is nudged in the ways that make it look again:
-// the theme-colour element is replaced by a fresh one, and the root element is lifted onto its own layer for a moment (no visible change).
-let kicked = '';
-function kick(colour: string): void {
-  if (kicked === colour) return;
-  kicked = colour;
-  [0, 150].forEach((ms) => window.setTimeout(() => {
-    if (kicked !== colour) return;
+// A phone looks at the colour behind the clock when the page CHANGES (and only then), so the colour must already be right in the very same moment as the change, and a few
+// harmless nudges follow it (a fresh theme-colour element, the thin top bar 1 px taller or shorter) for a phone that looked a little too early.
+let poked = '';
+function poke(colour: string): void {
+  poked = colour;
+  [0, 90, 260, 650, 1400, 2600].forEach((ms) => window.setTimeout(() => {
+    if (poked !== colour || last !== colour) return;
     try {
       const old = document.querySelector('meta[name="theme-color"]');
       if (old && old.getAttribute('content') === colour) old.replaceWith(old.cloneNode());
+      const bar = edgeBar();
+      if (bar) bar.style.height = bar.style.height === '3px' ? '2px' : '3px';
     } catch { /* a nudge is never a reason to fail */ }
   }, ms));
 }
+
+/** The colour of an ordinary page of the app (the theme's page colour). */
+const pageColour = (): string => (document.documentElement.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0a0a');
 
 function applyColour(colour: string): void {
   const root = document.documentElement;
@@ -68,7 +72,9 @@ function applyColour(colour: string): void {
   if (meta.getAttribute('content') !== colour) meta.setAttribute('content', colour);
   const bar = edgeBar();
   if (bar && bar.style.backgroundColor !== colour) bar.style.backgroundColor = colour;
+  const changed = last !== colour;
   last = colour;
+  if (changed) poke(colour);
 }
 
 function paint(): void {
@@ -81,25 +87,33 @@ function paint(): void {
 
 const queue = () => { if (!queued) { queued = true; window.setTimeout(paint, 120); } };
 
-/** A page with a colour of its own (null: read it from the screen again). Applied at once and again a moment later. */
+// The colour is also put right at once when the page changes (this runs right after the page's change and before the phone draws it), at most every 60 ms
+let lastNow = 0;
+const now = () => { const t = Date.now(); if (t - lastNow < 60) return; lastNow = t; paint(); };
+
+/** A page with a colour of its own (null: the page is an ordinary one again: its colour at once, then read from the screen). Applied at once and again a moment later. */
 export function setStripColour(colour: string | null, owner?: () => Element | null, nudge = false): void {
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
   override = colour;
   overrideOwner = colour ? owner || null : null;
-  if (nudge) kicked = '';
-  if (colour && activeOverride()) { applyColour(colour); if (nudge) kick(colour); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour); }, 90); }
+  void nudge;
+  if (colour && activeOverride()) { applyColour(colour); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour); }, 90); }
+  else if (!colour) applyColour(pageColour());
   queue();
 }
 
 /** Paint the strip again from what is on screen now. */
-export function repaintStrip(): void { last = ''; kicked = ''; queue(); }
+export function repaintStrip(): void { last = ''; queue(); }
 
 let started = false;
 /** Call once at start-up. Only does anything on a touch screen (a phone or tablet): on a computer the browser's own bar is not part of the page. */
 export function initStatusStrip(): void {
   if (started || typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;
   started = true;
-  new MutationObserver(queue).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+  new MutationObserver((records) => {
+    if (records.every((r) => r.target === edge)) return;   // the top bar itself changing is not a page change
+    now(); queue();
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
   window.setInterval(() => { if (!document.hidden) queue(); }, 2500);   // a slow check as well: whatever drifted is put right
   window.addEventListener('scroll', queue, { capture: true, passive: true });
   window.addEventListener('resize', queue);

@@ -2060,7 +2060,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       onClick={() => handleStartChatWithUser(friend)}
                       className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <img
                           src={friend.avatar}
                           alt={friend.username}
@@ -2140,8 +2140,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }}
         >
           {/* Active Chat Header */}
-          <div className="relative z-10 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="chat-bar relative z-10 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {/* Back to the list of chats (on every screen size: the list first, a chat opens full screen) */}
               <button
                 onClick={() => setMobileView('list')}
@@ -2152,7 +2152,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </button>
 
               <div
-                className="flex items-center gap-3 min-w-0 cursor-pointer group"
+                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group"
                 onClick={() => {
                   if (activeChat?.isGroup) {
                     setShowGroupDetails(true);
@@ -2193,9 +2193,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   )}
                 </div>
 
-                <div className="truncate">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-white truncate group-hover:text-noob transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className="text-sm font-bold text-white truncate min-w-0 group-hover:text-noob transition-colors">
                       {activeChat?.isGroup
                         ? activeChat.name || 'Group Chat'
                         : activeChat?.customNickname ||
@@ -2956,7 +2956,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           )}
 
           {/* Bottom Message Input Bar */}
-          <div className="p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/90 shrink-0 relative">
+          <div className="chat-bar p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/90 shrink-0 relative">
             {sendError && !sendBlocked && (
               <div role="alert" className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -3627,7 +3627,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     }}
                     className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="relative shrink-0">
                         <img
                           src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}

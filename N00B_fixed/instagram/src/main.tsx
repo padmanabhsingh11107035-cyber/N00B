@@ -83,6 +83,8 @@ initTheme();
 initStatusStrip();
 void initLanguage();
 startTextFit();   // a bar that runs out of room (top bar, bottom bar ...) takes back some of the bigger text until it fits
+import { startDoodleReveal } from './utils/doodleReveal';
+startDoodleReveal();   // lets the doodle background show through full-screen black/white layers
 
 // Android's browser/WebView renders the "liquid glass" bottom nav and three-dot menus (see
 // .liquid-glass in index.css) almost fully see-through instead of blurred-translucent — that

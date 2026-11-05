@@ -1333,3 +1333,6 @@ html[data-doodle="off"] body::after { display: none; }
 body.light .doodle-surface {
   background-image: linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)), url('/brand/doodle-dark.webp') !important;
 }
+
+/* full-screen plain black/white layers that let the doodle background (body::after, behind everything) show through: see utils/doodleReveal.ts */
+[data-doodle-see] { background-color: transparent !important; }

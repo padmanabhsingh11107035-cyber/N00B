@@ -167,7 +167,7 @@ const shell = 'notepad-shell fixed inset-0 z-[46] overflow-y-auto overscroll-con
 
   if (openId) {
     return (
-      <div className={shell} data-testid="notepad-editor">
+      <div className={shell} data-noob-keep="1" data-testid="notepad-editor">
         <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-8">
           <header className="flex items-center gap-3 mb-3.5">
             <button type="button" onClick={close} aria-label="Back" data-testid="settings-back" className={round}><ChevronLeft className="w-6 h-6" /></button>
@@ -224,7 +224,7 @@ const shell = 'notepad-shell fixed inset-0 z-[46] overflow-y-auto overscroll-con
   }
 
   return (
-    <div className={shell} data-testid="notepad-list">
+    <div className={shell} data-noob-keep="1" data-testid="notepad-list">
       <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-24">
         <header className="flex items-center gap-2.5 mb-4">
           <button type="button" onClick={back} aria-label="Back" data-testid="settings-back" className={round}><ChevronLeft className="w-6 h-6" /></button>

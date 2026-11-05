@@ -39,12 +39,12 @@ check(!/handleNextReel|handlePrevReel|navigateWithCooldown/.test(view), 'the old
 section('4. The layout (as in Roblox\'s Moments)');
 check(/text-\[26px\] leading-none font-bold tracking-tight text-white">Reels</.test(view) && /data-testid="reel-sound-button"/.test(view), 'big bold "Reels" title with the sound button on the right');
 check(/bg-\[#0f0f11\]/.test(view) && /media-dark/.test(view), 'the same near-black page colour');
-check(/data-reel-tap className="relative flex-1 min-h-0/.test(view) && /object-contain object-bottom/.test(audio), 'the picture is as wide as the screen, whole, and sits right above the writing (a wide video leaves room above it)');
-check(/data-testid="reel-actions"/.test(view) && /absolute right-3\.5 bottom-3/.test(view), 'like / comment / share / save are plain icons on the picture\'s bottom right edge');
-check(/text-\[16px\] font-bold text-white truncate/.test(view) && /w-\[34px\] h-\[34px\] rounded-full/.test(view), 'round picture and bold name');
-check(/No likes yet/.test(view) && /'like' : 'likes'/.test(view) && /-space-x-1\.5/.test(view), 'the likes row: stacked reaction emoji and "73 likes"');
-check(/data-testid=\{isCur \? 'reel-progress' : undefined\}/.test(view) && /bg-\[#bcbcc8\]/.test(view) && /progressRef\.current\.style\.width/.test(view), 'a thin progress bar fills as the video plays');
-check(/bg-\[#335fff\] text-white/.test(view) && /h-\[42px\] px-5 rounded-lg/.test(view) && /data-testid=\{isCur \? 'reel-sound-bar' : undefined\}/.test(view), 'the bottom bar: cover, sound name and artist, and a blue Follow button');
+check(/data-reel-tap className="relative w-full h-full overflow-hidden bg-black/.test(view) && /object-contain object-bottom/.test(audio) && /video\.style\.objectFit = near \? 'cover' : 'contain'/.test(view), 'the video fills the whole page when its shape fits (about 9:16), and is shown whole in the middle (never cropped) when it does not');
+check(/data-testid="reel-actions"/.test(view) && /absolute right-3 bottom-\[26px\]/.test(view), 'like / comment / share / save / menu are plain icons down the right edge of the video');
+check(/text-\[16px\] font-bold text-white truncate/.test(view) && /w-\[36px\] h-\[36px\] rounded-full/.test(view) && /absolute left-4 right-\[72px\] bottom-\[26px\]/.test(view), 'round picture and bold name over the bottom left of the video');
+check(/No likes yet/.test(view) && /'like' : 'likes'/.test(view) && /reel\.likesCount\.toLocaleString\(\)/.test(view), 'the like count sits under the heart');
+check(/data-testid=\{isCur \? 'reel-progress' : undefined\}/.test(view) && /absolute inset-x-0 bottom-0 z-20/.test(view) && /progressRef\.current\.style\.width/.test(view), 'a thin progress line on the bottom edge fills as the video plays');
+check(/bg-white text-black/.test(view) && /data-testid=\{isCur \? 'reel-sound-bar' : undefined\}/.test(view) && /Original audio/.test(view), 'the sound name and artist, and a white Noob button next to the name');
 check(/likeCountHiddenFor\(reel\.isLikeCountHidden/.test(view), 'hidden like counts stay hidden');
 check(/Copy link/.test(view) && /MoreVertical/.test(view), 'the three dots on the card open the reel menu (copy link for everyone, more for the owner / admin)');
 

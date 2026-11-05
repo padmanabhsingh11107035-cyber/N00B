@@ -1692,8 +1692,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const setStrip = (green: boolean, nudge = false) => {
     const root = document.documentElement;
-    root.style.setProperty('--msg-strip', green ? '#0E4B37' : '#0a0c0e');
-    setStripColour(green ? '#0E4B37' : '#0a0c0e', () => document.querySelector('[data-testid="messages-header"]')?.closest('.msg-page') ?? null, nudge);
+    const rest = root.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0c0e';   // the colour of the sheet once the green header has scrolled away
+    root.style.setProperty('--msg-strip', green ? '#0E4B37' : rest);
+    setStripColour(green ? '#0E4B37' : rest, () => document.querySelector('[data-testid="messages-header"]')?.closest('.msg-page') ?? null, nudge);
   };
   useLayoutEffect(() => {   // in the same moment as the page change (before the phone draws it), so the strip is right at once
     if (mobileView !== 'list') return;

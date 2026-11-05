@@ -1229,6 +1229,28 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
 }
 
+@layer base { html body.light header h1.noob-brand.text-white { color: #0a0a0a !important; } }
+
+/* Messages page, LIGHT mode: the green header stays; the sheet under it (filters, chat rows, "start a new chat") is white with dark text. Dark mode is untouched. */
+@layer base {
+  html body.light .msg-page.force-dark { --panel: #ffffff; background-color: #ffffff !important; }
+  html body.light .msg-page .msg-sheet, html body.light .msg-page .msg-sticky { background: #ffffff !important; }
+  html body.light .msg-page .msg-pill { background: #f0f1f3 !important; color: #3b4148 !important; }
+  html body.light .msg-page .msg-pill-on { background: transparent !important; color: #0a7a55 !important; }
+  html body.light .msg-page .msg-pill-slide { background: #d7f0e5; }
+  html body.light .msg-page .msg-chip { background: #e2e4e8; color: #555c64; }
+  html body.light .msg-page .msg-chip-on { background: #07eca8; color: #033b2a; }
+  html body.light .msg-page [data-testid="messages-rows"] .text-white, html body.light .msg-page [data-testid="messages-rows"] [class*="text-white/"] { color: #0a0a0a !important; }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#9aa1a8]"] { color: #5f666d !important; }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#8b9198]"] { color: #6b7279 !important; }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="text-zinc-400"] { color: #5f666d !important; }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#7c848b]"] { color: #8a9198 !important; }
+  html body.light .msg-page .msg-row:active { background-color: rgba(0, 0, 0, .06); }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="hover:bg-white"]:hover { background-color: rgba(0, 0, 0, .04); }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="bg-[#1f2428]"] { background-color: #eceef1 !important; }
+  html body.light .msg-page [data-testid="messages-rows"] [class*="bg-[#1f2428]"] svg { color: #3b4148 !important; }
+}
+
 /* The sign-in and sign-up pages (from the Create Account picture): a teal header that melts into a dark rounded sheet, round social buttons, grey inputs and a coral pill button. Always dark, in both themes. */
 .doodle-wallpaper-login.auth-v2 { background: #14171a !important; background-image: none !important; padding: 0 !important; justify-content: flex-start !important; }
 .auth-v2 .auth-head { background: linear-gradient(180deg, #2d8a7e 0%, #1f6a62 55%, #164a47 100%); }
@@ -1424,8 +1446,8 @@ html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 25
   html body.light [class*="bg-black/9"].text-white, html body.light [class*="bg-black/9"] .text-white, html body.light [class*="bg-black/9"] svg.text-white,
   html body.light [class*="from-black"].text-white, html body.light [class*="from-black"] .text-white, html body.light [class*="from-black"] svg.text-white,
   html body.light [class*="via-black"].text-white, html body.light [class*="via-black"] .text-white, html body.light [class*="via-black"] svg.text-white,
-  html body.light [class*="bg-zinc-950/8"].text-white, html body.light [class*="bg-zinc-950/8"] .text-white, html body.light [class*="bg-zinc-950/8"] svg.text-white,
-  html body.light [class*="bg-zinc-950/9"].text-white, html body.light [class*="bg-zinc-950/9"] .text-white, html body.light [class*="bg-zinc-950/9"] svg.text-white { color: #ffffff !important; }
+  html body.light [class*="bg-zinc-950/8"]:not(header):not([class*="sticky"]).text-white, html body.light [class*="bg-zinc-950/8"]:not(header):not([class*="sticky"]) .text-white, html body.light [class*="bg-zinc-950/8"]:not(header):not([class*="sticky"]) svg.text-white,
+  html body.light [class*="bg-zinc-950/9"]:not(header):not([class*="sticky"]).text-white, html body.light [class*="bg-zinc-950/9"]:not(header):not([class*="sticky"]) .text-white, html body.light [class*="bg-zinc-950/9"]:not(header):not([class*="sticky"]) svg.text-white { color: #ffffff !important; }
 }
 
 /* Light mode: a SOLID dark-tinted button or chip ("Requested", "Public", tags: bg-purple-950 with text-purple-300 ...) was black with dark text. Solid 800/900/950 fills of the

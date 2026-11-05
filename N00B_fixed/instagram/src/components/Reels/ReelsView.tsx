@@ -261,6 +261,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Every reel plays through ONE video element that lives for the whole session (see src/utils/reelAudio.ts): the phone gives the permission to
   // make sound to that element, so once it has it, every reel can have sound without asking again.
   const playerHostRef = useRef<HTMLDivElement>(null);
+  const [coverFit, setCoverFit] = useState(true);   // the video's shape fits the page: it fills it edge to edge; otherwise the whole picture is shown
   const hasReels = !!currentReel;
   const soundBlockedRef = useRef(false);
   const soundWantedRef = useRef(soundWanted);
@@ -321,7 +322,24 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       lastTime = t;
     };
     video.addEventListener('timeupdate', onTime);
+    // a video whose shape (about 9:16) fits the page fills it; any other shape is shown whole in the middle (never cropped)
+    const fit = () => {
+      const h = playerHostRef.current;
+      if (!h || !(video.videoWidth > 0) || !(video.videoHeight > 0) || !(h.clientHeight > 0)) return;
+      const ratio = (video.videoWidth / video.videoHeight) / (h.clientWidth / h.clientHeight);
+      const near = ratio > 0.78 && ratio < 1.28;
+      video.style.objectFit = near ? 'cover' : 'contain';
+      video.style.objectPosition = 'center';
+      setCoverFit(near);
+    };
+    video.addEventListener('loadedmetadata', fit);
+    video.addEventListener('resize', fit);
+    window.addEventListener('resize', fit);
+    fit();
     return () => {
+      video.removeEventListener('loadedmetadata', fit);
+      video.removeEventListener('resize', fit);
+      window.removeEventListener('resize', fit);
       video.removeEventListener('timeupdate', onTime);
       stopSong();
       video.removeEventListener('waiting', onWaiting);
@@ -895,19 +913,23 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       </span>
     );
     return (
-      <div className={`absolute inset-0 flex flex-col ${isCur ? '' : 'pointer-events-none'}`} data-testid={isCur ? 'reel-card' : 'reel-card-peek'}>
-        {/* The picture. Tapping it pauses / plays (twice: likes). */}
-        <div data-reel-tap className="relative flex-1 min-h-0 overflow-hidden cursor-pointer" onClick={isCur ? handleTap : undefined}>
+      <div className={`absolute inset-0 ${isCur ? '' : 'pointer-events-none'}`} data-testid={isCur ? 'reel-card' : 'reel-card-peek'}>
+        {/* The video fills the whole page (as in YouTube Shorts): edge to edge when its shape fits the page, the whole picture (not cropped) when it does not. Tapping it pauses / plays (twice: likes). */}
+        <div data-reel-tap className="relative w-full h-full overflow-hidden bg-black cursor-pointer" onClick={isCur ? handleTap : undefined}>
           {reel.thumbnailUrl && (
             <img
               src={reel.thumbnailUrl}
               alt=""
               draggable={false}
               referrerPolicy="no-referrer"
-              className={`absolute inset-0 w-full h-full object-contain object-bottom transition-opacity duration-150 ${isCur && !isVideoBuffering ? 'opacity-0' : ''}`}
+              className={`absolute inset-0 w-full h-full ${isCur && !coverFit ? 'object-contain' : 'object-cover'} transition-opacity duration-150 ${isCur && !isVideoBuffering ? 'opacity-0' : ''}`}
             />
           )}
           {isCur && <div ref={playerHostRef} className="absolute inset-0 w-full h-full" />}
+
+          {/* soft dark edges so the white writing and icons read on any video */}
+          <div className="absolute inset-x-0 top-0 h-28 pointer-events-none bg-gradient-to-b from-black/50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[48%] pointer-events-none bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
 
           {/* Buffering spinner — without this, a slow-loading video just looks frozen on a black frame, which reads as broken rather than loading. */}
           {isCur && isVideoBuffering && !videoFailed && (
@@ -948,21 +970,40 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </div>
           )}
 
-          {/* Like / comment / share / save: plain icons on the bottom right edge of the picture */}
-          <div className="absolute right-3.5 bottom-3 z-20 flex flex-col items-center gap-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" data-testid="reel-actions">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleLike();
-              }}
-              className={`relative cursor-pointer active:scale-90 transition-transform ${reel.isLiked ? 'text-red-500' : 'text-white'}`}
-              aria-label={reel.isLiked ? 'Unlike' : 'Like'}
-              data-testid="reel-like-button"
-            >
-              <Heart className={`w-7 h-7 ${reel.isLiked ? 'fill-current' : ''}`} strokeWidth={1.7} />
-              {isCur && <LikeReactionBurst emoji={likeEmoji} burstKey={likeBurstKey} />}
-            </button>
+          {/* Like / comment / share / save / menu: plain icons down the right edge */}
+          <div className="absolute right-3 bottom-[26px] z-20 flex flex-col items-center gap-[18px] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" data-testid="reel-actions">
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleLike();
+                }}
+                className={`relative cursor-pointer active:scale-90 transition-transform ${reel.isLiked ? 'text-red-500' : 'text-white'}`}
+                aria-label={reel.isLiked ? 'Unlike' : 'Like'}
+                data-testid="reel-like-button"
+              >
+                <Heart className={`w-[30px] h-[30px] ${reel.isLiked ? 'fill-current' : ''}`} strokeWidth={1.8} />
+                {isCur && <LikeReactionBurst emoji={likeEmoji} burstKey={likeBurstKey} />}
+              </button>
+              {!countHidden && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (reel.likesCount > 0) {
+                      setLikesViewsInitialTab('likes');
+                      setShowLikesViewsSheet(true);
+                    }
+                  }}
+                  disabled={reel.likesCount === 0}
+                  className="text-[13px] font-semibold leading-none cursor-pointer disabled:cursor-default"
+                  aria-label={reel.likesCount === 0 ? 'No likes yet' : `${reel.likesCount.toLocaleString()} ${reel.likesCount === 1 ? 'like' : 'likes'}`}
+                >
+                  {reel.likesCount.toLocaleString()}
+                </button>
+              )}
+            </div>
             {!reel.isCommentsDisabled && (
               <button
                 type="button"
@@ -973,7 +1014,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 className="flex flex-col items-center gap-1 cursor-pointer active:scale-90 transition-transform"
                 aria-label="Comments"
               >
-                <MessageCircle className="w-7 h-7" strokeWidth={1.7} />
+                <MessageCircle className="w-[29px] h-[29px]" strokeWidth={1.8} />
                 <span className="text-[13px] font-semibold leading-none">{reel.commentsCount}</span>
               </button>
             )}
@@ -986,7 +1027,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               className="flex flex-col items-center gap-1 cursor-pointer active:scale-90 transition-transform"
               aria-label="Share"
             >
-              <Send className="w-[26px] h-[26px] -rotate-12" strokeWidth={1.7} />
+              <Send className="w-[27px] h-[27px] -rotate-12" strokeWidth={1.8} />
               <span className="text-[13px] font-semibold leading-none">{reel.sharesCount}</span>
             </button>
             <button
@@ -998,139 +1039,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               className={`cursor-pointer active:scale-90 transition-transform ${reel.isSaved ? 'text-noob' : 'text-white'}`}
               aria-label={reel.isSaved ? 'Remove from saved' : 'Save'}
             >
-              <Bookmark className={`w-7 h-7 ${reel.isSaved ? 'fill-current' : ''}`} strokeWidth={1.7} />
+              <Bookmark className={`w-[28px] h-[28px] ${reel.isSaved ? 'fill-current' : ''}`} strokeWidth={1.8} />
             </button>
-          </div>
-        </div>
-
-        <div className="shrink-0 px-5 pt-3 pb-3">
-          {/* who posted it */}
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToProfile(reel.userId);
-              }}
-              className="relative flex items-center shrink-0 cursor-pointer"
-              aria-label={`Open ${reel.username}'s profile`}
-            >
-              <AvatarMedia
-                src={reel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                isLiveAvatar={reel.authorIsLiveAvatar}
-                liveAvatarVideoUrl={reel.authorLiveAvatarVideoUrl}
-                alt={reel.username}
-                className="w-[34px] h-[34px] rounded-full object-cover"
-              />
-              {hasCollab && (
-                <span className="-ml-3 mt-3 w-5 h-5 rounded-full ring-2 ring-[#0f0f11] bg-zinc-800 overflow-hidden">
-                  <img
-                    src={reel.collabUserAvatar || reel.taggedUsers?.[0]?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                    alt={reel.collabUsername || 'Tagged user'}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </span>
-              )}
-            </button>
-            <div className="min-w-0 flex-1 flex items-center gap-1.5">
-              <span
-                translate="no"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToProfile(reel.userId);
-                }}
-                className="text-[16px] font-bold text-white truncate cursor-pointer"
-              >
-                {reel.username}
-              </span>
-              {reel.isVerified && <VerifiedBadge size="xs" />}
-              {hasCollab && (
-                <>
-                  <span className="text-[13px] text-zinc-400 shrink-0">and</span>
-                  <span translate="no" className="text-[15px] font-bold text-white truncate">
-                    @{reel.collabUsername || reel.taggedUsers?.[0]?.username}
-                  </span>
-                </>
-              )}
-              {isCur && reel.isTrialReel && <span className="px-2 py-0.5 bg-yellow-500/80 text-black text-[10px] font-bold rounded-full shrink-0">Trial Reel</span>}
-            </div>
-            {soundCover('w-[26px] h-[26px]')}
-          </div>
-
-          {/* caption */}
-          {reel.caption && (
-            <p translate="no" className="mt-1.5 text-[15px] leading-snug text-zinc-200 line-clamp-2">
-              {reel.caption}
-            </p>
-          )}
-
-          {/* Outbound Web Link (Meta-Verified) */}
-          {safeExternalUrl(reel.webLink) && (
-            <a
-              href={safeExternalUrl(reel.webLink) as string}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="mt-1.5 inline-flex items-center gap-1 bg-white/5 border border-noob/40 px-2 py-0.5 rounded-full text-[11px] text-noob font-medium max-w-full"
-            >
-              <ExternalLink className="w-3 h-3 shrink-0" /> <span className="truncate">{reel.webLink}</span>
-            </a>
-          )}
-
-          {/* AI Voice Translation Button */}
-          {reel.aiTranslationAvailable && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAiVoiceTranslationActive(!aiVoiceTranslationActive);
-              }}
-              className={`mt-1.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                aiVoiceTranslationActive ? 'bg-noob text-black border-noob' : 'bg-white/5 text-purple-300 border-purple-500/40'
-              }`}
-            >
-              <Globe className="w-3 h-3" />
-              <span>{aiVoiceTranslationActive ? 'AI Voice Dubbed (EN)' : 'AI Translate Voice'}</span>
-            </button>
-          )}
-
-          {/* likes, and the reel's own menu */}
-          <div className="mt-2.5 flex items-center gap-2">
-            <span className="flex items-center -space-x-1.5 shrink-0" aria-hidden="true">
-              <span className="w-[22px] h-[22px] rounded-full bg-[#26272c] ring-2 ring-[#0f0f11] flex items-center justify-center text-[12px] leading-none">❤️</span>
-              {likeEmoji !== '❤️' && (
-                <span className="w-[22px] h-[22px] rounded-full bg-[#26272c] ring-2 ring-[#0f0f11] flex items-center justify-center text-[12px] leading-none">{likeEmoji}</span>
-              )}
-            </span>
-            {!countHidden && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (reel.likesCount > 0) {
-                    setLikesViewsInitialTab('likes');
-                    setShowLikesViewsSheet(true);
-                  }
-                }}
-                disabled={reel.likesCount === 0}
-                className="text-[15px] text-zinc-400 cursor-pointer disabled:cursor-default"
-              >
-                {reel.likesCount === 0 ? 'No likes yet' : `${reel.likesCount.toLocaleString()} ${reel.likesCount === 1 ? 'like' : 'likes'}`}
-              </button>
-            )}
-            <div className="relative ml-auto">
+            {/* the reel's own menu */}
+            <div className="relative">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowReelOptionsMenu((v) => !v);
                 }}
-                className="p-1 -mr-1 text-white cursor-pointer"
+                className="p-1 text-white cursor-pointer"
                 aria-label="Reel options"
                 title="Reel options"
               >
-                <MoreVertical className="w-5 h-5" />
+                <MoreVertical className="w-6 h-6" />
               </button>
 
               {isCur && showReelOptionsMenu && (
@@ -1138,7 +1061,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   <div className="absolute -inset-[200vmax] z-30" onClick={(e) => { e.stopPropagation(); setShowReelOptionsMenu(false); }} />
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 bottom-9 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                    className="absolute right-0 bottom-10 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
                   >
                     <button
                       onClick={() => {
@@ -1223,9 +1146,123 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 </>
               )}
             </div>
+            {soundCover('w-[34px] h-[34px]')}
           </div>
 
-          {/* how far the video has played */}
+          {/* who posted it, the caption and the sound, at the bottom left */}
+          <div className="absolute left-4 right-[72px] bottom-[26px] z-10 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-2.5 pointer-events-auto">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToProfile(reel.userId);
+                }}
+                className="relative flex items-center shrink-0 cursor-pointer"
+                aria-label={`Open ${reel.username}'s profile`}
+              >
+                <AvatarMedia
+                  src={reel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                  isLiveAvatar={reel.authorIsLiveAvatar}
+                  liveAvatarVideoUrl={reel.authorLiveAvatarVideoUrl}
+                  alt={reel.username}
+                  className="w-[36px] h-[36px] rounded-full object-cover"
+                />
+                {hasCollab && (
+                  <span className="-ml-3 mt-3 w-5 h-5 rounded-full ring-2 ring-black bg-zinc-800 overflow-hidden">
+                    <img
+                      src={reel.collabUserAvatar || reel.taggedUsers?.[0]?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                      alt={reel.collabUsername || 'Tagged user'}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </span>
+                )}
+              </button>
+              <div className="min-w-0 flex items-center gap-1.5">
+                <span
+                  translate="no"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToProfile(reel.userId);
+                  }}
+                  className="text-[16px] font-bold text-white truncate cursor-pointer"
+                >
+                  {reel.username}
+                </span>
+                {reel.isVerified && <VerifiedBadge size="xs" />}
+                {hasCollab && (
+                  <>
+                    <span className="text-[13px] text-white/70 shrink-0">and</span>
+                    <span translate="no" className="text-[15px] font-bold text-white truncate">
+                      @{reel.collabUsername || reel.taggedUsers?.[0]?.username}
+                    </span>
+                  </>
+                )}
+                {isCur && reel.isTrialReel && <span className="px-2 py-0.5 bg-yellow-500/80 text-black text-[10px] font-bold rounded-full shrink-0">Trial Reel</span>}
+              </div>
+              {!own && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleFollowCreator();
+                  }}
+                  className={`shrink-0 h-8 px-4 rounded-full text-[14px] font-semibold cursor-pointer active:scale-95 transition-transform ${
+                    following || requestedIds.has(reel.userId) ? 'bg-white/25 text-white' : 'bg-white text-black'
+                  }`}
+                >
+                  {following ? 'Noobed' : requestedIds.has(reel.userId) ? 'Requested' : 'Noob'}
+                </button>
+              )}
+            </div>
+
+            {reel.caption && (
+              <p translate="no" className="mt-2.5 text-[15px] leading-snug text-white line-clamp-2 pointer-events-auto">
+                {reel.caption}
+              </p>
+            )}
+
+          {/* Outbound Web Link (Meta-Verified) */}
+          {safeExternalUrl(reel.webLink) && (
+            <a
+              href={safeExternalUrl(reel.webLink) as string}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 inline-flex items-center gap-1 bg-white/5 border border-noob/40 px-2 py-0.5 rounded-full text-[11px] text-noob font-medium max-w-full"
+            >
+              <ExternalLink className="w-3 h-3 shrink-0" /> <span className="truncate">{reel.webLink}</span>
+            </a>
+          )}
+
+          {/* AI Voice Translation Button */}
+          {reel.aiTranslationAvailable && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAiVoiceTranslationActive(!aiVoiceTranslationActive);
+              }}
+              className={`mt-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                aiVoiceTranslationActive ? 'bg-noob text-black border-noob' : 'bg-white/5 text-purple-300 border-purple-500/40'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              <span>{aiVoiceTranslationActive ? 'AI Voice Dubbed (EN)' : 'AI Translate Voice'}</span>
+            </button>
+          )}
+
+            {/* its sound */}
+            <div className="mt-2.5 flex items-center gap-2 pointer-events-auto" data-testid={isCur ? 'reel-sound-bar' : undefined}>
+              <Music className="w-4 h-4 shrink-0" />
+              <p translate="no" className="min-w-0 text-[14px] text-white truncate">
+                {(reel.audioTrack?.title || 'Original audio')} · {reel.audioTrack?.artist || reel.username}
+              </p>
+            </div>
+          </div>
+
+          {/* how far the video has played: a thin line on the bottom edge (touch it to move through the video) */}
           <div
             data-reel-seek
             data-testid={isCur ? 'reel-seek' : undefined}
@@ -1233,7 +1270,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             aria-label="Move through this reel"
             aria-valuemin={0}
             aria-valuemax={100}
-            className="relative mt-[3px] py-[9px] touch-none cursor-pointer select-none"
+            className="absolute inset-x-0 bottom-0 z-20 py-[9px] -mb-[7px] touch-none cursor-pointer select-none"
             onPointerDown={isCur ? beginSeek : undefined}
             onPointerMove={isCur ? moveSeek : undefined}
             onPointerUp={isCur ? endSeek : undefined}
@@ -1247,32 +1284,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 </span>
               </div>
             )}
-            <div className={`${isCur && seekTime !== null ? 'h-[7px]' : 'h-[3px]'} rounded-full bg-[#1b1b20] overflow-hidden transition-[height] duration-100`} data-testid={isCur ? 'reel-progress' : undefined}>
-              <div ref={isCur ? progressRef : undefined} className="h-full rounded-full bg-[#bcbcc8] transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
+            <div className={`${isCur && seekTime !== null ? 'h-[7px]' : 'h-[3px]'} bg-white/25 overflow-hidden transition-[height] duration-100`} data-testid={isCur ? 'reel-progress' : undefined}>
+              <div ref={isCur ? progressRef : undefined} className="h-full bg-white transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
             </div>
-          </div>
-
-          {/* its sound, and Follow */}
-          <div className="mt-[3px] flex items-center gap-3" data-testid={isCur ? 'reel-sound-bar' : undefined}>
-            {soundCover('w-[42px] h-[42px]')}
-            <div className="min-w-0 flex-1 leading-tight">
-              <p translate="no" className="text-[15px] font-bold text-white truncate">{reel.audioTrack?.title || 'Original audio'}</p>
-              <p translate="no" className="text-[14px] text-zinc-400 truncate">{reel.audioTrack?.artist || reel.username}</p>
-            </div>
-            {!own && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleFollowCreator();
-                }}
-                className={`h-[42px] px-5 rounded-lg text-[15px] font-semibold cursor-pointer active:scale-95 transition-transform ${
-                  following || requestedIds.has(reel.userId) ? 'bg-white/10 text-zinc-200' : 'bg-[#335fff] text-white'
-                }`}
-              >
-                {following ? 'Noobed' : requestedIds.has(reel.userId) ? 'Requested' : 'Noob'}
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -1289,12 +1303,14 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     <div className="fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-[var(--nav-h)]">
       <div
         id="reels-page-container"
-        className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden flex flex-col select-none shadow-2xl border border-neutral-800"
+        className="relative w-full h-full sm:max-h-[860px] sm:max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden select-none sm:shadow-2xl sm:border border-neutral-800"
       >
+      {/* the title bar floats over the top of the video */}
+      <div className="absolute top-0 inset-x-0 z-30" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
       {/* Title bar: Back, "Reels", and the sound button */}
-      <div className="relative z-30 shrink-0 h-14 px-4 flex items-center justify-between" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+      <div className="relative shrink-0 h-14 px-4 flex items-center justify-between text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3 min-w-0">
           {onGoBack && (
             <button type="button" onClick={onGoBack} className="p-1 -ml-1 text-white cursor-pointer" title="Go back" aria-label="Go back">
@@ -1317,9 +1333,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         </button>
         </div>
       </div>
+      </div>
 
       {/* The reels: the one before, this one, the one after — one screen apart, moved together by the finger */}
-      <div ref={pagerRef} className="relative flex-1 min-h-0 overflow-hidden touch-none overscroll-none" onWheel={handleWheel} data-testid="reels-pager">
+      <div ref={pagerRef} className="absolute inset-0 overflow-hidden touch-none overscroll-none" onWheel={handleWheel} data-testid="reels-pager">
         <div ref={trackRef} className="absolute inset-0 will-change-transform" data-testid="reels-track">
           <div className="absolute inset-0" style={{ transform: `translateY(calc(-100% - ${SLOT_GAP}px))` }}>
             {localReels[currentIndex - 1] ? renderCard(localReels[currentIndex - 1], false) : null}
@@ -1330,7 +1347,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
         </div>
         {/* An ad at the top of Reels (NOOB Ads), when one is running here; it floats over the top of the reel and never takes a swipe */}
-        <div className="absolute top-2 inset-x-3 z-30 pointer-events-none"><div className="pointer-events-auto"><AdBanner page="reels" compact /></div></div>
+        <div className="absolute top-[72px] inset-x-3 z-30 pointer-events-none"><div className="pointer-events-auto"><AdBanner page="reels" compact /></div></div>
       </div>
 
       {/* 4. Sliding Comments Sheet Overlay */}

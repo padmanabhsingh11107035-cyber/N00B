@@ -607,7 +607,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           >
             <Menu className="w-4.5 h-4.5" />
           </button>
-          <h1 className="text-lg font-black italic tracking-tighter text-white select-none">
+          <h1 className="noob-brand text-lg font-black italic tracking-tighter text-white select-none">
             NOOB
           </h1>
         </div>

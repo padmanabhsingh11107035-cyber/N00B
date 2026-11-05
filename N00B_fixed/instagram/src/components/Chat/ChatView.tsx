@@ -72,7 +72,8 @@ import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
-import { applyTheme } from '../../utils/theme';
+import { applyTheme, setStripOverride } from '../../utils/theme';
+import { repaintStrip } from '../../utils/statusStrip';
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -1693,14 +1694,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const setStrip = (green: boolean) => {
     const root = document.documentElement;
     root.style.setProperty('--msg-strip', green ? '#0E4B37' : '#0a0c0e');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', green ? '#0E4B37' : '#0a0c0e');
+    root.style.setProperty('background-color', green ? '#0E4B37' : '#0a0c0e', 'important');
+    setStripOverride(green ? '#0E4B37' : '#0a0c0e');
   };
   useEffect(() => {
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
     setStrip(true);
-    return () => { root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); applyTheme(); };
+    return () => { root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); root.style.removeProperty('background-color'); setStripOverride(null); applyTheme(); repaintStrip(); };
   }, [mobileView]);
   useEffect(() => {
     const box = listRef.current;
@@ -2148,19 +2150,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }}
         >
           {/* Active Chat Header */}
-          <div className="chat-bar relative z-10 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="chat-bar chat-top relative z-10 pl-1 pr-1 py-2 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between gap-1 shrink-0">
+            <div className="flex items-center gap-1 min-w-0 flex-1">
               {/* Back to the list of chats (on every screen size: the list first, a chat opens full screen) */}
               <button
                 onClick={() => setMobileView('list')}
-                className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg cursor-pointer mr-1"
+                className="p-2 hover:bg-zinc-800/70 text-zinc-200 rounded-full cursor-pointer"
                 title="Back to chats"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-6 h-6" />
               </button>
 
               <div
-                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group"
+                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group pl-1"
                 onClick={() => {
                   if (activeChat?.isGroup) {
                     setShowGroupDetails(true);
@@ -2203,7 +2205,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <h3 className="text-sm font-bold text-white truncate min-w-0 group-hover:text-noob transition-colors">
+                    <h3 className="text-[17px] leading-tight font-semibold text-white truncate min-w-0">
                       {activeChat?.isGroup
                         ? activeChat.name || 'Group Chat'
                         : activeChat?.customNickname ||
@@ -2211,23 +2213,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           'Active Chat'}
                     </h3>
 
-                    {activeChat?.isGroup ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30">
-                        group
-                      </span>
-                    ) : (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30">
-                        chat
-                      </span>
-                    )}
-
                     {!activeChat?.isGroup &&
                       activeChat?.participants.find((p) => p.id !== currentUser.id)?.isVerified && (
                         <VerifiedBadge size="xs" />
                       )}
                   </div>
 
-                  <div className="text-[11px] text-zinc-400 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                  <div className="chat-sub text-[13px] leading-tight text-zinc-400 flex items-center gap-x-2 min-w-0 overflow-hidden whitespace-nowrap">
                     {activeChat?.isGroup && (
                       <span className="text-purple-300 font-medium flex items-center gap-1">
                         <Users className="w-3 h-3" /> {(activeChat.participants || []).length} members
@@ -2236,7 +2228,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {!activeChat?.isGroup && headerPartner && (isUserOnline(headerPartner.id) ? (
                       <span className="text-noob font-semibold" data-testid="chat-online-text">Online</span>
                     ) : lastSeenMap[headerPartner.id] ? (
-                      <span className="text-zinc-300 font-medium" data-testid="chat-last-seen">{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
+                      <span className="text-zinc-300 font-medium truncate min-w-0" data-testid="chat-last-seen">{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
                     ) : null)}
                     {!activeChat?.isGroup && activeChat?.vanishMode && (
                       <span className="text-noob font-medium flex items-center gap-1">
@@ -2250,14 +2242,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         e.stopPropagation();
                         setShowEncryption(true);
                       }}
-                      className={`font-medium flex items-center gap-1 cursor-pointer ${chatCrypto?.encryptable ? 'text-noob' : 'text-amber-300'}`}
-                      title="About this chat's encryption"
+                      className={`shrink-0 cursor-pointer ${chatCrypto?.encryptable ? 'text-noob' : 'text-amber-300'}`}
+                      title={chatCrypto === null ? 'Checking encryption…' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
+                      aria-label={chatCrypto === null ? 'Checking encryption' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
                     >
-                      {chatCrypto?.encryptable ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
-                      {chatCrypto === null ? 'Checking…' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
+                      {chatCrypto?.encryptable ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
                     </button>
                     {chatCrypto?.peer?.changed && (
-                      <span className="text-amber-300 font-bold">• Security code changed</span>
+                      <span className="text-amber-300 font-bold truncate">Security code changed</span>
                     )}
                   </div>
                 </div>
@@ -2275,23 +2267,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setCallIsOutgoing(true);
                     setShowCallModal(true);
                   }}
-                  className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:bg-noob hover:text-black hover:border-noob text-zinc-300 transition-all cursor-pointer"
+                  className="chat-icon-btn p-2.5 rounded-full text-zinc-200 hover:bg-zinc-800/70 transition-colors cursor-pointer"
                   title="Start a call"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-[22px] h-[22px]" />
                 </button>
               )}
               {/* Three Dots More Actions Button */}
               <button
                 onClick={() => setShowChatActionsMenu(!showChatActionsMenu)}
-                className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  showChatActionsMenu
-                    ? 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.3)]'
-                    : 'hover:bg-zinc-800 text-zinc-300 hover:text-white bg-zinc-900/80 border border-zinc-800'
-                }`}
+                className={`chat-icon-btn p-2.5 rounded-full transition-colors cursor-pointer text-zinc-200 ${showChatActionsMenu ? 'bg-zinc-800/80' : 'hover:bg-zinc-800/70'}`}
                 title="Chat actions and options"
               >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="w-[22px] h-[22px]" />
               </button>
 
               {/* Three Dots Dropdown Menu */}

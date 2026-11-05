@@ -1399,3 +1399,6 @@ html body.light [class*="hover:text-white"]:hover:not([class*="hover:bg-noob"]):
 html body.light [class*="hover:bg-white"]:hover:not([class*="text-black"]):not([class*="bg-white "]):not(.force-dark):not(.force-dark *) { background-color: #ececec; }
 /* the accent is black in Light mode: text on it is white, also while hovered */
 html body.light [class*="bg-noob"]:not([class*="bg-noob/"]):hover, html body.light [class*="hover:bg-noob"]:not([class*="hover:bg-noob/"]):hover { color: #ffffff; }
+
+/* Light mode: the chat page is white, the doodle only a whisper on it */
+html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), url('/brand/doodle-dark.webp') !important; }

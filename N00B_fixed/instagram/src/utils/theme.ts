@@ -5,8 +5,11 @@
 export type ThemePreference = 'dark' | 'light' | 'system';
 
 const KEY = 'noob_theme';
-// The strip above the app (the installed app's title bar, the phone's status bar) is white in Dark and in Light; the browser then writes its text in black.
-const chromeColor = (_resolved: 'dark' | 'light') => '#ffffff';
+// The strip above the app (the installed app's title bar, the phone's status bar) is the colour of the page: near-black in Dark, white in Light (the browser then writes its text
+// in the opposite colour). A page that paints its own strip (Messages) sets an override while it is open.
+let stripOverride: string | null = null;
+const chromeColor = (resolved: 'dark' | 'light') => stripOverride || (resolved === 'dark' ? '#0a0a0a' : '#ffffff');
+export function setStripOverride(colour: string | null): void { stripOverride = colour; if (colour) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colour); }
 
 // Every device starts in Dark, whatever the device's own light/dark setting is. Light and System are there only if the person chooses them.
 let memoryPreference: ThemePreference = 'dark'; // used only if the browser blocks storage

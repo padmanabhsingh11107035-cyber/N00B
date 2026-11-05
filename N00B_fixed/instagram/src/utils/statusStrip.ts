@@ -39,6 +39,9 @@ function paint(): void {
 
 const queue = () => { if (!queued) { queued = true; window.setTimeout(() => requestAnimationFrame(paint), 120); } };
 
+/** Paint the strip again from what is on screen now (after a page that painted its own strip has closed). */
+export function repaintStrip(): void { last = ''; queue(); }
+
 let started = false;
 /** Call once at start-up. Only does anything on a touch screen (a phone or tablet): on a computer the browser's own bar is not part of the page. */
 export function initStatusStrip(): void {

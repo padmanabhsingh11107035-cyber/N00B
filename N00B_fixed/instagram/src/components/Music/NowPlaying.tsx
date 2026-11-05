@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Heart, Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
+import { MusicBeats } from './MusicBeats';
 import { coverTint, fallbackTint, tintGlow, tintGradient, type CoverTint } from '../../utils/coverColor';
 
 /** Keys: A, W, left arrow and "," = the song before; D, S, right arrow and "." = the next song (not while someone is typing). */
@@ -206,7 +207,10 @@ export const NowPlaying: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         </div>
 
-        <div className="flex-1 min-h-6" />
+        {/* the beats: bars that jump with the song while it plays */}
+        <div className="flex-1 min-h-6 flex items-center py-4 pointer-events-none">
+          <div className="w-full h-[clamp(56px,16vh,130px)]"><MusicBeats seed={track.id} playing={isPlaying} elapsedSec={elapsedSec} /></div>
+        </div>
 
         {playbackError && (
           <p role="alert" className="mb-3 text-[12px] font-semibold text-center text-white bg-black/30 rounded-xl px-3 py-2">{playbackError}</p>

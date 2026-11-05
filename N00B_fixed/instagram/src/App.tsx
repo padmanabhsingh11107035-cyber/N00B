@@ -65,6 +65,7 @@ import {
   fetchAppNotifications,
   subscribeToNotificationChanges,
   clearAllNotifications,
+  clearOneNotification,
   markNotificationsAsRead,
   startPresenceHeartbeat,
   startLastSeenHeartbeat,
@@ -1406,6 +1407,12 @@ export default function App() {
     markNotificationsAsRead().catch((err) => console.error('Failed to mark notifications as read:', err));
   };
 
+  // One notification removed (the red bin on its card): gone from the list at once, hidden for this person on the server too.
+  const handleDeleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    void clearOneNotification(id).catch(() => undefined);
+  };
+
   const handleClearAllNotifications = async () => {
     try {
       await clearAllNotifications();
@@ -2366,6 +2373,7 @@ export default function App() {
           onFollowBack={handleToggleFollowUser}
           onRespondSuggestedUser={handleRespondSuggestedUser}
           onClearAll={handleClearAllNotifications}
+          onDeleteOne={handleDeleteNotification}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}
           onOpenChat={(chatId) => {

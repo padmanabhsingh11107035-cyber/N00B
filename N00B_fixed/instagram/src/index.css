@@ -392,6 +392,71 @@ body { min-height: 100vh; min-height: 100dvh; }
 /* The three-line menu of a phone: the same list in a drawer from the left. */
 
 
+/* The Notifications page: a full-screen page (like the reference): back arrow, the title in the middle, three dots; a heading with the DATE above each day's notifications;
+   a rounded card for each one with the sender's picture, the words and the TIME at the bottom; a swipe to the left slides the card over a red bin. Dark and light colours are
+   variables (set here, so nothing else in the app has to know). */
+.nt {
+  --nt-bg: #0a0a0a; --nt-card: #1c1d21; --nt-card-hi: #26282d; --nt-text: #f4f4f5; --nt-sub: #9b9ca3; --nt-line: rgba(255, 255, 255, 0.08);
+  --nt-accent: #ff5a2d; --nt-accent-ink: #ffffff; --nt-chip: #1c1d21; --nt-menu: #232529; --nt-shadow: 0 14px 40px -12px rgba(0, 0, 0, 0.7);
+  background-color: var(--nt-bg); color: var(--nt-text);
+}
+:root[data-theme="light"] .nt {
+  --nt-bg: #ffffff; --nt-card: #f5f3ef; --nt-card-hi: #ece9e3; --nt-text: #141416; --nt-sub: #6d6e75; --nt-line: rgba(10, 10, 10, 0.09);
+  --nt-chip: #f5f3ef; --nt-menu: #ffffff; --nt-shadow: 0 14px 40px -14px rgba(70, 50, 20, 0.3);
+}
+.nt-head { position: relative; display: flex; flex: none; align-items: center; justify-content: space-between; padding: 10px 8px 6px; }
+.nt-title { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; pointer-events: none; }
+.nt-iconbtn { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 9999px; background: transparent; color: var(--nt-text); cursor: pointer; }
+.nt-iconbtn:hover { background: var(--nt-card); }
+.nt-menu { position: absolute; z-index: 20; top: 44px; right: 0; min-width: 220px; padding: 6px; border: 1px solid var(--nt-line); border-radius: 14px; background: var(--nt-menu); box-shadow: var(--nt-shadow); }
+.nt-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--nt-text); font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; }
+.nt-menu button:hover { background: var(--nt-card); }
+.nt-menu button.is-danger { color: #ef4444; }
+.nt-chips { display: flex; flex: none; gap: 8px; padding: 6px 14px 10px; overflow-x: auto; }
+.nt-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: 0; border-radius: 9999px; background: var(--nt-chip); color: var(--nt-sub); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.nt-chip.is-on { background: var(--nt-accent); color: var(--nt-accent-ink); font-weight: 700; }
+.nt-count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 9999px; background: var(--nt-accent); color: #fff; font-size: 9px; font-weight: 800; }
+.nt-chip.is-on .nt-count { background: #fff; color: var(--nt-accent); }
+.nt-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 16px 24px; -webkit-overflow-scrolling: touch; }
+.nt-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.nt-date { margin: 6px 2px 0; font-size: 15px; font-weight: 700; color: var(--nt-text); }
+.nt-swipe { position: relative; overflow: hidden; border-radius: 16px; }
+.nt-bin { position: absolute; top: 0; right: 0; bottom: 0; width: 76px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ef4444; cursor: pointer; }
+.nt-card-slide { position: relative; will-change: transform; }
+.nt-card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid transparent; border-radius: 16px; background: var(--nt-card); }
+.nt-card.is-tappable { cursor: pointer; }
+.nt-card.is-unread { border-color: color-mix(in srgb, var(--nt-accent) 45%, transparent); }
+.nt-ava { width: 42px; height: 42px; border-radius: 9999px; object-fit: cover; box-shadow: 0 0 0 1px var(--nt-line); }
+.nt-kind { position: absolute; right: -4px; bottom: -4px; display: flex; padding: 3px; border: 1px solid var(--nt-line); border-radius: 9999px; background: var(--nt-bg); }
+.nt-card-title { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 12.5px; font-weight: 800; color: var(--nt-accent); }
+.nt-official { padding: 1px 6px; border-radius: 6px; background: color-mix(in srgb, var(--nt-accent) 18%, transparent); font-size: 9px; font-weight: 700; }
+.nt-text { font-size: 13px; line-height: 1.4; color: var(--nt-text); overflow-wrap: anywhere; }
+.nt-name { font-weight: 700; }
+.nt-detail { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--nt-bg); font-size: 12px; font-style: italic; color: var(--nt-sub); }
+.nt-time { margin-top: 8px; text-align: right; font-size: 11px; font-weight: 500; color: var(--nt-sub); }
+.nt-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 9999px; background: var(--nt-accent); }
+.nt-handle { margin-top: 2px; font-size: 11.5px; color: var(--nt-sub); }
+.nt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.nt-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.nt-btn:disabled { opacity: 0.6; cursor: default; }
+.nt-btn-primary { background: var(--nt-accent); color: var(--nt-accent-ink); }
+.nt-btn-ghost { background: var(--nt-card-hi); color: var(--nt-text); }
+.nt-scratch { margin-top: 10px; }
+.nt-status { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11.5px; font-weight: 600; color: var(--nt-sub); }
+.nt-status.is-ok { color: #22a06b; }
+.nt-hover-del { position: absolute; top: 10px; right: 10px; display: none; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 9999px; background: var(--nt-card-hi); color: #ef4444; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .nt-card-slide:hover .nt-hover-del { display: flex; } }
+.nt-paused { align-items: center; gap: 10px; margin-bottom: 12px; font-size: 12.5px; }
+.nt-empty { padding: 64px 24px; text-align: center; }
+.nt-empty-ico { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 9999px; background: var(--nt-card); color: var(--nt-sub); }
+.nt-empty h4 { font-size: 14px; font-weight: 700; }
+.nt-empty p { max-width: 280px; margin: 6px auto 0; font-size: 12px; color: var(--nt-sub); }
+.nt-row { align-items: center; }
+.nt-row-title { font-size: 13px; font-weight: 700; }
+.nt-row-sub { margin-top: 2px; font-size: 11.5px; color: var(--nt-sub); }
+.nt-check { width: 20px; height: 20px; accent-color: var(--nt-accent); cursor: pointer; flex: none; }
+@media (min-width: 768px) { .nt-body { padding-left: max(16px, calc((100% - 640px) / 2)); padding-right: max(16px, calc((100% - 640px) / 2)); } .nt-chips { padding-left: max(14px, calc((100% - 640px) / 2)); } }
+
 /* ============================================
    Liquid Glass — Apple-style translucent glass:
    layered blur, a bright top rim highlight, and a

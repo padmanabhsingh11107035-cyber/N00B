@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  X,
+  ChevronLeft,
+  MoreVertical,
   Heart,
   MessageCircle,
   UserPlus,
@@ -9,27 +10,23 @@ import {
   Sparkles,
   Check,
   Shield,
-  Sliders,
-  Settings,
-  Flame,
-  Music,
   Gamepad2,
+  Music,
   CheckCircle2,
   Trash2,
   Volume2,
   VolumeX,
   BellOff,
-  BellRing,
   Coins,
   Gift,
   Camera,
   Radio,
-  Bot
+  Bot,
+  SlidersHorizontal
 } from 'lucide-react';
 import { ShoppingBag, Phone, Lightbulb } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 import { openNoobDraw } from '../Draw/drawStore';
-import { formatRelativeTime } from '../../utils/formatTime';
 import { isNotificationSoundOn, setNotificationSoundOn } from '../../utils/notificationSound';
 import { NOTIFICATION_FILTERS, matchesFilter } from '../../utils/notificationFilters';
 
@@ -54,6 +51,8 @@ interface NotificationsModalProps {
   onFollowBack?: (userId: string) => void;
   onRespondSuggestedUser?: (notifId: string, actorId: string, accept: boolean) => void;
   onClearAll: () => void;
+  // remove ONE notification from this person's list (the red bin that a swipe to the left shows)
+  onDeleteOne?: (notifId: string) => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
   onOpenChat?: (chatId: string) => void;
@@ -61,6 +60,73 @@ interface NotificationsModalProps {
   // a planned meeting (invitation, reminder, cancellation, a registration to approve): opens that meeting's page
   onOpenLiveLoungeMeeting?: (meetingId: string) => void;
 }
+
+// The date of a notification, read the safe way (a phone browser only reads 3 digits of the fraction of a second).
+const toDate = (iso?: string | null): Date | null => {
+  if (!iso) return null;
+  const d = new Date(String(iso).replace(/(\.\d{3})\d+/, '$1'));
+  return isNaN(d.getTime()) ? null : d;
+};
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/** "Today, 5 Nov" / "Yesterday, 4 Nov" / "Mon, 2 Nov" (the year too when it is not this year): the heading above each day's notifications. */
+export const dateGroupLabel = (iso: string, now: Date = new Date()): string => {
+  const d = toDate(iso);
+  if (!d) return '';
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  const dm = d.toLocaleDateString([], { day: 'numeric', month: 'short', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}) });
+  if (diffDays <= 0) return `Today, ${dm}`;
+  if (diffDays === 1) return `Yesterday, ${dm}`;
+  return `${d.toLocaleDateString([], { weekday: 'short' })}, ${dm}`;
+};
+/** "8:26 am": the time of day, in the viewer's own time. */
+export const clockLabel = (iso: string): string => {
+  const d = toDate(iso);
+  return d ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s?(AM|PM)/, (m) => m.toLowerCase()) : '';
+};
+
+const REVEAL = 76;   // how far a card slides to show the red bin
+
+// One notification card. Dragged to the left it slides over and shows a red bin; a tap on the bin removes it. (A tap on the card itself opens what it is about.)
+const SwipeRow: React.FC<{ canDelete: boolean; onDelete: () => void; children: React.ReactNode }> = ({ canDelete, onDelete, children }) => {
+  const [dx, setDx] = useState(0);
+  const [open, setOpen] = useState(false);
+  const start = useRef<{ x: number; base: number } | null>(null);
+  const dragged = useRef(false);
+  const shift = canDelete ? (start.current ? dx : open ? -REVEAL : 0) : 0;
+  return (
+    <div className="nt-swipe group" data-testid="notif-row">
+      {canDelete && (
+        <button type="button" className="nt-bin" aria-label="Delete this notification" data-testid="notif-delete" onClick={onDelete} tabIndex={open ? 0 : -1}>
+          <Trash2 className="w-[18px] h-[18px]" />
+        </button>
+      )}
+      <div
+        className="nt-card-slide"
+        style={{ transform: `translateX(${shift}px)`, transition: start.current ? 'none' : 'transform 0.2s ease', touchAction: 'pan-y' }}
+        onPointerDown={(e) => { if (!canDelete) return; start.current = { x: e.clientX, base: open ? -REVEAL : 0 }; dragged.current = false; }}
+        onPointerMove={(e) => {
+          const s = start.current; if (!s) return;
+          const mx = e.clientX - s.x;
+          if (!dragged.current && Math.abs(mx) < 8) return;
+          dragged.current = true;
+          try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* not needed */ }
+          setDx(Math.max(-REVEAL, Math.min(0, s.base + mx)));
+        }}
+        onPointerUp={() => { const s = start.current; if (!s) return; start.current = null; if (dragged.current) setOpen(dx < -REVEAL / 2); setDx(0); }}
+        onPointerCancel={() => { start.current = null; setDx(0); }}
+        onClickCapture={(e) => { if (dragged.current) { e.stopPropagation(); e.preventDefault(); dragged.current = false; } else if (open) { e.stopPropagation(); e.preventDefault(); setOpen(false); } }}
+      >
+        {children}
+        {canDelete && (
+          <button type="button" className="nt-hover-del" aria-label="Delete this notification" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   currentUser,
@@ -73,6 +139,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onFollowBack,
   onRespondSuggestedUser,
   onClearAll,
+  onDeleteOne,
   onNavigateToUser,
   onOpenScratchCard,
   onOpenChat,
@@ -82,10 +149,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   const [soundOn, setSoundOn] = useState(isNotificationSoundOn());
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const filteredNotifications = notifications.filter((n) => {
     if (!notificationSettings.masterEnabled) return false;
-    
+
     // Check specific setting filters
     if (n.type === 'follow_request_received' || n.type === 'follow_request_accepted') {
       if (!notificationSettings.followRequests) return false;
@@ -108,33 +176,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
   const followRequestsCount = notifications.filter((n) => n.type === 'follow_request_received' && n.actionStatus === 'pending').length;
 
-  // "Today" / "Yesterday" / weekday name for the rest of the last week /
-  // "D Mon" beyond that — groups notifications the same way the reference
-  // layout does, without needing to touch the per-row relative time
-  // ("5d ago" etc.) that's already shown on each item.
-  const getDateGroupLabel = (iso: string): string => {
-    const date = new Date(iso);
-    if (isNaN(date.getTime())) return '';
-    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'long' }).toUpperCase();
-    return date.toLocaleDateString([], { day: 'numeric', month: 'short' }).toUpperCase();
-  };
-
-  // Notifications already arrive newest-first, so grouping consecutive
-  // items that share a label naturally keeps every group in order without
-  // needing a separate sort pass.
+  // Notifications already arrive newest-first, so grouping consecutive items that share a day keeps every day in order without a separate sort.
   const groupedNotifications: { label: string; items: AppNotification[] }[] = [];
   for (const notif of filteredNotifications) {
-    const label = getDateGroupLabel(notif.createdAt);
+    const label = dateGroupLabel(notif.createdAt);
     const lastGroup = groupedNotifications[groupedNotifications.length - 1];
-    if (lastGroup && lastGroup.label === label) {
-      lastGroup.items.push(notif);
-    } else {
-      groupedNotifications.push({ label, items: [notif] });
-    }
+    if (lastGroup && lastGroup.label === label) lastGroup.items.push(notif);
+    else groupedNotifications.push({ label, items: [notif] });
   }
 
   const renderIcon = (type: NotificationType) => {
@@ -190,459 +238,217 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     }
   };
 
+  const inSettings = activeTab === 'settings';
+  const toggleRows: Array<[keyof NotificationSettingsState, string, string]> = [
+    ['followRequests', 'Noob Requests & Approvals', 'When someone requests to noob your private account'],
+    ['newFollowers', 'New Followers', 'When someone noobs your profile'],
+    ['likesComments', 'Likes, Reactions & Comments', 'Activity on your Feed posts and Reels'],
+    ['gamesLeaderboard', 'Mini-Games & Leaderboards', 'Rank promotions and arcade challenge invites'],
+    ['musicHub', 'Music Hub Tracks & Playlists', 'Track uploads and playlist adds']
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]">
-        {/* Header */}
-        <header className="p-4 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-noob to-noob-strong p-[1.5px] flex items-center justify-center">
-              <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center">
-                <BellRing className="w-4 h-4 text-noob" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-black text-white">
-                  Notifications &amp; Activity
-                </h3>
-                {notificationSettings.masterEnabled ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
-                    Live ON
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">
-                    Paused
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-zinc-400">Followers, requests, likes &amp; game updates</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => { const next = !soundOn; setSoundOn(next); setNotificationSoundOn(next); }}
-              title={soundOn ? 'Notification sound is on (tap to turn off)' : 'Notification sound is off (tap to turn on)'}
-              aria-label={soundOn ? 'Turn notification sound off' : 'Turn notification sound on'}
-              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${soundOn ? 'bg-noob/15 border-noob/40 text-noob' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-white'}`}
-            >
-              {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* Tab switcher */}
-        <div className="grid grid-cols-3 text-center text-xs font-bold border-b border-zinc-800 bg-zinc-900/40 px-2 pt-2">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`pb-2.5 transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'all'
-                ? 'border-noob text-noob'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Bell className="w-3.5 h-3.5" /> All Activity
+    // a page of its own that fills the whole screen (data-noob-keep: the app's page-frame rules leave it exactly as it is); dark and light colours are in index.css (.nt)
+    <div className="nt fixed inset-0 z-50 flex flex-col" data-noob-keep="1" data-testid="notifications-page" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Header: back, the title in the middle, the three dots (sound, alert settings, clear all) */}
+      <header className="nt-head">
+        <button type="button" className="nt-iconbtn" aria-label="Back" data-testid="notif-back" onClick={() => (inSettings ? setActiveTab('all') : onClose())}>
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <h1 className="nt-title">{inSettings ? 'Alert settings' : 'Notifications'}</h1>
+        <div className="relative">
+          <button type="button" className="nt-iconbtn" aria-label="More options" aria-haspopup="menu" aria-expanded={menuOpen} data-testid="notif-more" onClick={() => setMenuOpen((v) => !v)}>
+            <MoreVertical className="w-5 h-5" />
           </button>
+          {menuOpen && (
+            <>
+              <button type="button" className="fixed inset-0 z-10 cursor-default" aria-label="Close the menu" onClick={() => setMenuOpen(false)} />
+              <div className="nt-menu" role="menu" data-testid="notif-menu">
+                <button type="button" role="menuitem" onClick={() => { const next = !soundOn; setSoundOn(next); setNotificationSoundOn(next); setMenuOpen(false); }}>
+                  {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />} Sound: {soundOn ? 'on' : 'off'}
+                </button>
+                <button type="button" role="menuitem" onClick={() => { setActiveTab('settings'); setMenuOpen(false); }}>
+                  <SlidersHorizontal className="w-4 h-4" /> Alert settings
+                </button>
+                <button type="button" role="menuitem" className="is-danger" onClick={() => { setMenuOpen(false); onClearAll(); }}>
+                  <Trash2 className="w-4 h-4" /> Clear all notifications
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </header>
 
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`pb-2.5 transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer relative ${
-              activeTab === 'requests'
-                ? 'border-purple-400 text-purple-400'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" /> Noob Requests
-            {followRequestsCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-purple-500 text-black text-[10px] font-black flex items-center justify-center">
-                {followRequestsCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`pb-2.5 transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-cyan-400 text-cyan-400'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" /> Toggle Alerts
+      {/* Filter chips (the six kinds, and the follow requests) */}
+      {!inSettings && (
+        <div className="nt-chips no-scrollbar" data-testid="notif-chips">
+          {NOTIFICATION_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              data-testid={`notif-filter-${f.id}`}
+              onClick={() => { setActiveTab('all'); setFilterType(f.id); }}
+              className={`nt-chip ${activeTab === 'all' && filterType === f.id ? 'is-on' : ''}`}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button type="button" data-testid="notif-requests" onClick={() => setActiveTab(activeTab === 'requests' ? 'all' : 'requests')} className={`nt-chip ${activeTab === 'requests' ? 'is-on' : ''}`}>
+            Noob Requests{followRequestsCount > 0 && <span className="nt-count">{followRequestsCount}</span>}
           </button>
         </div>
+      )}
 
-        {/* Filters chips (in all tab) */}
-        {activeTab === 'all' && (
-          <div className="px-4 py-2 border-b border-zinc-800/80 bg-zinc-950 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-            {NOTIFICATION_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                data-testid={`notif-filter-${f.id}`}
-                onClick={() => setFilterType(f.id)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  filterType === f.id
-                    ? 'bg-noob text-black font-bold'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                {f.label}
-              </button>
+      <div className="nt-body" data-testid="notif-body">
+        {/* THE LIST (all, or only the requests) */}
+        {!inSettings && (
+          <>
+            {!notificationSettings.masterEnabled && (
+              <div className="nt-card nt-paused">
+                <BellOff className="w-4 h-4 shrink-0" />
+                <span className="flex-1">Notifications are currently paused in your settings.</span>
+                <button type="button" className="nt-btn nt-btn-primary" onClick={() => onUpdateSettings({ ...notificationSettings, masterEnabled: true })}>Resume</button>
+              </div>
+            )}
+
+            {filteredNotifications.length === 0 ? (
+              <div className="nt-empty">
+                <div className="nt-empty-ico"><Bell className="w-6 h-6" /></div>
+                <h4>No notifications here</h4>
+                <p>When someone follows you, accepts your request, or likes your post, you'll see it here instantly.</p>
+              </div>
+            ) : (
+              groupedNotifications.map((group) => (
+                <section key={group.label + group.items[0].id} className="nt-group" data-testid="notif-group">
+                  <h2 className="nt-date" data-testid="notif-date">{group.label}</h2>
+                  {group.items.map((notif) => {
+                    const opens = notif.type === 'noob_draw_ready' || ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername;
+                    return (
+                      <SwipeRow key={notif.id} canDelete={!!onDeleteOne} onDelete={() => onDeleteOne?.(notif.id)}>
+                        <div
+                          onClick={() => {
+                            if (notif.type === 'noob_draw_ready') {
+                              onClose();
+                              openNoobDraw();
+                            } else if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
+                              onOpenChat?.(notif.chatId);
+                            } else if (notif.type === 'live_lounge_invite' && notif.message) {
+                              onOpenLiveLoungeInvite?.(notif.message);
+                            } else if (notif.type === 'live_lounge_meeting' && notif.message) {
+                              onOpenLiveLoungeMeeting?.(notif.message);
+                            } else {
+                              const username = notif.senderUsername || notif.actorUsername;
+                              if (username) onNavigateToUser?.(username);
+                            }
+                          }}
+                          className={`nt-card ${opens ? 'is-tappable' : ''} ${!notif.isRead ? 'is-unread' : ''}`}
+                        >
+                          {/* Avatar with the kind's own small icon */}
+                          <div className="relative shrink-0">
+                            <img
+                              src={notif.senderAvatar || notif.actorAvatar || '/noob-logo.svg.jpeg'}
+                              alt={notif.senderUsername || notif.actorUsername || 'User'}
+                              className="nt-ava"
+                              referrerPolicy="no-referrer"
+                            />
+                            <span className="nt-kind">{renderIcon(notif.type)}</span>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            {notif.title && (
+                              <div className="nt-card-title">
+                                <span>{notif.title}</span>
+                                {notif.senderUsername?.toLowerCase() === 'noob' && <span className="nt-official">Official Admin</span>}
+                              </div>
+                            )}
+                            <div className="nt-text">
+                              <span className="nt-name">{notif.senderDisplayName || notif.actorDisplayName || notif.senderUsername || notif.actorUsername}</span>{' '}
+                              <span>{notif.message || notif.text}</span>
+                            </div>
+
+                            {notif.detail && <div className="nt-detail">"{notif.detail}"</div>}
+
+                            {/* Action Buttons for Follow Request Received */}
+                            {notif.type === 'follow_request_received' && notif.actionStatus === 'pending' && (
+                              <div className="nt-actions">
+                                <button type="button" className="nt-btn nt-btn-primary" onClick={(e) => { e.stopPropagation(); notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId); }}>
+                                  <Check className="w-3.5 h-3.5" /> Accept
+                                </button>
+                                {/* Separate from Accept: this only follows them back (raises their follower count), it does not approve their request to follow you. */}
+                                {onFollowBack && notif.actorId && (
+                                  <button type="button" className="nt-btn nt-btn-ghost" disabled={currentUser.followingIds?.includes(notif.actorId)} onClick={(e) => { e.stopPropagation(); onFollowBack(notif.actorId!); }}>
+                                    <UserPlus className="w-3.5 h-3.5" />
+                                    {currentUser.followingIds?.includes(notif.actorId) ? 'Noobed' : 'Noob Back'}
+                                  </button>
+                                )}
+                                <button type="button" className="nt-btn nt-btn-ghost" onClick={(e) => { e.stopPropagation(); notif.actorId && onDeclineFollowRequest(notif.id, notif.actorId); }}>
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                            {notif.type === 'follow_request_received' && notif.actionStatus === 'accepted' && (
+                              <div className="nt-status is-ok"><CheckCircle2 className="w-3.5 h-3.5" /> Noob request approved</div>
+                            )}
+                            {notif.type === 'follow_request_received' && notif.actionStatus === 'declined' && <div className="nt-status">Request dismissed</div>}
+
+                            {/* Suggested for you: a random account they don't yet follow, shown with their @handle (the bold name above is just their display name). */}
+                            {notif.type === 'suggested_user' && (notif.actorUsername || notif.senderUsername) && (
+                              <div className="nt-handle" translate="no">@{notif.actorUsername || notif.senderUsername}</div>
+                            )}
+                            {notif.type === 'suggested_user' && notif.actionStatus === 'pending' && (
+                              <div className="nt-actions">
+                                <button type="button" className="nt-btn nt-btn-primary" onClick={(e) => { e.stopPropagation(); notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, true); }}>
+                                  <UserPlus className="w-3.5 h-3.5" /> Noob
+                                </button>
+                                <button type="button" className="nt-btn nt-btn-ghost" onClick={(e) => { e.stopPropagation(); notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, false); }}>
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {notif.type === 'suggested_user' && notif.actionStatus === 'accepted' && <div className="nt-status is-ok"><CheckCircle2 className="w-3.5 h-3.5" /> Followed</div>}
+                            {notif.type === 'suggested_user' && notif.actionStatus === 'declined' && <div className="nt-status">Suggestion dismissed</div>}
+
+                            {notif.type === 'birthday_wish' && notif.scratchCardId && (
+                              <button type="button" className="nt-btn nt-btn-primary nt-scratch" onClick={(e) => { e.stopPropagation(); onOpenScratchCard?.(notif.scratchCardId!); }}>
+                                <Gift className="w-3.5 h-3.5" /> Scratch to Reveal 🎁
+                              </button>
+                            )}
+
+                            <div className="nt-time" data-testid="notif-time">{clockLabel(notif.createdAt)}</div>
+                          </div>
+                          {!notif.isRead && <span className="nt-dot" aria-label="New" />}
+                        </div>
+                      </SwipeRow>
+                    );
+                  })}
+                </section>
+              ))
+            )}
+          </>
+        )}
+
+        {/* ALERT SETTINGS (opened from the three dots) */}
+        {inSettings && (
+          <div className="nt-group" data-testid="notif-settings">
+            <div className="nt-card nt-row">
+              <div className="flex-1 min-w-0">
+                <h4 className="nt-row-title">Master Notification Bar</h4>
+                <p className="nt-row-sub">Receive live alerts and unread count badges</p>
+              </div>
+              <input type="checkbox" className="nt-check" aria-label="Master Notification Bar" checked={notificationSettings.masterEnabled} onChange={(e) => onUpdateSettings({ ...notificationSettings, masterEnabled: e.target.checked })} />
+            </div>
+            <h2 className="nt-date">Category preferences</h2>
+            {toggleRows.map(([key, title, sub]) => (
+              <div key={key} className="nt-card nt-row">
+                <div className="flex-1 min-w-0">
+                  <h4 className="nt-row-title">{title}</h4>
+                  <p className="nt-row-sub">{sub}</p>
+                </div>
+                <input type="checkbox" className="nt-check" aria-label={title} checked={!!notificationSettings[key]} onChange={(e) => onUpdateSettings({ ...notificationSettings, [key]: e.target.checked })} />
+              </div>
             ))}
           </div>
         )}
-
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2.5">
-          {/* TAB 1: ALL NOTIFICATIONS / TAB 2: REQUESTS */}
-          {(activeTab === 'all' || activeTab === 'requests') && (
-            <>
-              {!notificationSettings.masterEnabled && (
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BellOff className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Notifications are currently paused in your settings.</span>
-                  </div>
-                  <button
-                    onClick={() => onUpdateSettings({ ...notificationSettings, masterEnabled: true })}
-                    className="px-2.5 py-1 bg-amber-400 text-black font-bold rounded-lg text-[10px] cursor-pointer shrink-0"
-                  >
-                    Resume
-                  </button>
-                </div>
-              )}
-
-              {filteredNotifications.length === 0 ? (
-                <div className="text-center py-12 space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-600">
-                    <Bell className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-sm font-bold text-zinc-300">No notifications here</h4>
-                  <p className="text-xs text-zinc-500 max-w-xs mx-auto">
-                    When someone follows you, accepts your request, or likes your post, you'll see it here instantly.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {groupedNotifications.map((group) => (
-                    <div key={group.label + group.items[0].id} className="space-y-2">
-                      <h4 className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider px-1">
-                        {group.label}
-                      </h4>
-                      {group.items.map((notif) => (
-                    <div
-                      key={notif.id}
-                      onClick={() => {
-                        if (notif.type === 'noob_draw_ready') {
-                          onClose();
-                          openNoobDraw();
-                        } else if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
-                          onOpenChat?.(notif.chatId);
-                        } else if (notif.type === 'live_lounge_invite' && notif.message) {
-                          onOpenLiveLoungeInvite?.(notif.message);
-                        } else if (notif.type === 'live_lounge_meeting' && notif.message) {
-                          onOpenLiveLoungeMeeting?.(notif.message);
-                        } else {
-                          const username = notif.senderUsername || notif.actorUsername;
-                          if (username) onNavigateToUser?.(username);
-                        }
-                      }}
-                      className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        notif.type === 'noob_draw_ready' || ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername
-                          ? 'cursor-pointer'
-                          : ''
-                      } ${
-                        !notif.isRead
-                          ? 'bg-zinc-900/90 border-noob/30 shadow-sm'
-                          : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {/* Avatar with type badge */}
-                        <div className="relative shrink-0">
-                          <img
-                            src={notif.senderAvatar || notif.actorAvatar || '/noob-logo.svg.jpeg'}
-                            alt={notif.senderUsername || notif.actorUsername || 'User'}
-                            className="w-10 h-10 rounded-2xl object-cover ring-1 ring-zinc-700"
-                            referrerPolicy="no-referrer"
-                          />
-                          <span className="absolute -bottom-1 -right-1 p-1 rounded-full bg-zinc-950 border border-zinc-800 shadow-sm">
-                            {renderIcon(notif.type)}
-                          </span>
-                        </div>
-
-                        {/* Notification text & time */}
-                        <div className="flex-1 min-w-0">
-                          {notif.title && (
-                            <div className="text-xs font-black text-noob mb-0.5 flex items-center gap-1">
-                              <span>{notif.title}</span>
-                              {notif.senderUsername?.toLowerCase() === 'noob' && (
-                                <span className="text-[10px] bg-noob/20 text-noob px-1.5 py-0.2 rounded font-bold">
-                                  Official Admin
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="text-xs text-zinc-300 leading-relaxed">
-                            <span className="font-bold text-white hover:text-noob transition-colors cursor-pointer mr-1">
-                              {notif.senderDisplayName || notif.actorDisplayName || notif.senderUsername || notif.actorUsername}
-                            </span>
-                            <span>{notif.message || notif.text}</span>
-                          </div>
-
-                          {notif.detail && (
-                            <div className="mt-1 p-2 rounded-xl bg-black/60 border border-zinc-800/80 text-[11px] text-zinc-400 italic">
-                              "{notif.detail}"
-                            </div>
-                          )}
-
-                          <span className="text-[10px] text-zinc-500 font-medium block mt-1">
-                            {formatRelativeTime(notif.createdAt)}
-                          </span>
-
-                          {/* Action Buttons for Follow Request Received */}
-                          {notif.type === 'follow_request_received' && notif.actionStatus === 'pending' && (
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId);
-                                }}
-                                className="px-3 py-1 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
-                              >
-                                <Check className="w-3.5 h-3.5" /> Accept
-                              </button>
-                              {/* Separate from Accept: this only follows them back (raises their follower
-                                  count) — it does not, by itself, approve their request to follow you. */}
-                              {onFollowBack && notif.actorId && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onFollowBack(notif.actorId!);
-                                  }}
-                                  disabled={currentUser.followingIds?.includes(notif.actorId)}
-                                  className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 disabled:cursor-default text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-zinc-700"
-                                >
-                                  <UserPlus className="w-3.5 h-3.5" />
-                                  {currentUser.followingIds?.includes(notif.actorId) ? 'Noobed' : 'Noob Back'}
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  notif.actorId && onDeclineFollowRequest(notif.id, notif.actorId);
-                                }}
-                                className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-
-                          {notif.type === 'follow_request_received' && notif.actionStatus === 'accepted' && (
-                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-noob font-bold">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Noob request approved
-                            </div>
-                          )}
-
-                          {notif.type === 'follow_request_received' && notif.actionStatus === 'declined' && (
-                            <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
-                              Request dismissed
-                            </div>
-                          )}
-
-                          {/* Suggested for you — a random account they don't yet follow, shown with
-                              their @handle explicitly (the bold name above is just their display name). */}
-                          {notif.type === 'suggested_user' && (notif.actorUsername || notif.senderUsername) && (
-                            <div className="text-[11px] text-zinc-500 font-medium -mt-0.5 mb-1" translate="no">
-                              @{notif.actorUsername || notif.senderUsername}
-                            </div>
-                          )}
-                          {notif.type === 'suggested_user' && notif.actionStatus === 'pending' && (
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, true);
-                                }}
-                                className="px-3 py-1 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" /> Noob
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, false);
-                                }}
-                                className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          )}
-                          {notif.type === 'suggested_user' && notif.actionStatus === 'accepted' && (
-                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-noob font-bold">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Followed
-                            </div>
-                          )}
-                          {notif.type === 'suggested_user' && notif.actionStatus === 'declined' && (
-                            <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
-                              Suggestion dismissed
-                            </div>
-                          )}
-
-                          {notif.type === 'birthday_wish' && notif.scratchCardId && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenScratchCard?.(notif.scratchCardId!);
-                              }}
-                              className="mt-2 px-3.5 py-1.5 bg-gradient-to-r from-pink-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-black text-xs font-black rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm w-fit"
-                            >
-                              <Gift className="w-3.5 h-3.5" /> Scratch to Reveal 🎁
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-noob shrink-0 mt-2 shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-                      )}
-                    </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* TAB 3: NOTIFICATION SETTINGS & TOGGLES */}
-          {activeTab === 'settings' && (
-            <div className="space-y-4">
-              {/* Master Push Alert Toggle */}
-              <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${notificationSettings.masterEnabled ? 'bg-noob/20 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
-                    <Bell className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-white">Master Notification Bar</h4>
-                    <p className="text-xs text-zinc-400">Receive live alerts and unread count badges</p>
-                  </div>
-                </div>
-
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.masterEnabled}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, masterEnabled: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-noob" />
-                </label>
-              </div>
-
-              {/* Granular Toggles */}
-              <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-3.5">
-                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                  Category Preferences
-                </h4>
-
-                {/* 1. Follow Requests & Approvals */}
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <span className="text-xs font-bold text-white block">Noob Requests &amp; Approvals</span>
-                    <span className="text-[11px] text-zinc-500">When someone requests to noob your private account</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.followRequests}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, followRequests: e.target.checked })}
-                    className="w-4 h-4 accent-noob rounded cursor-pointer"
-                  />
-                </div>
-
-                {/* 2. New Followers */}
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
-                  <div>
-                    <span className="text-xs font-bold text-white block">New Followers</span>
-                    <span className="text-[11px] text-zinc-500">When someone noobs your profile</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.newFollowers}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, newFollowers: e.target.checked })}
-                    className="w-4 h-4 accent-noob rounded cursor-pointer"
-                  />
-                </div>
-
-                {/* 3. Likes & Comments */}
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
-                  <div>
-                    <span className="text-xs font-bold text-white block">Likes, Reactions &amp; Comments</span>
-                    <span className="text-[11px] text-zinc-500">Activity on your Feed posts and Reels</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.likesComments}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, likesComments: e.target.checked })}
-                    className="w-4 h-4 accent-noob rounded cursor-pointer"
-                  />
-                </div>
-
-                {/* 4. Games & Leaderboard */}
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
-                  <div>
-                    <span className="text-xs font-bold text-white block">Mini-Games &amp; Leaderboards</span>
-                    <span className="text-[11px] text-zinc-500">Rank promotions and arcade challenge invites</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.gamesLeaderboard}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, gamesLeaderboard: e.target.checked })}
-                    className="w-4 h-4 accent-noob rounded cursor-pointer"
-                  />
-                </div>
-
-                {/* 5. Music Hub */}
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
-                  <div>
-                    <span className="text-xs font-bold text-white block">Music Hub Tracks &amp; Playlists</span>
-                    <span className="text-[11px] text-zinc-500">Track uploads and playlist adds</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.musicHub}
-                    onChange={(e) => onUpdateSettings({ ...notificationSettings, musicHub: e.target.checked })}
-                    className="w-4 h-4 accent-noob rounded cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <footer className="p-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between text-xs px-4">
-          <button
-            onClick={onClearAll}
-            className="text-zinc-500 hover:text-rose-400 flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" /> Clear All Activity
-          </button>
-          <span className="text-[11px] text-zinc-500 font-medium">
-            {notifications.length} Total Alerts
-          </span>
-        </footer>
       </div>
     </div>
   );

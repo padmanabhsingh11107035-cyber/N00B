@@ -95,6 +95,7 @@ export {
   subscribeToNotificationChanges,
   markNotificationsAsRead,
   clearAllNotifications,
+  clearOneNotification,
   fetchSettings,
   updateSettings,
   setFoodStallSettings,

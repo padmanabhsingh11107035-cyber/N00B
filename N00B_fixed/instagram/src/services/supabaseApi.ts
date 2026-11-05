@@ -1584,6 +1584,17 @@ export async function markNotificationsAsRead(): Promise<{ success: boolean }> {
   try { return await rpc('mark_notifications_read'); } catch { return { success: false }; }
 }
 
+// Removes ONE notification from this person's list (a swipe to the left on the card, then the red bin). Hidden for this person only; nothing is deleted for anybody else.
+export async function clearOneNotification(id: string): Promise<{ success: boolean }> {
+  try {
+    const session = await currentSession();
+    const uid = session?.user?.id;
+    if (!uid) return { success: false };
+    const { error } = await supabase.from('notification_clears').upsert({ notification_id: id, user_id: uid }, { onConflict: 'notification_id,user_id', ignoreDuplicates: true });
+    return { success: !error };
+  } catch { return { success: false }; }
+}
+
 export async function clearAllNotifications(): Promise<{ success: boolean }> {
   try { return await rpc('clear_notifications'); } catch { return { success: false }; }
 }

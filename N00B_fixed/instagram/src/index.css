@@ -173,7 +173,7 @@
   --color-stone-500: var(--color-zinc-500); --color-stone-600: var(--color-zinc-600); --color-stone-700: var(--color-zinc-700); --color-stone-800: var(--color-zinc-800); --color-stone-900: var(--color-zinc-900); --color-stone-950: var(--color-zinc-950);
 }
 
-.bg-page { background-color: var(--page); }
+html { background-color: #0a0a0a; }
 
 /* The strip above the app on a phone. An iPhone's installed app ignores theme-color: the strip behind the clock is simply the
    page's own (canvas) background. So the canvas is the accent colour, and the app body is drawn over everything inside the screen
@@ -1402,3 +1402,18 @@ html body.light [class*="bg-noob"]:not([class*="bg-noob/"]):hover, html body.lig
 
 /* Light mode: the chat page is white, the doodle only a whisper on it */
 html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.90)), url('/brand/doodle-dark.webp') !important; }
+
+/* Light mode: white text/icons on a dark photo overlay (labels on GIFs and stickers, the "several photos" badge on a post, text over a picture) stay white */
+@layer base {
+  html body.light [class*="bg-black/3"].text-white, html body.light [class*="bg-black/3"] .text-white, html body.light [class*="bg-black/3"] svg.text-white,
+  html body.light [class*="bg-black/4"].text-white, html body.light [class*="bg-black/4"] .text-white, html body.light [class*="bg-black/4"] svg.text-white,
+  html body.light [class*="bg-black/5"].text-white, html body.light [class*="bg-black/5"] .text-white, html body.light [class*="bg-black/5"] svg.text-white,
+  html body.light [class*="bg-black/6"].text-white, html body.light [class*="bg-black/6"] .text-white, html body.light [class*="bg-black/6"] svg.text-white,
+  html body.light [class*="bg-black/7"].text-white, html body.light [class*="bg-black/7"] .text-white, html body.light [class*="bg-black/7"] svg.text-white,
+  html body.light [class*="bg-black/8"].text-white, html body.light [class*="bg-black/8"] .text-white, html body.light [class*="bg-black/8"] svg.text-white,
+  html body.light [class*="bg-black/9"].text-white, html body.light [class*="bg-black/9"] .text-white, html body.light [class*="bg-black/9"] svg.text-white,
+  html body.light [class*="from-black"].text-white, html body.light [class*="from-black"] .text-white, html body.light [class*="from-black"] svg.text-white,
+  html body.light [class*="via-black"].text-white, html body.light [class*="via-black"] .text-white, html body.light [class*="via-black"] svg.text-white,
+  html body.light [class*="bg-zinc-950/8"].text-white, html body.light [class*="bg-zinc-950/8"] .text-white, html body.light [class*="bg-zinc-950/8"] svg.text-white,
+  html body.light [class*="bg-zinc-950/9"].text-white, html body.light [class*="bg-zinc-950/9"] .text-white, html body.light [class*="bg-zinc-950/9"] svg.text-white { color: #ffffff !important; }
+}

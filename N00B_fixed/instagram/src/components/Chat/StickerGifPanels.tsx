@@ -114,7 +114,7 @@ export const GifPanel: React.FC<GifPanelProps> = ({ curated, onPick }) => {
           {list.map((gif) => (
             <button key={gif.id} type="button" onClick={() => onPick(gif.url)} className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-noob transition-all cursor-pointer text-left">
               <img src={gif.preview || gif.url} alt={gif.title} loading="lazy" className="w-full h-20 object-cover group-hover:scale-105 transition-transform" />
-              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">{gif.title}</span>
+              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white force-white-text py-0.5 px-1 truncate">{gif.title}</span>
             </button>
           ))}
         </div>

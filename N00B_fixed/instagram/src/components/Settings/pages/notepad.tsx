@@ -13,7 +13,7 @@ import { canRecognize, listen, type Listener } from '../../../utils/studyVoice';
 const SIZES = [14, 16, 18, 21];
 const when = (iso: string): string => { try { return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 const isTemp = (id: string | null): boolean => !!id && id.startsWith('tmp-');
-const round = 'w-11 h-11 rounded-full bg-[#13523d] hover:bg-[#1a6249] text-white flex items-center justify-center cursor-pointer transition-colors shrink-0';
+const round = 'w-11 h-11 rounded-full bg-[#13523d] hover:bg-[#1a6249] text-[#ffffff] ring-1 ring-white/10 shadow-[0_6px_16px_rgba(0,0,0,0.25)] flex items-center justify-center cursor-pointer transition-colors shrink-0';
 
 export const NotepadPage: React.FC<PageProps> = ({ back }) => {
   const [notes, setNotes] = useState<Note[] | null>(null);
@@ -162,7 +162,8 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
 
   const shown = useMemo(() => filterNotes(notes || [], query), [notes, query]);
   const stats = noteStats(full());
-  const shell = 'min-h-full bg-gradient-to-b from-[#0e4937] via-[#0b3d2e] to-[#093327] text-white';
+  // the Notepad is always deep green (in Dark and in Light), over the whole screen: it never shows the page or the doodle behind it
+const shell = 'notepad-shell fixed inset-0 z-[46] overflow-y-auto overscroll-contain text-[#ffffff] bg-[#082e23] bg-[radial-gradient(120%_70%_at_50%_-10%,#16704f_0%,#0e4937_38%,#07271e_100%)]';
 
   if (openId) {
     return (
@@ -172,14 +173,14 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
             <button type="button" onClick={close} aria-label="Back" data-testid="settings-back" className={round}><ChevronLeft className="w-6 h-6" /></button>
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-black tracking-tight leading-none">Notepad</h1>
-              <p className="text-[11px] text-emerald-200/70 mt-1" data-testid="note-state">{state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving…' : state === 'failed' ? 'Not saved yet: check your connection' : 'Typing…'}</p>
+              <p className="text-[11px] text-[#a7e3cb] mt-1" data-testid="note-state">{state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving…' : state === 'failed' ? 'Not saved yet: check your connection' : 'Typing…'}</p>
             </div>
             <button type="button" onClick={saveNow} aria-label="Save" title="Save" data-testid="note-save" className={round}><Save className="w-5 h-5" /></button>
             <button type="button" onClick={share} aria-label="Share" title="Share" data-testid="note-share" className={round}><Share2 className="w-5 h-5" /></button>
             <div className="relative">
               <button type="button" onClick={() => setMenu((v) => !v)} aria-label="More" title="More" data-testid="note-more" className={round}><MoreVertical className="w-5 h-5" /></button>
               {menu && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0e4937] border border-white/15 shadow-2xl p-1.5 z-20 text-sm font-semibold">
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0e4937] text-[#ffffff] border border-white/15 shadow-2xl p-1.5 z-20 text-sm font-semibold">
                   {[
                     { icon: Copy, label: 'Copy all', run: copyAll }, { icon: Download, label: 'Save as .txt', run: download },
                     { icon: Type, label: 'Bigger text', run: () => resize(1) }, { icon: Type, label: 'Smaller text', run: () => resize(-1) },
@@ -227,26 +228,26 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
       <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-24">
         <header className="flex items-center gap-2.5 mb-4">
           <button type="button" onClick={back} aria-label="Back" data-testid="settings-back" className={round}><ChevronLeft className="w-6 h-6" /></button>
-          <div className="min-w-0 flex-1"><h1 className="text-2xl font-black tracking-tight leading-none">Notepad</h1><p className="text-[11px] text-emerald-200/70 mt-1">Your notes stay on your account</p></div>
-          <button type="button" onClick={newNote} data-testid="note-new" className="h-11 px-4 rounded-full bg-emerald-400 text-emerald-950 text-sm font-extrabold inline-flex items-center gap-1.5 cursor-pointer"><Plus className="w-4 h-4" />New</button>
+          <div className="min-w-0 flex-1"><h1 className="text-2xl font-black tracking-tight leading-none">Notepad</h1><p className="text-[11px] text-[#a7e3cb] mt-1">Your notes stay on your account</p></div>
+          <button type="button" onClick={newNote} data-testid="note-new" className="h-11 px-4 rounded-full bg-[#34d399] text-[#022c22] shadow-[0_8px_20px_rgba(52,211,153,0.35)] text-sm font-extrabold inline-flex items-center gap-1.5 cursor-pointer"><Plus className="w-4 h-4" />New</button>
         </header>
         {flash}
-        {notes === null ? <p className="py-16 text-center text-sm text-emerald-100/70">Loading…</p> : (
+        {notes === null ? <p className="py-16 text-center text-sm text-[#bfe9d8]">Loading…</p> : (
           <div className="space-y-3">
             {error && <p className="px-4 py-3 rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold">{error}</p>}
             {notes.length > 0 && (
               <label className="flex items-center gap-2 h-12 px-4 rounded-full bg-black/25 border border-white/10 focus-within:border-emerald-300">
-                <Search className="w-4 h-4 text-white/60" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your notes" className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/50" data-testid="note-search" />
+                <Search className="w-4 h-4 text-[rgba(255,255,255,0.6)]" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your notes" className="flex-1 bg-transparent outline-none text-sm text-[#ffffff] placeholder:text-[rgba(255,255,255,0.5)]" data-testid="note-search" />
               </label>
             )}
             {!error && notes.length === 0 && (
-              <div className="py-16 text-center space-y-2"><NotebookPen className="w-10 h-10 mx-auto text-emerald-200/60" /><p className="font-bold">No notes yet</p><p className="text-xs text-emerald-100/70">Tap New to write one, or paste something you want to keep. Only text is saved.</p></div>
+              <div className="py-16 text-center space-y-2"><NotebookPen className="w-10 h-10 mx-auto text-[#8fd5b8]" /><p className="font-bold">No notes yet</p><p className="text-xs text-[#bfe9d8]">Tap New to write one, or paste something you want to keep. Only text is saved.</p></div>
             )}
-            {notes.length > 0 && shown.length === 0 && <p className="py-10 text-center text-sm text-emerald-100/70">No note has that in it.</p>}
+            {notes.length > 0 && shown.length === 0 && <p className="py-10 text-center text-sm text-[#bfe9d8]">No note has that in it.</p>}
             {shown.map((n) => (
               <div key={n.id} className="flex items-stretch rounded-3xl bg-[#f9f7eb] text-[#1f3d33] shadow-lg shadow-black/20 overflow-hidden">
-                <button type="button" onClick={() => open(n)} className="flex-1 min-w-0 text-left px-5 py-4 hover:bg-emerald-50 cursor-pointer" data-testid="note-row">
+                <button type="button" onClick={() => open(n)} className="flex-1 min-w-0 text-left px-5 py-4 hover:bg-[#eef7ef] cursor-pointer" data-testid="note-row">
                   <span className="block text-[15px] font-extrabold truncate">{noteTitle(n.body)}</span>
                   <span className="block text-xs text-[#5f7a6d] truncate mt-0.5">{n.body.trim().split(/\r?\n/).slice(1).join(' ').slice(0, 90) || 'No more text'}</span>
                   <span className="block text-[10px] text-[#8aa396] mt-1">{when(n.updatedAt)}</span>

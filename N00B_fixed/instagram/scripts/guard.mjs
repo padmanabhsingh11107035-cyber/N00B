@@ -11,6 +11,7 @@ const CHECKS = [
   // things that were lost or looked lost
   ['Likes: never lost, on every kind of content', ['node', 'scripts/supabase/test-likes-guard.mjs']],
   // things that flashed, jumped or got cut
+  ['No page flash; chat alerts only when away', ['node', 'scripts/supabase/test-no-flash-chat-quiet.mjs']],
   ['Phone menu: full screen and steady', ['node', 'scripts/supabase/test-nav-badges.mjs']],
   ['Menus: one list for phone and strip', ['node', 'scripts/supabase/test-side-menu-fit.mjs']],
   ['Coming back to the menu', ['node', 'scripts/supabase/test-menu-return.mjs']],

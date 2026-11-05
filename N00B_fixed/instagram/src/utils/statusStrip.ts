@@ -48,7 +48,7 @@ function edgeBar(): HTMLElement | null {
 // A phone looks at the colour behind the clock when the page CHANGES (and only then), so the colour must already be right in the very same moment as the change, and a few
 // harmless nudges follow it (a fresh theme-colour element, the thin top bar 1 px taller or shorter) for a phone that looked a little too early.
 let poked = '';
-function poke(colour: string): void {
+function poke(colour: string, viewport: boolean): void {
   poked = colour;
   [0, 90, 260, 650, 1400, 2600].forEach((ms) => window.setTimeout(() => {
     if (poked !== colour || last !== colour) return;
@@ -58,7 +58,7 @@ function poke(colour: string): void {
       const bar = edgeBar();
       if (bar) bar.style.height = bar.style.height === '3px' ? '2px' : '3px';
       // a changed viewport tag (same meaning) makes an iPhone measure the top of the screen again
-      const vp = document.querySelector('meta[name="viewport"]');
+      const vp = viewport ? document.querySelector('meta[name="viewport"]') : null;   // (only when a page with its own colour comes or goes)
       if (vp) { const c = vp.getAttribute('content') || ''; vp.setAttribute('content', /viewport-fit=auto/.test(c) ? c.replace(/,\s*viewport-fit=auto/, '') : c + ', viewport-fit=auto'); }
     } catch { /* a nudge is never a reason to fail */ }
   }, ms));
@@ -67,7 +67,9 @@ function poke(colour: string): void {
 /** The colour of an ordinary page of the app (the theme's page colour). */
 const pageColour = (): string => (document.documentElement.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0a0a');
 
-function applyColour(colour: string): void {
+// `nudge`: a page with a colour of its own (Messages) has just come or gone, so the phone is asked to look at the top of the screen again. NEVER for a colour that was only read from the
+// screen (that can change while a page scrolls, and changing the viewport tag at that moment made the whole page flash white for a moment, most on Explore).
+function applyColour(colour: string, nudge: false | 'light' | 'full' = false): void {
   const root = document.documentElement;
   root.style.setProperty('background-color', colour, 'important');
   let meta = document.querySelector('meta[name="theme-color"]');
@@ -77,7 +79,7 @@ function applyColour(colour: string): void {
   if (bar && bar.style.backgroundColor !== colour) bar.style.backgroundColor = colour;
   const changed = last !== colour;
   last = colour;
-  if (changed) poke(colour);
+  if (changed && nudge) poke(colour, nudge === 'full');
 }
 
 // A colour read from the screen that is NOT the page's own colour has to be seen twice in a row (about 160 ms apart) before it is used. A page that is scrolled past its end (the
@@ -94,7 +96,7 @@ function paint(): void {
   queued = false;
   if (document.hidden) return;
   const own = activeOverride();
-  if (own) { pending = ''; applyColour(own); return; }
+  if (own) { pending = ''; applyColour(own, 'light'); return; }
   if (bouncing()) return;
   const colour = colourAtTop();
   if (!colour) return;
@@ -114,11 +116,13 @@ const now = () => { const t = Date.now(); if (t - lastNow < 60) return; lastNow 
 /** A page with a colour of its own (null: the page is an ordinary one again: its colour at once, then read from the screen). Applied at once and again a moment later. */
 export function setStripColour(colour: string | null, owner?: () => Element | null, nudge = false): void {
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
+  const transition = (colour === null) !== (override === null);   // a page with its own colour comes or goes
   override = colour;
   overrideOwner = colour ? owner || null : null;
   void nudge;
-  if (colour && activeOverride()) { applyColour(colour); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour); }, 90); }
-  else if (!colour) applyColour(pageColour());
+  const mode = transition ? 'full' : 'light';
+  if (colour && activeOverride()) { applyColour(colour, mode); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour, 'light'); }, 90); }
+  else if (!colour) applyColour(pageColour(), mode);
   queue();
 }
 

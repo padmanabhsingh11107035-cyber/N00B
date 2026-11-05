@@ -67,7 +67,8 @@ import {
   clearAllNotifications,
   markNotificationsAsRead,
   startPresenceHeartbeat,
-  startLastSeenHeartbeat
+  startLastSeenHeartbeat,
+  startInFrontHeartbeat
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
@@ -301,10 +302,8 @@ export default function App() {
   // out via the computer icon on their own profile page. Resets to the admin console on every fresh
   // login/reload on purpose, so the account never gets "stuck" outside it by accident.
   const [viewAsUser, setViewAsUser] = useState(false);
-  // A short sound when a chat message arrives while the app is open and the person is not already in the chat tab.
-  const unreadChatCount = useUnreadChatCount(currentUser, () => {
-    if (activeTabRef.current !== 'chat') playNotificationSound('message');
-  });
+  // A chat message that arrives while the app is open makes NO sound and no banner (the red number on the Chat icon is enough); alerts are for a person who is away.
+  const unreadChatCount = useUnreadChatCount(currentUser);
 
   // The admin console's "whole-app maintenance lock" (see AdminControlModal's Platform tab) — checked
   // once someone is signed in so a non-admin mid-lockdown sees the block screen below instead of the
@@ -907,7 +906,8 @@ export default function App() {
     // 'app' is the real Android app only; the website put on the home screen is 'pwa' (still the website, so no "has the app" tick in the admin panel); a browser tab is 'web'.
     const platform = detectPlatform(Capacitor.isNativePlatform(), isInstalled());
     const stopLastSeen = startLastSeenHeartbeat(platform);
-    return () => stopLastSeen();
+    const stopInFront = startInFrontHeartbeat();   // chat alerts on the phone are held back while the app is open in front (supabase/migrations/20261105000003)
+    return () => { stopLastSeen(); stopInFront(); };
   }, [currentUser?.id]);
 
   // Shows this session as online (the live status in chats and the admin panel) for as long as this tab/app stays open - Presence is per-connection, so it disappears on its

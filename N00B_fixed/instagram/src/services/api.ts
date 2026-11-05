@@ -231,6 +231,7 @@ export {
   fetchTypingUsers,
   startPresenceHeartbeat,
   startLastSeenHeartbeat,
+  startInFrontHeartbeat,
   subscribeToOnlinePresence,
   looksOnline,
   updateChatSettings,

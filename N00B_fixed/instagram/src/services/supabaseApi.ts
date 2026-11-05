@@ -3202,6 +3202,21 @@ export function startLastSeenHeartbeat(platform: PresencePlatform): () => void {
   return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', onHide); };
 }
 
+// "NOOB is open in front of me" (for as long as the screen shows it): chat alerts on the phone are only for a person who is AWAY, so while this runs they are held back (the red number on
+// the Chat icon is enough). Told every 15 seconds while the page is visible, and told "not any more" the moment it is hidden; the database forgets it after 25 seconds by itself
+// (migration 20261105000003), so a closed tab or a dead phone can not keep alerts away. Never a reason for an error on screen.
+export function startInFrontHeartbeat(): () => void {
+  const tell = (on: boolean) => { rpc('touch_in_front', { p_on: on }).catch(() => {}); };
+  const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible';
+  const tick = () => { if (visible()) tell(true); };
+  tick();
+  const interval = window.setInterval(tick, 15_000);
+  const onChange = () => tell(visible());
+  document.addEventListener('visibilitychange', onChange);
+  window.addEventListener('pagehide', () => tell(false));
+  return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', onChange); tell(false); };
+}
+
 // Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/
 // device) every time anyone connects or disconnects anywhere in the app. Shares the one channel
 // above rather than opening its own — see getPresenceChannel for why that matters.

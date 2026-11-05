@@ -42,6 +42,27 @@ function edgeBar(): HTMLElement | null {
   return edge;
 }
 
+// A phone only looks at the colour behind the clock again after certain events, so after every CHANGE of colour the page is nudged in the ways that make it look again:
+// the theme-colour element is replaced by a fresh one, and the root element is lifted onto its own layer for a moment (no visible change).
+let kicked = '';
+function kick(colour: string): void {
+  if (kicked === colour) return;
+  kicked = colour;
+  const run = () => {
+    try {
+      const old = document.querySelector('meta[name="theme-color"]');
+      if (old && old.getAttribute('content') === colour) {
+        const fresh = old.cloneNode() as HTMLMetaElement;
+        old.replaceWith(fresh);
+      }
+      const root = document.documentElement;
+      root.style.transform = 'translateZ(0)';
+      window.setTimeout(() => { root.style.transform = ''; }, 40);
+    } catch { /* a nudge is never a reason to fail */ }
+  };
+  [0, 120, 600].forEach((ms) => window.setTimeout(() => { if (kicked === colour) run(); }, ms));
+}
+
 function applyColour(colour: string): void {
   const root = document.documentElement;
   root.style.setProperty('background-color', colour, 'important');
@@ -51,6 +72,7 @@ function applyColour(colour: string): void {
   const bar = edgeBar();
   if (bar && bar.style.backgroundColor !== colour) bar.style.backgroundColor = colour;
   last = colour;
+  kick(colour);
 }
 
 function paint(): void {
@@ -67,12 +89,13 @@ const queue = () => { if (!queued) { queued = true; window.setTimeout(paint, 120
 export function setStripColour(colour: string | null): void {
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
   override = colour;
+  kicked = '';   // a page that sets its colour always gets the nudges, also when the colour is the same as before
   if (colour) { applyColour(colour); window.setTimeout(() => { if (override === colour) applyColour(colour); }, 90); }
   queue();
 }
 
 /** Paint the strip again from what is on screen now. */
-export function repaintStrip(): void { last = ''; queue(); }
+export function repaintStrip(): void { last = ''; kicked = ''; queue(); }
 
 let started = false;
 /** Call once at start-up. Only does anything on a touch screen (a phone or tablet): on a computer the browser's own bar is not part of the page. */

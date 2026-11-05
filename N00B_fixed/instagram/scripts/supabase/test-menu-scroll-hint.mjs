@@ -31,7 +31,7 @@ check(/el\.scrollBy\(\{ top: Math\.max\(160, Math\.round\(el\.clientHeight \* 0\
 
 section('4. In the menu');
 check(/const menuScroll = useScrollMore\(showNoobMenu\);/.test(feed), 'it follows whether the menu is open');
-check(/<div className="relative flex-1 min-h-0">\s*<div ref=\{menuScroll\.ref\} className="space-y-1 h-full overflow-y-auto overscroll-contain/.test(feed), 'the menu list is the thing that is measured, inside a box the hint can sit on');
+check(/<div className="relative flex-1 min-h-0">\s*<div ref=\{menuScroll\.ref\} className="h-full overflow-y-auto overscroll-contain/.test(feed), 'the menu list is the thing that is measured, inside a box the hint can sit on');
 check(/\{menuScroll\.more && <ScrollMoreHint onClick=\{menuScroll\.scrollDown\} \/>\}/.test(feed), 'it is drawn only while there is more below');
 check(/Suggestion Box/.test(feed) && /Anonymous Messages/.test(feed) && /Customer Support/.test(feed), 'every menu entry is still there');
 

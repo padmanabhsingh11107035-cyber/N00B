@@ -25,7 +25,7 @@ check(/assetsRef\.current\.forEach\(releaseAsset\)/.test(read(`${dir}/StudioApp.
 
 section('3. Opens from the three-line menu, the Create sheet and /studio');
 const feed = read('src/components/Feed/FeedView.tsx');
-check(/data-testid="menu-studio"/.test(feed) && /openStudio\(\)/.test(feed), 'the Home menu has a NOOB Studio button');
+check(/testId: 'menu-studio'/.test(feed) && /go\('studio', openStudio\)/.test(feed), 'the Home menu has a NOOB Studio button');
 const chooser = read('src/components/PostCreation/CreateChooser.tsx');
 check(/kind: 'studio'/.test(chooser), 'the Create sheet has "Edit in Studio"');
 const app = read('src/App.tsx');

@@ -49,11 +49,11 @@ section('4. The three-line menu opens it; Home itself does not show it');
 const feed = read('src/components/Feed/FeedView.tsx');
 check(/import \{ MoreCreationsPage \} from '\.\/MoreCreationsPage'/.test(feed) && count(feed, /<MoreCreationsPage/g) === 1, 'FeedView imports the page and draws it once');
 check(/\{showCreations && <MoreCreationsPage onClose=\{\(\) => setShowCreations\(false\)\} \/>\}/.test(feed), 'it opens when showCreations is set and closes with the back button');
-const entry = feed.match(/<MenuBanner tone="creations"[^\n]*/)?.[0] || '';
-check(/title="More of our creations"/.test(entry) && /entryId="creations"/.test(entry) && /markMenuEntry\('creations'\)/.test(entry) && /setShowNoobMenu\(false\)/.test(entry) && /setShowCreations\(true\)/.test(entry), 'the three-line menu has an entry "More of our creations" that closes the menu and opens the page');
+const entry = feed.match(/featOn\('creations'\) && \{[^\n]*/)?.[0] || '';
+check(/label: 'More of our creations'/.test(entry) && /entryId: 'creations'/.test(entry) && /go\('creations'/.test(entry) && /setShowCreations\(true\)/.test(entry) && /const go = \(id: string, open: \(\) => void\) => \(\) => \{ markMenuEntry\(id\); setShowNoobMenu\(false\);/.test(feed), 'the three-line menu has an entry "More of our creations" that closes the menu and opens the page');
 check(/const menuPageOpen = !!\(showAnonymous \|\| showOurTeam \|\| showCreations \|\|/.test(feed), 'it counts as a separate page (Home is hidden while it is open, and comes back as it was)');
 check(!/<MoreCreations[\s/>]/.test(feed) && !fs.existsSync(path.resolve('src/components/Feed/MoreCreations.tsx')), 'nothing about it is drawn on the Home page itself (no block among the stories and posts)');
-check(/'creations'/.test(read('src/components/Feed/MenuBanner.tsx')) && /creations: \{ border:/.test(read('src/components/Feed/MenuBanner.tsx')), 'the entry has its own colours in the menu');
+check(/icon: <Layers \/>/.test(entry), 'the entry has its own icon in the menu');
 
 section('5. The four websites are in the list');
 const data = read('src/data/moreCreations.ts');

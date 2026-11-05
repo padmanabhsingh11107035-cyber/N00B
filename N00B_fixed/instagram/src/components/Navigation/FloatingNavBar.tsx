@@ -44,7 +44,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active = false,
 );
 
 // The bar is flat and full width, like YouTube's: three pages, Create in the middle, three more pages (the pages that do not fit — the Videos
-// feed (in the menu on Home) and Music (its own button at the top of Home); the side menu on a computer still lists every page).
+// feed (in the menu on Home) and Music (its own button at the top of Home); the long strip on a tablet or computer lists every page).
 export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   activeTab,
   onSelectTab,
@@ -71,7 +71,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
     <nav
       id="floating-bottom-nav"
       data-tab={activeTab}
-      className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-2xl pointer-events-auto xl:hidden ${
+      className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-2xl pointer-events-auto md:hidden ${
         hideOnMobile ? 'max-md:hidden' : ''
       } ${keyboardOpen ? 'hidden' : ''}`}
     >

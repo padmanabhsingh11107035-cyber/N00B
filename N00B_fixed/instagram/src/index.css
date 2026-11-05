@@ -336,21 +336,61 @@ body { min-height: 100vh; min-height: 100dvh; }
   scrollbar-width: none;
 }
 
-/* The left menu of the desktop layout fills the height of the screen without an empty gap: the rows share the free height between them (never slimmer than 28 px,
-   never taller than 56 px); on a really short screen the menu scrolls inside itself and the profile box stays in view (un-layered on purpose, like
-   .liquid-glass: it beats the rows' py-3 utility). */
-[data-testid="desktop-side-menu-scroll"] { display: flex; flex-direction: column; }
-[data-testid="desktop-side-menu-scroll"] > nav { flex: 1 1 auto; display: flex; flex-direction: column; }
-[data-testid="desktop-side-menu-scroll"] nav button { flex: 1 1 0; min-height: 1.75rem; max-height: 3.5rem; padding-top: 0; padding-bottom: 0; }
-@media (min-width: 1280px) and (max-height: 900px) {
-  [data-testid="desktop-side-menu-scroll"] > :not(:last-child) { margin-block-end: 1.25rem; }
-  [data-testid="desktop-side-menu-scroll"] nav > :not(:last-child) { margin-block-end: 0.25rem; }
+/* The NOOB menu: the three-line menu of a phone and the long strip of a tablet / laptop / computer share one look (SideMenu.tsx). Icon at the left, then the words;
+   small headings and thin lines between the groups; an orange circle for counts. Dark by default, its own light colours in Light mode (the colours are variables, so
+   nothing else in the app has to know). The icons are the thin line icons of the bottom bar, heavier on the open page. */
+.nmenu {
+  --nm-bg: #1c1d21; --nm-text: #a6a7ad; --nm-hi: #ffffff; --nm-label: #7e7f86; --nm-line: rgba(255, 255, 255, 0.09);
+  --nm-hover: rgba(255, 255, 255, 0.06); --nm-on: rgba(255, 255, 255, 0.12); --nm-accent: #ff5a2d; --nm-shadow: 0 18px 50px -14px rgba(0, 0, 0, 0.75);
+  background-color: var(--nm-bg); color: var(--nm-text);
 }
-@media (min-width: 1280px) and (max-height: 740px) {
-  [data-testid="desktop-side-menu"] { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-  [data-testid="desktop-side-menu-scroll"] > :not(:last-child) { margin-block-end: 0.75rem; }
-  [data-testid="desktop-side-menu-scroll"] nav > :not(:last-child) { margin-block-end: 0.125rem; }
+:root[data-theme="light"] .nmenu {
+  --nm-bg: #fffdf8; --nm-text: #55565c; --nm-hi: #0a0a0a; --nm-label: #96979d; --nm-line: rgba(10, 10, 10, 0.1);
+  --nm-hover: rgba(10, 10, 10, 0.05); --nm-on: rgba(10, 10, 10, 0.09); --nm-shadow: 0 18px 50px -16px rgba(70, 50, 20, 0.28);
 }
+.nmenu-groups { display: flex; flex-direction: column; padding: 4px 8px 8px; }
+.nmenu-group { display: flex; flex-direction: column; gap: 2px; }
+.nmenu-group + .nmenu-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--nm-line); }
+.nmenu-label { padding: 6px 12px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--nm-label); }
+.nmenu-item {
+  position: relative; display: flex; align-items: center; gap: 14px; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--nm-text); font-size: 12.5px; font-weight: 500; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nmenu-item:hover { background: var(--nm-hover); color: var(--nm-hi); }
+.nmenu-item:active { opacity: 0.65; }
+.nmenu-item.is-active { background: var(--nm-on); color: var(--nm-hi); font-weight: 700; }
+.nmenu-item.is-off { cursor: default; opacity: 0.55; }
+.nmenu-item.is-off:hover { background: transparent; color: var(--nm-text); }
+.nmenu-item.is-danger:hover { color: #ef4444; }
+.nmenu-ico { position: relative; display: flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; }
+.nmenu-ico svg { width: 20px; height: 20px; stroke-width: 1.6; }
+.nmenu-item.is-active .nmenu-ico svg { stroke-width: 2.4; }
+.nmenu-ico img { width: 22px; height: 22px; border-radius: 9999px; object-fit: cover; box-shadow: 0 0 0 1px var(--nm-line); }
+.nmenu-item.is-active .nmenu-ico img { box-shadow: 0 0 0 1.5px var(--nm-bg), 0 0 0 3px var(--nm-hi); }
+.nmenu-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nmenu-badge { flex: none; display: flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px; background: var(--nm-accent); color: #ffffff; font-size: 10px; font-weight: 800; }
+.nmenu-tag { flex: none; padding: 2px 6px; border-radius: 9999px; background: var(--nm-accent); color: #ffffff; font-size: 8px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.nmenu-dot { position: absolute; top: -2px; right: -3px; width: 8px; height: 8px; border-radius: 9999px; background: var(--nm-accent); box-shadow: 0 0 0 2px var(--nm-bg); }
+.nmenu-item.is-compact { justify-content: center; gap: 0; padding: 0; min-height: 42px; }
+.nmenu-wordmark { color: var(--nm-hi); font-style: italic; font-weight: 900; letter-spacing: -0.04em; }
+.nmenu-iconbtn { display: flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; border: 0; border-radius: 9px; background: transparent; color: var(--nm-text); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease; }
+.nmenu-iconbtn:hover { background: var(--nm-hover); color: var(--nm-hi); }
+.nmenu-iconbtn svg { width: 18px; height: 18px; stroke-width: 1.8; }
+
+/* The long strip (tablet / laptop / computer). It is a rounded card that stays in view; collapsed it is a narrow strip of icons, extended it shows the words too.
+   Wide screens (1280 px and up) make room for the extended card; on a narrower one it opens over the page (a tap outside closes it). */
+.nmenu-panel { position: absolute; left: 12px; top: 12px; bottom: 12px; z-index: 2; display: flex; flex-direction: column; width: 56px; overflow: hidden; border: 1px solid var(--nm-line); border-radius: 16px; box-shadow: var(--nm-shadow); transition: width 0.2s ease; }
+.nmenu-panel.is-open { width: 248px; }
+.nmenu-head { display: flex; flex: none; align-items: center; gap: 10px; padding: 14px 12px 8px; }
+.nmenu-panel:not(.is-open) .nmenu-head { flex-direction: column; padding: 12px 8px 6px; gap: 6px; }
+.nmenu-logo { flex: none; width: 36px; height: 36px; overflow: hidden; border-radius: 10px; }
+.nmenu-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.nmenu-foot { flex: none; border-top: 1px solid var(--nm-line); }
+.nmenu-foot .nmenu-groups { padding-top: 6px; padding-bottom: 8px; }
+
+/* The three-line menu of a phone: the same list in a drawer from the left. */
+.nmenu-drawer { display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--nm-line); box-shadow: var(--nm-shadow); }
 
 /* ============================================
    Liquid Glass — Apple-style translucent glass:

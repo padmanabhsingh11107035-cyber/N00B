@@ -101,7 +101,7 @@ check(!/openNoobDraw/.test(prof) && !/NOOB Draw/.test(prof.split('Universal: App
 const settingsRegistry = read('src/components/Settings/registry.ts');
 check(/Profile finder using QR/.test(settingsRegistry) && !/label: 'QR Scanner'/.test(settingsRegistry) && /Profile finder using QR/.test(read('src/components/Profile/QrScannerPage.tsx')), 'the QR scanner is now called "Profile finder using QR" (Settings and activity, and the page)');
 const feed = read('src/components/Feed/FeedView.tsx');
-check(/openNoobDraw\(\)/.test(feed), 'NOOB Draw is still reachable from the Home page menu');
+check(/go\('draw', openNoobDraw\)/.test(feed), 'NOOB Draw is still reachable from the Home page menu');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

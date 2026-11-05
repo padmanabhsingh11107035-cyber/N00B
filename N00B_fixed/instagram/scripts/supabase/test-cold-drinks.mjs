@@ -80,9 +80,9 @@ check(!all.includes(MAKER), 'the name of the maker platform is nowhere (page, sc
 
 section('3b. Reached from the three-line menu of Home, with a way back');
 const feedSrc = read(path.resolve('src', 'components', 'Feed', 'FeedView.tsx'));
-const drinksEntry = feedSrc.match(/<MenuBanner tone="drinks"[^\n]*/)?.[0] || '';
-check(/title="NOOB Cold Drinks"/.test(drinksEntry) && /entryId="drinks"/.test(drinksEntry) && /markMenuEntry\('drinks'\)/.test(drinksEntry) && /setShowNoobMenu\(false\)/.test(drinksEntry) && /window\.location\.assign\('\/cold-drinks\/'\)/.test(drinksEntry), 'the three-line menu has an entry "NOOB Cold Drinks" that closes the menu and opens /cold-drinks/');
-check(/drinks: \{ border:/.test(read(path.resolve('src', 'components', 'Feed', 'MenuBanner.tsx'))) && /CupSoda/.test(feedSrc), 'the entry has its own colours and a can-of-drink icon');
+const drinksEntry = feedSrc.match(/featOn\('drinks'\) && \{[^\n]*/)?.[0] || '';
+check(/label: 'NOOB Cold Drinks'/.test(drinksEntry) && /entryId: 'drinks'/.test(drinksEntry) && /go\('drinks'/.test(drinksEntry) && /window\.location\.assign\('\/cold-drinks\/'\)/.test(drinksEntry) && /const go = \(id: string, open: \(\) => void\) => \(\) => \{ markMenuEntry\(id\); setShowNoobMenu\(false\);/.test(feedSrc), 'the three-line menu has an entry "NOOB Cold Drinks" that closes the menu and opens /cold-drinks/');
+check(/icon: <CupSoda \/>/.test(drinksEntry), 'the entry has a can-of-drink icon');
 check(/id="brand"/.test(html) && /class="back"/.test(html) && /history\.back\(\)/.test(srcFiles), 'the page has a ‹ NOOB arrow at its top-left that goes back to the app');
 
 section('4. Served the right way');

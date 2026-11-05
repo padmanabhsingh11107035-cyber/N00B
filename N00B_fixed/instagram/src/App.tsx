@@ -21,7 +21,10 @@ import {
   UserCheck,
   UserPlus,
   Plus,
-  Youtube
+  Youtube,
+  CirclePlus,
+  PanelLeftOpen,
+  PanelLeftClose
 } from 'lucide-react';
 import { Post, Reel, Story, User, StatusNote, AppNotification } from './types';
 import {
@@ -124,6 +127,8 @@ import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './utils/pageLayers';
 import { LogoLightbox } from './components/Common/LogoLightbox';
+import { MenuList, type MenuGroupSpec, type MenuItemSpec } from './components/Navigation/SideMenu';
+import { useMenuGroups, menuItemClick } from './utils/menuEntries';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { FeatureFlagsContext } from './utils/featureFlags';
 import { TAB_FEATURE, disabledFeatureSet, funFeatureKey, setCalcLocked } from './utils/features';
@@ -246,6 +251,11 @@ export default function App() {
   const refreshableHere = activeTab === 'feed' && pageLayers.layers.length === 0 && !fullPageOpen;
   // Home and Explore, once opened, stay alive (hidden) while another tab shows: going back to them is instant, with nothing rebuilt or fetched again, at the place they were left.
   const visitedTabs = useRef<{ uid?: string; tabs: Set<NavTab> }>({ tabs: new Set<NavTab>() });
+  // The long strip on the left of a tablet / laptop / computer: icons only by default, the Extend button shows the words too (the choice is remembered; on a screen under 1280 px
+  // wide the extended strip opens over the page instead of pushing it).
+  const homeMenuGroups = useMenuGroups();
+  const [sideExtended, setSideExtended] = useState<boolean>(() => { try { return localStorage.getItem('noob.sideMenu') === 'open' && window.matchMedia('(min-width: 1280px)').matches; } catch { return false; } });
+  const toggleSideMenu = () => setSideExtended((v) => { const n = !v; try { localStorage.setItem('noob.sideMenu', n ? 'open' : 'closed'); } catch { /* the choice just is not remembered */ } return n; });
   useTabScroll(activeTab, KEEP_ALIVE_TABS, pageLayers.layers.length === 0 && !fullPageOpen);
   useEffect(() => { document.documentElement.setAttribute('data-refresh', refreshableHere ? 'on' : 'off'); }, [refreshableHere]);
   // Tracks the tab the user was on immediately before the current one, so
@@ -1693,245 +1703,93 @@ export default function App() {
     /></React.Suspense>
   );
 
+  // The long strip (tablet / laptop / computer): the pages first, then the account, then the same pages as the three-line menu of a phone (Home publishes that list). A page of the
+  // menu is opened by Home, so from another page the strip goes Home first. On a screen under 1280 px wide the extended strip closes again after a page is chosen.
+  const sideItems = (list: Array<MenuItemSpec | false | null | undefined>): MenuItemSpec[] => list.filter((i): i is MenuItemSpec => !!i);
+  const pressHomeEntry = (id: string) => () => {
+    const fire = () => menuItemClick(id)?.();
+    if (activeTab === 'feed' && pageLayers.layers.length === 0) { fire(); return; }
+    handleSelectNavTab('feed');
+    window.requestAnimationFrame(() => window.requestAnimationFrame(fire));
+  };
+  const closeNarrowStrip = () => { if (sideExtended && !window.matchMedia('(min-width: 1280px)').matches) setSideExtended(false); };
+  const sideGroupsRaw: MenuGroupSpec[] = [
+    {
+      id: 'pages',
+      title: 'Pages',
+      items: sideItems([
+        { id: 'home', label: 'Home', icon: <Home />, active: pageTab === 'feed', onClick: () => handleSelectNavTab('feed'), testId: 'side-home' },
+        featOn('explore') && { id: 'explore', label: 'Explore', icon: <Compass />, active: pageTab === 'explore', onClick: () => handleSelectNavTab('explore'), testId: 'side-explore' },
+        featOn('reels') && { id: 'reels', label: 'Reels', icon: <Film />, active: pageTab === 'reels', onClick: () => handleSelectNavTab('reels'), testId: 'side-reels' },
+        featOn('videos') && { id: 'videos', label: 'Feed', icon: <Youtube />, active: pageTab === 'videos', onClick: () => handleSelectNavTab('videos'), testId: 'side-videos' },
+        featOn('create') && { id: 'create', label: 'Create', icon: <CirclePlus />, onClick: () => handleSelectNavTab('post'), testId: 'side-create' },
+        featOn('chat') && { id: 'chat', label: 'Chat', icon: <MessageSquare />, active: pageTab === 'chat', badge: unreadChatCount > 0 ? unreadChatCount : undefined, onClick: () => handleSelectNavTab('chat'), testId: 'side-chat' },
+        featOn('games') && { id: 'games', label: 'Mini-Games', icon: <Gamepad2 />, active: pageTab === 'games', onClick: () => handleSelectNavTab('games'), testId: 'side-games' },
+        !musicHidden && { id: 'music', label: 'Music', icon: <Music />, active: pageTab === 'music', onClick: () => handleSelectNavTab('music'), testId: 'side-music' },
+      ]),
+    },
+    {
+      id: 'account',
+      title: 'Account',
+      items: sideItems([
+        { id: 'notifications', label: 'Notifications', icon: <Bell />, badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined, onClick: handleOpenNotifications, testId: 'side-notifications' },
+        { id: 'wallet', label: 'Wallet', icon: <WalletIcon />, onClick: () => setShowWalletModal(true), testId: 'side-wallet' },
+        { id: 'subscriptions', label: 'Subscriptions', icon: <Sparkles />, onClick: () => setShowSubscriptionsModal(true), testId: 'side-subscriptions' },
+        // Insights are for business accounts only. (Customer support is the round button at the bottom right.)
+        currentUser.isBusiness && { id: 'insights', label: 'Account Insights', icon: <BarChart3 />, onClick: () => setShowProfessionalDashboardModal(true), testId: 'side-insights' },
+      ]),
+    },
+    ...homeMenuGroups.map((g) => ({ ...g, items: g.items.map((i) => (i.onClick ? { ...i, onClick: pressHomeEntry(i.id) } : i)) })),
+  ];
+  const withClose = (groups: MenuGroupSpec[]): MenuGroupSpec[] => groups.map((g) => ({ ...g, items: g.items.map((i) => (i.onClick ? { ...i, onClick: () => { closeNarrowStrip(); i.onClick?.(); } } : i)) }));
+  const sideGroups = withClose(sideGroupsRaw);
+  const sideFootGroups: MenuGroupSpec[] = withClose([
+    {
+      id: 'me',
+      items: [
+        { id: 'profile', label: currentUser.displayName || currentUser.username, icon: <img src={currentUser.avatar || '/noob-logo.svg.jpeg'} alt="" referrerPolicy="no-referrer" />, active: pageTab === 'profile', onClick: () => handleSelectNavTab('profile'), testId: 'side-profile' },
+        { id: 'logout', label: 'Log out', icon: <LogOut />, onClick: handleLogout, danger: true, testId: 'side-logout' },
+      ],
+    },
+  ]);
+
   return (
     <FeatureFlagsContext.Provider value={featuresOff}>
-    <div className={`min-h-screen text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
+    <div className={`min-h-screen text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 md:justify-start md:pl-0 lg:pl-0 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
       <SignupSourceCard userId={currentUser.id} />
       {incomingCall && featOn('calls') && (
         <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
       )}
-      {/* 1. Left Desktop Sidebar (shown on xl: screens) */}
-      <aside className="hidden xl:flex flex-col w-[240px] 2xl:w-[272px] h-[92vh] sticky top-6 justify-between pb-4 shrink-0 select-none xl:h-screen xl:top-0 xl:-my-6 xl:py-6 xl:px-3 xl:border-r xl:border-white/5 xl:overflow-hidden" data-testid="desktop-side-menu">
-        {/* The menu scrolls inside itself on a short screen, the profile box under it never gets pushed out of sight */}
-        <div className="space-y-7 min-h-0 flex-1 overflow-y-auto no-scrollbar pb-3" data-testid="desktop-side-menu-scroll">
-          {/* Logo & Brand Header */}
-          <div className="flex items-center gap-3 px-2">
-            <LogoLightbox className="w-10 h-10 rounded-[24%] overflow-hidden border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.12)] cursor-pointer hover:border-white/50 transition-colors" />
-            <div>
-              <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
-                NOOB <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30">APP</span>
-              </span>
-              <span className="text-[10px] text-zinc-500 block -mt-0.5">Fun & Connect</span>
-            </div>
+      {/* 1. The long strip on the left (tablet / laptop / computer; a phone has the bottom bar and the three-line menu instead) */}
+      <aside
+        className={`hidden md:block sticky top-0 h-dvh lg:-my-6 shrink-0 select-none z-[45] transition-[width] duration-200 ${sideExtended ? 'w-[80px] xl:w-[272px]' : 'w-[80px]'}`}
+        data-testid="desktop-side-menu"
+        data-extended={sideExtended ? 'true' : 'false'}
+      >
+        {sideExtended && <button type="button" className="xl:hidden fixed inset-0 cursor-default" style={{ zIndex: 1 }} onClick={toggleSideMenu} aria-label="Close the menu" data-testid="side-menu-backdrop" />}
+        <div className={`nmenu nmenu-panel ${sideExtended ? 'is-open' : ''}`} data-testid="desktop-side-menu-panel">
+          <div className="nmenu-head">
+            <LogoLightbox className="nmenu-logo cursor-pointer" />
+            {sideExtended && <span className="nmenu-wordmark text-lg flex-1 min-w-0 truncate">NOOB</span>}
+            <button
+              type="button"
+              className="nmenu-iconbtn"
+              onClick={toggleSideMenu}
+              aria-label={sideExtended ? 'Collapse the menu' : 'Extend the menu'}
+              aria-expanded={sideExtended}
+              title={sideExtended ? 'Collapse the menu' : 'Extend the menu'}
+              data-testid="side-menu-toggle"
+            >
+              {sideExtended ? <PanelLeftClose /> : <PanelLeftOpen />}
+            </button>
           </div>
-
-          {/* Navigation Links */}
-          <nav className="space-y-1.5">
-            <button
-              onClick={() => handleSelectNavTab('feed')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'feed'
-                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Home className={`w-4 h-4 ${activeTab === 'feed' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Home</span>
-            </button>
-
-            {featOn('explore') && (
-              <button
-                onClick={() => handleSelectNavTab('explore')}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'explore'
-                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <Compass className={`w-4 h-4 ${activeTab === 'explore' ? 'stroke-red-500' : 'stroke-current'}`} />
-                <span>Explore People</span>
-              </button>
-            )}
-
-            {featOn('reels') && (
-              <button
-                onClick={() => handleSelectNavTab('reels')}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'reels'
-                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <Film className={`w-4 h-4 ${activeTab === 'reels' ? 'stroke-red-500' : 'stroke-current'}`} />
-                <span>Reels</span>
-              </button>
-            )}
-
-            {featOn('videos') && (
-              <button
-                onClick={() => handleSelectNavTab('videos')}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'videos'
-                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <Youtube className={`w-4 h-4 ${activeTab === 'videos' ? 'stroke-red-500' : 'stroke-current'}`} />
-                <span>Feed</span>
-              </button>
-            )}
-
-            {featOn('create') && (
-              <button
-                onClick={() => handleSelectNavTab('post')}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.25)]"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>Create</span>
-              </button>
-            )}
-
-            <button
-              onClick={handleOpenNotifications}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3.5">
-                <Bell className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform" />
-                <span>Notifications</span>
-              </div>
-              {unreadNotificationCount > 0 ? (
-                <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-noob text-black animate-pulse">
-                  {unreadNotificationCount}
-                </span>
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-              )}
-            </button>
-
-            {featOn('chat') && (
-              <button
-                onClick={() => handleSelectNavTab('chat')}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'chat'
-                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <div className="flex items-center gap-3.5">
-                  <MessageSquare className={`w-4 h-4 ${activeTab === 'chat' ? 'stroke-red-500' : 'stroke-current'}`} />
-                  <span>Direct Chat</span>
-                </div>
-                {unreadChatCount > 0 && (
-                  <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-red-600 text-white animate-bounce">
-                    {unreadChatCount}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {featOn('games') && (
-              <button
-                onClick={() => handleSelectNavTab('games')}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'games'
-                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-noob' : 'stroke-current'}`} />
-                <span>Mini-Games</span>
-              </button>
-            )}
-
-            {!musicHidden && (
-              <button
-                onClick={() => handleSelectNavTab('music')}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'music'
-                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-                }`}
-              >
-                <Music className={`w-4 h-4 ${activeTab === 'music' ? 'stroke-noob' : 'stroke-current'}`} />
-                <span>Music Hub</span>
-              </button>
-            )}
-
-            {/* Desktop/tablet-only shortcuts (this whole sidebar is hidden below the xl breakpoint) —
-                same destinations the Profile ⋮ menu already opens, just reachable directly here too. */}
-            {featOn('lounge') && (
-              <button
-                onClick={() => setShowLiveLoungeUpsell(true)}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-              >
-                <Radio className="w-4 h-4 stroke-current" />
-                <span>Meetings</span>
-              </button>
-            )}
-
-            {featOn('ai') && (
-              <button
-                onClick={() => setShowNoobAiPage(true)}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-              >
-                <Bot className="w-4 h-4 stroke-current" />
-                <span>NOOB AI</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowWalletModal(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-            >
-              <WalletIcon className="w-4 h-4 stroke-current" />
-              <span>Wallet</span>
-            </button>
-
-            <button
-              onClick={() => setShowSubscriptionsModal(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 stroke-current" />
-              <span>Subscriptions</span>
-            </button>
-
-            {/* Insights are for business accounts only. (Customer support is the round button at the bottom right.) */}
-            {currentUser.isBusiness && (
-              <button
-                onClick={() => setShowProfessionalDashboardModal(true)}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-              >
-                <BarChart3 className="w-4 h-4 text-purple-400" />
-                <span>Account Insights</span>
-              </button>
-            )}
-          </nav>
-        </div>
-
-        {/* Profile Desk Widget */}
-        <div className="shrink-0 bg-zinc-900/60 hover:bg-zinc-900/90 border border-white/5 p-3 rounded-2xl transition-all shadow-lg" data-testid="desktop-side-profile">
-          <div className="flex items-center gap-3">
-            <div
-              onClick={() => handleSelectNavTab('profile')}
-              className="relative cursor-pointer"
-            >
-              <AvatarMedia
-                src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                isLiveAvatar={currentUser.isLiveAvatar}
-                liveAvatarVideoUrl={currentUser.liveAvatarVideoUrl}
-                alt={currentUser.username}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-red-500/60"
-              />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />
-            </div>
-            <div
-              onClick={() => handleSelectNavTab('profile')}
-              className="min-w-0 flex-1 cursor-pointer"
-            >
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-white truncate">{currentUser.displayName || currentUser.username}</span>
-                {currentUser.isVerified ? <VerifiedBadge size="xs" /> : <CheckCircle2 className="w-3 h-3 text-red-500 shrink-0" />}
-              </div>
-              <span className="text-[10px] text-zinc-400 font-medium block truncate">@{currentUser.username}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
-              title="Log Out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+          {/* the pages scroll inside the strip on a short screen; the profile and Log out under them stay in view */}
+          <div className="nmenu-scroll no-scrollbar" data-testid="desktop-side-menu-scroll">
+            <MenuList groups={sideGroups} compact={!sideExtended} />
+          </div>
+          <div className="nmenu-foot" data-testid="desktop-side-profile">
+            <MenuList groups={sideFootGroups} compact={!sideExtended} />
           </div>
         </div>
       </aside>
@@ -1940,13 +1798,13 @@ export default function App() {
       <main
         className={`relative w-full max-w-[480px] ${
           pageTab === 'music' ? 'md:max-w-3xl lg:max-w-[980px] 2xl:max-w-[1120px]' : pageTab === 'feed' ? 'md:max-w-2xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
-        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : pageTab === 'music' ? 'xl:mx-auto' : 'xl:ml-auto'} ${pageTab === 'music' ? 'bg-[#050507]' : 'bg-page'} ${pageTab === 'feed' ? 'doodle-wallpaper-feed' : pageTab === 'music' ? '' : 'doodle-wallpaper'} lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
+        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : pageTab === 'music' ? 'xl:mx-auto' : 'xl:mx-0 xl:ml-auto'} ${pageTab === 'music' ? 'bg-[#050507]' : 'bg-page'} ${pageTab === 'feed' ? 'doodle-wallpaper-feed' : pageTab === 'music' ? '' : 'doodle-wallpaper'} lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,
           // unwanted page-level scroll on top of the chat list's own internal scroll.
           pageTab === 'chat' ? '' : 'pb-24'
-        } overflow-hidden shrink-0`}
+        } md:mx-auto overflow-hidden shrink-0 md:shrink md:min-w-0 xl:shrink-0`}
       >
         {/* the page that is showing; it stays alive (hidden) while a profile is open on top of it */}
         <PageLayerSlot layerId={0} hidden={pageLayers.layers.length > 0} register={pageLayers.register}>

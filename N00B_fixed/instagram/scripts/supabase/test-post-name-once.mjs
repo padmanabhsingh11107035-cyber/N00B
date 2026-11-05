@@ -25,7 +25,7 @@ check(/<span onClick=\{\(\) => goToProfile\(post\.userId\)\} className="font-bol
 check((post.match(/@\{post\.username\}/g) || []).length === 0, 'nowhere in the card is the author\'s @username drawn a second time');
 
 section('3. The three-line menu');
-check(/className="space-y-1 h-full overflow-y-auto overscroll-contain pb-\[max\(1rem,env\(safe-area-inset-bottom\)\)\] no-scrollbar"/.test(feed), 'the menu list has no scrollbar while it scrolls');
+check(/className="h-full overflow-y-auto overscroll-contain pb-\[max\(1rem,env\(safe-area-inset-bottom\)\)\] no-scrollbar"/.test(feed), 'the menu list has no scrollbar while it scrolls');
 check(/\.no-scrollbar::-webkit-scrollbar \{\s*display: none;/.test(css) && /scrollbar-width: none;/.test(css), 'the rule that hides it works in Safari / Chrome and Firefox');
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -22,7 +22,8 @@ export function currentMenuEntry(): string | null {
 /** Puts the button in the middle of the menu's list and makes it flash once, so the eye lands on it. The menu may not be drawn yet: it tries for about a third of a second. */
 export function scrollToMenuEntry(id: string, tries = 20): void {
   if (typeof document === 'undefined') return;
-  const el = document.querySelector<HTMLElement>(`[data-menu-entry="${id.replace(/"/g, '')}"]`);
+  // (the long strip of a tablet / computer draws the same rows, hidden on a phone: only the one that is really on screen counts)
+  const el = Array.from(document.querySelectorAll<HTMLElement>(`[data-menu-entry="${id.replace(/"/g, '')}"]`)).find((e) => e.getClientRects().length > 0) || null;
   if (!el) {
     if (tries > 0 && typeof requestAnimationFrame === 'function') requestAnimationFrame(() => scrollToMenuEntry(id, tries - 1));
     return;

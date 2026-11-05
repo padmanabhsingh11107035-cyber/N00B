@@ -18,12 +18,12 @@ const feed = read('src/components/Feed/FeedView.tsx');
 check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && !/nav-item-videos/.test(nav), 'the bottom bar carries neither Music nor Videos (the bar has 3 pages, Create, then 3 pages)');
 check(/musicHidden\?: boolean/.test(feed) && /\{onOpenTab && !musicHidden && \(\s*<button\s+onClick=\{\(\) => onOpenTab\('music'\)\}/.test(feed), 'the Music button at the top of Home is drawn only while the page is shown');
 check(!/setShowNoobMenu\(false\); onOpenTab\('music'\)/.test(feed), 'the three-line menu no longer lists Music (the top button is the way in)');
-check(/onOpenTab\('videos'\)/.test(feed) && /data-testid="noob-menu-more-pages"/.test(feed), 'the same menu lists the Videos feed');
+check(/onOpenTab\('videos'\)/.test(feed) && /id: 'more-pages'/.test(feed) && /testId: 'menu-videos'/.test(feed), 'the same menu lists the Videos feed');
 
 section('2. Everywhere else the page shows up');
 check(/const musicHidden = platformSettings\?\.musicPageHidden === true;/.test(app), 'hidden only when the administrator says so (a missing setting means shown)');
 check(/musicHidden=\{musicHidden\}/.test(app) && /onOpenTab=\{handleSelectNavTab\}/.test(app), 'the menu on Home is told');
-check(/\{!musicHidden && \(\s*<button\s+onClick=\{\(\) => handleSelectNavTab\('music'\)\}/.test(app), 'the side menu on computers loses its Music Hub button');
+check(/!musicHidden && \{ id: 'music'[^\n]*handleSelectNavTab\('music'\)/.test(app), 'the side strip on tablets and computers loses its Music button');
 check(/activeTab === 'music' && !musicHidden/.test(app), 'the page itself is never drawn while hidden');
 check(/if \(musicHidden && activeTab === 'music'\) setActiveTab\('feed'\)/.test(app), 'anyone who is on it when it gets hidden is taken Home');
 check(/document\.addEventListener\('visibilitychange', onBack\)/.test(app) && /Date\.now\(\) - last > 120_000/.test(app) && /\[currentUser\?\.id, viewAsUser\]/.test(app), 'the setting is re-read when the app comes back to the front (at most every 2 minutes), and when the administrator steps into "use as user"');

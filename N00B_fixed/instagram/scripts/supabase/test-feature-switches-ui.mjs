@@ -48,9 +48,9 @@ check(/const offKey = TAB_FEATURE\[tab\];\s*if \(offKey && featuresOff\.has\(off
 
 section('3. The side menu on computers');
 for (const [k, tab] of [['explore', 'explore'], ['reels', 'reels'], ['videos', 'videos'], ['create', 'post'], ['chat', 'chat'], ['games', 'games']]) {
-  check(new RegExp(`\\{featOn\\('${k}'\\) && \\(\\s*<button\\s+onClick=\\{\\(\\) => handleSelectNavTab\\('${tab}'\\)\\}`).test(app), `the ${k} button is drawn only while the page is on`);
+  check(new RegExp(`featOn\\('${k}'\\) && \\{ id: '[a-z]+', label: '[^']+', icon: <[A-Za-z0-9]+ />,[^\\n]*handleSelectNavTab\\('${tab}'\\)`).test(app), `the ${k} button is drawn only while the page is on`);
 }
-check(/\{featOn\('lounge'\) && \(\s*<button\s+onClick=\{\(\) => setShowLiveLoungeUpsell\(true\)\}/.test(app) && /\{featOn\('ai'\) && \(\s*<button\s+onClick=\{\(\) => setShowNoobAiPage\(true\)\}/.test(app), 'so are Meetings and NOOB AI');
+check(/featOn\('lounge'\) && \{ id: 'lounge'/.test(read('src/components/Feed/FeedView.tsx')) && /featOn\('ai'\) && \{ id: 'ai'/.test(read('src/components/Feed/FeedView.tsx')), 'so are Live Lounge and NOOB AI (they are in the same list as the three-line menu)');
 check(/\{featOn\('explore'\) && \(\s*<button\s+onClick=\{\(\) => setActiveTab\('explore'\)\}/.test(app) && /\{featOn\('explore'\) && \(\s*<>\s*<span>•<\/span>/.test(app), 'the two "Explore" links of the right-hand panel go too');
 check(/activeTab !== 'chat' && activeTab !== 'reels' && featOn\('support'\) && \(/.test(app), 'the round help button at the bottom right is drawn only while Customer Support is on');
 

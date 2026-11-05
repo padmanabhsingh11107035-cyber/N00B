@@ -50,6 +50,7 @@ const APP_ORDER: Array<{ id: ShareApp; label: string }> = [
 export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUser, itemId, ownerUsername, onClose }) => {
   const drag = useSheetDrag(onClose);   // drag the grey bar down to close
   const kbm = useKeyboardMetrics();
+  const [typing, setTyping] = useState(false);   // the search box has the keyboard: only then does the sheet make room for it (otherwise the sheet sits still at the bottom)
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -120,14 +121,14 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
   };
 
   // On a phone the keyboard (the search box) lifts the sheet: it keeps its own colour all the way down behind the keyboard's glass, so the page never shows through it.
-  const sheetStyle = kbm.phone ? { maxHeight: Math.max(220, Math.min(Math.round(kbm.page * 0.82), kbm.visible - 12)) + kbm.keyboard, paddingBottom: kbm.keyboard || undefined } : undefined;
+  const sheetStyle = kbm.phone && typing ? { maxHeight: Math.max(220, Math.min(Math.round(kbm.page * 0.82), kbm.visible - 12)) + kbm.keyboard, paddingBottom: kbm.keyboard || undefined } : undefined;
   const sheet = (
     <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center" data-testid="share-sheet">
       <div ref={drag.backdropRef} className="absolute inset-0 bg-black/70 animate-in fade-in duration-150" onClick={onClose} aria-hidden="true" />
       <div
         ref={drag.sheetRef}
         style={sheetStyle}
-        className="relative w-full sm:max-w-md max-h-[82dvh] bg-zinc-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+        className="relative w-full sm:max-w-md h-[min(78dvh,640px)] sm:h-auto max-h-[82dvh] bg-zinc-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
         role="dialog"
         aria-label={`Share ${TYPE_LABEL[type]}`}
       >
@@ -136,7 +137,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
         <div className="px-3 pb-2 flex items-center gap-2 shrink-0">
           <label className="flex-1 flex items-center gap-2 rounded-full bg-zinc-800 px-3.5 py-2.5">
             <Search className="w-4 h-4 text-zinc-400 shrink-0" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search people" className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-zinc-400 outline-none" data-testid="share-search" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} placeholder="Search" aria-label="Search people" className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-zinc-400 outline-none" data-testid="share-search" />
           </label>
           <button onClick={onClose} aria-label="Close" className={`${CLOSE_X_CLASS} p-2.5 rounded-full bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer shrink-0`}><X className="w-4 h-4" /></button>
         </div>
@@ -185,7 +186,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
               </button>
             </div>
           ) : (
-            <div className="flex gap-3.5 overflow-x-auto no-scrollbar px-4 pt-3 pb-6" data-testid="share-apps">
+            <div className="flex flex-nowrap items-start gap-3.5 overflow-x-auto overflow-y-hidden overscroll-x-contain snap-x no-scrollbar px-4 pt-3 pb-6 [-webkit-overflow-scrolling:touch]" style={{ touchAction: 'pan-x' }} data-testid="share-apps">
               {APP_ORDER.slice(0, 1).map((a) => (
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}
@@ -204,7 +205,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
 };
 
 const ShareIcon: React.FC<{ label: string; look: string; onClick: () => void; testId: string; children: React.ReactNode }> = ({ label, look, onClick, testId, children }) => (
-  <button onClick={onClick} className="flex flex-col items-center gap-1.5 w-[4.25rem] shrink-0 cursor-pointer" data-testid={testId}>
+  <button onClick={onClick} className="flex flex-col items-center gap-1.5 w-[4.25rem] shrink-0 snap-start cursor-pointer" data-testid={testId}>
     <span className={`w-12 h-12 rounded-full flex items-center justify-center ${look}`}>{children}</span>
     <span className="text-[10.5px] text-zinc-300 leading-tight text-center">{label}</span>
   </button>

@@ -17,7 +17,8 @@ import {
   Ticket,
   Send,
   QrCode,
-  HeartHandshake
+  HeartHandshake,
+  ChevronLeft
 } from 'lucide-react';
 import { User } from '../../types';
 import { formatNoobPoints } from '../../utils/formatPoints';
@@ -170,286 +171,183 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
     }
   };
 
+  const cardDigits = (currentUser.id || '').replace(/[^0-9a-f]/gi, '').slice(-4).toUpperCase().padStart(4, '0');
+  const milestone = exactPoints < 500 ? 500 : exactPoints < 1000 ? 1000 : 2500;
+  const tier = exactPoints >= 2500 ? 'GRAND LEGEND' : exactPoints >= 1000 ? 'CYBER CHAMPION' : exactPoints >= 500 ? 'ARCADE ACE' : 'PIONEER';
+
+  const actions = [
+    { label: 'Send points', sub: 'Gift points to a friend', button: 'Send', icon: <Send className="w-[18px] h-[18px]" />, run: () => setShowSendPoints(true) },
+    { label: 'Requests', sub: 'See who asked you for points', button: 'Open', icon: <HeartHandshake className="w-[18px] h-[18px]" />, run: () => setShowPaymentRequests(true) },
+    { label: 'Coupons', sub: 'Use them on Pro and Verified', button: 'Open', icon: <Ticket className="w-[18px] h-[18px]" />, run: () => setShowCoupons(true) }
+  ];
+  const tabs: { id: 'overview' | 'badges' | 'history'; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'badges', label: `Badges (${unlockedBadgesCount})` },
+    { id: 'history', label: 'Transactions' }
+  ];
+
   return (
-    <div
-      id="accounts-statistics-modal"
-      className="fixed inset-0 z-50 bg-zinc-950 flex items-stretch justify-center p-0 animate-in fade-in duration-200"
-    >
-      <div className="w-full h-full max-w-none bg-zinc-950 p-5 sm:py-6 sm:px-[max(1.5rem,calc((100vw-40rem)/2))] space-y-5 overflow-y-auto pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold text-white tracking-tight">Wallet</h2>
-            <p className="text-[11px] text-zinc-400">Your NOOB Points, badges &amp; activity</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setShowMyQr(true)}
-              title="Your QR code — let someone scan it to send you NOOB Points"
-              aria-label="Show your QR code"
-              className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-200 cursor-pointer transition-colors"
-            >
+    <div id="accounts-statistics-modal" data-noob-keep="1" data-testid="wallet-page" className="wl fixed inset-0 z-50 flex items-stretch justify-center p-0 animate-in fade-in duration-200">
+      <div className="wl-scroll w-full h-full overflow-y-auto pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto w-full max-w-xl px-4 space-y-5">
+          {/* Header: back, title, QR */}
+          <div className="relative flex items-center justify-between h-12">
+            <button type="button" onClick={onClose} aria-label="Close" data-testid="wallet-back" className="wl-round">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h2 className="wl-title">Wallet</h2>
+            <button type="button" onClick={() => setShowMyQr(true)} title="Your QR code: let someone scan it to send you NOOB Points" aria-label="Show your QR code" className="wl-round">
               <QrCode className="w-[18px] h-[18px]" />
             </button>
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-200 cursor-pointer transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
-        </div>
 
-        {/* Balance card: a NOOB card in the wallet's own green */}
-        <div
-          data-testid="wallet-card"
-          className="relative overflow-hidden rounded-[26px] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.5)] text-white min-h-[188px] flex flex-col justify-between"
-          style={{ background: 'linear-gradient(135deg,#1f6a4f 0%,#0E4B37 55%,#0a3a2b 100%)' }}
-        >
-          <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(115deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0.08) 75%,rgba(255,255,255,0) 100%)' }} />
-          <div className="relative flex items-start justify-between">
-            <span className="text-[22px] font-black tracking-[0.2em] leading-none">NOOB</span>
-            <span className="text-[10px] font-extrabold tracking-widest px-2.5 py-1 rounded-full bg-black/30">
-              {exactPoints >= 2500 ? 'GRAND LEGEND' : exactPoints >= 1000 ? 'CYBER CHAMPION' : exactPoints >= 500 ? 'ARCADE ACE' : 'PIONEER'}
-            </span>
-          </div>
-          <div className="relative">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5"><Coins className="w-3.5 h-3.5" /> Balance</span>
-            <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-4xl font-black tracking-tight">{formatNoobPoints(exactPoints)}</span>
-              <span className="text-[11px] font-semibold text-white/60">({exactPoints.toLocaleString()} exact pts)</span>
+          {/* The card */}
+          <div data-testid="wallet-card" className="wl-card-main">
+            <span aria-hidden="true" className="wl-shine" />
+            <div className="relative flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="wl-lab">Name</p>
+                <p className="wl-name truncate">{currentUser.displayName || currentUser.username}</p>
+                <p className="wl-dots" aria-hidden="true">••••&nbsp;&nbsp;••••&nbsp;&nbsp;••••&nbsp;&nbsp;{cardDigits}</p>
+              </div>
+              <span aria-hidden="true" className="wl-mark"><i /><i /></span>
+            </div>
+            <div className="relative flex items-end justify-between gap-3 mt-6">
+              <div>
+                <p className="wl-lab flex items-center gap-1.5"><Coins className="w-3.5 h-3.5" /> Balance</p>
+                <p className="wl-balance">{formatNoobPoints(exactPoints)}</p>
+                <p className="wl-exact">{exactPoints.toLocaleString()} exact pts</p>
+              </div>
+              <span className="wl-tier">{tier}</span>
+            </div>
+            <div className="relative mt-4">
+              <div className="flex justify-between wl-lab mb-1">
+                <span>Next milestone</span>
+                <span className="text-white font-bold">{milestone.toLocaleString()} pts</span>
+              </div>
+              <div className="wl-bar"><div style={{ width: `${Math.min(100, Math.round((exactPoints / milestone) * 100))}%` }} /></div>
             </div>
           </div>
-          <div className="relative">
-            <div className="flex justify-between text-[10px] text-white/70 font-semibold mb-1">
-              <span>Next milestone</span>
-              <span className="text-white font-bold">{exactPoints < 500 ? '500 pts' : exactPoints < 1000 ? '1,000 pts' : '2,500 pts'}</span>
-            </div>
-            <div className="w-full bg-black/30 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-white h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, Math.round((exactPoints / (exactPoints < 500 ? 500 : exactPoints < 1000 ? 1000 : 2500)) * 100))}%` }} />
-            </div>
+
+          {/* Actions, one row each */}
+          <div className="wl-panel divide-y divide-[var(--wl-line)]" data-testid="wallet-actions">
+            {actions.map((x) => (
+              <div key={x.label} className="flex items-center gap-3 py-3 first:pt-1 last:pb-1">
+                <span className="wl-tile">{x.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="wl-row-title">{x.label}</p>
+                  <p className="wl-row-sub truncate">{x.sub}</p>
+                </div>
+                <button type="button" onClick={x.run} className="wl-pill">{x.button}</button>
+              </div>
+            ))}
           </div>
-        </div>
 
-        {/* Quick actions: round buttons */}
-        <div className="grid grid-cols-3 gap-3" data-testid="wallet-actions">
-          {[
-            { label: 'Send', sub: 'Gift points', icon: <Send className="w-5 h-5" />, run: () => setShowSendPoints(true), tone: 'bg-noob text-black' },
-            { label: 'Requests', sub: 'Friends ask', icon: <HeartHandshake className="w-5 h-5" />, run: () => setShowPaymentRequests(true), tone: 'bg-zinc-900 text-amber-300 border border-zinc-800' },
-            { label: 'Coupons', sub: 'Pro & verify', icon: <Ticket className="w-5 h-5" />, run: () => setShowCoupons(true), tone: 'bg-zinc-900 text-blue-300 border border-zinc-800' }
-          ].map((x) => (
-            <button key={x.label} onClick={x.run} className="flex flex-col items-center gap-1.5 cursor-pointer group">
-              <span className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md group-active:scale-95 transition-transform ${x.tone}`}>{x.icon}</span>
-              <span className="text-xs font-bold text-white leading-none">{x.label}</span>
-              <span className="text-[10px] text-zinc-500 leading-none">{x.sub}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Sub-tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-          <button
-            onClick={() => setActiveSubTab('overview')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'overview'
-                ? 'bg-white text-black shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            📊 Activity &amp; Overview
-          </button>
-          <button
-            onClick={() => setActiveSubTab('badges')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'badges'
-                ? 'bg-white text-black shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            Badges Showcase ({unlockedBadgesCount})
-          </button>
-          <button
-            onClick={() => setActiveSubTab('history')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeSubTab === 'history'
-                ? 'bg-white text-black shadow-sm'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            💳 Transactions
-          </button>
-        </div>
-
-        {/* Tab 1: Overview */}
-        {activeSubTab === 'overview' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Gaming Won</span>
-                <span className="text-xl font-black text-white block mt-1">{gamesWon}</span>
-                <span className="text-[10px] text-noob font-semibold mt-0.5 block">+50 pts / win</span>
-              </div>
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Matches Played</span>
-                <span className="text-xl font-black text-white block mt-1">{gamesPlayed}</span>
-                <span className="text-[10px] text-purple-400 font-semibold mt-0.5 block">+10 pts / game</span>
-              </div>
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Posts &amp; Reels</span>
-                <span className="text-xl font-black text-white block mt-1">{postsCount}</span>
-                <span className="text-[10px] text-cyan-400 font-semibold mt-0.5 block">+10M pts / post</span>
-              </div>
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Followers</span>
-                <span className="text-xl font-black text-white block mt-1">{currentUser.followersCount || 0}</span>
-                <span className="text-[10px] text-amber-400 font-semibold mt-0.5 block">Active Reach</span>
-              </div>
-            </div>
-
-            {/* Quick Summary Banner */}
-            <div className="p-3.5 bg-zinc-900/40 border border-white/5 rounded-2xl flex items-center gap-3">
-              <Info className="w-5 h-5 text-noob shrink-0" />
-              <div className="text-xs text-zinc-300">
-                <p className="font-semibold text-white">Real-Time Sync</p>
-                <p className="text-[11px] text-zinc-400">
-                  Your accumulated points update immediately whenever you win arcade challenges, share creative posts, or engage with fellow community members.
-                </p>
-              </div>
-            </div>
+          {/* Tabs */}
+          <div className="wl-seg" role="tablist">
+            {tabs.map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={activeSubTab === t.id} onClick={() => setActiveSubTab(t.id)} className={activeSubTab === t.id ? 'is-on' : ''}>{t.label}</button>
+            ))}
           </div>
-        )}
 
-        {/* Tab 2: Badges Showcase */}
-        {activeSubTab === 'badges' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {badges.map((b) => (
-                <div
-                  key={b.id}
-                  onClick={() => handleCelebrateBadge(b)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                    b.isUnlocked
-                      ? 'bg-zinc-900/80 border-zinc-700 hover:border-noob/60 hover:shadow-md'
-                      : 'bg-zinc-950/60 border-zinc-900 opacity-60'
-                  }`}
-                >
-                  <div
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 border ${
-                      b.isUnlocked
-                        ? 'bg-zinc-800 border-zinc-700 shadow-sm'
-                        : 'bg-zinc-900 border-zinc-800 grayscale'
-                    }`}
-                  >
-                    {b.icon}
+          {/* Tab 1: Overview */}
+          {activeSubTab === 'overview' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { k: 'Gaming won', v: gamesWon, n: '+50 pts / win' },
+                  { k: 'Matches played', v: gamesPlayed, n: '+10 pts / game' },
+                  { k: 'Posts & reels', v: postsCount, n: '+10M pts / post' },
+                  { k: 'Followers', v: currentUser.followersCount || 0, n: 'Active reach' }
+                ].map((s) => (
+                  <div key={s.k} className="wl-panel !p-3.5">
+                    <span className="wl-lab-dim">{s.k}</span>
+                    <span className="wl-stat">{s.v}</span>
+                    <span className="wl-note">{s.n}</span>
                   </div>
+                ))}
+              </div>
+              <div className="wl-panel flex items-center gap-3">
+                <Info className="w-5 h-5 shrink-0 wl-accent-text" />
+                <div>
+                  <p className="wl-row-title">Real-time sync</p>
+                  <p className="wl-row-sub">Your points update at once when you win arcade challenges, share posts, or join in with the community.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: Badges */}
+          {activeSubTab === 'badges' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {badges.map((b) => (
+                <div key={b.id} onClick={() => handleCelebrateBadge(b)} className={`wl-panel !p-3.5 flex items-start gap-3 cursor-pointer ${b.isUnlocked ? '' : 'opacity-60'}`}>
+                  <div className={`wl-tile !w-11 !h-11 text-xl ${b.isUnlocked ? '' : 'grayscale'}`}>{b.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-bold text-white truncate">{b.name}</h4>
+                      <h4 className="wl-row-title truncate">{b.name}</h4>
                       {b.isUnlocked ? (
-                        <span className="text-[9px] font-extrabold text-noob bg-noob/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Unlocked
-                        </span>
+                        <span className="wl-chip"><CheckCircle2 className="w-2.5 h-2.5" /> Unlocked</span>
                       ) : (
-                        <span className="text-[9px] font-semibold text-zinc-500 flex items-center gap-0.5">
-                          <Lock className="w-2.5 h-2.5" /> Locked
-                        </span>
+                        <span className="wl-row-sub flex items-center gap-0.5 !text-[9px]"><Lock className="w-2.5 h-2.5" /> Locked</span>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug line-clamp-2">
-                      {b.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1.5 text-[9px] text-zinc-500 font-semibold">
+                    <p className="wl-row-sub mt-0.5 leading-snug line-clamp-2">{b.description}</p>
+                    <div className="flex items-center gap-2 mt-1.5 wl-row-sub !text-[9px] font-semibold">
                       <span className="capitalize">{b.category}</span>
                       <span>•</span>
-                      <span className={b.rarity === 'Legendary' ? 'text-amber-400' : b.rarity === 'Epic' ? 'text-purple-400' : 'text-zinc-400'}>
-                        {b.rarity}
-                      </span>
+                      <span className={b.rarity === 'Legendary' ? 'text-amber-500' : b.rarity === 'Epic' ? 'text-purple-500' : ''}>{b.rarity}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tab 3: Earning Rules */}
-        {activeSubTab === 'history' && (
-          <div className="space-y-3">
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 space-y-1">
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5 mb-2">
-                <Coins className="w-4 h-4 text-amber-400" /> Recent Transactions
-              </h4>
-              {(!currentUser.noobTransactions || currentUser.noobTransactions.length === 0) ? (
-                <p className="text-xs text-zinc-500 py-2">
-                  No transactions yet — play a game, publish a post, or comment to start earning.
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                  {currentUser.noobTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center justify-between py-1.5 border-b border-zinc-800/60 last:border-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs text-zinc-200 break-words" data-testid="points-reason">{tx.reason}</p>
-                        <p className="text-[10px] text-zinc-500">
-                          {new Date(tx.timestamp).toLocaleString()}
-                        </p>
+          {/* Tab 3: Transactions and earning rules */}
+          {activeSubTab === 'history' && (
+            <div className="space-y-4">
+              <div className="wl-panel space-y-1">
+                <h4 className="wl-row-title flex items-center gap-1.5 mb-2"><Coins className="w-4 h-4 text-amber-500" /> Recent transactions</h4>
+                {(!currentUser.noobTransactions || currentUser.noobTransactions.length === 0) ? (
+                  <p className="wl-row-sub py-2">No transactions yet. Play a game, publish a post, or comment to start earning.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                    {currentUser.noobTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--wl-line)] last:border-0">
+                        <div className="min-w-0">
+                          <p className="wl-row-title !font-semibold break-words" data-testid="points-reason">{tx.reason}</p>
+                          <p className="wl-row-sub">{new Date(tx.timestamp).toLocaleString()}</p>
+                        </div>
+                        <span className={`text-xs font-bold shrink-0 pl-2 ${tx.amount > 0 ? 'wl-pos' : tx.amount < 0 ? 'wl-neg' : 'text-zinc-500'}`}>
+                          {tx.amount > 0 ? '+' : ''}
+                          {tx.amount.toLocaleString()}
+                        </span>
                       </div>
-                      <span
-                        className={`text-xs font-bold shrink-0 pl-2 ${
-                          tx.amount > 0 ? 'text-noob' : tx.amount < 0 ? 'text-rose-400' : 'text-zinc-500'
-                        }`}
-                      >
-                        {tx.amount > 0 ? '+' : ''}
-                        {tx.amount.toLocaleString()}
-                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="wl-panel space-y-3">
+                <h4 className="wl-row-title flex items-center gap-1.5"><Flame className="w-4 h-4 text-orange-500" /> How to earn noobPoints</h4>
+                <div className="space-y-2.5 text-xs">
+                  {[
+                    ['🎮 Win PvP / mini-game matches', '+50 to +200 pts', 'wl-pos'],
+                    ['📸 Publish an image post or reel', '+10,000,000 pts', 'wl-pos'],
+                    ['💬 Every comment you write', '+1,000,000 pts', 'wl-pos'],
+                    ['🏆 Top 10 global leaderboard finish', '+500 pts bonus', 'text-amber-500'],
+                    ['🛡️ Responsible reporting & safety compliance', '+50 pts', 'text-cyan-500']
+                  ].map(([a, b, c], i, all) => (
+                    <div key={a} className={`flex items-center justify-between gap-3 ${i < all.length - 1 ? 'pb-2 border-b border-[var(--wl-line)]' : ''}`}>
+                      <span className="wl-row-title !font-medium">{a}</span>
+                      <span className={`font-bold shrink-0 ${c}`}>{b}</span>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 space-y-3">
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-orange-400" /> How to accumulate noobPoints
-              </h4>
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-                  <span className="text-zinc-300">🎮 Win PvP / Mini-Game Matches</span>
-                  <span className="font-bold text-noob">+50 to +200 pts</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-                  <span className="text-zinc-300">📸 Publish Image Post or Reel</span>
-                  <span className="font-bold text-noob">+10,000,000 pts</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-                  <span className="text-zinc-300">💬 Every comment you write</span>
-                  <span className="font-bold text-noob">+1,000,000 pts</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-                  <span className="text-zinc-300">🏆 Top 10 Global Leaderboard Finish</span>
-                  <span className="font-bold text-amber-400">+500 pts Bonus</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-300">🛡️ Responsible Reporting &amp; Safety Compliance</span>
-                  <span className="font-bold text-cyan-400">+50 pts</span>
-                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="pt-2 border-t border-zinc-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition-colors cursor-pointer"
-          >
-            Close
-          </button>
+          )}
         </div>
       </div>
 

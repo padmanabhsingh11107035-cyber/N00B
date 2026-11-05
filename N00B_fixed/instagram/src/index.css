@@ -457,6 +457,48 @@ body { min-height: 100vh; min-height: 100dvh; }
 .nt-check { width: 20px; height: 20px; accent-color: var(--nt-accent); cursor: pointer; flex: none; }
 @media (min-width: 768px) { .nt-body { padding-left: max(16px, calc((100% - 640px) / 2)); padding-right: max(16px, calc((100% - 640px) / 2)); } .nt-chips { padding-left: max(14px, calc((100% - 640px) / 2)); } }
 
+/* The Wallet page: a green card on a soft page, rows with a round icon and a green pill button, a segmented tab bar. Dark and light colours are variables, set here. */
+.wl {
+  --wl-bg: #0a0e0c; --wl-glow: rgba(44, 138, 102, 0.22); --wl-surface: #141b17; --wl-surface2: #1b2520; --wl-text: #f2f7f4; --wl-sub: #8da398; --wl-line: rgba(255, 255, 255, 0.08);
+  --wl-accent: #2f9b73; --wl-accent-ink: #ffffff; --wl-tile: #1f3a2e; --wl-tile-ink: #5fd6a6; --wl-pos: #34d399; --wl-neg: #fb7185; --wl-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  background: radial-gradient(120% 55% at 50% -8%, var(--wl-glow), transparent 70%), var(--wl-bg); color: var(--wl-text);
+}
+:root[data-theme="light"] .wl {
+  --wl-bg: #f3f8f5; --wl-glow: rgba(120, 200, 160, 0.38); --wl-surface: #ffffff; --wl-surface2: #eaf3ee; --wl-text: #0f1f18; --wl-sub: #62776c; --wl-line: rgba(15, 40, 28, 0.09);
+  --wl-accent: #1f7a57; --wl-tile: #e0f1e8; --wl-tile-ink: #1f7a57; --wl-pos: #0f8f64; --wl-neg: #e11d48; --wl-shadow: 0 10px 30px -16px rgba(30, 90, 60, 0.35);
+}
+.wl-round { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--wl-line); border-radius: 9999px; background: var(--wl-surface); color: var(--wl-text); cursor: pointer; box-shadow: var(--wl-shadow); }
+.wl-title { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; pointer-events: none; }
+.wl-card-main { position: relative; overflow: hidden; border-radius: 28px; padding: 20px; color: #fff; background: linear-gradient(140deg, #23805f 0%, #0f4d38 52%, #0a3427 100%); box-shadow: 0 22px 44px -18px rgba(8, 60, 42, 0.7); }
+.wl-shine { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(90% 70% at 100% 0%, rgba(255, 255, 255, 0.2), transparent 60%), linear-gradient(115deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 45%); }
+.wl-lab { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.68); }
+.wl-name { margin-top: 2px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+.wl-dots { margin-top: 6px; font-size: 13px; letter-spacing: 0.12em; color: rgba(255, 255, 255, 0.7); }
+.wl-mark { display: flex; flex: none; }
+.wl-mark i { width: 28px; height: 28px; border-radius: 9999px; background: rgba(255, 255, 255, 0.85); }
+.wl-mark i + i { margin-left: -12px; background: rgba(255, 255, 255, 0.4); }
+.wl-balance { margin-top: 2px; font-size: 38px; line-height: 1.05; font-weight: 900; letter-spacing: -0.02em; }
+.wl-exact { margin-top: 2px; font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, 0.62); }
+.wl-tier { flex: none; padding: 5px 11px; border-radius: 9999px; background: rgba(0, 0, 0, 0.28); font-size: 10px; font-weight: 800; letter-spacing: 0.1em; }
+.wl-bar { height: 6px; overflow: hidden; border-radius: 9999px; background: rgba(0, 0, 0, 0.3); }
+.wl-bar > div { height: 100%; border-radius: 9999px; background: #fff; transition: width 0.5s; }
+.wl-panel { padding: 16px; border: 1px solid var(--wl-line); border-radius: 22px; background: var(--wl-surface); box-shadow: var(--wl-shadow); }
+.wl-tile { display: flex; flex: none; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 14px; background: var(--wl-tile); color: var(--wl-tile-ink); }
+.wl-row-title { font-size: 13px; font-weight: 700; color: var(--wl-text); }
+.wl-row-sub { font-size: 11.5px; color: var(--wl-sub); }
+.wl-pill { flex: none; padding: 9px 20px; border: 0; border-radius: 9999px; background: var(--wl-accent); color: var(--wl-accent-ink); font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.wl-pill:active { transform: scale(0.96); }
+.wl-seg { display: flex; gap: 4px; padding: 4px; border-radius: 9999px; background: var(--wl-surface2); }
+.wl-seg button { flex: 1; padding: 9px 6px; border: 0; border-radius: 9999px; background: transparent; color: var(--wl-sub); font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.wl-seg button.is-on { background: var(--wl-accent); color: var(--wl-accent-ink); box-shadow: var(--wl-shadow); }
+.wl-lab-dim { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--wl-sub); }
+.wl-stat { display: block; margin-top: 4px; font-size: 24px; font-weight: 900; color: var(--wl-text); }
+.wl-note { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 600; color: var(--wl-accent); }
+.wl-accent-text { color: var(--wl-accent); }
+.wl-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 6px; background: var(--wl-tile); color: var(--wl-tile-ink); font-size: 9px; font-weight: 800; }
+.wl-pos { color: var(--wl-pos); }
+.wl-neg { color: var(--wl-neg); }
+
 /* ============================================
    Liquid Glass — Apple-style translucent glass:
    layered blur, a bright top rim highlight, and a

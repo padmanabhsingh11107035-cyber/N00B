@@ -891,10 +891,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
       {/* NOOB's extra-features menu — the hamburger next to the wordmark */}
       {showNoobMenu && (
-        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain" onClick={() => setShowNoobMenu(false)}>
+        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain overflow-hidden" onClick={() => setShowNoobMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="doodle-panel w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+            className="doodle-panel w-[min(18rem,85vw)] shrink-0 h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
           >
             <div className="shrink-0 flex items-center justify-between mb-4">
               <h2 className="text-sm font-black italic tracking-tighter text-white">NOOB</h2>

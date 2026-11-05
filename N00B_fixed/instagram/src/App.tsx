@@ -1694,7 +1694,7 @@ export default function App() {
 
   return (
     <FeatureFlagsContext.Provider value={featuresOff}>
-    <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
+    <div className={`min-h-screen text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
       <SignupSourceCard userId={currentUser.id} />
       {incomingCall && featOn('calls') && (

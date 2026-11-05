@@ -7,8 +7,8 @@ const css = read('src/index.css'), prefs = read('src/utils/devicePrefs.ts'), app
 check(fs.existsSync('public/brand/doodle-white.webp') && fs.existsSync('public/brand/doodle-dark.webp') && fs.statSync('public/brand/doodle-white.webp').size < 150000, 'both pattern pictures (white for dark mode, dark for light mode) exist and are small');
 check(/body::after \{[^}]*position: fixed;[^}]*inset: 0;[^}]*pointer-events: none;[^}]*doodle-white\.webp[^}]*490px/.test(css), 'one fixed layer over every page, taps go through it, the pattern is drawn small (490 px per mirrored tile)');
 check(/body\.light::after \{[^}]*doodle-dark\.webp/.test(css) && /html\[data-doodle="off"\] body::after \{ display: none; \}/.test(css), 'dark doodles on the light theme; the switch turns it off');
-const z = Number((/body::after \{[^}]*z-index: (\d+)/.exec(css) || [])[1]);
-check(z >= 1 && z <= 5, 'it sits above the page content but below the bar, sheets and dialogs');
+const z = Number((/body::after \{[^}]*z-index: (-?\d+)/.exec(css) || [])[1]);
+check(z === -1, 'it sits BEHIND the page content: never drawn over pictures, videos or text');
 check(/doodleBackground: true/.test(prefs) && /set\('data-doodle', !p\.doodleBackground, 'off'\)/.test(prefs), 'on by default, kept on the device, applied as an attribute on the page');
 check(/data-doodle|doodleBackground/.test(app) && /testId="doodle-background"/.test(app), 'Settings > App > Background has the switch');
 const sys = read('src/components/Common/SystemPage.tsx'), lockGate = read('src/components/Common/AppLockGate.tsx');

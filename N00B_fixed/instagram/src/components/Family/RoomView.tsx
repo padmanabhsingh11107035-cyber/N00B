@@ -10,6 +10,7 @@ import { keepAwake } from '../../booth/camera';
 import { MapCanvas, type MapApi, type MapLook, type TrailData } from './MapCanvas';
 import { DayPanel } from './DayPanel';
 import { ReportSheet } from './Sheets';
+import { cachedPlace, placeName, spotKey } from '../../family/placeName';
 import { Avatar, copyText, Modal, shareInvite, Switch, Toast } from './parts';
 
 // A room: the detailed map full-screen with everybody's picture on their exact place, and a sheet below that lists the people (drag it up to see all of them).
@@ -97,6 +98,10 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
   useEffect(() => { if (!ask) return; const t = window.setTimeout(() => setAsk(''), 4000); return () => window.clearTimeout(t); }, [ask]);
   const update = (p: Partial<Prefs>): void => { const next = { ...prefs, ...p }; setPrefs(next); savePrefs(next); };
 
+  // ---- the name of the place under each person (looked up once per spot, kept on this phone)
+  const [places, setPlaces] = useState<Record<string, string>>({});
+  const spots = useRef<Set<string>>(new Set());
+
   // ---- the people, with where they are and how fresh it is
   const rows = useMemo(() => {
     const list = (data?.members ?? []).map((m) => {
@@ -109,10 +114,20 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
       else if (lat == null || lng == null) status = m.me ? (geo === 'denied' ? 'Location is blocked' : 'Finding your place…') : 'Waiting for a place…';
       else if (st === 'live') status = speedText(own ? fix.speed : m.speed) || 'Live now';
       else status = `Last seen ${agoText(m.updatedAt, now)}`;
-      return { m, lat, lng, st, dist, status };
+      const place = lat != null && lng != null && m.sharing ? (places[spotKey(lat, lng)] || cachedPlace(lat, lng)) : '';
+      return { m, lat, lng, st, dist, status, place };
     });
     return list.sort((a, b) => Number(b.m.me) - Number(a.m.me) || (a.dist ?? 1e12) - (b.dist ?? 1e12));
-  }, [data, fix, now, geo]);
+  }, [data, fix, now, geo, places]);
+  useEffect(() => {
+    for (const r of rows) {
+      if (r.lat == null || r.lng == null || !r.m.sharing || r.place) continue;
+      const k = spotKey(r.lat, r.lng);
+      if (spots.current.has(k)) continue;
+      spots.current.add(k);
+      void placeName(r.lat, r.lng).then((n) => { if (n) setPlaces((o) => ({ ...o, [k]: n })); else spots.current.delete(k); });
+    }
+  }, [rows]);
   const pins = useMemo<PinData[]>(() => rows.flatMap((r) => (r.lat == null || r.lng == null || r.st === 'none' || (!r.m.sharing && !r.m.me)) ? [] : [{
     id: r.m.id, name: r.m.name, avatar: r.m.avatar, lat: r.lat, lng: r.lng, state: r.st, me: r.m.me, moving: ((r.m.me ? fix?.speed : r.m.speed) ?? 0) > 1.5, hue: pinHue(r.m.id), initial: initialOf(r.m.name)
   }]), [rows, fix]);
@@ -227,7 +242,7 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
               <div className="fm-person-row">
                 <button type="button" className="fm-person-main" onClick={() => picked(r.m.id)} data-testid="family-person">
                   <Avatar id={r.m.id} name={r.m.name} src={r.m.avatar} size={46} state={r.m.sharing ? r.st : 'paused'} />
-                  <span className="fm-person-text"><b>{r.m.me ? 'You' : r.m.name}{r.m.role === 'owner' ? <i>Owner</i> : null}</b><small className={r.st === 'live' && r.m.sharing ? 'is-live' : ''}>{r.status}</small></span>
+                  <span className="fm-person-text"><b>{r.m.me ? 'You' : r.m.name}{r.m.role === 'owner' ? <i>Owner</i> : null}</b>{r.place && <small className="fm-place" data-testid="family-place">{r.place}</small>}<small className={r.st === 'live' && r.m.sharing ? 'is-live' : ''}>{r.status}</small></span>
                   <span className="fm-person-dist">{r.dist != null ? formatDistance(r.dist) : ''}</span>
                 </button>
                 {r.m.report && <button type="button" className="fm-day-btn" onClick={() => openDay(r.m.id)} aria-label={`${r.m.me ? 'Your' : `${r.m.name}'s`} day: where ${r.m.me ? 'you' : 'they'} went today`} title="Where they went today" data-testid="family-day-open"><Route size={18} /></button>}

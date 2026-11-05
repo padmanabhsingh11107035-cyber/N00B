@@ -173,7 +173,7 @@
 /* The strip above the app on a phone. An iPhone's installed app ignores theme-color: the strip behind the clock is simply the
    page's own (canvas) background. So the canvas is the accent colour, and the app body is drawn over everything inside the screen
    (it always fills the whole screen, so none of the red shows there). Android and desktop use theme-color instead (index.html). */
-html { background-color: #0a0a0a; }
+html { background-color: #0a0a0a; overflow-x: clip; }
 :root[data-theme="light"] { background-color: #ffffff; }
 body { min-height: 100vh; min-height: 100dvh; }
 
@@ -1307,13 +1307,13 @@ html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-
 .pro-light [data-testid="pro-cards"] .bg-white { background-color: #111 !important; }
 
 /* The doodle pattern of NOOB's icons (public/brand/doodle-*.webp: the supplied picture, mirrored on every edge so it tiles with no seam, black turned into clear),
-   drawn over every page (white on the dark theme, black on the light one: the app's own two colours) and above the content but below the bar, sheets and dialogs. Taps go straight through it. Light theme: dark doodles.
+   drawn BEHIND every page (white on the dark theme, black on the light one: the app's own two colours); never over pictures, videos or text. Taps go straight through it. Light theme: dark doodles.
    Off with Settings > App > Background (html[data-doodle="off"]). */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: -1;
   pointer-events: none;
   background: url('/brand/doodle-white.webp') 0 0 / 490px auto repeat;
   opacity: 0.17;

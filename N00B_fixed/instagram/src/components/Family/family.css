@@ -233,3 +233,4 @@
 .fm-stay { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 850; color: #fff; cursor: pointer; background: hsl(var(--hue) 62% 40%); border: 2.5px solid #fff; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5); transition: transform 0.18s; }
 .fm-stay.is-now { border-color: var(--fm-live); }
 .fm-stay.is-sel { transform: scale(1.28); box-shadow: 0 0 0 5px hsl(var(--hue) 85% 62% / 0.35), 0 3px 10px rgba(0, 0, 0, 0.5); z-index: 5; }
+.fm-person-text small.fm-place { color: inherit; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

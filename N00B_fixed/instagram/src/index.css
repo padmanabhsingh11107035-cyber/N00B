@@ -1335,24 +1335,25 @@ body.light .doodle-surface {
 }
 
 /* full-screen plain black/white layers that let the doodle background (body::after, behind everything) show through: see utils/doodleReveal.ts */
-[data-doodle-see] { background-color: transparent !important; }
+html body [data-doodle-see], html body.light [data-doodle-see] { background-color: transparent !important; }   /* more specific than the light theme's own white-for-black rules */
 
 /* The OLD small-icon wallpapers (page, Home, chat) are gone: the supplied doodle (body::after, behind everything) is the only background pattern now. Their own page colour is
    see-through so it shows. The sign-in page keeps its own look (.doodle-wallpaper-login). */
 body, .doodle-wallpaper { background-image: none; }
-.doodle-wallpaper-feed, .chat-wallpaper, .doodle-wallpaper { background-image: none; background-color: transparent; }
+html body .doodle-wallpaper-feed, html body .doodle-wallpaper { background-image: none; background-color: transparent; }
+html body.light .doodle-wallpaper-feed, html body.light .doodle-wallpaper { background-color: transparent !important; }
 
 /* the page colour comes from <html>; <body> must not paint its own, or it would cover the doodle layer that sits behind the content */
 body, body.light { background-color: transparent !important; }
 
 /* Full-screen layers that sit ON TOP of the page (loading screens, Settings, fun pages, the chat) cannot be see-through: they wear the same doodle themselves, on the page colour. */
-.fixed.doodle-wallpaper, .fixed.doodle-wallpaper-feed, .chat-wallpaper {
+html body .fixed.doodle-wallpaper, html body .fixed.doodle-wallpaper-feed, html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper-feed, .chat-wallpaper {
   background-color: var(--page) !important;
   background-image: linear-gradient(rgba(10, 10, 10, 0.80), rgba(10, 10, 10, 0.80)), url('/brand/doodle-white.webp') !important;
   background-size: auto, 490px auto !important;
   background-repeat: no-repeat, repeat !important;
 }
-body.light .fixed.doodle-wallpaper, body.light .fixed.doodle-wallpaper-feed, body.light .chat-wallpaper {
+html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper-feed, body.light .chat-wallpaper {
   background-image: linear-gradient(rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.80)), url('/brand/doodle-dark.webp') !important;
 }
 

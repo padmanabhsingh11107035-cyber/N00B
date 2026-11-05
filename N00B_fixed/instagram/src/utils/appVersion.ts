@@ -22,10 +22,12 @@ export interface UpdateContext {
   editingText: boolean;
   mediaPlaying: boolean;
   alreadyTriedThisVersion: boolean;
+  /** the app has just been opened (not resumed): an old copy found right at the start is replaced at once */
+  atLaunch?: boolean;
 }
 export const AUTO_UPDATE_AFTER_AWAY_MS = 10_000;
 export function shouldAutoApplyUpdate(c: UpdateContext): boolean {
-  return c.visible && c.awayMs >= AUTO_UPDATE_AFTER_AWAY_MS && !c.editingText && !c.mediaPlaying && !c.alreadyTriedThisVersion;
+  return c.visible && (c.awayMs >= AUTO_UPDATE_AFTER_AWAY_MS || !!c.atLaunch) && !c.editingText && !c.mediaPlaying && !c.alreadyTriedThisVersion;
 }
 
 const TRIED_KEY = 'noob.updateReloadedFor';
@@ -71,13 +73,14 @@ export function useUpdateAvailable(): boolean {
   useEffect(() => {
     let alive = true;
     let hiddenAt = document.visibilityState === 'hidden' ? Date.now() : 0;
-    const check = async (awayMs = 0) => {
+    const check = async (awayMs = 0, atLaunch = false) => {
       const latest = await fetchLatestBuildId();
       if (!alive || !latest || latest === __BUILD_ID__) return;
       setUpdateAvailable(true);
       if (shouldAutoApplyUpdate({
         visible: document.visibilityState === 'visible',
         awayMs,
+        atLaunch,
         editingText: isEditing(),
         mediaPlaying: isMediaPlaying(),
         alreadyTriedThisVersion: triedVersion() === latest
@@ -87,14 +90,14 @@ export function useUpdateAvailable(): boolean {
       }
     };
 
-    check();
+    check(0, true);
     // visibilitychange/focus specifically catch a suspended PWA being reopened — that resume
     // event is exactly the moment a stale instance most needs to find out it's stale.
     const onVisible = () => {
       if (document.visibilityState !== 'visible') { hiddenAt = Date.now(); return; }
       const away = hiddenAt ? Date.now() - hiddenAt : 0;
       hiddenAt = 0;
-      void check(away);
+      void check(away, true);   // the app was just brought back: an old copy is replaced at once
     };
     const onFocus = () => { if (document.visibilityState === 'visible') void check(); };
     document.addEventListener('visibilitychange', onVisible);

@@ -54,7 +54,6 @@ import {
   Lock,
   MessageCircle,
   SquarePen,
-  PenLine,
   ArrowDownLeft,
   Filter,
   Smile,
@@ -2135,11 +2134,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 )}
           </div>
 
-          {/* the round mint "new chat" button floating at the bottom right */}
-          <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="New chat" title="New chat" data-testid="messages-fab"
-            className="absolute right-[14px] bottom-[54px] z-20 w-[56px] h-[56px] rounded-full bg-[var(--mint)] text-white flex items-center justify-center shadow-[0_8px_22px_rgba(0,0,0,.5)] active:scale-95 transition-transform cursor-pointer">
-            <PenLine className="w-6 h-6" strokeWidth={2.1} />
-          </button>
         </aside>
 
         {/* RIGHT COLUMN: Active Conversation View */}

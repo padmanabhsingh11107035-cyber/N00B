@@ -167,9 +167,9 @@ const FEATURES: Array<{ title: string; icon: React.ComponentType<{ className?: s
   { title: 'Go live', icon: Radio, items: ['Live streaming', 'Live Lounge for hosted live sessions', 'NOOB Rooms: voice rooms to talk with friends', 'Meetings you can schedule and join'] },
   { title: 'Fun and community', icon: Sparkles, items: [
     'Daily NOOB: a new challenge every day, vote for the best entry, top three win NOOB Points', 'Anonymous Messages and Ask Me Anything',
-    'This or That, Mood Status and public polls', 'Suggestion Box: tell the team what to build next'] },
+    'This or That, Mood Status and public polls', 'Suggestion Box: tell the team what to build next', 'Family Map: share your place with the people you choose, end-to-end encrypted, only while you want to'] },
   { title: 'Create and learn', icon: Brain, items: [
-    'NOOB AI: a friendly AI assistant', 'NOOB Study: an AI study space with plans, practice and notes', 'NOOB Draw: draw and share your own pictures', 'Customer Support with an AI helper'] },
+    'NOOB AI: a friendly AI assistant', 'NOOB Study: an AI study space with plans, practice and notes', 'NOOB Draw: draw and share your own pictures', 'NOOB Studio: edit photos and videos with filters, text and music', 'NOOB Forms: build forms and surveys and share a link', 'Lenses and Buddy Booth: fun face filters and photos with characters', 'Customer Support with an AI helper'] },
   { title: 'Shop and rewards', icon: ShoppingBag, items: ['Shop NOOB and the NOOB Food Stall', 'NOOB Points you earn by taking part', 'NOOB Pro for extra perks'] },
   { title: 'Privacy and safety', icon: ShieldCheck, items: [
     'Public or private account, close friends, and hiding your profile from chosen people', 'Block and report people, with a team that handles reports',

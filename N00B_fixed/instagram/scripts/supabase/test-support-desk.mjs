@@ -15,7 +15,7 @@ const modal = read(D + 'CustomerSupportModal.tsx'), hub = read(D + 'SupportHub.t
 const pages = read(D + 'SupportPages.tsx'), icons = read(D + 'SupportIcons.tsx'), css = read(D + 'supportDesk.css');
 
 section('1. Opening support shows the options');
-check(/const \[activeSupportTab, setActiveSupportTab\] = useState<SupportScreen>\('home'\);/.test(modal) && !/useResumeState<'ai_chat'/.test(modal), 'support always opens on the "Need help?" screen (the conversation is still kept)');
+check(/const \[activeSupportTab, setActiveSupportTab\] = useState<SupportScreen>\(initialScreen \?\? 'home'\);/.test(modal) && !/useResumeState<'ai_chat'/.test(modal), 'support always opens on the "Need help?" screen (the conversation is still kept)');
 const tileIds = [...hub.matchAll(/\{ id: '(\w+)', label: '([^']+)'/g)].map((m) => m[1]);
 check(tileIds.join() === 'chat,call,faq,report,ticket,payment', 'six tiles: chat, call, FAQs, report, ticket, payment help', tileIds.join());
 check(/Need help\?/.test(hub) && /Popular topics/.test(hub) && /SUPPORT_TOPICS\.filter/.test(hub), 'with a "Need help?" heading and the popular topics under them');
@@ -25,7 +25,7 @@ const fills = (name) => { const body = icons.slice(icons.indexOf('export const '
 check(iconNames.every((n) => fills(n).size >= 3), 'and every one is drawn in at least three colours (not a grey outline)');
 check(new Set(iconNames.map((n) => [...fills(n)][0])).size === 6, 'a different main colour for each');
 check(/openChatWith\(t\.prompt\)/.test(modal) && /t\.action === 'report'\) setActiveSupportTab\('safety_report'\)/.test(modal) && /openPaymentHelp/.test(modal), 'a topic opens the chat with its question, the report topic opens the report form, payment help lists the payments');
-check(/onBack = \(\) => \{ if \(activeSupportTab === 'home'\) onClose\(\); else setActiveSupportTab\('home'\); \}/.test(modal), 'back goes to the options, and from the options out of help');
+check(/onBack = \(\) => \{ if \(activeSupportTab === 'home' \|\| \(initialScreen && activeSupportTab === initialScreen\)\) onClose\(\); else setActiveSupportTab\('home'\); \};?/.test(modal), 'back goes to the options, and from the options out of help');
 
 section('2. The chat has the whole screen');
 check(/\.sd-chat \{[^}]*flex: 1; min-height: 0; display: flex; flex-direction: column/.test(css) && /\.sd-thread \{ flex: 1; min-height: 0; overflow-y: auto/.test(css), 'the conversation takes all the space between the slim bar and the typing bar');

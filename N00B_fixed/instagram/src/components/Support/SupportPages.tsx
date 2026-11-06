@@ -139,7 +139,7 @@ export const TicketPage: React.FC<TicketProps> = (p) => (
       <div className="sd-done" data-testid="support-ticket-done">
         <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#1faa4b" /><path d="M14 25l7 7 13-15" fill="none" stroke="#fff" strokeWidth="4.200" strokeLinecap="round" strokeLinejoin="round" /></svg>
         <h3>Ticket sent</h3>
-        <p>The NOOB team has it. Their reply will show in the Suggestion Box (Home menu), where you can see all your earlier messages.</p>
+        <p>The NOOB team has it. Their reply will show in the Suggestion Box (Help &amp; Support), where you can see all your earlier messages.</p>
         {p.onOpenBox && <button type="button" className="sd-btn line" onClick={p.onOpenBox}>Open the Suggestion Box</button>}
         <button type="button" className="sd-btn ghost" onClick={p.onAnother}>Raise another ticket</button>
       </div>

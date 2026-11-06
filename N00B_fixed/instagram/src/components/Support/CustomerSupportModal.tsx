@@ -9,6 +9,7 @@ import { SupportChatPanel } from './SupportChatPanel';
 import { SupportHeader, SupportHub, type SupportScreen } from './SupportHub';
 import { SupportRatingSheet } from './SupportRatingSheet';
 import { CallPage, FaqPage, ReportPage, TicketPage } from './SupportPages';
+import { SuggestionBoxPage } from './SuggestionBoxPage';
 import type { Topic } from './supportTopics';
 
 declare const __BUILD_ID__: string;
@@ -25,6 +26,8 @@ import confetti from 'canvas-confetti';
 interface CustomerSupportModalProps {
   currentUser: User;
   onClose: () => void;
+  /** open straight on one screen (the Suggestion Box, from Settings) instead of the "Need help?" screen */
+  initialScreen?: SupportScreen;
 }
 
 interface ChatMessage {
@@ -45,14 +48,15 @@ const PrivacyPolicy = React.lazy(() => import('../Legal/PrivacyPolicy').then((m)
 
 export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   currentUser,
-  onClose
+  onClose,
+  initialScreen
 }) => {
   const [legal, setLegal] = useState<null | 'terms' | 'privacy'>(null);
   // Support is a page of its own: while it is open the page behind it is hidden (not just covered), and it fills exactly the visible part of the screen (also when the keyboard is up).
   useFullPage(true);
   const visibleArea = useVisibleArea();
   // Opening support always shows the "Need help?" screen with its coloured options; the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
-  const [activeSupportTab, setActiveSupportTab] = useState<SupportScreen>('home');
+  const [activeSupportTab, setActiveSupportTab] = useState<SupportScreen>(initialScreen ?? 'home');
   
   // Voice & Speech Synthesis / Recognition State (Used exclusively for Live Voice Call)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -947,8 +951,9 @@ ${description}`.slice(0, 2000));
     window.setTimeout(() => { setShowReviewModal(false); setActiveSupportTab('home'); }, 1600);
   };
 
-  const onBack = () => { if (activeSupportTab === 'home') onClose(); else setActiveSupportTab('home'); };
-  const TITLES: Record<SupportScreen, string> = { home: 'Help & Support', ai_chat: 'NOOB Support', call_us: 'Call us', safety_report: 'Report someone', ticket: 'Raise a ticket', faq: 'FAQs' };
+  // opened straight on a screen (the Suggestion Box from Settings), the arrow leaves the help desk instead of showing the "Need help?" screen
+  const onBack = () => { if (activeSupportTab === 'home' || (initialScreen && activeSupportTab === initialScreen)) onClose(); else setActiveSupportTab('home'); };
+  const TITLES: Record<SupportScreen, string> = { home: 'Help & Support', ai_chat: 'NOOB Support', call_us: 'Call us', safety_report: 'Report someone', ticket: 'Raise a ticket', faq: 'FAQs', suggestions: 'Suggestion Box' };
 
   const callStatus2: { cls: string; icon: React.ReactNode; text: string } = !speechSupported
     ? { cls: 'warn', icon: <MicOff />, text: 'Voice input is not available. Type below.' }
@@ -1050,8 +1055,11 @@ ${description}`.slice(0, 2000));
           />
         )}
 
+        {activeSupportTab === 'suggestions' && <SuggestionBoxPage userId={currentUser.id} />}
+
         {activeSupportTab === 'ticket' && (
           <TicketPage
+            onOpenBox={() => setActiveSupportTab('suggestions')}
             category={ticketCategory} setCategory={setTicketCategory}
             subject={ticketSubject} setSubject={setTicketSubject}
             description={ticketDescription} setDescription={setTicketDescription}

@@ -119,7 +119,7 @@ check(/dataSaver/.test(appPages) && /autoplay/.test(appPages) && /uploadQuality/
 const activityPages = read('src/components/Settings/pages/activity.tsx');
 check(/SearchesPage/.test(activityPages) && /clearSearches\(\)/.test(activityPages) && /forgetSearch\(q\)/.test(activityPages) && /go\('searches'\)/.test(activityPages), 'Your activity: recent searches, remove one or clear all');
 check(/BREAK_CHOICES/.test(activityPages) && /breakEveryMin/.test(activityPages) && /Coffee/.test(read('src/components/Settings/TimeReminder.tsx')), 'Time management: a "take a break" reminder');
-check(/openSuggestionBox/.test(read('src/components/Settings/pages/support.tsx')) && /<SuggestionBoxModal userId=\{currentUser\.id\}/.test(profile), 'Help: report a problem or send an idea opens the Suggestion Box');
+check(/openSuggestionBox/.test(read('src/components/Settings/pages/support.tsx')) && /initialScreen="suggestions"/.test(profile), 'Help: report a problem or send an idea opens the Suggestion Box');
 const support = read('src/components/Settings/pages/support.tsx');
 check(/<OrdersView canManage=\{false\} \/>/.test(support) && /openWallet/.test(support), 'Orders and payments: your orders and the wallet');
 check(/FAQ/.test(support) && /aria-expanded/.test(support) && /openSupport/.test(support), 'Help: common questions and the support assistant');

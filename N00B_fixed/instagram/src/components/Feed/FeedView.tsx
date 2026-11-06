@@ -26,7 +26,6 @@ import {
   Trophy,
   ShoppingBag,
   Music2,
-  Lightbulb,
   Layers,
   CupSoda,
   Gift,
@@ -78,7 +77,6 @@ import { AdBanner } from '../Ads/AdBanner';
 import { useFeaturesOff } from '../../utils/featureFlags';
 import { funFeatureKey } from '../../utils/features';
 import { MoreCreationsPage } from './MoreCreationsPage';
-import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
@@ -572,6 +570,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       id: 'noob',
       title: 'NOOB',
       items: menuItems([
+        featOn('daily') && { id: 'daily', entryId: 'daily', label: 'Daily NOOB', icon: <Flame />, hint: "Today's challenge: win real points", onClick: go('daily', () => setShowDailyNoob(true)) },
         featOn('draw') && { id: 'draw', entryId: 'draw', label: 'NOOB Draw', tag: 'NEW', icon: <Gift />, hint: 'Free weekly spins: win Pro, the tick and millions', onPointerDown: preloadNoobDraw, onClick: go('draw', openNoobDraw) },
         featOn('studio') && { id: 'studio', entryId: 'studio', testId: 'menu-studio', label: 'NOOB Studio', tag: 'NEW', icon: <Wand2 />, hint: 'Edit photos and videos: filters, text, music, export', onPointerDown: preloadStudio, onClick: go('studio', openStudio) },
         (isMainAdmin(currentUser) || studyStatus?.mode === 'on' || studyStatus?.mode === 'coming_soon') && { id: 'study', entryId: 'study', label: 'NOOB Study', tag: studyStatus?.mode === 'on' ? 'NEW' : isMainAdmin(currentUser) ? 'Admin' : 'Soon', icon: <GraduationCap />, hint: 'Your AI tutor, plan and study space', onPointerDown: preloadNoobStudy, onClick: go('study', () => openStudy('home')) },
@@ -596,7 +595,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
       id: 'more',
       title: 'More from NOOB',
       items: menuItems([
-        featOn('daily') && { id: 'daily', entryId: 'daily', label: 'Daily NOOB', icon: <Flame />, hint: "Today's challenge: win real points", onClick: go('daily', () => setShowDailyNoob(true)) },
         featOn('rooms') && { id: 'rooms', entryId: 'rooms', label: 'NOOB Rooms', icon: <Trophy />, hint: 'Live voice rooms: join, talk, play', onClick: go('rooms', () => setShowNoobRooms(true)) },
         featOn('song') && { id: 'song', entryId: 'song', label: 'Guess the Song', icon: <Music2 />, hint: 'A clip plays: pick the right title, score points', onClick: go('song', () => setShowGuessTheSong(true)) },
         featOn('lounge') && { id: 'lounge', entryId: 'lounge', label: `NOOB Live Lounge${currentUser.hasLiveLounge ? ' (Unlocked)' : ''}`, icon: <Sparkles />, hint: 'Private meeting rooms: screen share, whiteboard & chat', onClick: go('lounge', () => setShowLiveLoungePage(true)) },
@@ -606,7 +604,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
           : { id: 'food', entryId: 'food', label: 'NOOB Food Stall', icon: <UtensilsCrossed />, hint: 'Burgers, bhel, fries, manchurian & coke', onClick: go('food', () => setShowFoodStall(true)) }),
         featOn('ai') && { id: 'ai', entryId: 'ai', label: 'NOOB AI', icon: <Bot />, hint: 'Talk to your AI friend by voice', onClick: go('ai', () => setShowNoobAi(true)) },
         featOn('support') && { id: 'support', entryId: 'support', label: 'Customer Support', icon: <MessageCircle />, hint: 'Chat with the NOOB support team', onClick: go('support', () => setShowSupportModal(true)) },
-        featOn('suggestions') && { id: 'idea', entryId: 'idea', label: 'Suggestion Box', icon: <Lightbulb />, hint: 'Share ideas, improvements or problems', onClick: go('idea', () => setShowSuggestionBox(true)) },
         // NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app)
         featOn('drinks') && { id: 'drinks', entryId: 'drinks', label: 'NOOB Cold Drinks', icon: <CupSoda />, hint: 'Ten cans, ten flavours: scroll to explore in 3D', onClick: go('drinks', () => window.location.assign('/cold-drinks/')) },
         featOn('creations') && { id: 'creations', entryId: 'creations', label: 'More of our creations', icon: <Layers />, hint: 'Other websites we made: visit and explore', onClick: go('creations', () => setShowCreations(true)) },
@@ -1035,10 +1032,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </React.Suspense>
       )}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
-      {showSuggestionBox && <SuggestionBoxModal userId={currentUser.id} onClose={() => setShowSuggestionBox(false)} />}
-      {showSupportModal && (
+      {(showSupportModal || showSuggestionBox) && (
         <React.Suspense fallback={<LazyFallback />}>
-          <CustomerSupportModal currentUser={currentUser} onClose={() => setShowSupportModal(false)} />
+          <CustomerSupportModal currentUser={currentUser} initialScreen={showSupportModal ? undefined : 'suggestions'} onClose={() => { setShowSupportModal(false); setShowSuggestionBox(false); }} />
         </React.Suspense>
       )}
     </div>

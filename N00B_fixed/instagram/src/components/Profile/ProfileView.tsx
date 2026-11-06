@@ -128,7 +128,6 @@ import { LazyVideo } from '../Common/LazyVideo';
 // every visit — dynamic import() here and in App.tsx (which also renders AdminControlModal) share
 // the same underlying chunk, so this doesn't double-load anything.
 const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
-const SuggestionBoxModal = React.lazy(() => import('../Support/SuggestionBoxModal').then((m) => ({ default: m.SuggestionBoxModal })));
 const AvatarPicker = React.lazy(() => import('../Avatars/AvatarPicker'));
 const ScratchPage = React.lazy(() => import('../Scratch/ScratchPage').then((m) => ({ default: m.ScratchPage })));
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
@@ -1686,7 +1685,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {showSuggestionBox && (
         <React.Suspense fallback={<LazyFallback />}>
-          <SuggestionBoxModal userId={currentUser.id} onClose={() => setShowSuggestionBox(false)} />
+          <CustomerSupportModal currentUser={currentUser} initialScreen="suggestions" onClose={() => setShowSuggestionBox(false)} />
         </React.Suspense>
       )}
 

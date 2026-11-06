@@ -1,12 +1,14 @@
 import React from 'react';
 import { ArrowLeft, ChevronRight, Star, X } from 'lucide-react';
-import { CallTileIcon, ChatTileIcon, FaqTileIcon, PaymentTileIcon, ReportTileIcon, TicketTileIcon } from './SupportIcons';
+import { CallTileIcon, ChatTileIcon, FaqTileIcon, IdeaTileIcon, PaymentTileIcon, ReportTileIcon, TicketTileIcon } from './SupportIcons';
+import { useFeatureOn } from '../../utils/featureFlags';
+import './suggestionBox.css';
 import { SUPPORT_TOPICS, type Topic } from './supportTopics';
 
 // The first screen of the help desk, like the "Need help?" screen of a delivery app: a row of coloured tiles (chat, call, FAQs, report, ticket, payment) and the popular topics below.
 // Everything it shows is handed in by CustomerSupportModal; this file is only the screen.
 
-export type SupportScreen = 'home' | 'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq';
+export type SupportScreen = 'home' | 'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq' | 'suggestions';
 
 interface HeaderProps {
   title: string;
@@ -57,6 +59,7 @@ interface HubProps {
 
 export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPayment, onTopic, onOpenTerms, onOpenPrivacy }) => {
   const topics = SUPPORT_TOPICS.filter((t) => t.action !== 'payment' && t.action !== 'report');
+  const showIdeas = useFeatureOn('suggestions');   // the administrator can switch the Suggestion Box off for users
   return (
     <div className="sd-hub" data-testid="support-hub">
       <div className="sd-hello">
@@ -75,6 +78,14 @@ export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPay
           </button>
         ))}
       </div>
+
+      {showIdeas && (
+        <button type="button" className="sd-idea" onClick={() => onOpen('suggestions')} data-testid="support-tile-suggestions">
+          <IdeaTileIcon />
+          <span><strong>Suggestion Box</strong><small>Share an idea, an improvement or a problem</small></span>
+          <ChevronRight className="sd-chev" />
+        </button>
+      )}
 
       <h2 className="sd-section">Popular topics</h2>
       <div className="sd-rows" data-testid="support-topics">

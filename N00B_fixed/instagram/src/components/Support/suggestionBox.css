@@ -1,0 +1,72 @@
+/* The Suggestion Box page of the help desk (sg-) and the card on the first screen that opens it (sd-idea). Light, soft, with smooth motion. */
+.sg-page { background: linear-gradient(180deg, #fffaf0 0, #fff 220px); -webkit-overflow-scrolling: touch; }
+.sg-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 14px 8px 16px; }
+.sg-bulb { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 28px; background: radial-gradient(circle at 50% 35%, #fff3c4, #ffe08a 70%); box-shadow: 0 14px 30px -12px rgba(217, 119, 6, .55), inset 0 1px 0 #fff; animation: sg-float 4.5s ease-in-out infinite; }
+.sg-bulb svg { width: 56px; height: 56px; }
+.sg-hero h2 { margin-top: 10px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+.sg-hero p { max-width: 310px; font-size: 14px; line-height: 1.5; color: #6b7280; }
+
+.sg-card { display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: 24px; background: #fff; border: 1px solid #eef0f3; box-shadow: 0 18px 40px -22px rgba(30, 41, 59, .28); animation: sg-in .38s cubic-bezier(.2, .8, .2, 1) both; }
+.sg-seg { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; border-radius: 18px; background: #f3f4f7; }
+.sg-seg-thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 14px; background: #fff; box-shadow: 0 6px 16px -6px rgba(30, 41, 59, .3), 0 0 0 1.5px var(--hue); transform: translateX(calc(var(--i) * 100%)); transition: transform .32s cubic-bezier(.3, 1.2, .4, 1), box-shadow .25s; }
+.sg-seg button { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 9px; min-width: 0; color: #8a919c; transition: color .2s, transform .12s; }
+.sg-seg button:active { transform: scale(.96); }
+.sg-seg button svg { width: 20px; height: 20px; }
+.sg-seg button b { font-size: 12.5px; font-weight: 800; }
+.sg-seg button small { font-size: 10.5px; font-weight: 500; line-height: 1.1; white-space: nowrap; }
+.sg-seg button.on { color: var(--hue); }
+
+.sg-field { position: relative; border-radius: 18px; background: #f7f8fa; border: 1.5px solid transparent; transition: border-color .2s, background .2s, box-shadow .2s; }
+.sg-field:focus-within { background: #fff; border-color: var(--hue); box-shadow: 0 0 0 4px rgba(12, 131, 31, .1); }
+.sg-field textarea { display: block; width: 100%; resize: none; border: 0; outline: 0; background: transparent; padding: 14px 15px 30px; font-size: 15px; line-height: 1.5; font-weight: 500; color: #1c1c1c; min-height: 132px; transition: height .15s ease; }
+.sg-field textarea::placeholder { color: #a0a7b1; }
+.sg-count { position: absolute; right: 14px; bottom: 9px; font-size: 11px; font-weight: 700; color: #b4bac3; transition: color .2s; }
+.sg-count.low { color: #d97706; }
+.sg-err { padding: 10px 13px; border-radius: 12px; background: #fdecea; color: #b42318; font-size: 13px; font-weight: 600; animation: sg-in .25s both; }
+
+.sg-send { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 15px; border-radius: 16px; font-size: 15.5px; font-weight: 800; color: #fff; background: var(--hue); box-shadow: 0 14px 26px -14px var(--hue); transition: transform .12s, opacity .2s, box-shadow .2s, filter .2s; }
+.sg-send:active:not(:disabled) { transform: scale(.98); }
+.sg-send:disabled { opacity: .4; box-shadow: none; filter: grayscale(.4); }
+.sg-send svg { width: 18px; height: 18px; }
+
+.sg-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 26px 14px; border-radius: 24px; background: #f2fbf4; border: 1px solid #d3efd9; animation: sg-in .4s cubic-bezier(.2, .8, .2, 1) both; }
+.sg-done svg { width: 60px; height: 60px; animation: sg-pop .5s cubic-bezier(.3, 1.5, .4, 1) both; }
+.sg-tick { stroke-dasharray: 40; stroke-dashoffset: 40; animation: sg-draw .45s .2s ease-out forwards; }
+.sg-done h3 { font-size: 19px; font-weight: 800; }
+.sg-done p { max-width: 300px; font-size: 14px; line-height: 1.5; color: #4b6b55; }
+.sg-done .sd-btn { margin-top: 8px; flex: none; min-width: 170px; }
+
+.sg-sub { margin: 24px 2px 10px; font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #7a828d; }
+.sg-empty { padding: 18px 14px; border-radius: 16px; background: #f7f8fa; font-size: 13px; line-height: 1.5; color: #7a828d; text-align: center; }
+.sg-skel { display: flex; flex-direction: column; gap: 10px; }
+.sg-skel i { height: 84px; border-radius: 18px; background: linear-gradient(90deg, #f1f3f6 25%, #f8f9fb 50%, #f1f3f6 75%); background-size: 200% 100%; animation: sg-shine 1.3s linear infinite; }
+.sg-list { display: flex; flex-direction: column; gap: 10px; }
+.sg-item { padding: 13px 14px 12px; border-radius: 18px; background: #fff; border: 1px solid #eef0f3; border-left: 4px solid var(--hue); box-shadow: 0 10px 24px -20px rgba(30, 41, 59, .5); animation: sg-in .4s cubic-bezier(.2, .8, .2, 1) both; }
+.sg-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sg-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; color: var(--hue); }
+.sg-chip svg { width: 14px; height: 14px; }
+.sg-state { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; background: #fef3c7; color: #b45309; }
+.sg-state svg { width: 12px; height: 12px; }
+.sg-state.replied { background: #dcfce7; color: #15803d; }
+.sg-state.solved { background: #eef0f3; color: #6b7280; }
+.sg-msg { margin-top: 8px; font-size: 14px; line-height: 1.5; color: #2a2f37; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sg-item time { display: block; margin-top: 6px; font-size: 11px; color: #a0a7b1; }
+.sg-reply { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: #eefaf1; border: 1px solid #d3efd9; }
+.sg-reply b { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #0c831f; }
+.sg-reply p { margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: #1f3d28; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* the card on the first screen of the help desk that opens the page */
+.sd-idea { display: flex; align-items: center; gap: 13px; width: 100%; margin: 0 0 22px; padding: 13px 14px; border-radius: 20px; text-align: left; background: linear-gradient(135deg, #fff7dd, #ffefb8); border: 1px solid #f7e2a1; box-shadow: 0 14px 28px -20px rgba(217, 119, 6, .7); transition: transform .12s; }
+.sd-idea:active { transform: scale(.98); }
+.sd-idea > svg:first-child { width: 44px; height: 44px; flex: none; }
+.sd-idea > span { flex: 1; min-width: 0; }
+.sd-idea strong { display: block; font-size: 15px; font-weight: 800; color: #1c1c1c; }
+.sd-idea small { display: block; margin-top: 2px; font-size: 12.5px; color: #8a6a14; }
+.sd-idea .sd-chev { color: #b8912a; }
+
+@keyframes sg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes sg-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes sg-draw { to { stroke-dashoffset: 0; } }
+@keyframes sg-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes sg-shine { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .sg-bulb, .sg-card, .sg-done, .sg-done svg, .sg-item, .sg-skel i, .sg-err { animation: none; } .sg-tick { animation: none; stroke-dashoffset: 0; } .sg-seg-thumb, .sg-send { transition: none; } }

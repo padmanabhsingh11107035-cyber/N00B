@@ -60,6 +60,7 @@ import {
   logoutUser,
   checkAndRegisterDevice,
   subscribeToDeviceRevoked,
+  isThisDeviceRevoked,
   deleteMyAccount,
   setSessionUserId,
   fetchAppNotifications,
@@ -762,6 +763,15 @@ export default function App() {
       if (checking || ended || Date.now() - lastAt < 5000) return;
       checking = true;
       try {
+        // logged out from another phone (the live channel can miss it): end this login now
+        if (await isThisDeviceRevoked(getDeviceId(), myId)) {
+          ended = true;
+          void logoutUser();
+          setSessionEndedNotice('Your account is signed in on another device. Log in again to continue here.');
+          setSessionUserId(null);
+          setCurrentUser(null);
+          return;
+        }
         const step = stepWatch(watchRef.current, await checkSessionStatus(myId));
         lastAt = Date.now();
         watchRef.current = step.state;

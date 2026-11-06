@@ -1042,6 +1042,17 @@ export function subscribeToDeviceRevoked(deviceId: string, userId: string, onRev
   return () => { supabase.removeChannel(channel); };
 }
 
+// Has someone logged THIS device out from the "already signed in elsewhere" picker on another phone? The live channel above can miss it (a phone that was asleep,
+// a dropped connection), so the app also asks once in a while. true only when the row says so; any doubt (no row, offline) is false, so nobody is signed out by a hiccup.
+export async function isThisDeviceRevoked(deviceId: string, userId: string): Promise<boolean> {
+  try {
+    if (selfEndingLogin) return false;
+    const { data, error } = await supabase.from('device_sessions').select('revoked_at').eq('user_id', userId).eq('device_id', deviceId).maybeSingle();
+    if (error || !data) return false;
+    return !!(data as { revoked_at?: string | null }).revoked_at;
+  } catch { return false; }
+}
+
 // Routed through the Edge Function (not called as a plain RPC) so it can email a deletion receipt
 // to whatever address was on the account, grabbed from delete_my_account's own return value before
 // the row is gone — see recover-account's "delete-account" action. Invoked BEFORE signing out

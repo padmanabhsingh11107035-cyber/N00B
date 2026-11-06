@@ -44,6 +44,7 @@ export {
   revokeDeviceSession,
   fetchMyDevices,
   subscribeToDeviceRevoked,
+  isThisDeviceRevoked,
   deleteMyAccount,
   fetchCurrentUser,
   checkSessionStatus,

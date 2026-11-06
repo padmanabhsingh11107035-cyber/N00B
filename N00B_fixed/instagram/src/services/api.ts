@@ -489,6 +489,7 @@ export {
   dismissAskReport,
   removeAskQuestionAdmin,
   setMyMood,
+  setMyMoodUntil,
   clearMyMood,
   fetchMyMood,
   fetchUserMood,

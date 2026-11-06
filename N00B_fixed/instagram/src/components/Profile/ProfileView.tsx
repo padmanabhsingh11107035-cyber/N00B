@@ -107,7 +107,7 @@ import { useFeatureOn } from '../../utils/featureFlags';
 import { BoothIcon } from '../Booth/BoothIcon';
 import { openBooth, preloadBooth } from '../Booth/boothStore';
 import { openLenses } from '../Lenses/lensStore';
-import { LensesIcon, ScratchIcon } from './ProfileToolIcons';
+import { AvatarsIcon, LensesIcon, ScratchIcon } from './ProfileToolIcons';
 import { QrScannerPage } from './QrScannerPage';
 import { TranslatorPage } from './TranslatorPage';
 import { ExportDataModal } from './ExportDataModal';
@@ -636,7 +636,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
       <div className="relative mb-4">
-        <div className="flex items-center gap-3 mb-4 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
+        <div className="flex items-center gap-2 mb-4 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
           {isOwnProfile && onOpenCreate && (
             <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
           )}
@@ -690,6 +690,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <ScratchIcon size={26} />
+          </button>
+        )}
+        {isOwnProfile && (
+          <button
+            type="button"
+            onClick={() => setShowAvatarPicker(true)}
+            data-testid="profile-avatars"
+            title="Choose avatar"
+            aria-label="Choose avatar: pick a character as your profile picture"
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
+          >
+            <AvatarsIcon size={26} />
           </button>
         )}
         {isOwnProfile && onSwitchToAdminPanel && (

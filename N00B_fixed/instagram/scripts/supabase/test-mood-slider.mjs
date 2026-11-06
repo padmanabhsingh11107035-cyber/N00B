@@ -17,8 +17,8 @@ check(mid.eyeH > moodStops[0].eyeH && mid.eyeH < moodStops[1].eyeH, 'between two
 console.log('\n2. The page');
 const page = read('src/components/Fun/MoodPage.tsx');
 const hub = read('src/components/Fun/FunHub.tsx');
-check(/setMyMood\(\{ mood, note: kept\.current\.note, visibility: kept\.current\.visibility, expireHours: kept\.current\.expireHours \}\)/.test(page), 'letting go saves the mood with the same visibility and note as before');
-check(/if \(!currentUser\) \{ onLogin\?\.\(\); return; \}/.test(page) && /if \(mood === savedMood\.current\) return;/.test(page), 'a visitor is asked to log in, and an unchanged mood is not saved again');
+check(/setMyMoodUntil\(\{ mood, note: kept\.current\.note, visibility: kept\.current\.visibility, expiresAt: nextMidnight\(\) \}\)/.test(page) && /data-testid="mood-save"/.test(page) && !/MOOD_SAVE_DELAY_MS/.test(page), 'the Save mood button saves the mood with the same visibility and note as before, to clear at the next 12 midnight (letting go of the slider no longer saves by itself)');
+check(/if \(!currentUser\) \{ onLogin\?\.\(\); return; \}/.test(page) && /pickedId === savedId/.test(page), 'a visitor is asked to log in, and a mood that is already saved can not be saved again');
 check(/active\.id === 'mood'/.test(hub) && /onBack=\{onBack\}/.test(hub), 'the hub shows Mood as one full screen with its own way back');
 check(fs.existsSync('src/components/Fun/MoodClassic.tsx'), 'the old page (note, lists, who can see it) is kept');
 check(!/localStorage|sessionStorage/.test(page), 'nothing is kept in the browser');

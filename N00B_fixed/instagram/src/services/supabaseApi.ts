@@ -6337,6 +6337,18 @@ const mapMoodPage = (res: MoodPage | null): MoodPage => ({
 export async function setMyMood(input: { mood: string; note: string; visibility: 'everyone' | 'followers' | 'only_me'; expireHours: number | null }): Promise<MoodStatus> {
   return rpc<MoodStatus>('mood_set', { p_mood: input.mood, p_note: input.note, p_visibility: input.visibility, p_expire_hours: input.expireHours });
 }
+/** Sets my mood so that it clears itself at an exact moment (the next 12 midnight of the person's own time zone). An older database that does not have mood_set_until yet
+ *  (migration 20261106000001) is asked for the nearest whole number of hours instead, so saving keeps working in both cases. */
+export async function setMyMoodUntil(input: { mood: string; note: string; visibility: 'everyone' | 'followers' | 'only_me'; expiresAt: Date }): Promise<MoodStatus> {
+  try {
+    return await rpc<MoodStatus>('mood_set_until', { p_mood: input.mood, p_note: input.note, p_visibility: input.visibility, p_expires_at: input.expiresAt.toISOString() });
+  } catch (err) {
+    const text = String((err as { message?: string } | null)?.message ?? err);
+    if (!/mood_set_until|could not find|schema cache|PGRST202|not found/i.test(text)) throw err;
+    const hours = Math.min(24, Math.max(1, Math.ceil((input.expiresAt.getTime() - Date.now()) / 3_600_000)));
+    return setMyMood({ mood: input.mood, note: input.note, visibility: input.visibility, expireHours: hours });
+  }
+}
 export async function clearMyMood(): Promise<void> { await rpc('mood_clear'); }
 export async function fetchMyMood(): Promise<MoodStatus | null> { return (await rpc<MoodStatus | null>('mood_my')) ?? null; }
 /** Someone's mood, if this person is allowed to see it (null otherwise - "no mood" and "not allowed" look the same). */

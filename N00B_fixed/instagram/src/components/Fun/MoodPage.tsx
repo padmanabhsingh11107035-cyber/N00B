@@ -1,20 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
-import { setMyMood, fetchMyMood } from '../../services/api';
+import { Check, ChevronLeft, Loader2 } from 'lucide-react';
+import { setMyMoodUntil, fetchMyMood } from '../../services/api';
 import { MOODS as ALL_MOODS, type MoodId } from '../../utils/moods';
-import { SLIDER_ORDER, moodAt, nearestMood, MOOD_SAVE_DELAY_MS } from '../../utils/moodSlider';
+import { SLIDER_ORDER, moodAt, nearestMood } from '../../utils/moodSlider';
 
 // the eight moods in the order of the slider (low to high)
 const MOODS = SLIDER_ORDER.map((id) => ALL_MOODS.find((m) => m.id === id)!);
 import type { FunPageProps } from './types';
 
 // Mood: one full screen. The whole page takes the colour of how you feel, a face that follows your finger shows it, and a ruler at the bottom is the slider. The word at the top
-// is the mood. Nothing else is on the page. Letting go of the slider saves the mood the way the old page did (who can see it and the 24 hours stay as they were set; a new mood
-// is for followers and clears after 24 hours), and the database still decides who sees what (migration 20261016000003). The old page with the note, the lists and the choices
-// is kept in MoodClassic.tsx.
+// is the mood. Letting go of the slider only picks the mood: the black "Save mood" button at the bottom saves it (who can see it stays as it was set; a new mood is for
+// followers). A saved mood clears itself at the next 12 midnight of the person's own time (migration 20261106000001), and the database still decides who sees what (migration
+// 20261016000003). The old page with the note, the lists and the choices is kept in MoodClassic.tsx.
 
 const PAD = 34;            // space left and right of the ruler (px)
-const PANEL_H = 168;       // the white panel at the bottom (px)
+const PANEL_H = 232;       // the white panel at the bottom (px): the ruler, the Save button and one line under it
+
+// the next 12 midnight of the person's own time
+const nextMidnight = (): Date => { const d = new Date(); d.setHours(24, 0, 0, 0); return d; };
 
 export interface MoodPageProps extends FunPageProps { onBack?: () => void }
 
@@ -25,9 +28,11 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
   const dragging = useRef(false);
   const raf = useRef(0);
   const wrap = useRef<HTMLDivElement | null>(null);
-  const kept = useRef<{ visibility: 'everyone' | 'followers' | 'only_me'; note: string; expireHours: number | null }>({ visibility: 'followers', note: '', expireHours: 24 });
+  const kept = useRef<{ visibility: 'everyone' | 'followers' | 'only_me'; note: string }>({ visibility: 'followers', note: '' });
   const savedMood = useRef<MoodId | null>(null);
-  const saveTimer = useRef<number | undefined>(undefined);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [pickedId, setPickedId] = useState<MoodId | null>(null);   // what the slider is on now
+  const [savedId, setSavedId] = useState<MoodId | null>(null);     // what is saved
   const touched = useRef(false);
   const [problem, setProblem] = useState('');
   const [width, setWidth] = useState(375);
@@ -49,7 +54,8 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
       const i = MOODS.findIndex((x) => x.id === m.mood);
       if (i < 0) return;
       savedMood.current = m.mood as MoodId;
-      kept.current = { visibility: m.visibility ?? 'followers', note: m.note ?? '', expireHours: m.expiresAt ? 24 : null };
+      kept.current = { visibility: m.visibility ?? 'followers', note: m.note ?? '' };
+      setSavedId(m.mood as MoodId); setPickedId(m.mood as MoodId);
       target.current = i / last; shownRef.current = i / last; setShown(i / last);
     }).catch(() => undefined);
     return () => { alive = false; };
@@ -68,7 +74,7 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
     };
     raf.current = requestAnimationFrame(tick);
   }, []);
-  useEffect(() => () => { cancelAnimationFrame(raf.current); window.clearTimeout(saveTimer.current); }, []);
+  useEffect(() => () => { cancelAnimationFrame(raf.current); }, []);
 
   const valueAt = (clientX: number) => {
     const r = wrap.current?.getBoundingClientRect();
@@ -76,27 +82,30 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
     return Math.min(1, Math.max(0, (clientX - (r?.left || 0) - PAD) / (w - PAD * 2)));
   };
 
+  // the Save mood button: saves the mood the slider is on, to clear itself at the next 12 midnight
   const save = useCallback(async () => {
     const id = nearestMood(target.current, last);
     const mood = MOODS[id].id;
-    if (mood === savedMood.current) return;
     if (!currentUser) { onLogin?.(); return; }
+    setSaveState('saving'); setProblem('');
     try {
-      await setMyMood({ mood, note: kept.current.note, visibility: kept.current.visibility, expireHours: kept.current.expireHours });
-      savedMood.current = mood; setProblem('');
-    } catch { setProblem('Not saved. Check your connection.'); }
+      await setMyMoodUntil({ mood, note: kept.current.note, visibility: kept.current.visibility, expiresAt: nextMidnight() });
+      savedMood.current = mood; setSavedId(mood); setSaveState('saved');
+      try { navigator.vibrate?.(10); } catch { /* not everywhere */ }
+      window.setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2200);
+    } catch { setProblem('Not saved. Check your connection.'); setSaveState('idle'); }
   }, [currentUser, last, onLogin]);
 
   const down = (e: React.PointerEvent) => {
     touched.current = true; dragging.current = true;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    target.current = valueAt(e.clientX); window.clearTimeout(saveTimer.current); run();
+    target.current = valueAt(e.clientX); run();
   };
   const move = (e: React.PointerEvent) => {
     if (!dragging.current) return;
     const before = nearestMood(target.current, last);
     target.current = valueAt(e.clientX);
-    if (nearestMood(target.current, last) !== before) { try { navigator.vibrate?.(6); } catch { /* not everywhere */ } }
+    if (nearestMood(target.current, last) !== before) { try { navigator.vibrate?.(6); } catch { /* not everywhere */ } setSaveState((s) => (s === 'saved' ? 'idle' : s)); }
     run();
   };
   const up = () => {
@@ -104,8 +113,7 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
     dragging.current = false;
     target.current = nearestMood(target.current, last) / last;   // settle on the nearest mood
     run();
-    window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => { void save(); }, MOOD_SAVE_DELAY_MS);
+    setPickedId(MOODS[nearestMood(target.current, last)].id);
   };
 
   const m = moodAt(shown);
@@ -160,10 +168,10 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
         </g>
       </svg>
 
-      {problem && <div className="absolute left-0 right-0 text-center text-[12px] font-semibold text-white/90 pointer-events-none" style={{ bottom: PANEL_H + 18 }} role="status">{problem}</div>}
+      {problem && <div className="absolute left-0 right-0 text-center text-[12px] font-semibold text-white/90 pointer-events-none" style={{ bottom: `calc(${PANEL_H + 18}px + env(safe-area-inset-bottom))` }} role="status">{problem}</div>}
 
       {/* the ruler */}
-      <div className="absolute left-0 right-0 bottom-0 bg-white" style={{ height: PANEL_H, borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: '0 -8px 30px rgba(0,0,0,.12)' }}>
+      <div className="absolute left-0 right-0 bottom-0 bg-white" style={{ height: `calc(${PANEL_H}px + env(safe-area-inset-bottom))`, borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: '0 -8px 30px rgba(0,0,0,.12)' }}>
         <div className="absolute rounded-full bg-white" style={{ width: 96, height: 96, left: knobX - 48, top: -34 }} />
         <div className="absolute rounded-full" style={{ width: 54, height: 54, left: knobX - 27, top: -13, background: m.color, boxShadow: 'inset 0 -3px 6px rgba(0,0,0,.08)' }} data-testid="mood-knob" />
         <div className="absolute left-0 right-0" style={{ top: 78, height: 44 }}>
@@ -179,6 +187,21 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
             );
           })}
         </div>
+
+        {/* the Save mood button, and when it clears */}
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={() => { void save(); }}
+          disabled={saveState === 'saving' || saveState === 'saved' || (!!currentUser && pickedId !== null && pickedId === savedId)}
+          data-testid="mood-save"
+          className="absolute left-5 right-5 flex items-center justify-center gap-2 rounded-full text-white font-extrabold text-[16px] cursor-pointer transition-transform active:scale-[.98]"
+          style={{ top: 140, height: 56, background: saveState === 'saved' ? '#16a34a' : '#0b0b0c', boxShadow: '0 16px 28px -16px rgba(0,0,0,.6)' }}
+        >
+          {saveState === 'saving' ? <><Loader2 className="w-5 h-5 animate-spin" />Saving…</> : (saveState === 'saved' || (pickedId !== null && pickedId === savedId)) ? <><Check className="w-5 h-5" strokeWidth={3} />Saved</> : 'Save mood'}
+        </button>
+        <p className="absolute left-0 right-0 text-center text-[12px] font-medium text-zinc-500" style={{ top: 206 }}>Your mood clears by itself at 12 midnight.</p>
       </div>
     </div>
   );

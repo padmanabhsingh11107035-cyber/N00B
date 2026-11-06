@@ -4,6 +4,7 @@ import { tabSessions } from '../../services/supabase';
 import { fetchCurrentUser, fetchLinkedAccounts, fetchUserById, signInLinkedAccount, type LinkedAccount } from '../../services/supabaseApi';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip } from '../Common/SheetGrip';
+import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
 
 // What the saved accounts look like right now (picture and name). The saved login only knows the user name, so the pictures are asked for when the sheet opens; the last answer is kept on this
 // device, so the next time they show at once and are then refreshed.
@@ -35,6 +36,7 @@ interface SwitchAccountModalProps {
 // kept on this device, so switching to it never asks again (until it is removed from the list or logged out).
 export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose }) => {
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
+  const area = useVisibleArea();        // the part of the screen above the keyboard: the page fills exactly that, so it sits tightly on the keyboard
   const [accounts, setAccounts] = useState(() => tabSessions.savedAccounts());
   const [removingId, setRemovingId] = useState<string | null>(null); // tap once to arm, tap again to confirm
   const currentId = tabSessions.currentAccount();
@@ -121,15 +123,17 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
 
   return (
     <div
-      className="fixed inset-0 z-[125] flex items-end justify-center"
+      className="fixed inset-0 z-[125]"
       role="dialog"
       aria-modal="true"
       aria-label="Switch account"
     >
-      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      {/* a solid page: nothing of the profile behind it shows (not around it, not under the see-through keyboard of a phone) */}
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-zinc-950" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 bottom-0 flex items-end justify-center" style={visibleAreaStyle(area)}>
       <div
         ref={drag.sheetRef}
-        className="relative w-full max-w-md h-[60vh] flex flex-col bg-zinc-950 border-t border-x border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+        className="relative w-full max-w-md h-full flex flex-col bg-zinc-950 overflow-hidden animate-in slide-in-from-bottom duration-200"
         aria-busy={!!switching}
       >
         {switching && (
@@ -266,6 +270,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
             Add another account
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

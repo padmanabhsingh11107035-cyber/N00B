@@ -636,7 +636,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
       <div className="relative mb-4">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
           {isOwnProfile && onOpenCreate && (
             <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
           )}
@@ -663,7 +663,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-buddy-booth"
             title="Buddy Booth"
             aria-label="Buddy Booth: take a photo with a buddy"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-600 via-purple-600 to-pink-500 hover:brightness-110 cursor-pointer shadow-[0_0_14px_rgba(168,85,247,.5)] transition active:scale-90"
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-600 via-purple-600 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <BoothIcon size={26} />
           </button>
@@ -675,7 +675,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-lenses"
             title="NOOB Lenses"
             aria-label="NOOB Lenses: face filters"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 hover:brightness-110 cursor-pointer shadow-[0_0_14px_rgba(251,146,60,.5)] transition active:scale-90"
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <LensesIcon size={26} />
           </button>
@@ -687,7 +687,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-scratch"
             title="Scratch Reveal"
             aria-label="Scratch Reveal: scratch the foil to unveil secret photos"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer shadow-[0_0_14px_rgba(251,191,36,.45)] transition active:scale-90"
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <ScratchIcon size={26} />
           </button>
@@ -849,7 +849,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         </div>
 
-        <div className="flex items-center gap-5 sm:gap-8">
+        {/* Who this is: the picture on the left, the name, its badges and what kind of account it is on the right */}
+        <div className="flex items-center gap-4" data-testid="profile-identity">
           {/* The picture: tap for full screen. The note sits above it like a speech bubble; on your own profile a small + adds a story. */}
           <div className={`relative shrink-0 ${targetUser.statusNote ? 'mt-7' : ''}`}>
             <div className="relative cursor-pointer group" onClick={() => setShowFullscreenAvatar(true)} title="View profile picture full screen">
@@ -882,47 +883,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
 
-          {/* The name and the three numbers beside the picture */}
+
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
+            <h2 className="text-xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0">
               {targetUser.isVerified ? (
                 <VerifiedBadge size="md" />
               ) : (
                 <CheckCircle2 className="w-4 h-4 text-noob fill-noob/20 shrink-0" />
               )}
               {isBusiness ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1 whitespace-nowrap"><Briefcase className="w-3 h-3" /> Business</span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1 whitespace-nowrap"><Briefcase className="w-3 h-3" /> Business</span>
               ) : isPrivate ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap"><Lock className="w-3 h-3" /> Private</span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap"><Lock className="w-3 h-3" /> Private</span>
               ) : null}
             </div>
-            <div className="mt-2 flex items-start justify-between gap-2 max-w-sm">
-              <div className="min-w-0">
-                <span className="text-xl font-extrabold text-white block leading-tight">{displayedPosts.length}</span>
-                <span className="text-sm text-zinc-300 block truncate">posts</span>
-              </div>
-              <button onClick={() => setFollowListTab('followers')} className="text-left min-w-0 cursor-pointer">
-                <span className="text-xl font-extrabold text-white block leading-tight">{(targetUser.followersCount || 0).toLocaleString()}</span>
-                <span className="text-sm text-zinc-300 block truncate">followers</span>
-              </button>
-              <button onClick={() => setFollowListTab('following')} className="text-left min-w-0 cursor-pointer">
-                <span className="text-xl font-extrabold text-white block leading-tight">{(targetUser.followingCount || 0).toLocaleString()}</span>
-                <span className="text-sm text-zinc-300 block truncate">following</span>
-              </button>
-            </div>
+            {isBusiness && (
+              <p className="mt-1.5 text-sm font-semibold text-zinc-300 truncate">{targetUser.businessCategory || 'Digital Creator'}</p>
+            )}
+            {targetUser.pronouns && (
+              <p className="mt-0.5 text-xs text-zinc-400 truncate">{targetUser.pronouns}</p>
+            )}
           </div>
         </div>
 
-        {/* The bio: what kind of account it is (grey), the words, the link, then the rest of what this person shared */}
-        <div className="mt-3 space-y-1.5">
-          {isBusiness && (
-            <p className="text-sm text-zinc-400">{targetUser.businessCategory || 'Digital Creator'}</p>
-          )}
-          {targetUser.pronouns && (
-            <p className="text-sm text-zinc-400">{targetUser.pronouns}</p>
-          )}
-          <p className="text-sm text-white whitespace-pre-line leading-snug max-w-2xl break-words [overflow-wrap:anywhere]">
+        {/* The three numbers: one even row of three, so every label is written in full */}
+        <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-black/50" data-testid="profile-stats">
+          <div className="min-w-0 px-2 py-2.5 text-center">
+            <span className="block text-lg font-extrabold text-white leading-tight">{displayedPosts.length}</span>
+            <span className="block text-xs font-semibold text-zinc-400">Posts</span>
+          </div>
+          <button type="button" onClick={() => setFollowListTab('followers')} className="min-w-0 px-2 py-2.5 text-center cursor-pointer active:bg-white/5 transition-colors">
+            <span className="block text-lg font-extrabold text-white leading-tight">{(targetUser.followersCount || 0).toLocaleString()}</span>
+            <span className="block text-xs font-semibold text-zinc-400">Followers</span>
+          </button>
+          <button type="button" onClick={() => setFollowListTab('following')} className="min-w-0 px-2 py-2.5 text-center cursor-pointer active:bg-white/5 transition-colors">
+            <span className="block text-lg font-extrabold text-white leading-tight">{(targetUser.followingCount || 0).toLocaleString()}</span>
+            <span className="block text-xs font-semibold text-zinc-400">Following</span>
+          </button>
+        </div>
+
+        {/* The bio: the words, the link, then the rest of what this person shared, each in its own place */}
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-white whitespace-pre-line leading-relaxed max-w-2xl break-words [overflow-wrap:anywhere]">
             {targetUser.bio || (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
           </p>
 
@@ -931,7 +934,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               href={safeExternalUrl(targetUser.website) as string}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 text-sky-400 hover:underline font-semibold text-sm min-w-0"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3.5 py-2 text-sm font-semibold text-sky-400 active:bg-white/5 min-w-0"
             >
               <Link2 className="w-4 h-4 shrink-0" />
               <span className="truncate">{targetUser.website.replace(/^https?:\/\//, '')}</span>
@@ -974,15 +977,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
 
           {(targetUser.city || targetUser.countryCode) && (
-            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               {targetUser.city && (
-                <span className="flex items-center gap-1 text-zinc-300">
-                  <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-zinc-200">
+                  <MapPin className="w-4 h-4 text-rose-400" />
                   <span>{targetUser.city}</span>
                 </span>
               )}
               {targetUser.countryCode && (
-                <span className="text-[10px] text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-800 font-mono">
+                <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1.5 text-xs font-mono font-bold text-zinc-300">
                   {targetUser.countryCode}
                 </span>
               )}
@@ -994,11 +997,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Interests Tags */}
           {targetUser.interests && targetUser.interests.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
               {targetUser.interests.map((tag) => (
                 <span
                   key={tag}
-                  className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-900 text-zinc-300 border border-zinc-800"
+                  className="text-xs font-bold px-3 py-1 rounded-full bg-black/50 text-zinc-200 border border-white/10"
                 >
                   #{tag}
                 </span>
@@ -1006,23 +1009,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           )}
 
-          {/* Business Direct Contact */}
+          {/* Business Direct Contact: two equal buttons side by side */}
           {isBusiness && (targetUser.email || targetUser.mobileNumber) && (
-            <div className="pt-1 flex flex-wrap items-center gap-2">
+            <div className={`grid gap-2 ${targetUser.email && targetUser.mobileNumber ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {targetUser.email && (
                 <a
                   href={`mailto:${targetUser.email}`}
-                  className="text-[11px] font-semibold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-800 flex items-center gap-1"
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/50 px-3 py-3 text-sm font-bold text-white active:bg-white/5 transition-colors min-w-0"
                 >
-                  <Mail className="w-3 h-3 text-pink-400" /> Contact Email
+                  <Mail className="w-4 h-4 text-pink-400 shrink-0" /> <span className="truncate">Contact Email</span>
                 </a>
               )}
               {targetUser.mobileNumber && (
                 <a
                   href={`tel:${targetUser.mobileNumber}`}
-                  className="text-[11px] font-semibold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-800 flex items-center gap-1"
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/50 px-3 py-3 text-sm font-bold text-white active:bg-white/5 transition-colors min-w-0"
                 >
-                  <Phone className="w-3 h-3 text-noob" /> Call / WhatsApp
+                  <Phone className="w-4 h-4 text-noob shrink-0" /> <span className="truncate">Call / WhatsApp</span>
                 </a>
               )}
             </div>

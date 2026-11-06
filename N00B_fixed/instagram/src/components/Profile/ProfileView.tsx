@@ -94,7 +94,7 @@ import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
-import { Globe as GlobeIcon, KeyRound, Languages } from 'lucide-react';
+import { ChevronRight, Globe as GlobeIcon, KeyRound, Languages } from 'lucide-react';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { DevicesModal } from './DevicesModal';
 import { AppearanceSetting } from '../Common/AppearanceSetting';
@@ -941,9 +941,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </a>
           )}
 
-          {/* Mood Status: how this person feels, only when they chose to share it with the person looking (and it has not expired) */}
-          {!isTargetBlocked && <ProfileMoodChip userId={targetUser.id} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
-
           {mutualFollowers.length > 0 && (
           <button
             onClick={() => setShowMutualFollowersSheet(true)}
@@ -1032,6 +1029,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
         </div>
 
+        {/* Mood Status: how this person feels, only when they chose to share it with the person looking (and it has not expired). It sits right above the Professional dashboard. */}
+        {!isTargetBlocked && (
+          <div className="mt-3">
+            <ProfileMoodChip userId={targetUser.id} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />
+          </div>
+        )}
+
         {/* Professional dashboard: a grey card under the bio (your own business account only) */}
         {isOwnProfile && isBusiness && (
           <button
@@ -1042,6 +1046,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           >
             <span className="block text-base font-extrabold text-white">Professional dashboard</span>
             <span className="block text-sm text-zinc-400">Live organic impressions, profile engagement &amp; growth</span>
+          </button>
+        )}
+
+        {/* Is this account public or private: a line right above Edit profile and Share profile (your own profile; a tap opens Settings and activity, where it can be changed) */}
+        {isOwnProfile && (
+          <button
+            type="button"
+            onClick={() => { setShowThreeDotsMenu(false); setShowSettingsHub(true); }}
+            data-testid="profile-account-type"
+            className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-left cursor-pointer active:bg-white/5 transition-colors"
+          >
+            {isPrivate ? <Lock className="w-4 h-4 shrink-0 text-purple-300" /> : isBusiness ? <Briefcase className="w-4 h-4 shrink-0 text-noob" /> : <GlobeIcon className="w-4 h-4 shrink-0 text-sky-300" />}
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-white">{isPrivate ? 'Private account' : isBusiness ? 'Business account' : 'Public account'}</span>
+              <span className="block text-xs text-zinc-400 truncate">{isPrivate ? 'Only people you approve can see your posts' : 'Anyone on NOOB can see your profile and posts'}</span>
+            </span>
+            <ChevronRight className="w-4 h-4 shrink-0 text-zinc-500" />
           </button>
         )}
 

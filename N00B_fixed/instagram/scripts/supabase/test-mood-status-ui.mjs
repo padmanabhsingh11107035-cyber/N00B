@@ -51,7 +51,7 @@ check(!/localStorage|sessionStorage/.test(page + cards), 'no mood is kept in the
 section('5. On a profile');
 check(/export const ProfileMoodChip/.test(cards) && /isOwnProfile \? fetchMyMood\(\) : fetchUserMood\(userId\)/.test(cards), 'the chip asks the database for the mood the person looking may see');
 check(/if \(!isOwnProfile \|\| !onOpenFunPage\) return null;/.test(cards) && /\+ Set your mood/.test(cards), 'someone else with no (visible) mood shows nothing; on my own profile a quiet "Set your mood" opens the page');
-check(/\{!isTargetBlocked && <ProfileMoodChip userId=\{targetUser\.id\} isOwnProfile=\{isOwnProfile\} onOpenFunPage=\{onOpenFunPage\} \/>\}/.test(profile), 'it sits under the name and is not shown on the profile of someone you blocked');
+check(/\{!isTargetBlocked && \(\s*<div className=\"mt-3\">\s*<ProfileMoodChip userId=\{targetUser\.id\} isOwnProfile=\{isOwnProfile\} onOpenFunPage=\{onOpenFunPage\} \/>\s*<\/div>\s*\)\}\s*\{\/\* Professional dashboard/.test(profile), 'it sits right above the Professional dashboard and is not shown on the profile of someone you blocked');
 
 section('6. Privacy (in the database)');
 check(/revoke all on public\.user_moods from public, anon, authenticated;/.test(sql), 'the table can not be read from the app');

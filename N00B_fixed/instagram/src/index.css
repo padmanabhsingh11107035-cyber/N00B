@@ -1559,7 +1559,7 @@ html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper
 html.sd-open { background-color: #e8ebf0 !important; }
 html.sd-open body::after { display: none !important; }
 html.sd-open body * { visibility: hidden; }
-html.sd-open .sd-root, html.sd-open .sd-root * { visibility: visible; }
+html.sd-open .sd-root, html.sd-open .sd-root *, html.sd-open .sd-legal, html.sd-open .sd-legal * { visibility: visible; }
 
 /* Chat: the top bar and the message bar are plain white in Light mode (the same white as the page behind the doodle) */
 html body.light .chat-bar { background-color: #ffffff; border-color: #e6e6e6; backdrop-filter: none; -webkit-backdrop-filter: none; }

@@ -34,7 +34,7 @@ const auth = read('src/components/Auth/AuthView.tsx');
 check((auth.match(/variant="row"/g) || []).length === 1 && /auth-social-top/.test(auth) && /Or sign up with/.test(auth) && /Or log in with/.test(auth), 'round social buttons at the top of both pages');
 const soc = read('src/components/Auth/SocialLoginButtons.tsx');
 check(/id: 'apple', supabaseId: 'apple'/.test(soc) && /social-row/.test(soc), 'Apple, Google, Facebook and the other enabled ones are in the round row');
-check(/\.auth-v2 form button\[type="submit"\] \{ background: #ff856d/.test(read('src/index.css')), 'the coral button and grey inputs are in the style sheet');
+check(/\.auth-v2 form button\[type="submit"\] \{ background: linear-gradient/.test(read('src/index.css')), 'the gradient pill button and glass inputs are in the style sheet');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

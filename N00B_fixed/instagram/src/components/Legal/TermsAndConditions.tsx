@@ -17,7 +17,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
             </div>
             <div>
               <h2 className="text-lg font-black text-white">NOOB Terms & Conditions</h2>
-              <p className="text-xs text-zinc-400">Effective Date: August 2026 • Version 1.0</p>
+              <p className="text-xs text-zinc-400">Effective Date: November 2026 • Version 1.1</p>
             </div>
           </div>
           <button
@@ -108,9 +108,39 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
               Modifications & Account Deletion
             </h3>
             <p>
-              You may edit your bio, update your profile picture, or delete your account data anytime through your profile settings.
+              You may edit your bio and profile picture, or delete your account and all its data anytime (Settings and activity, then Your NOOB account, then Delete account).
               NOOB may update these Terms periodically, and continued use constitutes acceptance of updated terms.
             </p>
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-0">
+            <h3 className="text-sm font-bold text-white">Our apps</h3>
+            <p dangerouslySetInnerHTML={{ __html: "NOOB is a website and web app at <b>noobsocials.com</b> and an Android app from <b>Google Play</b>. These Terms apply to all of them. On Android the app can ask for permissions: <b>location</b> (Family Map), <b>camera and microphone</b> (photos, videos, voice messages, calls, live video), <b>contacts</b> (Find friends), <b>photos and files</b> (what you choose to upload) and <b>notifications</b>. You can say no to any of them: only the feature that needs it stays off." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-1">
+            <h3 className="text-sm font-bold text-white">Your account</h3>
+            <p dangerouslySetInnerHTML={{ __html: "One account is for one person. You are responsible for what happens in it, so keep your password to yourself and tell us at once if someone else got in (Help, or the grievance form). NOOB may remove content, warn, suspend or close an account that breaks these Terms or the law, or that puts other people at risk. You can delete your own account at any time (Settings and activity, then Your NOOB account, then Delete account)." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-2">
+            <h3 className="text-sm font-bold text-white">NOOB Pro and Ads</h3>
+            <p dangerouslySetInnerHTML={{ __html: "<b>NOOB Pro</b> is a plan you pay for with noobs, never with money; what a plan includes and costs is shown before you choose it, and it can change for the future. <b>Ads</b> are for business accounts: applying is free, and an ad is shown only after NOOB approves it. NOOB can refuse, pause or remove an ad, or switch ads off, at any time." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-3">
+            <h3 className="text-sm font-bold text-white">Family Map: your duty</h3>
+            <p dangerouslySetInnerHTML={{ __html: "Share your place only with people who know and agree, and never use Family Map to follow, watch or frighten someone. Whoever has a room&apos;s code can join it until the owner locks it, so give the code only to people you trust. Family Map is <b>not an emergency or safety service</b>: it can be late, wrong or off, so never depend on it where a life or safety is involved." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-4">
+            <h3 className="text-sm font-bold text-white">What we cannot promise</h3>
+            <p dangerouslySetInnerHTML={{ __html: "NOOB is made by students and is provided <b>as it is</b>. It can be slow, change or be down for a while, and we cannot promise that nothing is ever lost, so keep your own copy of what matters to you (Download your information). As far as the law allows, the NOOB developers are not responsible for indirect loss or for what other people post or do. Nothing here takes away a right the law gives you." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-5">
+            <h3 className="text-sm font-bold text-white">Changes to these Terms</h3>
+            <p dangerouslySetInnerHTML={{ __html: "When these Terms change, the date and version at the top change, and for a big change we tell you inside NOOB. If you keep using NOOB after a change, you accept it; if you do not agree, you can delete your account." }} />
           </section>
 
           <section className="space-y-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:text-white [&_h4]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ul]:text-zinc-400" data-testid="legal-data-inventory">

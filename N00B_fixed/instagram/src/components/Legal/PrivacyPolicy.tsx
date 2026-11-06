@@ -17,7 +17,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
             </div>
             <div>
               <h2 className="text-lg font-black text-white">NOOB Privacy Policy</h2>
-              <p className="text-xs text-zinc-400">Last Updated: October 2026 • Privacy First</p>
+              <p className="text-xs text-zinc-400">Last Updated: November 2026 • Privacy First</p>
             </div>
           </div>
           <button
@@ -100,8 +100,8 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
               5. Your Controls
             </h3>
             <p>
-              You can inspect or export a copy of your profile data at any time from Profile → Settings → Export Data.
-              You can edit your profile, bio, and privacy preferences at any time from Profile → Settings.
+              You can see and download a copy of your details at any time (Settings and activity, then Your NOOB account, then Download your information).
+              You can edit your profile, bio and privacy choices at any time (Edit profile, or Settings and activity).
             </p>
           </section>
 
@@ -112,11 +112,26 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
             </h3>
             <p>
               You can permanently delete your NOOB account at any time, without contacting support, from
-              <strong className="text-white"> Profile → Settings → Danger Zone → Delete My Account Permanently</strong>.
+              <strong className="text-white"> Settings and activity → Your NOOB account → Delete account</strong>.
               This requires your password to confirm and immediately and permanently removes your account, profile,
               posts, reels, stories, comments, messages, and uploaded media, and detaches you from other users'
               followers/following lists. This action cannot be undone and is not recoverable.
             </p>
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-0">
+            <h3 className="text-sm font-bold text-white">Permissions of the Android app</h3>
+            <p dangerouslySetInnerHTML={{ __html: "The Android app asks before it uses: <b>location</b> (only for Family Map, and only if you share), <b>camera</b> and <b>microphone</b> (photos, videos, voice messages, calls and live video, only while you use them), <b>contacts</b> (only when you press Find friends), <b>photos and files</b> (only what you pick to upload) and <b>notifications</b>. If you say no, or switch a permission off later in your phone&apos;s settings, only that feature stops. Nothing is read in secret." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-1">
+            <h3 className="text-sm font-bold text-white">How long we keep things</h3>
+            <p dangerouslySetInnerHTML={{ __html: "<b>Daily NOOB entries and Instants</b> are deleted after 24 hours. <b>Family Map</b>: only your latest place is kept, hidden after 24 hours without news; the day report lasts until midnight. Everything else you make (posts, reels, videos, stories, comments, messages, notes) stays until you delete it or delete your account. When you delete your account, your data is removed from NOOB straight away (Settings and activity, then Your NOOB account, then Delete account)." }} />
+          </section>
+
+          <section className="space-y-2" data-testid="legal-new-2">
+            <h3 className="text-sm font-bold text-white">Children</h3>
+            <p dangerouslySetInnerHTML={{ __html: "NOOB is for people aged <b>13 and over</b>, and people under 18 should use it with a parent or guardian&apos;s knowledge. We do not knowingly keep the data of a child under 13: if you think one has signed up, tell us through the grievance form and we will delete the account. A parent or guardian can ask us, through the same form, to see or delete a child&apos;s data." }} />
           </section>
 
           <section className="space-y-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:text-white [&_h4]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ul]:text-zinc-400" data-testid="legal-data-inventory">

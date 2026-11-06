@@ -64,7 +64,7 @@ check(/grievance\.html/.test(read('public/sitemap.xml')), 'the page is in the si
 section('5. "Order Successful!" for NOOB Pro');
 const rc = read('src/components/Profile/ProReceipt.tsx'), pro = read('src/components/Profile/ProFeaturesModal.tsx');
 check(/Order Successful!/.test(rc) && /Thank you for your purchase/.test(rc) && /Order Details/.test(rc) && /Subtotal/.test(rc) && />Total</.test(rc.replace(/\{[^}]*\}/g, '')) || /'Total'/.test(rc), 'the receipt: Order Successful, Thank you, Order Details, Subtotal, Total');
-check(/receiptNumber/.test(rc) && /Done<\/button>/.test(rc) && /discount > 0/.test(rc), 'a receipt number, the Done button, and a coupon line only when a coupon was used');
+check(/receiptNumber/.test(rc) && /Done<\/button>/.test(read('src/components/Payments/PaymentReceiptPage.tsx')) && /discount > 0/.test(rc), 'a receipt number, the Done button, and a coupon line only when a coupon was used');
 check(/setReceipt\(\{ planName: tier\.name, billing, base: quote\.base, total: quote\.display/.test(pro) && /<ProReceipt receipt=\{receipt\}/.test(pro), 'it opens the moment a plan has been paid, with the real plan, billing, price and coupon');
 
 console.log(`\n${passed} passed, ${failed} failed`);

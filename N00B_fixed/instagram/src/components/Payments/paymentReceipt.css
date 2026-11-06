@@ -1,0 +1,103 @@
+/* The payment receipt (pr-): black, white and soft grey, like the example video. One timeline (seconds):
+   0 - 2.5   the opening: a dark square with a tick, little buttons fly out around it and back in
+   2.2 - 2.8 the page turns soft grey            2.5 - 3.0  the dark slot comes down at the top
+   3.0 - 4.2 a paper plane flies up into the slot  4.15 - 6.45 the receipt is printed out of the slot and slides down, and stops
+   6.5 - 7.1 the plane under it drops away and the black Done button rises.   Written in plain colours: it looks the same in dark and light mode. */
+.pr-root {
+  position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; overflow: hidden;
+  background: #ffffff; color: #0b0b0c; color-scheme: light;
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; letter-spacing: 0; text-transform: none; -webkit-font-smoothing: antialiased;
+  animation: pr-fadein .25s ease-out both, pr-bg .7s 2.2s ease both;
+}
+.pr-root *, .pr-root *::before, .pr-root *::after { box-sizing: border-box; }
+:where(.pr-root) h1, :where(.pr-root) h2, :where(.pr-root) h3, :where(.pr-root) p { margin: 0; }
+:where(.pr-root) button { cursor: pointer; border: 0; background: none; font: inherit; color: inherit; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* ---- the opening */
+.pr-intro { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; background: #fff; animation: pr-intro-out .4s 2.2s ease both; pointer-events: none; }
+.pr-intro-txt { text-align: center; animation: pr-fadeup .6s .1s ease both; }
+.pr-intro-txt h2 { font-size: 27px; line-height: 1.08; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.pr-intro-txt p { margin-top: 10px; font-size: 13.5px; color: #85858c; }
+.pr-orbit { position: relative; width: 220px; height: 220px; }
+.pr-core { position: absolute; left: 50%; top: 50%; width: 66px; height: 66px; margin: -33px 0 0 -33px; display: grid; place-items: center; border-radius: 22px; background: linear-gradient(160deg, #26262a, #0b0b0c); color: #fff; box-shadow: 0 18px 30px -12px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .14); animation: pr-core-in .65s .25s cubic-bezier(.3, 1.6, .4, 1) both; }
+.pr-core svg { width: 30px; height: 30px; }
+.pr-sat { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; display: grid; place-items: center; border-radius: 13px; background: linear-gradient(160deg, #2a2a2e, #101012); color: #fff; box-shadow: 0 10px 18px -8px rgba(0, 0, 0, .5); animation: pr-sat 1.15s var(--d) cubic-bezier(.3, .9, .3, 1) both; }
+.pr-sat svg { width: 18px; height: 18px; }
+
+/* ---- the receipt page */
+.pr-bar { position: relative; z-index: 6; flex: none; display: flex; align-items: center; justify-content: space-between; min-height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 10px 0; opacity: 0; animation: pr-fadein .45s 2.6s ease both; }
+.pr-bar strong { font-size: 16px; font-weight: 700; }
+.pr-back { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; transition: background .15s, scale .12s; }
+.pr-back:active { background: rgba(0, 0, 0, .07); scale: .94; }
+.pr-back svg { width: 22px; height: 22px; }
+.pr-bar-gap { width: 42px; }
+
+.pr-stage { position: relative; flex: 1; min-height: 0; }
+.pr-slot { position: absolute; z-index: 5; top: 8px; left: 16px; right: 16px; height: 54px; border-radius: 22px; background: linear-gradient(180deg, #38383e, #121214 55%, #0a0a0b); box-shadow: inset 0 2px 3px rgba(255, 255, 255, .13), inset 0 -8px 12px rgba(0, 0, 0, .65), 0 20px 30px -16px rgba(0, 0, 0, .6); opacity: 0; animation: pr-slot-in .6s 2.5s cubic-bezier(.2, .9, .25, 1) both; }
+.pr-slit { position: absolute; left: 22px; right: 22px; top: 24px; height: 5px; border-radius: 5px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .6), rgba(255, 255, 255, 0)); opacity: .3; animation: pr-slit 1s 3.9s ease both; }
+
+.pr-plane { position: absolute; z-index: 6; left: 50%; top: 20px; width: 34px; height: 34px; margin-left: -17px; color: #0b0b0c; opacity: 0; animation: pr-rise 1.25s 3s cubic-bezier(.45, .05, .25, 1) both; }
+.pr-plane svg { display: block; width: 34px; height: 34px; transform: rotate(-45deg); }
+.pr-trail { position: absolute; left: 50%; top: 100%; width: 16px; height: 44vh; margin-left: -8px; border-radius: 12px; background: linear-gradient(to bottom, rgba(110, 110, 118, .42), rgba(110, 110, 118, 0)); filter: blur(5px); }
+
+/* the receipt is printed out of the slot: this box starts at the middle of the slot, so the receipt is hidden above it and appears as it slides down */
+.pr-scroll { position: absolute; z-index: 3; left: 0; right: 0; top: 35px; bottom: 0; overflow: hidden; }
+.pr-settled .pr-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.pr-clip { padding: 36px 28px 96px; }
+.pr-ticket { position: relative; transform: translateY(calc(-100% - 110px)); animation: pr-print 2.3s 4.15s cubic-bezier(.33, .62, .2, 1) both; will-change: transform; }
+.pr-card { background: #fff; border-radius: 22px; padding: 18px 16px 16px; box-shadow: 0 26px 42px -26px rgba(0, 0, 0, .4), 0 0 0 1px rgba(0, 0, 0, .04); text-align: center; }
+.pr-ok { width: 40px; height: 40px; margin: 0 auto 9px; display: grid; place-items: center; border-radius: 50%; background: #0b0b0c; color: #fff; }
+.pr-ok svg { width: 21px; height: 21px; }
+.pr-card h1 { font-size: 19px; line-height: 1.2; font-weight: 800; }
+.pr-sub { margin-top: 3px; font-size: 13px; color: #7a7a82; }
+.pr-amount { margin-top: 8px; font-size: 25px; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pr-sec { margin-top: 12px; padding-top: 11px; border-top: 1px dashed #d7d7dc; text-align: left; }
+.pr-sec h3 { margin-bottom: 9px; font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8a8a90; }
+.pr-rows { display: flex; flex-direction: column; gap: 7px; }
+.pr-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; font-size: 13.5px; color: #5a5a62; }
+.pr-row > span:last-child { text-align: right; font-weight: 600; color: #0b0b0c; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pr-row.strong { font-size: 15.5px; font-weight: 800; color: #0b0b0c; }
+.pr-row.strong > span:last-child { font-weight: 800; }
+.pr-note { margin-top: 8px; font-size: 11.5px; line-height: 1.45; color: #8a8a90; }
+.pr-pass { margin-top: 8px; }
+.pr-pass-t { font-size: 11px; font-weight: 800; letter-spacing: .24em; }
+.pr-barcode { display: block; width: 100%; height: 44px; margin: 10px 0 7px; }
+.pr-no { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.pr-date { margin-top: 3px; font-size: 11.5px; color: #8a8a90; font-variant-numeric: tabular-nums; }
+
+/* the little plane that pulls the receipt down: it drops away when the receipt has stopped */
+.pr-lead { position: absolute; left: 50%; bottom: -58px; width: 30px; height: 30px; margin-left: -15px; color: #0b0b0c; animation: pr-lead-away .75s 6.5s cubic-bezier(.5, 0, .9, .5) both; }
+.pr-lead svg { width: 30px; height: 30px; transform: rotate(135deg); }
+
+/* ---- the black rounded Done button */
+.pr-foot { position: relative; z-index: 7; flex: none; padding: 12px 18px calc(16px + env(safe-area-inset-bottom)); }
+.pr-done { display: block; width: 100%; max-width: 560px; margin: 0 auto; height: 58px; border-radius: 999px; background: linear-gradient(180deg, #202023, #0b0b0c); color: #fff; font-size: 16.5px; font-weight: 800; letter-spacing: .02em; box-shadow: 0 20px 32px -16px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255, 255, 255, .12); opacity: 0; transform: translateY(30px); animation: pr-done-in .6s 6.5s cubic-bezier(.2, .9, .25, 1) both; transition: scale .12s; }
+.pr-done:active { scale: .98; }
+.pr-done[aria-disabled="true"] { pointer-events: none; }
+
+/* a tap while it plays, or "reduce motion": straight to the finished receipt */
+.pr-skip, .pr-skip * { animation-delay: 0s !important; animation-duration: .001s !important; }
+@media (prefers-reduced-motion: reduce) { .pr-root, .pr-root * { animation-delay: 0s !important; animation-duration: .001s !important; } .pr-bg { transition: none; } }
+
+@keyframes pr-fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pr-fadeup { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pr-bg { from { background-color: #ffffff; } to { background-color: #eeeef0; } }
+@keyframes pr-intro-out { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: hidden; } }
+@keyframes pr-core-in { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pr-sat {
+  0% { transform: rotate(var(--a)) translateY(0) rotate(calc(var(--a) * -1)) scale(.2); opacity: 0; }
+  38% { transform: rotate(var(--a)) translateY(-86px) rotate(calc(var(--a) * -1)) scale(1); opacity: 1; }
+  66% { transform: rotate(var(--a)) translateY(-86px) rotate(calc(var(--a) * -1)) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(0) rotate(calc(var(--a) * -1)) scale(.2); opacity: 0; }
+}
+@keyframes pr-slot-in { from { opacity: 0; transform: translateY(-16px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes pr-slit { 0% { opacity: .3; } 45% { opacity: 1; } 100% { opacity: .45; } }
+@keyframes pr-rise {
+  0% { opacity: 0; transform: translateY(52vh) scale(1); }
+  12% { opacity: 1; }
+  86% { opacity: 1; transform: translateY(4px) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(.55); }
+}
+@keyframes pr-print { from { transform: translateY(calc(-100% - 110px)); } to { transform: translateY(0); } }
+@keyframes pr-lead-away { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(150px); } }
+@keyframes pr-done-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }

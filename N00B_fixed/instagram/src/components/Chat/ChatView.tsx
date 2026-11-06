@@ -1,3 +1,4 @@
+import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
@@ -443,6 +444,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       if (res.success && res.user) {
         setOwnedItemIds((prev) => [...prev, item.id]);
         onUserUpdated?.(res.user);
+        showPaymentReceipt(buildPaymentReceipt({ paidFor: `Chat shop: ${item.name}`, amount: item.price }));
       } else {
         setShopError(res.error || 'Could not complete purchase.');
       }

@@ -191,6 +191,7 @@ const LiveStreamView = React.lazy(() => import('./components/LiveStream/LiveStre
 const LiveLoungePage = React.lazy(() => import('./components/Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
 const NoobAiPage = React.lazy(() => import('./components/Profile/NoobAiPage').then((m) => ({ default: m.NoobAiPage })));
 const AccountsStatisticsModal = React.lazy(() => import('./components/Profile/AccountsStatisticsModal').then((m) => ({ default: m.AccountsStatisticsModal })));
+import { PaymentReceiptHost } from './components/Payments/PaymentReceiptHost';
 const ProFeaturesModal = React.lazy(() => import('./components/Profile/ProFeaturesModal').then((m) => ({ default: m.ProFeaturesModal })));
 const { View: HomeVideoFeedView, preload: preloadVideos } = lazyTab(() => import('./components/Videos/HomeVideoFeedView').then((m) => m.HomeVideoFeedView));
 // The bottom bar's pages, in the order they are fetched ahead of time (see the effect below) and by tab, so a tap can start the fetch early.
@@ -2152,6 +2153,9 @@ export default function App() {
           />
         </button>
       )}
+
+      {/* The animated receipt of any payment just made (components/Payments, utils/paymentReceipt.ts) */}
+      <PaymentReceiptHost />
 
       {/* --- MODALS --- */}
       {/* 0. AI Customer Support Modal */}

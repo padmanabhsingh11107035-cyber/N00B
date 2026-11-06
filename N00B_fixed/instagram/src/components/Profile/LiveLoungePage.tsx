@@ -14,6 +14,7 @@ import { MeetingForm } from './meeting/MeetingForm';
 import { MeetingList } from './meeting/MeetingList';
 import { MeetingDetails } from './meeting/MeetingDetails';
 import type { LiveLoungeMeeting } from '../../services/api';
+import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 
 interface LiveLoungePageProps {
   currentUser: User;
@@ -114,6 +115,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
         onUserUpdated?.(res.user);
         confetti({ particleCount: 80, spread: 90, origin: { y: 0.5 } });
         setUnlocked(true);
+        showPaymentReceipt(buildPaymentReceipt({ paidFor: 'NOOB Live Lounge (unlock)', amount: LIVE_LOUNGE_PRICE }));
       } else {
         setError(res.error || 'Could not complete the purchase.');
       }

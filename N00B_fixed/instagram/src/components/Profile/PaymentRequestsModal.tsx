@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, HeartHandshake, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
 import { User } from '../../types';
 import { PaymentRequestSummary, fetchMyPaymentRequests, respondPaymentRequest } from '../../services/api';
+import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import { formatNoobPoints } from '../../utils/formatPoints';
 
 function formatCountdown(expiresAt: string, now: number): string {
@@ -64,8 +65,14 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
     setBusy(true);
     setError('');
     try {
+      const paid = requests.find((r) => r.id === id);
       const res = await respondPaymentRequest(id, true, isMasterAdmin ? undefined : password);
       if (res.success) {
+        // you have paid for your friend: the animated receipt opens by itself
+        if (paid) {
+          const what = paid.purchaseType === 'live_lounge' ? 'NOOB Live Lounge' : paid.planName ? `NOOB Pro ${paid.planName}` : 'NOOB Pro';
+          showPaymentReceipt(buildPaymentReceipt({ paidFor: what, paidTo: `@${paid.requester.username}`, amount: paid.amount }));
+        }
         setRequests((prev) => prev.filter((r) => r.id !== id));
         setActiveId(null);
         setPassword('');

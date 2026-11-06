@@ -3,6 +3,7 @@ import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock
 import { User } from '../../types';
 import { transferNoobPoints, fetchUsers } from '../../services/api';
 import { formatNoobPoints, formatPaymentId } from '../../utils/formatPoints';
+import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import { QrScannerModal } from '../Common/QrScannerModal';
 import confetti from 'canvas-confetti';
 import { loadFace } from '../../face/faceId';
@@ -125,6 +126,8 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
         onUserUpdated?.(res.user);
         confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
         setSuccessState({ recipient, amount: parsedAmount, note: note.trim(), transferId: res.transferId, at: new Date().toISOString() });
+        // the points have gone out: the animated receipt opens by itself (only for the person who paid)
+        showPaymentReceipt(buildPaymentReceipt({ paidFor: 'NOOB Points sent', paidTo: `@${recipient.username}`, amount: parsedAmount, transferId: res.transferId, note: note.trim() || undefined }));
         setConfirmingWithPassword(false);
         setPassword('');
         setShowPassword(false);

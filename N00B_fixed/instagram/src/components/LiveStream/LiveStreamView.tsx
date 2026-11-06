@@ -1,3 +1,4 @@
+import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio, Camera, MonitorUp, ChevronDown } from 'lucide-react';
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack, IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
@@ -316,6 +317,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     setGiftSheetOpen(false);
     const res = await giftLiveStream(streamId, amount);
     if (!res.success) setError(res.error || 'Could not send that gift.');
+    else showPaymentReceipt(buildPaymentReceipt({ paidFor: 'Live stream gift', amount, transferId: res.transferId }));
   };
 
   if (phase === 'setup' && isIosStandalonePwa()) {

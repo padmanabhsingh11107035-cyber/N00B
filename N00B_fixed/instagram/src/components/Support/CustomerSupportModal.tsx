@@ -1143,9 +1143,9 @@ ${description}`.slice(0, 2000));
 
     {/* the Terms / the Privacy Policy: a page on top of this one (drawn after it), so closing it comes back here */}
     {legal && (
-      <div className="sd-legal" style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
+      <div className="sd-legal" style={{ position: 'fixed', inset: 0, zIndex: 100000 }}>
         <React.Suspense fallback={null}>
-          {legal === 'terms' ? <TermsAndConditions onClose={() => setLegal(null)} /> : <PrivacyPolicy onClose={() => setLegal(null)} />}
+          {legal === 'terms' ? <TermsAndConditions onClose={() => setLegal(null)} onHelp={() => setLegal(null)} /> : <PrivacyPolicy onClose={() => setLegal(null)} onHelp={() => setLegal(null)} />}
         </React.Suspense>
       </div>
     )}

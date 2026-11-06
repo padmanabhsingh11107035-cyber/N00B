@@ -1,0 +1,59 @@
+/* The legal pages (lg-): the rose design the owner chose (a pink "Hello" card, one rounded document card, one "Understood" button), in the app's dark or light theme.
+   One fixed frame (top bar, one scrolling document, bottom button): it never grows or shrinks while it is read. */
+.lg-root {
+  --bg: #1d1b1c; --hello-bg: #2b2527; --hello-tx: #f3e9ec; --doc-bg: #4a4648; --tx: #f4f1f2; --muted: #b9b1b4; --head: #ffffff; --line: rgba(255, 255, 255, .14);
+  --accent: #e23d68; --accent-tx: #ffffff; --link: #ff9fb8;
+  position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column;
+  background: var(--bg); color: var(--tx);
+  font-family: 'DM Sans', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 400; letter-spacing: 0; text-transform: none;
+  animation: lg-in .2s ease-out both; -webkit-font-smoothing: antialiased;
+}
+html[data-theme="light"] .lg-root {
+  --bg: #fdf1f3; --hello-bg: #fbd3da; --hello-tx: #3b2228; --doc-bg: #ffffff; --tx: #3a3033; --muted: #8d7f84; --head: #1f1518; --line: #f0dfe3;
+  --accent: #e23d68; --accent-tx: #ffffff; --link: #c42b55;
+}
+.lg-root *, .lg-root *::before, .lg-root *::after { box-sizing: border-box; }
+.lg-root h1, .lg-root h2, .lg-root h3, .lg-root p, .lg-root ul { margin: 0; padding: 0; }
+.lg-root button { cursor: pointer; border: 0; background: none; font: inherit; color: inherit; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* the top bar: the arrow on the left, Help on the right */
+.lg-bar { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: calc(54px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0 8px; background: var(--bg); z-index: 3; }
+.lg-back { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; color: var(--head); transition: background .15s, transform .12s; }
+.lg-back:active { background: var(--line); transform: scale(.94); }
+.lg-back svg { width: 22px; height: 22px; }
+.lg-help { padding: 10px 14px; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--head); transition: background .15s, transform .12s; }
+.lg-help:active { background: var(--line); transform: scale(.96); }
+
+/* the one scrolling area */
+.lg-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.lg-col { max-width: 720px; margin: 0 auto; padding: 4px 16px 20px; }
+
+.lg-hello { padding: 16px 18px 16px; border-radius: 20px; background: var(--hello-bg); color: var(--hello-tx); animation: lg-up .4s cubic-bezier(.2, .8, .2, 1) both; }
+.lg-hello b { display: block; font-size: 16px; font-weight: 800; }
+.lg-hello p { margin-top: 5px; font-size: 14px; line-height: 1.55; }
+
+.lg-doc { margin-top: 14px; padding: 22px 20px 12px; border-radius: 26px; background: var(--doc-bg); color: var(--tx); animation: lg-up .45s .05s cubic-bezier(.2, .8, .2, 1) both; }
+.lg-doc h1 { font-size: 20px; line-height: 1.25; font-weight: 800; color: var(--head); }
+.lg-meta { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.lg-sec { margin-top: 20px; }
+.lg-sec h2 { font-size: 15px; line-height: 1.35; font-weight: 800; color: var(--head); }
+.lg-body { margin-top: 8px; font-size: 14.5px; line-height: 1.7; overflow-wrap: anywhere; }
+.lg-body p + p, .lg-body p + ul, .lg-body ul + p, .lg-body ul + h4, .lg-body p + h4 { margin-top: 10px; }
+.lg-body b, .lg-body strong { color: var(--head); font-weight: 700; }
+.lg-body h4 { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 800; color: var(--head); }
+.lg-body ul { margin-top: 8px; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.lg-body li { position: relative; padding-left: 18px; }
+.lg-body li::before { content: ''; position: absolute; left: 3px; top: .72em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.lg-body a { color: var(--link); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.lg-doc .lg-sec:last-child { padding-bottom: 8px; }
+
+/* the one button at the bottom, from the left edge to the right edge */
+.lg-foot { flex: none; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--bg); }
+.lg-foot button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px 18px; border-radius: 18px; background: var(--accent); color: var(--accent-tx); font-size: 16px; font-weight: 800; box-shadow: 0 16px 28px -16px var(--accent); transition: transform .12s, filter .15s; }
+.lg-foot button:active { transform: scale(.98); filter: brightness(1.08); }
+.lg-foot button svg { width: 19px; height: 19px; }
+
+@keyframes lg-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lg-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (min-width: 720px) { .lg-doc { padding: 28px 30px 16px; } }
+@media (prefers-reduced-motion: reduce) { .lg-root, .lg-hello, .lg-doc { animation: none; } }

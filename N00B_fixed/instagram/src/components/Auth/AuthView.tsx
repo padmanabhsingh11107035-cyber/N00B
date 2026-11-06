@@ -342,6 +342,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   // The help chat for people who are not logged in: its button is hidden while the administrator has switched the Support page off (Admin > Pages)
   const [guestHelpOn, setGuestHelpOn] = useState(true);
   const [guestHelpOpen, setGuestHelpOpen] = useState(false);
+  // "Help" on the Terms / Privacy pages opens this login page's help chat
+  useEffect(() => {
+    const open = () => setGuestHelpOpen(true);
+    window.addEventListener('noob-open-support', open);
+    return () => window.removeEventListener('noob-open-support', open);
+  }, []);
   useEffect(() => {
     fetchPublicPlatformSettings().then((s) => {
       setSignupsEnabled(s.signupsEnabled);

@@ -58,7 +58,7 @@ for (const f of ['public/terms.html', 'public/privacy.html', 'src/components/Leg
   const s = read(f);
   check(/Who runs NOOB/.test(s) && /not a registered company/.test(s) && /no cash value/.test(s) && /Translate/.test(s) && /grievance\.html/.test(s) && /Money, noobs, purchases and refunds/.test(s) && /not an emergency or safety service/.test(s), `${f}: who runs NOOB, money and refunds, no cash value, Translate, young people and location, the grievance page`);
 }
-check(/data-testid="e2ee-translate"/.test(read('src/components/Legal/EndToEndEncryption.tsx')), 'the encryption page says Translate sends one message to the translator');
+check(/testId: "e2ee-translate"/.test(read('src/components/Legal/EndToEndEncryption.tsx')), 'the encryption page says Translate sends one message to the translator');
 check(/grievance\.html/.test(read('public/sitemap.xml')), 'the page is in the sitemap');
 
 section('5. "Order Successful!" for NOOB Pro');

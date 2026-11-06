@@ -1,181 +1,40 @@
 import React from 'react';
-import { ShieldCheck, Lock, Eye, ArrowLeft, X, Database, Bell, CheckCircle2, Trash2, Users } from 'lucide-react';
+import { LegalShell, type LegalSection } from './LegalShell';
 
-interface PrivacyPolicyProps {
+// Privacy Policy: the text lives here as data; the look is LegalShell (ivory, navy and gold, one fixed full-screen frame). When a thing changes in the app, change it here, in public/privacy.html too.
+
+const SECTIONS: LegalSection[] = [
+  { id: 's1', title: "Information We Collect", html: "<p>We collect information provided directly when you register and interact on NOOB:</p> <ul> <li><b>Account Details:</b> First name, last name, user ID handle, email, country, and mobile contact number.</li> <li><b>Profile Data:</b> Avatar image, bio tagline, status notes, and customizable preferences.</li> <li><b>User-Created Content:</b> Posts, stories, reels, captions, comments, and direct messages you post.</li> <li><b>Device Contacts (native app only, opt-in):</b> If you choose to use \"Find Friends,\" the app reads your phone's contact numbers on-device and sends them to our server once to check for matching NOOB accounts. We never store your contact list — matching happens in real time, and no phone number that isn't already yours or another NOOB member's is ever saved or shared.</li> </ul>" },
+  { id: 's2', title: "How We Use Your Information", html: "<p>Your data is used strictly for core social interaction functions:</p> <ul> <li>To let other registered users find and connect with you on the Explore directory.</li> <li>To deliver real-time messages, comments, likes, and story reactions.</li> <li>To personalize your feed, search suggestions, and explore feed.</li> <li>To safeguard against spam, unauthorized access, and malicious activity.</li> </ul>" },
+  { id: 's3', title: "Data Protection & Security", html: "<p> We implement industry-standard encryption for sensitive credentials and messages, and Family Map places are end-to-end encrypted. We do NOT sell your personal contact information or phone number to third-party marketing brokers. </p>" },
+  { id: 's4', title: "Sharing & Third Parties", html: "<p> We do not sell your personal data. Uploaded media (photos, videos, audio) is stored with a secure third-party cloud storage provider solely to serve it back to the app. Our AI Customer Support feature sends only the text of your support question to a third-party AI provider to generate a reply — it never receives your password, email, or phone number. </p>" },
+  { id: 's5', title: "Your Controls", html: "<p> You can see and download a copy of your details at any time (Settings and activity, then Your NOOB account, then Download your information). You can edit your profile, bio and privacy choices at any time (Edit profile, or Settings and activity). </p>" },
+  { id: 's6', title: "Deleting Your Account", html: "<p> You can permanently delete your NOOB account at any time, without contacting support, from <b> Settings and activity → Your NOOB account → Delete account</b>. This requires your password to confirm and immediately and permanently removes your account, profile, posts, reels, stories, comments, messages, and uploaded media, and detaches you from other users' followers/following lists. This action cannot be undone and is not recoverable. </p>" },
+  { id: 's7', title: "Permissions of the Android app", testId: "legal-new-0", html: "The Android app asks before it uses: <b>location</b> (only for Family Map, and only if you share), <b>camera</b> and <b>microphone</b> (photos, videos, voice messages, calls and live video, only while you use them), <b>contacts</b> (only when you press Find friends), <b>photos and files</b> (only what you pick to upload) and <b>notifications</b>. If you say no, or switch a permission off later in your phone&apos;s settings, only that feature stops. Nothing is read in secret." },
+  { id: 's8', title: "How long we keep things", testId: "legal-new-1", html: "<b>Daily NOOB entries and Instants</b> are deleted after 24 hours. <b>Family Map</b>: only your latest place is kept, hidden after 24 hours without news; the day report lasts until midnight. Everything else you make (posts, reels, videos, stories, comments, messages, notes) stays until you delete it or delete your account. When you delete your account, your data is removed from NOOB straight away (Settings and activity, then Your NOOB account, then Delete account)." },
+  { id: 's9', title: "Children", testId: "legal-new-2", html: "NOOB is for people aged <b>13 and over</b>, and people under 18 should use it with a parent or guardian&apos;s knowledge. We do not knowingly keep the data of a child under 13: if you think one has signed up, tell us through the grievance form and we will delete the account. A parent or guardian can ask us, through the same form, to see or delete a child&apos;s data." },
+  { id: 's10', title: "Everything NOOB collects, why, and who helps us", testId: "legal-data-inventory", html: "<p>This is the complete list of what NOOB asks you for, what you create, what the app reads by itself, and who helps us run it. If a new thing is ever added, it is added here first.</p><h4>1. What we ask you to give</h4><ul><li><b>Sign-up:</b> your name, a user ID, your email (confirmed with a code we email), your mobile number and country, your date of birth (13 to 82 years), your gender, a password (kept only as a one-way fingerprint, never readable), a profile photo and a bio. The <b>city</b> is optional.</li><li><b>Language and account type:</b> the language you choose, and whether the account is public, private or a business account (a business account also gives a business email, phone and address).</li><li><b>Where you heard about NOOB:</b> one optional answer, asked once after sign-up.</li><li><b>Food Stall orders:</b> delivery addresses (name of the place, details, map pin) and your phone number for the order.</li><li><b>Help:</b> what you write to Support, the Suggestion Box, reports you file, ad applications and the email you give for them.</li><li><b>Contacts (Android app only, only if you press Find friends):</b> the phone numbers in your contacts are read on your phone and matched to find friends.</li></ul><h4>2. What you create</h4><ul><li>Posts, reels, videos, stories, Instants, comments, likes, saves, follows, polls, highlights, Daily NOOB entries, game scores, NOOB Points and their history.</li><li><b>Messages:</b> chats are end-to-end encrypted between the people in them (voice messages, photos and videos you send in a chat are stored for that chat). Chat keys are kept on your device; an encrypted backup of the key is kept so you can sign in on another device.</li><li><b>Notepad:</b> the notes you write (text only), kept on your account and visible only to you.</li><li><b>NOOB Forms:</b> the forms you build (questions, design, settings) and the answers people send to them. People who fill a form do not need an account: their answers, and any file or signature they attach, go to the owner of the form and to the people the owner shares the form with. Files are kept in a private store. If the owner switches it on, the campaign tags in the link (utm_source, utm_medium, utm_campaign) are kept with the answer; nothing else about the visit is kept. The owner can delete answers at any time. If you made a form, deleting your account deletes it and its answers.</li><li><b>Call list:</b> who a call was with, when, and how long it lasted (never the sound of the call). You can delete your own lines.</li><li><b>Family Map:</b> the rooms you make or join (name, picture, code), who is in them, whether you are sharing, and your latest place in each room you share with. Your place is end-to-end encrypted: it is locked on your phone for the devices of the people in the room before it is sent, so NOOB&apos;s servers keep only locked data and can not read it, and only the latest place is kept (no history, no trail). It is hidden after 24 hours without news, removed when you pause sharing, leave the room or delete your account, and shown only to people in a room with you while you share with it. Anyone who has a room&apos;s code can join it unless the room is locked, so give the code only to people you trust; the owner of a room can remove people, make a new code and lock the room. What NOOB can still see: the room&apos;s name, who is in it, whether you are sharing and when a place was last sent, not where it was.</li><li><b>Day report (Family Map, only if you turn it on):</b> the places you stayed at (where, from when to when) and the trips between them (a thin route line, how far, on foot, by bike or by car), worked out on your phone from your location, for today only. It is end-to-end encrypted like your places: it is locked on your phone for the people in your rooms, and NOOB&apos;s servers keep only locked data they can not read. It lasts for the current day of your time zone: at midnight it is deleted and a new day begins (NOOB&apos;s servers also delete it every minute after that, and nothing of an older day is ever shown). Switching it off, pausing your location, leaving a room or deleting your account deletes it at once. Your phone keeps today&apos;s report on your phone, so that a restart loses nothing, and erases it at midnight. It shows where a person went, so turn it on only with everybody&apos;s knowledge.</li><li><b>Anonymous Messages and Ask Me Anything:</b> the questions and answers you send.</li><li><b>NOOB AI, the Study tutor and Support AI:</b> what you ask and the answers (the tutor also keeps your notes, materials, tests and progress). Pictures you send to the tutor go to the AI and are not stored.</li></ul><h4>3. What the app reads by itself</h4><ul><li><b>Device:</b> the operating system and version (for example Android 14), and the battery level in per cent and whether it is charging (only where your browser or phone shares it; an iPhone does not).</li><li><b>Browser and visit:</b> browser, device type, screen size, language, time zone, the page you came from, the first and last page you opened, and a random visitor number (also for people without an account).</li><li><b>Place:</b> your IP address and the approximate place worked out from it (city, region, country), and the city you typed.</li><li><b>Precise location (Family Map only, and only if you allow it):</b> your phone&apos;s exact place from its GPS, its speed, its direction and how exact it is. It is read only while you share with a Family Map room: while NOOB is open and, in the NOOB Android app, if you switch it on, also in the background, while the app is closed (Android shows a notification the whole time it works). It is never read for anything else and never used for adverts. The day report (only if you turn it on) uses it to work out, on your phone, the places you stayed at and your trips. You can switch it off at any time (Family Map, Share my location) or take the permission away in your phone&apos;s settings.</li><li><b>Activity:</b> when you were last online, whether you are online now, which devices are signed in, your log-in history, which posts and reels you have already seen, and the address that lets us send you a notification.</li></ul><h4>4. Why, and what we never do</h4><p>We use all of this only to run NOOB: show you the right things, keep chats and accounts safe, find faults that only happen on some phones, stop spam and fake accounts, and let our administrators help you. <b>We do not sell it, we do not share it with advertisers or any other company, and it is not used for any other activity.</b> It is protected by HTTPS while it travels and is encrypted at rest in our database provider&apos;s storage; only NOOB&apos;s administrators can read what is not end-to-end encrypted. Deleting your account deletes it.</p><h4>5. Who helps us run NOOB (they only receive what the job needs)</h4><ul><li><b>Supabase</b>: database, sign-in and file storage. <b>Cloudflare</b>: the website, its cache, security, and anonymous traffic statistics.</li><li><b>Resend</b>: the emails we send you (codes, receipts, welcome).</li><li><b>Agora</b> and <b>Metered</b>: live video, calls and meeting rooms.</li><li><b>AI providers</b> (for example Groq, Google Gemini, OpenRouter): the text of your question to NOOB AI, the tutor or Support AI, and pictures you send to the tutor. <b>Tavily</b>: web search for the tutor&apos;s research.</li><li><b>NOOB Forms helpers:</b> only when a form owner presses an AI button, the words of that question (or, for a summary, the written answers of that form) are sent to an AI provider (for example Groq, Google Gemini or OpenRouter). If the owner adds a web hook, each new answer is sent to the web address the owner chose. Emails about new answers go to the owner only.</li><li><b>AudD</b>: a short sound sample when you use Search song. <b>Giphy</b>: the words you type to search GIFs. <b>OpenFreeMap</b> and <b>OpenStreetMap</b>: the map pictures when you pin an address or use Family Map (they see your IP address and the part of the map you look at, never your account or where your family is). <b>YouTube</b>: videos shown inside NOOB. <b>Google Fonts</b>: letters.</li><li><b>Google, Apple, Facebook, Discord</b> and other sign-in buttons: only if you choose them.</li><li><b>Pwned Passwords</b>: when you choose a password, the first 5 characters of its fingerprint are checked against a public list of leaked passwords (the password itself never leaves your phone).</li></ul><h4>6. Storage on your device</h4><p>Your login, theme, language, chat keys and small settings are kept in your browser or app (cookies or local storage) so NOOB works; nothing is used to track you on other websites. Family Map also remembers on your device the last room you opened, your map style and whether you allowed sharing (yes or no notes) and, only if you turned the day report on, today&apos;s report so that a restart loses nothing (it is erased at midnight and when you switch the report off).</p>" },
+  { id: 's11', title: "Who runs NOOB", testId: "legal-trust-0", html: "NOOB Socials is built and run by the <b>NOOB developers</b>, a team of students in India. NOOB is <b>not a registered company</b>, so there is no company name or company number to quote: this agreement is between you and the NOOB developers, represented by the NOOB administrator account in the app. NOOB is free to use. Complaints and the Grievance Officer are reached at <a href=\"/grievance.html\">noobsocials.com/grievance.html</a> (a form that needs no login and gives you a ticket number). These terms are governed by the laws of India." },
+  { id: 's12', title: "Money, noobs, purchases and refunds", testId: "legal-trust-1", html: "NOOB takes <b>no card, bank or UPI payment</b> inside the app and holds no money for anyone. <b>noobs</b> (NOOB Points) are an in-app game currency: they have <b>no cash value</b>, cannot be withdrawn, sold or exchanged for money, and NOOB promises them no value; they are earned by using the app and spent on things inside it, such as NOOB Pro. A NOOB Pro payment gives you a receipt (an &quot;Order Successful&quot; screen with a receipt number); if a payment was taken twice or the plan was not given, send the receipt number through the grievance form within 15 days and the noobs or the plan are put right. The Shop and the Food Stall are run by the sellers who list there: you pay the seller directly (by UPI to the seller&apos;s own UPI ID, or cash on delivery or pickup), the address and phone number you give are used only to deliver that order, and refunds and returns are agreed with the seller. NOOB does not sell or deliver goods itself; if a seller does not deliver, report it through the grievance form and NOOB can remove the listing and the seller." },
+  { id: 's13', title: "Encrypted chats and translation", testId: "legal-trust-2", html: "Chats are end-to-end encrypted: NOOB&apos;s servers keep only locked messages they cannot read. <b>Translate</b> is the one thing that makes a message leave your phone: when you tap Translate, your phone opens that one message and sends only its text to an AI language service (Groq) to be translated. NOOB does not store that text or its translation, but the service sees it for that moment, so a message you translate is not private from that service. If you never tap Translate, nothing is sent." },
+  { id: 's14', title: "Young people, live video and location", testId: "legal-trust-3", html: "NOOB is meant for people aged 13 and over; people under 18 should use it with a parent or guardian&apos;s knowledge. Family Map, live streaming and chat are optional and off until you turn them on; Family Map shows your place only to the people in the rooms you chose, can be paused or deleted at any time, and is <b>not an emergency or safety service</b>. Report anything unsafe with the Report button or the grievance form: content about a person&apos;s private areas, or pretending to be them, is removed within 24 hours of that person&apos;s complaint." },
+  { id: 's15', title: "Contact, complaints and your rights", testId: "legal-contact-rights", html: "For any complaint about content or about your data, use the <b>Help</b> page inside NOOB (profile, then Settings and activity, then Help), the Suggestion Box, or the Grievance Officer&apos;s page at <a href=\"/grievance.html\">noobsocials.com/grievance.html</a> (a form that needs no login and gives you a ticket number). NOOB&apos;s Grievance Officer (Padmanabh Singh Vaghela, email <a href=\"mailto:padmanabhsingh11107035@gmail.com\">padmanabhsingh11107035@gmail.com</a>, PIN code 382424, India) <b>acknowledges every complaint within 24 hours and resolves it within 15 days</b>; content that shows a person&apos;s private areas, or pretends to be them, is removed within 24 hours of a complaint by that person. You may at any time <b>see and correct</b> your details (Edit profile), <b>withdraw your consent</b>, and <b>delete your account and all your data</b> inside the app (profile, Settings and activity, Your NOOB account) or at noobsocials.com/data-deletion.html. If we do not act on a complaint you can complain to the Data Protection Board of India. NOOB is meant for people aged 13 and over." },
+]
+
+interface Props {
   onClose: () => void;
+  /** where Help goes (inside the help desk it only closes this page); by default Customer Support */
+  onHelp?: () => void;
 }
 
-export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-      <div className="w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative my-auto max-h-[90vh] flex flex-col text-white">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-noob/10 border border-noob/30 flex items-center justify-center text-noob">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white">NOOB Privacy Policy</h2>
-              <p className="text-xs text-zinc-400">Last Updated: November 2026 • Privacy First</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="overflow-y-auto pr-2 my-4 space-y-5 text-xs text-zinc-300 leading-relaxed scrollbar-thin scrollbar-thumb-zinc-700">
-          <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-noob font-bold text-sm">
-              <Lock className="w-4 h-4" />
-              <span>Your Privacy Matters at NOOB</span>
-            </div>
-            <p>
-              NOOB is committed to protecting your personal information while providing an enjoyable, fun, and safe
-              space to connect with friends, creators, and new people. This Privacy Policy details the information we collect,
-              how it is used, and how you retain total control over your data.
-            </p>
-          </div>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-noob" />
-              1. Information We Collect
-            </h3>
-            <p>We collect information provided directly when you register and interact on NOOB:</p>
-            <ul className="list-disc pl-5 space-y-1 text-zinc-400">
-              <li><strong className="text-white">Account Details:</strong> First name, last name, user ID handle, email, country, and mobile contact number.</li>
-              <li><strong className="text-white">Profile Data:</strong> Avatar image, bio tagline, status notes, and customizable preferences.</li>
-              <li><strong className="text-white">User-Created Content:</strong> Posts, stories, reels, captions, comments, and direct messages you post.</li>
-              <li><strong className="text-white">Device Contacts (native app only, opt-in):</strong> If you choose to use "Find Friends," the app reads your phone's contact numbers on-device and sends them to our server once to check for matching NOOB accounts. We never store your contact list — matching happens in real time, and no phone number that isn't already yours or another NOOB member's is ever saved or shared.</li>
-            </ul>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Eye className="w-4 h-4 text-noob" />
-              2. How We Use Your Information
-            </h3>
-            <p>Your data is used strictly for core social interaction functions:</p>
-            <ul className="list-disc pl-5 space-y-1 text-zinc-400">
-              <li>To let other registered users find and connect with you on the Explore directory.</li>
-              <li>To deliver real-time messages, comments, likes, and story reactions.</li>
-              <li>To personalize your feed, search suggestions, and explore feed.</li>
-              <li>To safeguard against spam, unauthorized access, and malicious activity.</li>
-            </ul>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-noob" />
-              3. Data Protection & Security
-            </h3>
-            <p>
-              We implement industry-standard encryption for sensitive credentials and messages, and Family Map places are end-to-end encrypted. We do NOT sell your
-              personal contact information or phone number to third-party marketing brokers.
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-noob" />
-              4. Sharing & Third Parties
-            </h3>
-            <p>
-              We do not sell your personal data. Uploaded media (photos, videos, audio) is stored with a secure
-              third-party cloud storage provider solely to serve it back to the app. Our AI Customer Support feature
-              sends only the text of your support question to a third-party AI provider to generate a reply — it
-              never receives your password, email, or phone number.
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Bell className="w-4 h-4 text-noob" />
-              5. Your Controls
-            </h3>
-            <p>
-              You can see and download a copy of your details at any time (Settings and activity, then Your NOOB account, then Download your information).
-              You can edit your profile, bio and privacy choices at any time (Edit profile, or Settings and activity).
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Trash2 className="w-4 h-4 text-noob" />
-              6. Deleting Your Account
-            </h3>
-            <p>
-              You can permanently delete your NOOB account at any time, without contacting support, from
-              <strong className="text-white"> Settings and activity → Your NOOB account → Delete account</strong>.
-              This requires your password to confirm and immediately and permanently removes your account, profile,
-              posts, reels, stories, comments, messages, and uploaded media, and detaches you from other users'
-              followers/following lists. This action cannot be undone and is not recoverable.
-            </p>
-          </section>
-
-          <section className="space-y-2" data-testid="legal-new-0">
-            <h3 className="text-sm font-bold text-white">Permissions of the Android app</h3>
-            <p dangerouslySetInnerHTML={{ __html: "The Android app asks before it uses: <b>location</b> (only for Family Map, and only if you share), <b>camera</b> and <b>microphone</b> (photos, videos, voice messages, calls and live video, only while you use them), <b>contacts</b> (only when you press Find friends), <b>photos and files</b> (only what you pick to upload) and <b>notifications</b>. If you say no, or switch a permission off later in your phone&apos;s settings, only that feature stops. Nothing is read in secret." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-new-1">
-            <h3 className="text-sm font-bold text-white">How long we keep things</h3>
-            <p dangerouslySetInnerHTML={{ __html: "<b>Daily NOOB entries and Instants</b> are deleted after 24 hours. <b>Family Map</b>: only your latest place is kept, hidden after 24 hours without news; the day report lasts until midnight. Everything else you make (posts, reels, videos, stories, comments, messages, notes) stays until you delete it or delete your account. When you delete your account, your data is removed from NOOB straight away (Settings and activity, then Your NOOB account, then Delete account)." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-new-2">
-            <h3 className="text-sm font-bold text-white">Children</h3>
-            <p dangerouslySetInnerHTML={{ __html: "NOOB is for people aged <b>13 and over</b>, and people under 18 should use it with a parent or guardian&apos;s knowledge. We do not knowingly keep the data of a child under 13: if you think one has signed up, tell us through the grievance form and we will delete the account. A parent or guardian can ask us, through the same form, to see or delete a child&apos;s data." }} />
-          </section>
-
-          <section className="space-y-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:text-white [&_h4]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ul]:text-zinc-400" data-testid="legal-data-inventory">
-            <h3 className="text-sm font-bold text-white">Everything NOOB collects, why, and who helps us</h3>
-            <div dangerouslySetInnerHTML={{ __html: "<p>This is the complete list of what NOOB asks you for, what you create, what the app reads by itself, and who helps us run it. If a new thing is ever added, it is added here first.</p><h4>1. What we ask you to give</h4><ul><li><b>Sign-up:</b> your name, a user ID, your email (confirmed with a code we email), your mobile number and country, your date of birth (13 to 82 years), your gender, a password (kept only as a one-way fingerprint, never readable), a profile photo and a bio. The <b>city</b> is optional.</li><li><b>Language and account type:</b> the language you choose, and whether the account is public, private or a business account (a business account also gives a business email, phone and address).</li><li><b>Where you heard about NOOB:</b> one optional answer, asked once after sign-up.</li><li><b>Food Stall orders:</b> delivery addresses (name of the place, details, map pin) and your phone number for the order.</li><li><b>Help:</b> what you write to Support, the Suggestion Box, reports you file, ad applications and the email you give for them.</li><li><b>Contacts (Android app only, only if you press Find friends):</b> the phone numbers in your contacts are read on your phone and matched to find friends.</li></ul><h4>2. What you create</h4><ul><li>Posts, reels, videos, stories, Instants, comments, likes, saves, follows, polls, highlights, Daily NOOB entries, game scores, NOOB Points and their history.</li><li><b>Messages:</b> chats are end-to-end encrypted between the people in them (voice messages, photos and videos you send in a chat are stored for that chat). Chat keys are kept on your device; an encrypted backup of the key is kept so you can sign in on another device.</li><li><b>Notepad:</b> the notes you write (text only), kept on your account and visible only to you.</li><li><b>NOOB Forms:</b> the forms you build (questions, design, settings) and the answers people send to them. People who fill a form do not need an account: their answers, and any file or signature they attach, go to the owner of the form and to the people the owner shares the form with. Files are kept in a private store. If the owner switches it on, the campaign tags in the link (utm_source, utm_medium, utm_campaign) are kept with the answer; nothing else about the visit is kept. The owner can delete answers at any time. If you made a form, deleting your account deletes it and its answers.</li><li><b>Call list:</b> who a call was with, when, and how long it lasted (never the sound of the call). You can delete your own lines.</li><li><b>Family Map:</b> the rooms you make or join (name, picture, code), who is in them, whether you are sharing, and your latest place in each room you share with. Your place is end-to-end encrypted: it is locked on your phone for the devices of the people in the room before it is sent, so NOOB&apos;s servers keep only locked data and can not read it, and only the latest place is kept (no history, no trail). It is hidden after 24 hours without news, removed when you pause sharing, leave the room or delete your account, and shown only to people in a room with you while you share with it. Anyone who has a room&apos;s code can join it unless the room is locked, so give the code only to people you trust; the owner of a room can remove people, make a new code and lock the room. What NOOB can still see: the room&apos;s name, who is in it, whether you are sharing and when a place was last sent, not where it was.</li><li><b>Day report (Family Map, only if you turn it on):</b> the places you stayed at (where, from when to when) and the trips between them (a thin route line, how far, on foot, by bike or by car), worked out on your phone from your location, for today only. It is end-to-end encrypted like your places: it is locked on your phone for the people in your rooms, and NOOB&apos;s servers keep only locked data they can not read. It lasts for the current day of your time zone: at midnight it is deleted and a new day begins (NOOB&apos;s servers also delete it every minute after that, and nothing of an older day is ever shown). Switching it off, pausing your location, leaving a room or deleting your account deletes it at once. Your phone keeps today&apos;s report on your phone, so that a restart loses nothing, and erases it at midnight. It shows where a person went, so turn it on only with everybody&apos;s knowledge.</li><li><b>Anonymous Messages and Ask Me Anything:</b> the questions and answers you send.</li><li><b>NOOB AI, the Study tutor and Support AI:</b> what you ask and the answers (the tutor also keeps your notes, materials, tests and progress). Pictures you send to the tutor go to the AI and are not stored.</li></ul><h4>3. What the app reads by itself</h4><ul><li><b>Device:</b> the operating system and version (for example Android 14), and the battery level in per cent and whether it is charging (only where your browser or phone shares it; an iPhone does not).</li><li><b>Browser and visit:</b> browser, device type, screen size, language, time zone, the page you came from, the first and last page you opened, and a random visitor number (also for people without an account).</li><li><b>Place:</b> your IP address and the approximate place worked out from it (city, region, country), and the city you typed.</li><li><b>Precise location (Family Map only, and only if you allow it):</b> your phone&apos;s exact place from its GPS, its speed, its direction and how exact it is. It is read only while you share with a Family Map room: while NOOB is open and, in the NOOB Android app, if you switch it on, also in the background, while the app is closed (Android shows a notification the whole time it works). It is never read for anything else and never used for adverts. The day report (only if you turn it on) uses it to work out, on your phone, the places you stayed at and your trips. You can switch it off at any time (Family Map, Share my location) or take the permission away in your phone&apos;s settings.</li><li><b>Activity:</b> when you were last online, whether you are online now, which devices are signed in, your log-in history, which posts and reels you have already seen, and the address that lets us send you a notification.</li></ul><h4>4. Why, and what we never do</h4><p>We use all of this only to run NOOB: show you the right things, keep chats and accounts safe, find faults that only happen on some phones, stop spam and fake accounts, and let our administrators help you. <b>We do not sell it, we do not share it with advertisers or any other company, and it is not used for any other activity.</b> It is protected by HTTPS while it travels and is encrypted at rest in our database provider&apos;s storage; only NOOB&apos;s administrators can read what is not end-to-end encrypted. Deleting your account deletes it.</p><h4>5. Who helps us run NOOB (they only receive what the job needs)</h4><ul><li><b>Supabase</b>: database, sign-in and file storage. <b>Cloudflare</b>: the website, its cache, security, and anonymous traffic statistics.</li><li><b>Resend</b>: the emails we send you (codes, receipts, welcome).</li><li><b>Agora</b> and <b>Metered</b>: live video, calls and meeting rooms.</li><li><b>AI providers</b> (for example Groq, Google Gemini, OpenRouter): the text of your question to NOOB AI, the tutor or Support AI, and pictures you send to the tutor. <b>Tavily</b>: web search for the tutor&apos;s research.</li><li><b>NOOB Forms helpers:</b> only when a form owner presses an AI button, the words of that question (or, for a summary, the written answers of that form) are sent to an AI provider (for example Groq, Google Gemini or OpenRouter). If the owner adds a web hook, each new answer is sent to the web address the owner chose. Emails about new answers go to the owner only.</li><li><b>AudD</b>: a short sound sample when you use Search song. <b>Giphy</b>: the words you type to search GIFs. <b>OpenFreeMap</b> and <b>OpenStreetMap</b>: the map pictures when you pin an address or use Family Map (they see your IP address and the part of the map you look at, never your account or where your family is). <b>YouTube</b>: videos shown inside NOOB. <b>Google Fonts</b>: letters.</li><li><b>Google, Apple, Facebook, Discord</b> and other sign-in buttons: only if you choose them.</li><li><b>Pwned Passwords</b>: when you choose a password, the first 5 characters of its fingerprint are checked against a public list of leaked passwords (the password itself never leaves your phone).</li></ul><h4>6. Storage on your device</h4><p>Your login, theme, language, chat keys and small settings are kept in your browser or app (cookies or local storage) so NOOB works; nothing is used to track you on other websites. Family Map also remembers on your device the last room you opened, your map style and whether you allowed sharing (yes or no notes) and, only if you turned the day report on, today&apos;s report so that a restart loses nothing (it is erased at midnight and when you switch the report off).</p>" }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-trust-0">
-            <h3 className="text-sm font-bold text-white">Who runs NOOB</h3>
-            <p dangerouslySetInnerHTML={{ __html: "NOOB Socials is built and run by the <b>NOOB developers</b>, a team of students in India. NOOB is <b>not a registered company</b>, so there is no company name or company number to quote: this agreement is between you and the NOOB developers, represented by the NOOB administrator account in the app. NOOB is free to use. Complaints and the Grievance Officer are reached at <a href=\"/grievance.html\">noobsocials.com/grievance.html</a> (a form that needs no login and gives you a ticket number). These terms are governed by the laws of India." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-trust-1">
-            <h3 className="text-sm font-bold text-white">Money, noobs, purchases and refunds</h3>
-            <p dangerouslySetInnerHTML={{ __html: "NOOB takes <b>no card, bank or UPI payment</b> inside the app and holds no money for anyone. <b>noobs</b> (NOOB Points) are an in-app game currency: they have <b>no cash value</b>, cannot be withdrawn, sold or exchanged for money, and NOOB promises them no value; they are earned by using the app and spent on things inside it, such as NOOB Pro. A NOOB Pro payment gives you a receipt (an &quot;Order Successful&quot; screen with a receipt number); if a payment was taken twice or the plan was not given, send the receipt number through the grievance form within 15 days and the noobs or the plan are put right. The Shop and the Food Stall are run by the sellers who list there: you pay the seller directly (by UPI to the seller&apos;s own UPI ID, or cash on delivery or pickup), the address and phone number you give are used only to deliver that order, and refunds and returns are agreed with the seller. NOOB does not sell or deliver goods itself; if a seller does not deliver, report it through the grievance form and NOOB can remove the listing and the seller." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-trust-2">
-            <h3 className="text-sm font-bold text-white">Encrypted chats and translation</h3>
-            <p dangerouslySetInnerHTML={{ __html: "Chats are end-to-end encrypted: NOOB&apos;s servers keep only locked messages they cannot read. <b>Translate</b> is the one thing that makes a message leave your phone: when you tap Translate, your phone opens that one message and sends only its text to an AI language service (Groq) to be translated. NOOB does not store that text or its translation, but the service sees it for that moment, so a message you translate is not private from that service. If you never tap Translate, nothing is sent." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-trust-3">
-            <h3 className="text-sm font-bold text-white">Young people, live video and location</h3>
-            <p dangerouslySetInnerHTML={{ __html: "NOOB is meant for people aged 13 and over; people under 18 should use it with a parent or guardian&apos;s knowledge. Family Map, live streaming and chat are optional and off until you turn them on; Family Map shows your place only to the people in the rooms you chose, can be paused or deleted at any time, and is <b>not an emergency or safety service</b>. Report anything unsafe with the Report button or the grievance form: content about a person&apos;s private areas, or pretending to be them, is removed within 24 hours of that person&apos;s complaint." }} />
-          </section>
-
-          <section className="space-y-2" data-testid="legal-contact-rights">
-            <h3 className="text-sm font-bold text-white">Contact, complaints and your rights</h3>
-            <p dangerouslySetInnerHTML={{ __html: 'For any complaint about content or about your data, use the <b>Help</b> page inside NOOB (profile, then Settings and activity, then Help), the Suggestion Box, or the Grievance Officer&apos;s page at <a href="/grievance.html">noobsocials.com/grievance.html</a> (a form that needs no login and gives you a ticket number). NOOB&apos;s Grievance Officer (Padmanabh Singh Vaghela, email <a href=\"mailto:padmanabhsingh11107035@gmail.com\">padmanabhsingh11107035@gmail.com</a>, PIN code 382424, India) <b>acknowledges every complaint within 24 hours and resolves it within 15 days</b>; content that shows a person&apos;s private areas, or pretends to be them, is removed within 24 hours of a complaint by that person. You may at any time <b>see and correct</b> your details (Edit profile), <b>withdraw your consent</b>, and <b>delete your account and all your data</b> inside the app (profile, Settings and activity, Your NOOB account) or at noobsocials.com/data-deletion.html. If we do not act on a complaint you can complain to the Data Protection Board of India. NOOB is meant for people aged 13 and over.' }} />
-          </section>
-        </div>
-
-        {/* Footer Action */}
-        <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-noob text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Understood & Close</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+export const PrivacyPolicy: React.FC<Props> = ({ onClose, onHelp }) => (
+  <LegalShell
+    title="Privacy Policy"
+    meta="Last Updated: November 2026 • Privacy First"
+    lead="Before you continue, please read how NOOB looks after your information."
+    sections={SECTIONS}
+    ariaLabel="NOOB Privacy Policy"
+    onClose={onClose}
+    onHelp={onHelp}
+  />
+);

@@ -499,6 +499,12 @@ export default function App() {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showStatusNoteModal, setShowStatusNoteModal] = useState(false);
   const [showCustomerSupportModal, setShowCustomerSupportModal] = useState(false);
+  // "Help" on the Terms / Privacy / encryption pages (components/Legal/LegalShell.tsx) asks the app to open Customer Support
+  useEffect(() => {
+    const open = () => setShowCustomerSupportModal(true);
+    window.addEventListener('noob-open-support', open);
+    return () => window.removeEventListener('noob-open-support', open);
+  }, []);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);

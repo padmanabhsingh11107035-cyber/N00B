@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { nativePushState, enableNativePush, disableNativePush, type NativePushState } from '../../services/pushNotifications';
 import { ArrowLeft, Download, Smartphone, Share, CheckCircle2, Bell, BellOff, Loader2 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -59,6 +61,16 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
   const [notifMessage, setNotifMessage] = useState<string | null>(null);
   const [pushState, setPushState] = useState<PushDeviceState>(currentUser.pushSubscription ? 'on' : 'off');
   const pushSupport = useMemo(() => getPushSupport(), []);
+  // In the Android app the switch controls the phone's own notifications (Firebase), not the browser's
+  const isNative = Capacitor.isNativePlatform();
+  const [nativeState, setNativeState] = useState<NativePushState | null>(null);
+  const nativeOk = isNative && nativeState !== null && nativeState !== 'old-build';
+  useEffect(() => {
+    if (!isNative) return;
+    let alive = true;
+    void nativePushState().then((s) => { if (!alive) return; setNativeState(s); setPushState(s === 'on' ? 'on' : 'off'); });
+    return () => { alive = false; };
+  }, [isNative]);
 
   useEffect(() => {
     warmPushSetup();   // the notification key and the helper are got ready while the page is read, so the button has nothing left to wait for
@@ -77,6 +89,20 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
     setNotifMessage(null);
     const before = pushState;
     try {
+      if (nativeOk) {
+        if (pushState === 'on') {
+          setPushState('off');
+          await disableNativePush();
+          setNativeState('off');
+        } else {
+          const s = await enableNativePush();
+          setNativeState(s);
+          setPushState(s === 'on' ? 'on' : 'off');
+          if (s === 'blocked') setNotifMessage('Notifications are blocked for NOOB. Open your phone Settings, then Apps, NOOB, Notifications, and allow them.');
+          else if (s === 'off') setNotifMessage('Could not turn notifications on. Check your connection and try again.');
+        }
+        return;
+      }
       if (pushState === 'on') {
         setPushState('off');   // shown at once; goes back if switching off did not work
         const ok = await disablePushNotifications();
@@ -116,7 +142,13 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
 
   const notifHint =
     notifMessage ||
-    (pushSupport.supported === false
+    (isNative && nativeState === 'old-build'
+      ? 'Update the NOOB app from Google Play to get notifications on this phone.'
+      : nativeOk && nativeState === 'blocked'
+        ? 'Notifications are blocked for NOOB. Open your phone Settings, then Apps, NOOB, Notifications, and allow them.'
+        : nativeOk
+          ? null
+          : pushSupport.supported === false
       ? pushSupport.message
       : pushState === 'other-device'
         ? 'Turned on for another device. Tap to get them on this one instead.'

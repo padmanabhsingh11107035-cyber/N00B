@@ -50,7 +50,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
-import { avatarStoredUrl } from '../../data/avatars';
+import { AVATARS, avatarStoredUrl } from '../../data/avatars';
 import {
   fetchCollections,
   fetchLikedPosts,
@@ -70,7 +70,9 @@ import {
   fetchUserFeedVideos,
   fetchUserLongVideos,
   type MutualFollower,
-  updateFullProfile
+  updateFullProfile,
+  setMyAvatarChoice,
+  fetchAvatarChoice
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -229,6 +231,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showLiveAvatarModal, setShowLiveAvatarModal] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  // The avatar (character) this person chose. It is NOT their profile picture: the profile keeps showing the picture they have, and anyone who visits sees a "View avatar" button.
+  const [avatarChoice, setAvatarChoice] = useState<string | null>(null);
+  const [showViewAvatar, setShowViewAvatar] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showHideProfileModal, setShowHideProfileModal] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -592,6 +597,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const isBusiness = targetUser.accountType === 'business' || targetUser.isBusiness;
   const isPrivate = targetUser.accountType === 'private';
+  useEffect(() => {
+    let alive = true;
+    setAvatarChoice(null);
+    void fetchAvatarChoice(targetUser.id).then((id) => { if (alive) setAvatarChoice(id && AVATARS.some((a) => a.id === id) ? id : null); });
+    return () => { alive = false; };
+  }, [targetUser.id]);
 
   const profileTabs: { id: typeof activeTab; label: string; title: string; Icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
     { id: 'posts', label: 'Posts', title: 'Posts', Icon: Grid },
@@ -915,6 +926,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
             {targetUser.pronouns && (
               <p className="mt-0.5 text-xs text-zinc-400 truncate">{targetUser.pronouns}</p>
+            )}
+            {!isOwnProfile && avatarChoice && (
+              <button
+                type="button"
+                onClick={() => setShowViewAvatar(true)}
+                data-testid="profile-view-avatar"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/50 px-3 py-1.5 text-xs font-bold text-white cursor-pointer active:scale-95 transition-transform"
+              >
+                <AvatarsIcon size={16} /> View avatar
+              </button>
             )}
           </div>
         </div>
@@ -1941,14 +1962,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showAvatarPicker && (
         <React.Suspense fallback={<div className="fixed inset-0 z-[110] bg-black" />}>
           <AvatarPicker
-            current={currentUser.avatar}
+            current={avatarChoice ? avatarStoredUrl(avatarChoice) : null}
             onClose={() => setShowAvatarPicker(false)}
             onChoose={async (a) => {
-              const res = await updateFullProfile({ avatar: avatarStoredUrl(a.id) } as Partial<User>);
-              if (!res.success) throw new Error((res as { error?: string }).error || 'Could not save your avatar. Please try again.');
-              onUserUpdated?.({ ...currentUser, ...res.user, avatar: res.user?.avatar ?? avatarStoredUrl(a.id) });
+              // only the choice is saved: the profile picture stays as it is
+              try { await setMyAvatarChoice(a.id); } catch (e) { throw new Error(e instanceof Error && e.message ? e.message : 'Could not save your avatar. Please try again.'); }
+              setAvatarChoice(a.id);
             }}
           />
+        </React.Suspense>
+      )}
+
+      {/* somebody else's avatar: only that one character, nothing to pick */}
+      {showViewAvatar && avatarChoice && (
+        <React.Suspense fallback={<div className="fixed inset-0 z-[110] bg-black" />}>
+          <AvatarPicker only={avatarChoice} onChoose={() => undefined} onClose={() => setShowViewAvatar(false)} />
         </React.Suspense>
       )}
 

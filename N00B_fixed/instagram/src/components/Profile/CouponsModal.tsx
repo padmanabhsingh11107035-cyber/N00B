@@ -79,12 +79,12 @@ export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose
               setApplyMsg(null);
             }}
             placeholder="Type coupon code here"
-            className="flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+            className="flex-1 min-w-0 w-0 bg-transparent px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
           />
           <button
             onClick={handleApplyCode}
             disabled={!codeInput.trim()}
-            className="px-5 py-2.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-sm cursor-pointer disabled:cursor-not-allowed transition-colors"
+            className="shrink-0 whitespace-nowrap px-5 py-2.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-sm cursor-pointer disabled:cursor-not-allowed transition-colors"
           >
             Apply
           </button>

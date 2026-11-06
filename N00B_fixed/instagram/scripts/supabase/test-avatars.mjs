@@ -20,6 +20,7 @@ check(/Math\.max\(0, Math\.min\(H\.current, d\.startPos \+ \(e\.clientY - d\.sta
 check(/data-noob-keep=""/.test(page) && /prefers-reduced-motion/.test(page) && /aria-modal="true"/.test(page), 'the page keeps its own design, respects "reduce motion" and is a proper dialog');
 check(/id: 'avatars'[^}]*action: 'openAvatars'/.test(read('src/components/Settings/registry.ts')) && /openAvatars: \(\) => void;/.test(read('src/components/Settings/types.ts')), 'Choose an avatar is in the three dots of the profile (Settings and activity)');
 const prof = read('src/components/Profile/ProfileView.tsx');
-check(/openAvatars: \(\) => \{ setShowSettingsHub\(false\); setShowAvatarPicker\(true\); \}/.test(prof) && /updateFullProfile\(\{ avatar: avatarStoredUrl\(a\.id\) \}/.test(prof), 'choosing saves it as the profile picture (the full address, so it works in emails and the Android app too)');
+check(/openAvatars: \(\) => \{ setShowSettingsHub\(false\); setShowAvatarPicker\(true\); \}/.test(prof) && /await setMyAvatarChoice\(a\.id\)/.test(prof) && !/updateFullProfile\(\{ avatar: avatarStoredUrl/.test(prof), 'choosing an avatar saves only the choice: the profile picture is NOT changed');
+check(/data-testid="profile-view-avatar"/.test(prof) && /!isOwnProfile && avatarChoice/.test(prof) && /<AvatarPicker only=\{avatarChoice\}/.test(prof), 'a visitor sees a View avatar button that opens only that person\'s avatar, with nothing to pick');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

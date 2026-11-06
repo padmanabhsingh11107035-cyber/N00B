@@ -6350,6 +6350,14 @@ export async function setMyMoodUntil(input: { mood: string; note: string; visibi
   }
 }
 export async function clearMyMood(): Promise<void> { await rpc('mood_clear'); }
+
+// ---- Choose avatar (migration 20261106000002): the character a person picked, kept apart from the profile picture ----
+/** Saves the avatar I picked. The profile picture is not changed. */
+export async function setMyAvatarChoice(avatarId: string): Promise<void> { await rpc('avatar_choice_set', { p_avatar: avatarId }); }
+/** The avatar a person picked, if they picked one and I may see it (null otherwise, also when the database does not have the function yet). */
+export async function fetchAvatarChoice(userId: string): Promise<string | null> {
+  try { const v = await rpc<string | null>('avatar_choice_get', { p_user: userId }); return typeof v === 'string' && v ? v : null; } catch { return null; }
+}
 export async function fetchMyMood(): Promise<MoodStatus | null> { return (await rpc<MoodStatus | null>('mood_my')) ?? null; }
 /** Someone's mood, if this person is allowed to see it (null otherwise - "no mood" and "not allowed" look the same). */
 export async function fetchUserMood(userId: string): Promise<MoodStatus | null> {

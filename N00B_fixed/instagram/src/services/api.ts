@@ -490,6 +490,8 @@ export {
   removeAskQuestionAdmin,
   setMyMood,
   setMyMoodUntil,
+  setMyAvatarChoice,
+  fetchAvatarChoice,
   clearMyMood,
   fetchMyMood,
   fetchUserMood,

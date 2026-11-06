@@ -1709,3 +1709,8 @@ html body.light:not(.x) [class~="bg-teal-950"]:not(.force-dark):not(.force-dark 
   html body.light [class~="bg-green-950"].text-white, html body.light [class~="bg-green-950"] .text-white,
   html body.light [class~="bg-noob"].text-white, html body.light [class~="bg-noob"] .text-white, html body.light [class*="from-noob"].text-white, html body.light [class*="from-noob"] .text-white { color: #ffffff !important; }
 }
+
+/* iPhone: a page must never zoom or shrink itself. Something wider than the screen for a moment (a page sliding in, a long word) makes Safari zoom the whole page out and back
+   in, which looked like the Wallet, QR code, menu and legal pages "getting smaller and bigger". The page never scrolls sideways, never pinch-zooms, and text keeps its size. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; max-width: 100%; touch-action: pan-x pan-y; }
+body { overflow-x: clip; max-width: 100vw; }

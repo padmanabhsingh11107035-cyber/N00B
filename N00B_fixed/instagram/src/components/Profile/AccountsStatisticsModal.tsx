@@ -9,7 +9,6 @@ import {
   Share2,
   Coins,
   Star,
-  Flame,
   CheckCircle2,
   Lock,
   ChevronRight,
@@ -318,48 +317,28 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
           )}
 
-          {/* Tab 3: Transactions and earning rules */}
+          {/* Tab 3: Transactions: not in a box, edge to edge (the full width of the screen), one row under the other */}
           {activeSubTab === 'history' && (
-            <div className="space-y-4">
-              <div className="wl-panel space-y-1">
-                <h4 className="wl-row-title flex items-center gap-1.5 mb-2"><Coins className="w-4 h-4 text-amber-500" /> Recent transactions</h4>
-                {(!currentUser.noobTransactions || currentUser.noobTransactions.length === 0) ? (
-                  <p className="wl-row-sub py-2">No transactions yet. Play a game, publish a post, or comment to start earning.</p>
-                ) : (
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                    {currentUser.noobTransactions.map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--wl-line)] last:border-0">
-                        <div className="min-w-0">
-                          <p className="wl-row-title !font-semibold break-words" data-testid="points-reason">{tx.reason}</p>
-                          <p className="wl-row-sub">{new Date(tx.timestamp).toLocaleString()}</p>
-                        </div>
-                        <span className={`text-xs font-bold shrink-0 pl-2 ${tx.amount > 0 ? 'wl-pos' : tx.amount < 0 ? 'wl-neg' : 'text-zinc-500'}`}>
-                          {tx.amount > 0 ? '+' : ''}
-                          {tx.amount.toLocaleString()}
-                        </span>
+            <div className="-mx-4" data-testid="wallet-transactions">
+              <h4 className="wl-row-title flex items-center gap-1.5 px-4 pb-2"><Coins className="w-4 h-4 text-amber-500" /> Recent transactions</h4>
+              {(!currentUser.noobTransactions || currentUser.noobTransactions.length === 0) ? (
+                <p className="wl-row-sub px-4 py-3">No transactions yet. Play a game, publish a post, or comment to start earning.</p>
+              ) : (
+                <div className="border-t border-[var(--wl-line)]">
+                  {currentUser.noobTransactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--wl-line)]">
+                      <div className="min-w-0">
+                        <p className="wl-row-title !font-semibold break-words" data-testid="points-reason">{tx.reason}</p>
+                        <p className="wl-row-sub">{new Date(tx.timestamp).toLocaleString()}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="wl-panel space-y-3">
-                <h4 className="wl-row-title flex items-center gap-1.5"><Flame className="w-4 h-4 text-orange-500" /> How to earn noobPoints</h4>
-                <div className="space-y-2.5 text-xs">
-                  {[
-                    ['🎮 Win PvP / mini-game matches', '+50 to +200 pts', 'wl-pos'],
-                    ['📸 Publish an image post or reel', '+10,000,000 pts', 'wl-pos'],
-                    ['💬 Every comment you write', '+1,000,000 pts', 'wl-pos'],
-                    ['🏆 Top 10 global leaderboard finish', '+500 pts bonus', 'text-amber-500'],
-                    ['🛡️ Responsible reporting & safety compliance', '+50 pts', 'text-cyan-500']
-                  ].map(([a, b, c], i, all) => (
-                    <div key={a} className={`flex items-center justify-between gap-3 ${i < all.length - 1 ? 'pb-2 border-b border-[var(--wl-line)]' : ''}`}>
-                      <span className="wl-row-title !font-medium">{a}</span>
-                      <span className={`font-bold shrink-0 ${c}`}>{b}</span>
+                      <span className={`text-sm font-bold shrink-0 tabular-nums ${tx.amount > 0 ? 'wl-pos' : tx.amount < 0 ? 'wl-neg' : 'text-zinc-500'}`}>
+                        {tx.amount > 0 ? '+' : ''}
+                        {tx.amount.toLocaleString()}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

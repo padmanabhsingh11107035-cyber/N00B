@@ -14,6 +14,8 @@ const CTA_H = 84;        // the "Use this avatar" bar at the bottom of the sheet
 interface Props {
   /** the picture the person has now (to mark it and to open on it) */
   current?: string | null;
+  /** view-only: show just this one character (somebody else's avatar, from "View avatar" on their profile): nothing to pick, no list, no button */
+  only?: string;
   /** saves the choice; may take a moment */
   onChoose: (a: Avatar) => Promise<void> | void;
   onClose: () => void;
@@ -25,9 +27,11 @@ const shade = (hex: string, amt: number): string => {
   return `rgb(${f((n >> 16) & 255)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`;
 };
 
-export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) => {
+export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose }) => {
+  const list = React.useMemo(() => (only ? AVATARS.filter((a) => a.id === only) : AVATARS), [only]);
+  const ctaH = only ? 0 : CTA_H;
   const currentId = avatarIdOf(current);
-  const start = Math.max(0, AVATARS.findIndex((a) => a.id === currentId));
+  const start = Math.max(0, list.findIndex((a) => a.id === currentId));
   const [idx, setIdx] = useState(start);
   const idxRef = useRef(start);
   const [open, setOpen] = useState<'closed' | 'open' | 'full'>('closed');
@@ -43,7 +47,7 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
   const y = useRef(800);
   const drag = useRef<{ startY: number; startPos: number; lastY: number; lastT: number; v: number } | null>(null);
   const origin = mediaOrigin();
-  const av = AVATARS[idx];
+  const av = list[idx] ?? list[0];
   const text = av.light ? '#14161c' : '#ffffff';
   const soft = av.light ? 'rgba(20,22,28,.7)' : 'rgba(255,255,255,.78)';
   const calm = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -55,8 +59,8 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
     el.style.transition = animate && !calm ? 'transform .42s cubic-bezier(.22,.9,.24,1)' : 'none';
     el.style.transform = `translate3d(0, ${to}px, 0)`;
     if (dim.current) { dim.current.style.transition = el.style.transition.replace('transform', 'opacity'); dim.current.style.opacity = String(Math.max(0, Math.min(0.55, (1 - to / H.current) * 0.7))); dim.current.style.pointerEvents = to < H.current - 4 ? 'auto' : 'none'; }
-    if (scroller.current) scroller.current.style.height = `${Math.max(0, H.current - to - HEADER_H - CTA_H)}px`;
-  }, [calm]);
+    if (scroller.current) scroller.current.style.height = `${Math.max(0, H.current - to - HEADER_H - ctaH)}px`;
+  }, [calm, ctaH]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -79,14 +83,14 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
 
   const goTo = useCallback((i: number) => {
     const el = pager.current; if (!el) return;
-    const n = Math.max(0, Math.min(AVATARS.length - 1, i));
+    const n = Math.max(0, Math.min(list.length - 1, i));
     el.scrollTo({ left: n * el.clientWidth, behavior: calm ? 'auto' : 'smooth' });
-  }, [calm]);
+  }, [calm, list.length]);
 
   const onScroll = () => {
     const el = pager.current; if (!el) return;
     const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-    if (i !== idxRef.current && i >= 0 && i < AVATARS.length) {
+    if (i !== idxRef.current && i >= 0 && i < list.length) {
       idxRef.current = i; setIdx(i); setDone(''); setError('');
       try { navigator.vibrate?.(5); } catch { /* not everywhere */ }
     }
@@ -160,7 +164,7 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
 
       {/* the characters: swipe sideways */}
       <div ref={pager} onScroll={onScroll} className="av-pager absolute inset-0 flex overflow-x-auto overflow-y-hidden" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }} aria-roledescription="carousel">
-        {AVATARS.map((a, i) => (
+        {list.map((a, i) => (
           <section key={a.id} className="relative shrink-0 w-full h-full overflow-hidden" style={{ scrollSnapAlign: 'center', scrollSnapStop: 'always' }} aria-label={`${a.name}, ${a.role}`} aria-hidden={i !== idx}>
             {/* the name, huge and faint, behind the character */}
             <div aria-hidden="true" className="absolute inset-x-0 top-[17%] flex flex-col items-center leading-none font-black uppercase pointer-events-none" style={{ fontSize: 'min(30vw, 150px)', letterSpacing: '.04em', color: a.light ? 'rgba(20,22,28,.08)' : 'rgba(255,255,255,.09)', transform: `translateX(${(i - idx) * 18}px)`, transition: calm ? 'none' : 'transform .5s ease' }}>
@@ -184,16 +188,18 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
       {/* the bottom: the arrow, the button and the small pictures of everyone */}
       <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
         <button type="button" onClick={() => snapTo('open')} aria-label={`More about ${av.name}`} aria-expanded={open !== 'closed'} data-testid="avatar-more" className="av-bob w-12 h-12 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ animation: calm ? 'none' : 'av-bob 1.8s ease-in-out infinite', background: av.light ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.22)', backdropFilter: 'blur(10px)', color: text, boxShadow: '0 6px 18px rgba(0,0,0,.18)' }}><ChevronUp className="w-6 h-6" /></button>
-        <button type="button" onClick={() => void choose()} disabled={busy || isCurrent} data-testid="avatar-use" className="h-11 px-8 rounded-full font-extrabold text-sm cursor-pointer disabled:opacity-80 active:scale-[0.98] transition-transform inline-flex items-center gap-2" style={{ background: av.light ? '#14161c' : '#ffffff', color: av.light ? '#ffffff' : '#14161c' }}>
+        {!only && <button type="button" onClick={() => void choose()} disabled={busy || isCurrent} data-testid="avatar-use" className="h-11 px-8 rounded-full font-extrabold text-sm cursor-pointer disabled:opacity-80 active:scale-[0.98] transition-transform inline-flex items-center gap-2" style={{ background: av.light ? '#14161c' : '#ffffff', color: av.light ? '#ffffff' : '#14161c' }}>
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : isCurrent ? <Check className="w-4 h-4" /> : null}{busy ? 'Saving…' : isCurrent ? 'This is your avatar' : 'Use this avatar'}
-        </button>
+        </button>}
         {(done || error) && <p role={error ? 'alert' : 'status'} className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: error ? 'rgba(220,38,38,.9)' : 'rgba(0,0,0,.45)', color: '#fff' }}>{error || done}</p>}
+        {!only && (
         <div ref={strip} className="flex gap-2 overflow-x-auto no-scrollbar max-w-full px-4 py-1" role="tablist" aria-label="All avatars">
-          {AVATARS.map((a, i) => (
+          {list.map((a, i) => (
             <button key={a.id} type="button" role="tab" aria-selected={i === idx} aria-label={a.name} onClick={() => goTo(i)} className="shrink-0 w-11 h-14 rounded-xl overflow-hidden cursor-pointer transition-transform" style={{ background: a.bg, outline: i === idx ? `2px solid ${text}` : '2px solid transparent', outlineOffset: 2, transform: i === idx ? 'scale(1.08)' : 'scale(1)', opacity: i === idx ? 1 : 0.8 }}>
               <img src={avatarUrl(a.id, '', origin)} alt="" draggable={false} loading="lazy" decoding="async" className="w-full h-full object-cover" style={{ objectPosition: '50% 8%', transform: 'scale(1.9)', transformOrigin: '50% 12%' }} />
             </button>))}
         </div>
+        )}
       </div>
 
       {/* the sheet */}
@@ -235,11 +241,13 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
             <div className="col-span-2 flex items-center gap-2"><span className="w-5 h-5 rounded-full" style={{ background: av.bg, boxShadow: '0 0 0 2px rgba(255,255,255,.6)' }} /><span className="text-[13px] font-bold">{av.info.colour}</span><span className="text-[10.5px] uppercase tracking-widest" style={{ color: soft }}>signature colour</span></div>
           </dl>
         </div>
+        {!only && (
         <div className="shrink-0 px-5 flex items-center" style={{ height: CTA_H }}>
           <button type="button" onClick={() => void choose()} disabled={busy || isCurrent} className="w-full h-12 rounded-full font-extrabold text-sm cursor-pointer disabled:opacity-80 active:scale-[0.99] transition-transform inline-flex items-center justify-center gap-2" style={{ background: av.light ? '#14161c' : '#ffffff', color: av.light ? '#ffffff' : '#14161c' }}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : isCurrent ? <Check className="w-4 h-4" /> : null}{busy ? 'Saving…' : isCurrent ? 'This is your avatar' : `Use ${av.name} as my avatar`}
           </button>
         </div>
+        )}
       </div>
     </div>
   );

@@ -559,6 +559,50 @@ async function sendPush(sub: any, payload: Uint8Array, vapid: (endpoint: string)
   }
 }
 
+// ---- phones: the Android app, through Firebase Cloud Messaging (free). Needs the function secret FIREBASE_SERVICE_ACCOUNT (the whole JSON file of a
+// Firebase "service account" key). Without it, phones are simply skipped and browser notifications carry on as before.
+let fcmAuth: { token: string; exp: number } | null = null;
+async function fcmAccessToken(sa: any): Promise<string> {
+  if (fcmAuth && Date.now() < fcmAuth.exp - 60_000) return fcmAuth.token;
+  const now = Math.floor(Date.now() / 1000);
+  const head = bytesToB64u(te.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const claims = bytesToB64u(te.encode(JSON.stringify({
+    iss: sa.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600
+  })));
+  const pem = String(sa.private_key || '').replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, te.encode(`${head}.${claims}`)));
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${head}.${claims}.${bytesToB64u(sig)}` }),
+    signal: AbortSignal.timeout(10_000)
+  });
+  const j: any = await res.json().catch(() => ({}));
+  if (!j.access_token) throw new Error(`Google sign-in for push failed (${res.status})`);
+  fcmAuth = { token: String(j.access_token), exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
+  return fcmAuth.token;
+}
+
+async function sendPhone(projectId: string, accessToken: string, token: string, title: string, body: string, data: Record<string, string>, ring: boolean): Promise<'sent' | 'gone' | 'failed'> {
+  try {
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ message: { token, notification: { title, body }, data, android: { priority: 'HIGH', ttl: ring ? '45s' : '86400s' } } }),
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (res.ok) return 'sent';
+    const text = await res.text().catch(() => '');
+    if (res.status === 404 || /UNREGISTERED|registration-token-not-registered/i.test(text)) return 'gone';
+    if (res.status === 400 && /INVALID_ARGUMENT/i.test(text) && /token/i.test(text)) return 'gone';
+    console.warn(`push: phone send answered ${res.status} ${oneLine(text, 160)}`);
+    return 'failed';
+  } catch (e) {
+    console.warn(`push: could not reach Firebase: ${oneLine((e as Error)?.message, 120)}`);
+    return 'failed';
+  }
+}
+
 async function handlePush(req: Request, body: any, admin: any): Promise<Response> {
   const secret = req.headers.get('x-noob-push') || '';
   const id = String(body?.notificationId ?? '');
@@ -576,14 +620,17 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
   }
   if (!data?.claimed) return json({ success: true, sent: 0, note: 'Already handled.' });
   const recipients: { userId: string; subscription: any }[] = Array.isArray(data.recipients) ? data.recipients : [];
-  if (!recipients.length) return json({ success: true, sent: 0 });
+  const phones: { userId: string; token: string }[] = Array.isArray(data.phones) ? data.phones : [];
+  if (!recipients.length && !phones.length) return json({ success: true, sent: 0 });
 
-  let vapid: (endpoint: string) => Promise<string>;
-  try {
-    vapid = await makeVapid(String(data.publicKey || ''), privateKey, (Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@nooob.xyz').trim());
-  } catch (e) {
-    console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
-    return json({ error: 'Push keys are invalid.' }, 500);
+  let vapid: (endpoint: string) => Promise<string> = async () => '';
+  if (recipients.length) {
+    try {
+      vapid = await makeVapid(String(data.publicKey || ''), privateKey, (Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@nooob.xyz').trim());
+    } catch (e) {
+      console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
+      return json({ error: 'Push keys are invalid.' }, 500);
+    }
   }
   // An incoming call needs to ring even with the app fully closed. Declining always happens inside
   // the app's own incoming-call screen (no OS notification action buttons here, unlike before) — the
@@ -620,7 +667,34 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
     }
   }));
   if (dead.length) await admin.rpc('push_forget', { p_secret: secret, p_dead: dead });
-  return json({ success: true, ...tally });
+
+  // the Android app (phones)
+  const phoneTally = { sent: 0, gone: 0, failed: 0 };
+  const saText = (Deno.env.get('FIREBASE_SERVICE_ACCOUNT') || '').trim();
+  if (phones.length && saText) {
+    try {
+      const sa = JSON.parse(saText);
+      const accessToken = await fcmAccessToken(sa);
+      const phoneData: Record<string, string> = { url: String(notifPayload.url ?? '/'), type: String(notifPayload.type ?? data.type ?? 'notification') };
+      const ring = data.type === 'call_ring';
+      const deadPhones: { userId: string; token: string }[] = [];
+      let at = 0;
+      await Promise.all(Array.from({ length: Math.min(10, phones.length) }, async () => {
+        while (at < phones.length) {
+          const ph = phones[at++];
+          const outcome = await sendPhone(String(sa.project_id), accessToken, String(ph.token), String(notifPayload.title), String(notifPayload.body), phoneData, ring);
+          phoneTally[outcome]++;
+          if (outcome === 'gone') deadPhones.push({ userId: ph.userId, token: String(ph.token) });
+        }
+      }));
+      if (deadPhones.length) await admin.rpc('push_forget_phones', { p_secret: secret, p_dead: deadPhones });
+    } catch (e) {
+      console.error(`push: phone notifications failed: ${oneLine((e as Error)?.message, 160)}`);
+    }
+  } else if (phones.length) {
+    console.warn('push: phones are waiting but the FIREBASE_SERVICE_ACCOUNT secret is not set');
+  }
+  return json({ success: true, ...tally, phones: phoneTally });
 }
 
 // Simple per-person limit so nobody can burn the free AI quota: 20 requests a minute.

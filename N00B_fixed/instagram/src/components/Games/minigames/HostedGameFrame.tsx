@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
 import { supabase } from '../../../services/supabase';
+import { setMusicAudioSession } from '../../../utils/gameMusic';
 import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone, gameScoreBoard, gameScoreSubmit } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
@@ -143,6 +144,13 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     window.addEventListener('message', onMessage);
     return () => { window.removeEventListener('message', onMessage); close(); };
   }, [multiplayer?.game, multiplayer?.id, multiplayer?.name]);
+
+  // iPhone: while a game is open, its sounds play even with the side switch on silent (like a song does)
+  useEffect(() => {
+    if (!visible) return;
+    setMusicAudioSession(true);
+    return () => setMusicAudioSession(false);
+  }, [visible]);
 
   // The keyboard goes to the game as soon as it is brought into view; on a phone Play goes straight to full screen.
   useEffect(() => {

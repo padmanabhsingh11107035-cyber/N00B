@@ -174,8 +174,18 @@ function makeContext(): boolean {
   }
 }
 
+// iPhone: sounds made by the page itself (like this music) are silenced by the side "silent" switch, while songs played from a file are not. Asking Safari for a "playback"
+// audio session makes the page's own sounds behave like music: they play even when the switch is on silent. (Other browsers ignore this.)
+export function setMusicAudioSession(on: boolean): void {
+  try {
+    const s = (g.navigator as { audioSession?: { type: string } } | undefined)?.audioSession;
+    if (s) s.type = on ? 'playback' : 'auto';
+  } catch { /* not supported: nothing to change */ }
+}
+
 function begin(): void {
   if (timer || !makeContext()) return;
+  setMusicAudioSession(true);
   try { if (ctx.state === 'suspended') void ctx.resume?.(); } catch { /* ignore */ }
   step = 0;
   nextTime = ctx.currentTime + 0.1;
@@ -225,6 +235,7 @@ export function stopGameMusic(): void {
 }
 
 function haltPlayback(): void {
+  setMusicAudioSession(false);
   if (timer) { clearInterval(timer); timer = null; }
   if (ctx && master) {
     try {

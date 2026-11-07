@@ -50,6 +50,19 @@ export async function nativePushState(): Promise<NativePushState> {
   } catch { return 'old-build'; }
 }
 
+// One line that says what this phone reports (shown under the switch in the Android app, so a problem can be read off the screen).
+export async function nativePushDiag(): Promise<string> {
+  try {
+    const { App } = await import('@capacitor/app');
+    const info = await App.getInfo();
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const perm = await PushNotifications.checkPermissions();
+    return `App ${info.version} (build ${info.build}) · phone permission: ${perm.receive} · switched off here: ${isOff() ? 'yes' : 'no'}`;
+  } catch (e) {
+    return 'Check failed: ' + String((e as Error)?.message || e).slice(0, 140);
+  }
+}
+
 // Asks the phone's question when needed and registers this phone. Called from the Install and Permissions toggle.
 export async function enableNativePush(): Promise<NativePushState> {
   try {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { nativePushState, enableNativePush, disableNativePush, type NativePushState } from '../../services/pushNotifications';
+import { nativePushState, enableNativePush, disableNativePush, nativePushDiag, type NativePushState } from '../../services/pushNotifications';
 import { ArrowLeft, Download, Smartphone, Share, CheckCircle2, Bell, BellOff, Loader2 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -65,6 +65,8 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
   const isNative = Capacitor.isNativePlatform();
   const [nativeState, setNativeState] = useState<NativePushState | null>(null);
   const nativeOk = isNative && nativeState !== null && nativeState !== 'old-build';
+  const [nativeDiag, setNativeDiag] = useState('');
+  useEffect(() => { if (isNative) void nativePushDiag().then(setNativeDiag); }, [isNative, nativeState]);
   useEffect(() => {
     if (!isNative) return;
     let alive = true;
@@ -89,6 +91,10 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
     setNotifMessage(null);
     const before = pushState;
     try {
+      if (isNative && !nativeOk) {
+        setNotifMessage(nativeState === 'old-build' ? 'Update the NOOB app from Google Play to get notifications on this phone.' : 'Checking this phone… try again in a moment.');
+        return;
+      }
       if (nativeOk) {
         if (pushState === 'on') {
           setPushState('off');
@@ -248,6 +254,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
             </button>
 
             {notifHint && <p className="text-[11px] text-amber-300/90 leading-relaxed">{notifHint}</p>}
+            {isNative && nativeDiag && <p className="text-[10px] text-zinc-500 leading-relaxed break-words" data-testid="native-push-diag">{nativeDiag}</p>}
           </div>
         </div>
       </div>

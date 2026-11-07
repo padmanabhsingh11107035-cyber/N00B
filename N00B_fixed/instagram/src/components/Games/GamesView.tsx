@@ -20,10 +20,12 @@ import {
   ShieldAlert,
   HelpCircle,
   Music,
-  VolumeX
+  VolumeX,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { MiniGameMeta, ALL_50_MINI_GAMES, GameCategory } from './types';
-import { GamePosterCarousel } from './GamePosterCarousel';
+import { GameBannerArtwork } from './GameIcons';
 import { warmHelixFilesWhenIdle } from '../../utils/helixWarmup';
 import { warmUnderhallFilesWhenIdle } from '../../utils/underhallWarmup';
 import { warmCanyonFilesWhenIdle } from '../../utils/canyonWarmup';
@@ -45,13 +47,16 @@ interface GamesViewProps {
   allUsers: User[];
   onUserUpdated?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
+  /** laptop / computer: the page is full screen, and this button takes the person back to the page they came from */
+  onBack?: () => void;
 }
 
 export const GamesView: React.FC<GamesViewProps> = ({
   currentUser,
   allUsers,
   onUserUpdated,
-  onNavigateToUserProfile
+  onNavigateToUserProfile,
+  onBack
 }) => {
   // The Games page is remembered while it is open: closing / refreshing the app brings the person back to this page, to the game
   // they were playing, with that game's progress (see utils/pageResume.ts and each game). Closing the page forgets all of it.
@@ -158,80 +163,115 @@ export const GamesView: React.FC<GamesViewProps> = ({
     return matchesCategory && matchesSearch;
   });
 
-  return (
-    <div className="w-full max-w-4xl mx-auto px-4 pb-24 pt-2">
-      {/* Top Header & Points Stat Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-4 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
-        <div className="flex items-center justify-between gap-3.5">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-noob flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0">
-              <Gamepad2 className="w-6 h-6 text-black stroke-[2.5]" />
-            </div>
-            <h1 className="text-xl font-black text-white tracking-tight lowercase truncate">
-              noob arena
-            </h1>
-          </div>
+  const CATEGORIES: { key: GameCategory; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'arcade', label: 'Arcade' },
+    { key: 'puzzle', label: 'Puzzle & Match' },
+    { key: 'reflex', label: 'Reflex & Action' },
+    { key: 'brain', label: 'Brain & Strategy' },
+    { key: 'social', label: 'Social & Party' }
+  ];
+  const searching = searchQuery.trim() !== '' || selectedCategory !== 'all';
+  // The home page of the games: rows of tiles, like a store shelf. Searching or picking a category shows the matches as one grid.
+  const shelves: { id: string; title: string; games: MiniGameMeta[] }[] = [
+    { id: 'new', title: 'New games', games: ALL_50_MINI_GAMES.filter((g) => g.isNew) },
+    ...CATEGORIES.filter((c) => c.key !== 'all').map((c) => ({ id: c.key, title: c.label, games: ALL_50_MINI_GAMES.filter((g) => g.category === c.key) }))
+  ].filter((s) => s.games.length > 0);
 
-          {/* 3-Dot Button — pinned to the far right of this row via the
-              parent's justify-between, instead of sitting right next to the
-              title with a large empty gap after it. */}
-          <div className="flex items-center gap-2 shrink-0">
+  const tile = (game: MiniGameMeta, wide = false) => (
+    <button
+      key={game.id}
+      type="button"
+      onClick={() => setSelectedGameForPlay(game)}
+      className={`rbx-tile group text-left shrink-0 cursor-pointer ${wide ? 'w-full' : 'w-[138px] sm:w-[160px] lg:w-[176px]'}`}
+      data-testid={`game-tile-${game.id}`}
+    >
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#232527] ring-1 ring-white/5 transition-transform duration-200 group-hover:scale-[1.03]">
+        {game.posters && game.posters[0] ? (
+          <img src={game.posters[0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover object-top" />
+        ) : (
+          <GameBannerArtwork id={game.id} className="w-full h-full" />
+        )}
+        {game.isNew && <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#00b06f] text-[10px] font-extrabold text-white">NEW</span>}
+        <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="w-11 h-11 rounded-full bg-white/95 flex items-center justify-center"><Play className="w-5 h-5 text-black fill-black ml-0.5" /></span>
+        </span>
+      </div>
+      <p className="mt-2 text-[13px] font-bold text-white leading-snug line-clamp-2">{game.title}</p>
+      <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#bdbebe] truncate">
+        <Users className="w-3 h-3 shrink-0" />
+        <span className="truncate">{game.players}</span>
+        <span className="text-[#6f7072]">·</span>
+        <span className="truncate">{game.rewardNote || (game.pointsReward > 0 ? 'Earn NOOBs' : 'For fun')}</span>
+      </p>
+    </button>
+  );
+
+  return (
+    <div className="rbx w-full min-h-screen bg-[#121316] text-white md:px-8 lg:px-12 px-3 pb-28 md:pb-12" data-testid="games-page">
+      {/* Top bar: back (laptop / computer), search in the middle, points and the small buttons on the right */}
+      <header className="sticky top-0 z-30 -mx-3 md:-mx-8 lg:-mx-12 px-3 md:px-8 lg:px-12 py-3 bg-[#121316]/95 flex items-center gap-3">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            data-testid="games-back"
+            className="hidden md:inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full bg-[#232527] hover:bg-[#2f3133] text-sm font-bold text-white cursor-pointer shrink-0 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Back
+          </button>
+        )}
+        <div className="relative flex-1 max-w-[560px] md:mx-auto min-w-0">
+          <Search className="w-4 h-4 text-[#bdbebe] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search games"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-10 bg-[#232527] rounded-full pl-10 pr-4 text-sm text-white placeholder-[#8d8e90] focus:outline-none focus:ring-2 focus:ring-white/30"
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-[#232527] text-sm font-bold" title="Your NOOBs">
+            <span className="w-4 h-4 rounded-full bg-amber-400 inline-block" />
+            {formatNoobPoints(userPoints)}
+          </span>
           <button
             onClick={() => { const next = !musicOn; setMusicOn(next); setGameMusicOn(next); }}
             aria-label={musicOn ? 'Turn game music off' : 'Turn game music on'}
             title={musicOn ? 'Game music is on (tap to turn off)' : 'Game music is off (tap to turn on)'}
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${musicOn ? 'bg-noob/15 border-noob/40 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white'}`}
+            className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"
           >
-            {musicOn ? <Music className="w-4 h-4 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+            {musicOn ? <Music className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4 text-[#8d8e90]" />}
           </button>
-          <div className="relative shrink-0" ref={menuRef}>
-              <button
-                onClick={() => setShowMenu((prev) => !prev)}
-                aria-label="Arena information"
-                className="w-8 h-8 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {showMenu && (
-                <>
-                  <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowMenu(false)} />
-                  {/* Anchored to the viewport (not the tiny 3-dot button) so it
-                      can never overflow off-screen regardless of where the
-                      button sits in the header or how narrow the screen is. */}
-                  <div className="fixed left-4 right-4 top-24 mx-auto max-w-sm z-40 p-4 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 text-left">
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-800/80">
-                    <Info className="w-4 h-4 text-noob" />
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                      Arena Info &amp; Rules
-                    </h3>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu((prev) => !prev)}
+              aria-label="Arena information"
+              className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setShowMenu(false)} />
+                <div className="fixed left-4 right-4 top-20 mx-auto max-w-sm z-40 p-4 rounded-2xl bg-[#232527] shadow-2xl text-left">
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
+                    <Info className="w-4 h-4 text-white" />
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider">Arena Info &amp; Rules</h3>
                   </div>
-
                   <div className="space-y-2.5 text-xs">
-                    <div className="bg-zinc-900/90 p-2.5 rounded-2xl border border-zinc-800">
-                      <span className="text-[11px] font-bold text-zinc-400 block mb-1">
-                        Scoring System
-                      </span>
+                    <div className="bg-[#121316] p-2.5 rounded-xl">
+                      <span className="text-[11px] font-bold text-[#bdbebe] block mb-1">Scoring System</span>
                       <div className="space-y-1 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-300">🏆 Victory:</span>
-                          <span className="text-noob font-black">+10M NOOBs</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-300">🤝 Draw / Tie:</span>
-                          <span className="text-blue-400 font-black">+5M NOOBs</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-300">💥 Loss / Defeat:</span>
-                          <span className="text-zinc-500 font-bold">0 NOOBs</span>
-                        </div>
+                        <div className="flex items-center justify-between"><span className="text-zinc-300">🏆 Victory:</span><span className="text-white font-black">+10M NOOBs</span></div>
+                        <div className="flex items-center justify-between"><span className="text-zinc-300">🤝 Draw / Tie:</span><span className="text-blue-400 font-black">+5M NOOBs</span></div>
+                        <div className="flex items-center justify-between"><span className="text-zinc-300">💥 Loss / Defeat:</span><span className="text-zinc-500 font-bold">0 NOOBs</span></div>
                       </div>
                     </div>
-
-                    <div className="bg-zinc-900/90 p-2.5 rounded-2xl border border-zinc-800">
-                      <span className="text-[11px] font-bold text-zinc-400 block mb-1">
-                        Game Modes
-                      </span>
+                    <div className="bg-[#121316] p-2.5 rounded-xl">
+                      <span className="text-[11px] font-bold text-[#bdbebe] block mb-1">Game Modes</span>
                       <ul className="text-[11px] text-zinc-300 space-y-1 list-disc list-inside">
                         <li>Quick match with active online players</li>
                         <li>Instant practice matches against AI Bot</li>
@@ -240,250 +280,118 @@ export const GamesView: React.FC<GamesViewProps> = ({
                     </div>
                   </div>
                 </div>
-                </>
-              )}
-            </div>
+              </>
+            )}
           </div>
-          </div>
-
-        {/* Games / Leaderboard switch — full-width, evenly-split toggle
-            instead of one button whose label used to flip between the
-            action and the current state, which read ambiguously at a
-            glance ("Leaderboard" while already ON the leaderboard tab). */}
-        <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-md w-full sm:w-auto">
-          <button
-            onClick={() => setActiveTab('games')}
-            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'games'
-                ? 'bg-noob text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Gamepad2 className="w-3.5 h-3.5" />
-            <span>Games</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'leaderboard'
-                ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5" />
-            <span>Leaderboard</span>
-          </button>
         </div>
+      </header>
+
+      {/* Games / Leaderboard */}
+      <div className="flex items-center gap-2 mt-1 mb-4">
+        <button onClick={() => setActiveTab('games')} className={`h-9 px-4 rounded-full text-sm font-bold cursor-pointer transition-colors ${activeTab === 'games' ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}>
+          <span className="inline-flex items-center gap-1.5"><Gamepad2 className="w-4 h-4" />Games</span>
+        </button>
+        <button onClick={() => setActiveTab('leaderboard')} className={`h-9 px-4 rounded-full text-sm font-bold cursor-pointer transition-colors ${activeTab === 'leaderboard' ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}>
+          <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4" />Leaderboard</span>
+        </button>
       </div>
 
       {activeTab === 'games' ? (
         <>
-          {/* Search & Category Filter Pills */}
-          <div className="space-y-3 mb-6">
-            <div className="relative">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search mini-games (e.g. Snake, Tic Tac Toe, Rock Paper Scissors, Math)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob transition-colors shadow-inner"
-              />
-            </div>
-
-            {/* Category tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {(
-                [
-                  { key: 'all', label: 'All Games' },
-                  { key: 'arcade', label: '🕹️ Arcade' },
-                  { key: 'puzzle', label: '🧩 Puzzle & Match' },
-                  { key: 'reflex', label: '⚡ Reflex & Action' },
-                  { key: 'brain', label: '🧠 Brain & Strategy' },
-                  { key: 'social', label: '🎉 Social & Party' }
-                ] as { key: GameCategory; label: string }[]
-              ).map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    selectedCategory === cat.key
-                      ? 'bg-noob text-black shadow-[0_0_15px_rgba(255,255,255,0.25)]'
-                      : 'bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Games Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredGames.map((game, idx) => (
-              <div
-                key={game.id}
-                className="game-card bg-zinc-950 border border-zinc-800/90 hover:border-zinc-700 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col group"
+          {/* Category chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-3 no-scrollbar">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                onClick={() => setSelectedCategory(cat.key)}
+                className={`h-8 px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${selectedCategory === cat.key ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}
               >
-                {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own. The small gap around it keeps the picture's white outline whole: it used to sit on the card's own edge, where the card's rounder corners cut it off. */}
-                <div className="p-2 pb-0">
-                <div className="relative overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-500" onClick={() => setSelectedGameForPlay(game)}>
-                  <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} />
-
-                  {/* Game Number Badge */}
-                  <span className="game-badge absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">
-                    #{idx + 1}
-                    {game.isNew && <span className="game-badge-new ml-1.5 text-amber-300">NEW</span>}
-                  </span>
-
-                  {/* Mode Player Indicator */}
-                  <span className="game-badge absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-noob border border-noob/30">
-                    {game.players}
-                  </span>
-                </div>
-                </div>
-
-                {/* Card Info */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <h3 className="text-sm font-bold text-white group-hover:text-noob transition-colors line-clamp-1">
-                        {game.title}
-                      </h3>
-                      <span className="text-[10px] font-extrabold text-amber-400 shrink-0">
-                        {game.pointsReward > 0 ? `+${game.pointsReward.toLocaleString()} NOOBs${game.rewardNote ? ` ${game.rewardNote}` : ''}` : game.rewardNote}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
-                      {game.description}
-                    </p>
-                  </div>
-
-                  {/* Tags & Play Button */}
-                  <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      {game.tags.slice(0, 2).map((t, i) => (
-                        <span key={i} className="text-[9px] px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedGameForPlay(game)}
-                      className="px-3.5 py-1.5 rounded-xl bg-noob hover:bg-noob/90 text-black text-xs font-extrabold flex items-center gap-1 shadow-sm transition-transform active:scale-95 cursor-pointer shrink-0"
-                    >
-                      <Play className="w-3 h-3 fill-black" />
-                      <span>Play</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+                {cat.label}
+              </button>
             ))}
           </div>
 
-          {filteredGames.length === 0 && (
-            <div className="text-center py-16 bg-zinc-950 rounded-3xl border border-zinc-800">
-              <p className="text-zinc-400 text-sm">No games found matching "{searchQuery}".</p>
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('all');
-                }}
-                className="mt-3 px-4 py-2 rounded-xl bg-zinc-900 text-xs font-bold text-noob hover:bg-zinc-800 cursor-pointer"
-              >
-                Reset Filters
-              </button>
+          {searching ? (
+            <>
+              <h2 className="text-xl font-extrabold mt-3 mb-3">{searchQuery.trim() ? `Results for “${searchQuery.trim()}”` : CATEGORIES.find((c) => c.key === selectedCategory)?.label}</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-x-3 gap-y-5">
+                {filteredGames.map((g) => tile(g, true))}
+              </div>
+              {filteredGames.length === 0 && (
+                <div className="text-center py-16">
+                  <p className="text-[#bdbebe] text-sm">No games found matching "{searchQuery}".</p>
+                  <button onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }} className="mt-3 h-9 px-4 rounded-full bg-white text-black text-sm font-bold cursor-pointer">Reset filters</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-7 mt-2">
+              {shelves.map((s) => (
+                <section key={s.id} data-testid={`games-shelf-${s.id}`}>
+                  <button type="button" onClick={() => { if (s.id !== 'new') setSelectedCategory(s.id as GameCategory); }} className="flex items-center gap-1 mb-3 cursor-pointer">
+                    <h2 className="text-xl font-extrabold">{s.title}</h2>
+                    {s.id !== 'new' && <ChevronRight className="w-5 h-5 text-[#bdbebe]" />}
+                  </button>
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 md:mx-0 md:px-0 snap-x">
+                    {s.games.map((g) => tile(g))}
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </>
       ) : (
         /* GLOBAL NOOBS LEADERBOARD TAB */
-        <div className="space-y-6">
-          {/* Full Rankings List (Top 10 only) */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-4 shadow-xl space-y-2">
-            <h2 className="text-sm font-bold text-zinc-300 px-2 mb-2">Top 10 Leaderboard Rankings</h2>
-
+        <div className="max-w-3xl">
+          <h2 className="text-xl font-extrabold mb-3">Top 10</h2>
+          <div className="space-y-2">
             {isLoadingLeaderboard && leaderboard.length === 0 ? (
-              <div className="py-10 flex flex-col items-center justify-center gap-2 text-zinc-500">
-                <Radio className="w-6 h-6 animate-pulse text-noob" />
+              <div className="py-10 flex flex-col items-center justify-center gap-2 text-[#bdbebe]">
+                <Radio className="w-6 h-6 animate-pulse" />
                 <span className="text-xs">Loading rankings...</span>
               </div>
             ) : leaderboardError && leaderboard.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-2 text-center px-4">
                 <ShieldAlert className="w-6 h-6 text-amber-400" />
-                <span className="text-xs text-zinc-400">Couldn't load the leaderboard right now.</span>
-                <button
-                  onClick={loadLeaderboardData}
-                  className="mt-1 text-xs text-noob hover:underline cursor-pointer font-semibold"
-                >
-                  Try again
-                </button>
+                <span className="text-xs text-[#bdbebe]">Couldn't load the leaderboard right now.</span>
+                <button onClick={loadLeaderboardData} className="mt-1 text-xs text-white underline cursor-pointer font-semibold">Try again</button>
               </div>
             ) : leaderboard.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-1.5 text-center px-4">
-                <Trophy className="w-6 h-6 text-zinc-600" />
-                <span className="text-xs text-zinc-400">No rankings yet — be the first to play!</span>
+                <Trophy className="w-6 h-6 text-[#6f7072]" />
+                <span className="text-xs text-[#bdbebe]">No rankings yet — be the first to play!</span>
               </div>
             ) : (
               leaderboard.slice(0, 10).map((player, idx) => {
-              const fullUser = allUsers.find(
-                (u) => (player.userId && u.id === player.userId) || u.username === player.username
-              );
-              return (
-              <div
-                key={player.userId || player.username || idx}
-                onClick={() => {
-                  if (fullUser && onNavigateToUserProfile) onNavigateToUserProfile(fullUser);
-                }}
-                className={`p-3 rounded-2xl flex items-center justify-between gap-3 transition-colors ${
-                  fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''
-                } ${
-                  player.username === currentUser.username
-                    ? 'bg-noob/10 border border-noob/30'
-                    : 'bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-900'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className={`w-6 shrink-0 text-center font-mono font-bold text-xs ${
-                    idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-700' : 'text-zinc-500'
-                  }`}>
-                    #{idx + 1}
-                  </span>
-
-                  <img
-                    src={player.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                    alt={player.username}
-                    className="w-9 h-9 rounded-full object-cover shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs font-bold text-white truncate">
-                        {player.displayName || player.username}
-                      </span>
-                      {player.username === currentUser.username && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold shrink-0">
-                          YOU
-                        </span>
-                      )}
+                const fullUser = allUsers.find((u) => (player.userId && u.id === player.userId) || u.username === player.username);
+                return (
+                  <div
+                    key={player.userId || player.username || idx}
+                    onClick={() => { if (fullUser && onNavigateToUserProfile) onNavigateToUserProfile(fullUser); }}
+                    className={`p-3 rounded-xl flex items-center justify-between gap-3 transition-colors ${fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''} ${player.username === currentUser.username ? 'bg-[#2f3133]' : 'bg-[#232527] hover:bg-[#2a2c2e]'}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`w-7 shrink-0 text-center font-extrabold text-sm ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-[#8d8e90]'}`}>{idx + 1}</span>
+                      <img
+                        src={player.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                        alt={player.username}
+                        className="w-10 h-10 rounded-full object-cover shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm font-bold text-white truncate">{player.displayName || player.username}</span>
+                          {player.username === currentUser.username && <span className="text-[10px] px-1.5 rounded bg-white text-black font-bold shrink-0">YOU</span>}
+                        </div>
+                        <span className="text-[11px] text-[#bdbebe] block truncate">@{player.username} • {player.gamesWon || 0} Wins</span>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-zinc-400 block truncate">
-                      @{player.username} • {player.gamesWon || 0} Wins
-                    </span>
+                    <div className="text-right shrink-0 ml-2">
+                      <span className="text-sm font-black text-white block">{formatNoobPoints(player.noobPoints || 0)}</span>
+                      <span className="text-[10px] text-[#8d8e90] block">NOOBs</span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="text-right shrink-0 ml-2">
-                  <span className="text-xs font-black text-noob block">
-                    {formatNoobPoints(player.noobPoints || 0)} <span className="text-[9px]">noobs</span>
-                  </span>
-                  <span className="text-[9px] text-zinc-500 block">Score</span>
-                </div>
-              </div>
-              );
+                );
               })
             )}
           </div>

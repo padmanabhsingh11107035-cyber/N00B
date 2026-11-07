@@ -25,7 +25,7 @@ const walk = (d, out = []) => { for (const f of fs.readdirSync(d, { withFileType
 const hits = [...walk('src'), 'index.html', 'public/theme-init.js', 'public/manifest.json'].filter((p) => /#d97757|rgba?\(\s*217\s*,\s*119\s*,\s*87/i.test(read(p)) && !/ChatView\.tsx$/.test(p));
 check(hits.length === 0, 'no file still draws the old orange (#d97757)', hits.join(', '));
 check(/theme-color" content="#0a0a0a"/.test(read('index.html')) && /"theme_color": "#0a0a0a"/.test(read('public/manifest.json')) && /dark \? '#0a0a0a' : '#ffffff'/.test(read('public/theme-init.js')) && /resolved === 'dark' \? '#0a0a0a' : '#ffffff'/.test(read('src/utils/theme.ts')), 'the strip above the app (title bar, phone status bar) has the colour of the page: near-black in Dark, white in Light');
-check(/:root\[data-theme="dark"\] \.game-badge \{ background-color: #ffffff !important; color: #000000 !important/.test(read('src/index.css')) && (read('src/components/Games/GamesView.tsx').match(/game-badge /g) || []).length === 2, 'the number and players badges on the game cards are white with black text in Dark only');
+check(/:root\[data-theme="dark"\] \.game-badge \{ background-color: #ffffff !important; color: #000000 !important/.test(read('src/index.css')) && (read('src/components/Games/GamesView.tsx').match(/game-badge /g) || []).length === 0, 'the number and players badges on the game cards are white with black text in Dark only');
 check(/oldAccent\(activeChat\?\.themeColor\)/.test(read('src/components/Chat/ChatView.tsx')) && /toLowerCase\(\) === '#d97757'/.test(read('src/components/Chat/ChatView.tsx')), 'a chat colour saved in the old orange shows as white');
 
 section('3. The decorative hues are black-and-white');

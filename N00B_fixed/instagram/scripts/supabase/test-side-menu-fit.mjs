@@ -37,7 +37,7 @@ check(/<MenuList groups=\{menuGroups\} \/>/.test(feed) && /id: 'noob'/.test(feed
 check(/window\.matchMedia\?\.\('\(min-width: 768px\)'\)\.matches\) return;/.test(feed), 'a page closed on a tablet or computer does not pop a three-line menu open');
 
 section('4. Tablet / laptop / computer: the long strip');
-check(/<aside\s+className=\{`hidden md:block sticky top-0 h-dvh/.test(app) && /data-testid="desktop-side-menu"/.test(app), 'the strip is there from 768 px wide, as tall as the window');
+check(/<aside\s+className=\{`hidden md:block[^`]* sticky top-0 h-dvh/.test(app) && /data-testid="desktop-side-menu"/.test(app), 'the strip is there from 768 px wide, as tall as the window');
 check(/useState<boolean>\(\(\) => \{ try \{ return localStorage\.getItem\('noob\.sideMenu'\) === 'open' && window\.matchMedia\('\(min-width: 1280px\)'\)\.matches; \} catch \{ return false; \} \}\)/.test(app), 'it starts as icons only; an extended strip is remembered, on screens from 1280 px wide');
 check(/data-testid="side-menu-toggle"/.test(app) && /aria-label=\{sideExtended \? 'Collapse the menu' : 'Extend the menu'\}/.test(app) && /<PanelLeftClose \/> : <PanelLeftOpen \/>/.test(app), 'an Extend / Collapse button shows the words next to the icons');
 check(/<MenuList groups=\{sideGroups\} compact=\{!sideExtended\} \/>/.test(app) && /<MenuList groups=\{sideFootGroups\} compact=\{!sideExtended\} \/>/.test(app), 'icons only when collapsed, full rows when extended');

@@ -57,9 +57,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       const data = await fetchMusicTracks();
       setTracks(data);
-      if (data.length > 0 && !currentTrack) {
-        setCurrentTrack(data[0]);
-      }
+      // no song is picked for the person: nothing is ready until they tap one
     } catch (err) {
       console.error('Failed to fetch tracks in global player:', err);
     }

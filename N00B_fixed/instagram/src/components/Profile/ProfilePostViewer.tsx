@@ -1,9 +1,10 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Post, User } from '../../types';
 import { PostCard } from '../Feed/PostCard';
 import { CommentsSheet } from '../Feed/CommentsSheet';
 import { FeedVideoWatchView } from '../Feed/FeedVideoWatchView';
+import { applyLikes, useLikeLedgerVersion } from '../../utils/likeLedger';
 
 export interface PostActions {
   onToggleLike: (postId: string) => void;
@@ -18,6 +19,8 @@ export interface PostActions {
 interface Props extends PostActions {
   title: string;
   posts: Post[];
+  /** the app's own up-to-date copy of every post: the viewer always shows these, so a like, a save or a comment shows at once */
+  livePosts?: Post[];
   startId: string;
   currentUser: User;
   allUsers: User[];
@@ -28,8 +31,15 @@ interface Props extends PostActions {
 
 // A person's posts as one scrolling page, opened exactly on the post that was tapped in the profile grid. It lives on top of the profile (nothing about the page underneath
 // changes, and Back returns to the same grid), so it never jumps to Explore or the Home feed and always starts on the right post.
-export const ProfilePostViewer: React.FC<Props> = ({ title, posts, startId, currentUser, allUsers, onClose, onNavigateToProfile, onToggleFollowUser, ...actions }) => {
+export const ProfilePostViewer: React.FC<Props> = ({ title, posts: snapshot, livePosts, startId, currentUser, allUsers, onClose, onNavigateToProfile, onToggleFollowUser, ...actions }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const likeVersion = useLikeLedgerVersion();
+  // the list as it was when the person tapped, but every post taken from the app's live copy (then passed through the likes memory), never the old snapshot
+  const posts = useMemo(() => {
+    const live = new Map((livePosts ?? []).map((p) => [p.id, p] as const));
+    return applyLikes(snapshot.map((p) => live.get(p.id) ?? p), 'post');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot, livePosts, likeVersion]);
   const [commentsFor, setCommentsFor] = useState<Post | null>(null);
   const [watchPost, setWatchPost] = useState<Post | null>(null);
 

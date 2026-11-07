@@ -1733,6 +1733,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <ProfilePostViewer
           title={postViewer.title}
           posts={postViewer.list}
+          livePosts={posts}
           startId={postViewer.startId}
           currentUser={currentUser}
           allUsers={allUsers}

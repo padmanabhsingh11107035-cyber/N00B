@@ -1784,6 +1784,7 @@ body { overflow-x: clip; max-width: 100vw; }
 .nf input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), .nf textarea, .nf select { color: #202124 !important; }
 .nf input:focus-visible, .nf textarea:focus-visible, .nf select:focus-visible, .nf button:focus-visible { outline: 2px solid #5f6368 !important; outline-offset: 1px; }
 .nf .shadow-2xl, .nf .shadow-xl, .nf .shadow-lg { box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15) !important; }
+.nf .nf-surface { background-color: #ffffff !important; color: #202124 !important; }
 .nf-card { box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); }
 .nf-tile { transition: box-shadow .15s, transform .15s; }
 .nf-tile:hover { box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15); }

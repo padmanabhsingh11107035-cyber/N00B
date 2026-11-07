@@ -16,8 +16,8 @@ export const QUALITY_PRESETS: Record<Quality, Preset> = {
 export function suggestQuality(): Quality {
   const coarse = matchMedia('(pointer: coarse)').matches
   const cores = navigator.hardwareConcurrency ?? 4
-  if (coarse || cores <= 4) return 'medium'
-  return 'high'
+  if (coarse || cores <= 4) return 'low'
+  return 'medium'
 }
 
 /**
@@ -50,7 +50,7 @@ export class Renderer {
   applyQuality(quality: Quality): void {
     this.preset = QUALITY_PRESETS[quality]
     this.gl.shadowMap.enabled = this.preset.shadows
-    this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.preset.pixelRatio))
+    this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.preset.pixelRatio) * this.resScale)
     this.bloom?.dispose()
     this.composer?.dispose()
     this.composer = undefined
@@ -84,7 +84,32 @@ export class Renderer {
     }
   }
 
+
+  /** Adaptive resolution: 1 = the preset's sharpness. The game lowers it by itself when frames take too long and gives it back when there is room, so it stays smooth on any device. */
+  private resScale = 1
+  private resSlow = 0
+  private resFast = 0
+  private resLast = 0
+
+  private adaptRes(): void {
+    const now = performance.now() / 1000
+    const dt = this.resLast ? now - this.resLast : 0
+    this.resLast = now
+    if (dt <= 0 || dt > 0.25) return
+    if (dt > 0.024) { this.resSlow += dt; this.resFast = 0 }
+    else if (dt < 0.0185) { this.resFast += dt; this.resSlow = Math.max(0, this.resSlow - dt) }
+    let next = this.resScale
+    if (this.resSlow > 0.6 && this.resScale > 0.5) { next = Math.max(0.5, this.resScale - 0.12); this.resSlow = 0 }
+    else if (this.resFast > 5 && this.resScale < 1) { next = Math.min(1, this.resScale + 0.06); this.resFast = 0 }
+    if (next !== this.resScale) {
+      this.gl.setPixelRatio(this.gl.getPixelRatio() * (next / this.resScale))
+      this.resScale = next
+      this.resize()
+    }
+  }
+
   render(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void {
+    this.adaptRes()
     const w = this.canvas.clientWidth || window.innerWidth
     const h = this.canvas.clientHeight || window.innerHeight
     if (Math.abs(camera.aspect - w / h) > 1e-3) {

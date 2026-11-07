@@ -80,7 +80,7 @@ body { touch-action: none; user-select: none; -webkit-user-select: none; }
 .tagline { margin: 0; font-size: clamp(15px, 1.8vw, 20px); font-weight: 600; text-shadow: 0 2px 10px rgba(27, 16, 48, 0.8); }
 .press { margin: 0; font-size: 14px; opacity: 0.85; text-shadow: 0 2px 8px rgba(27, 16, 48, 0.9); }
 
-.panel { background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 210, 63, 0.16); border-radius: var(--radius); box-shadow: 0 18px 50px rgba(27, 16, 48, 0.45); padding: 20px 22px; }
+.panel { background: var(--panel); border: 1px solid rgba(255, 210, 63, 0.16); border-radius: var(--radius); box-shadow: 0 18px 50px rgba(27, 16, 48, 0.45); padding: 20px 22px; }
 h2 { font-family: var(--display); font-weight: 800; font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; color: #fff4dc; }
 h3 { font-family: var(--display); font-weight: 700; font-size: 15px; margin: 0 0 10px; letter-spacing: 0.02em; color: var(--gold); text-transform: uppercase; }
 .sub { margin: 0 0 16px; color: var(--sand-dim); font-size: 14px; line-height: 1.45; }
@@ -125,7 +125,7 @@ kbd { display: inline-block; font: 700 11px/1 var(--body); padding: 3px 6px; bor
 .field input, .field select, .online-join input, .lab-import input { font: 600 15px var(--body); padding: 10px 12px; border-radius: 9px; border: 1.5px solid rgba(245, 230, 204, 0.25); background: rgba(27, 16, 48, 0.6); color: var(--sand); text-transform: none; letter-spacing: 0; }
 .field select option { background: var(--ink); }
 .fair { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--cyan); }
-.mode-card { display: grid; gap: 6px; align-content: start; text-align: left; padding: 16px; min-height: 150px; border-radius: var(--radius); background: var(--panel); border: 1.5px solid rgba(255, 210, 63, 0.2); color: var(--sand); cursor: pointer; font-family: var(--body); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: transform 0.15s, border-color 0.15s, background 0.15s; box-shadow: 0 14px 40px rgba(27, 16, 48, 0.4); }
+.mode-card { display: grid; gap: 6px; align-content: start; text-align: left; padding: 16px; min-height: 150px; border-radius: var(--radius); background: var(--panel); border: 1.5px solid rgba(255, 210, 63, 0.2); color: var(--sand); cursor: pointer; font-family: var(--body); transition: transform 0.15s, border-color 0.15s, background 0.15s; box-shadow: 0 14px 40px rgba(27, 16, 48, 0.4); }
 .mode-card:hover, .mode-card:focus-visible, .mode-card:focus { transform: translateY(-4px); border-color: var(--orange); background: var(--panel-2); }
 .mode-icon { font: 800 13px var(--display); color: var(--ink); background: var(--gold); border-radius: 7px; padding: 5px 8px; justify-self: start; letter-spacing: 0.05em; }
 .mode-card[data-mode='split'] .mode-icon { background: var(--cyan); }

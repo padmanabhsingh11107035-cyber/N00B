@@ -185,6 +185,24 @@ export class KartController {
     this.airTime = 0
   }
 
+  /** A kart driven by another player's phone: follow the pose that was sent, keeping the render interpolation smooth. */
+  setRemote(x: number, y: number, z: number, yaw: number, speed: number, drifting: boolean, driftDir: number, grounded: boolean, boosting: boolean): void {
+    this.prevPosition.copy(this.position)
+    this.prevYaw = this.yaw
+    this.body.setTranslation({ x, y, z }, true)
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
+    this.position.set(x, y, z)
+    this.yaw = yaw
+    this.speed = speed
+    this.drifting = drifting
+    this.driftDir = drifting ? driftDir : 0
+    this.grounded = grounded
+    this.boostTime = boosting ? 0.2 : 0
+    this.boostPower = boosting ? 1.2 : 1
+    this.spinTime = this.stickTime = this.stunTime = 0
+    this.spinAngle = 0
+  }
+
   /** Start a boost (stacks by keeping the longer time and the stronger power). */
   boost(seconds: number, power = 1): void {
     this.boostTime = Math.max(this.boostTime, seconds)

@@ -144,6 +144,8 @@ export interface CarState {
   anchor: number
   /** Presentation hints (deterministic, never read by rules). */
   steerVis: number
+  /** the steering the car really follows: the wheel eases to the requested lock instead of jumping (smooth turning with keys and touch) */
+  steerIn: number
   landImpact: number
 }
 
@@ -159,7 +161,7 @@ export function createCar(id: number, track: Track, lane: number, gridS: number,
     lastPad: -1, padTimer: 0, rampIndex: -1, place: id + 1, progress: newProgress(),
     stats: { topSpeed: 0, nitros: 0, corks: 0, driftBoosts: 0, perfectPads: 0, pads: 0, tricks: 0, draftTime: 0, airTime: 0, hits: 0, dodges: 0, blocks: 0, itemsUsed: 0, wallHits: 0, wrecks: 0, launch: 'none' },
     damage: 0, wreck: 0, hold: 0, holdPress: -1,
-    warnSeeker: -1, warnLocked: false, warnLockD: 0, warnMine: -1, slip: 0, anchor: 1, steerVis: 0, landImpact: 0,
+    warnSeeker: -1, warnLocked: false, warnLockD: 0, warnMine: -1, slip: 0, anchor: 1, steerVis: 0, steerIn: 0, landImpact: 0,
   }
   placeOnTrack(car, track, mod(gridS, track.length), lane)
   return car
@@ -430,6 +432,12 @@ export function stepCar(car: CarState, inp: CarInput, track: Track, events: Race
   let brake = clamp(inp.brake, 0, 1)
   if (car.spin > 0) { throttle = 0; brake = 0; steer = 0 }
   if (car.wheelspin > 0) throttle = 0
+  // The wheel eases toward the lock that is asked for (quicker when straightening up), so turns start and end smoothly.
+  {
+    const back = Math.abs(steer) < Math.abs(car.steerIn) || steer * car.steerIn < 0
+    car.steerIn = approach(car.steerIn, steer, dt * (back ? 11 : 6.5))
+    steer = car.steerIn
+  }
   car.steerVis = approach(car.steerVis, steer, dt * 6)
 
   // Nitro: tap boost when charged for a short burst; it then recharges over the cooldown.

@@ -10,6 +10,8 @@ import { buildKart, type KartView } from './kartModel'
 import { createProgress, type Progress } from './rules'
 import { Tracker, type Track } from './track'
 
+export type RemotePose = { t: number; x: number; y: number; z: number; yaw: number; sp: number; dr: boolean; dd: number; gr: boolean; bt: boolean }
+
 /**
  * One competitor: the reusable KartController (physics/handling) plus everything the race adds on
  * top — track tracking, lap progress, held item, shield, respawn state and the animated view.
@@ -43,6 +45,9 @@ export class Racer {
   wrongWay = 0
   hitFlash = 0
   input: KartInput = { throttle: 0, brake: 0, steer: 0, drift: false }
+  /** Online race: the id of the person whose phone drives this kart (null for the player and for AI), and the poses received from them. */
+  remoteId: string | null = null
+  poses: RemotePose[] = []
   readonly trails: Trail[]
   private wheelSpin = 0
   private lean = 0

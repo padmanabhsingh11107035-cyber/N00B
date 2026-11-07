@@ -161,8 +161,74 @@ export class Game {
     this.launched.clear()
   }
 
-  private spawn(playerChar: Character | null): void {
+  /** Online race: send my pose to the others (set by the lobby); null in a normal race. */
+  onlineSend: ((pose: Record<string, unknown>) => void) | null = null
+  private poseClock = 0
+
+  /** A pose arrived from another player's phone. */
+  remotePose(id: string, p: { x: number; y: number; z: number; yaw: number; sp: number; dr: boolean; dd: number; gr: boolean; bt: boolean }): void {
+    const r = this.racers.find(o => o.remoteId === id)
+    if (!r) return
+    const now = performance.now() / 1000
+    r.poses.push({ t: now, ...p })
+    if (r.poses.length > 12) r.poses.shift()
+  }
+
+  /** Follow the other player's kart, a little behind real time so the movement is smooth between packets. */
+  private driveRemote(r: Racer): void {
+    const ps = r.poses
+    if (!ps.length) return
+    const at = performance.now() / 1000 - 0.14
+    let a = ps[0]
+    let b = ps[ps.length - 1]
+    for (let i = 0; i < ps.length - 1; i += 1) {
+      if (ps[i].t <= at && ps[i + 1].t >= at) { a = ps[i]; b = ps[i + 1]; break }
+    }
+    let f = b.t > a.t ? (at - a.t) / (b.t - a.t) : 1
+    f = Math.max(0, Math.min(1.4, f))
+    let dy = b.yaw - a.yaw
+    dy = Math.atan2(Math.sin(dy), Math.cos(dy))
+    r.kart.setRemote(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, a.z + (b.z - a.z) * f, a.yaw + dy * f, b.sp, b.dr, b.dd, b.gr, b.bt)
+  }
+
+  /** Start a race between people (2 to 6 phones, no AI); `order` is the same on every phone. */
+  startOnlineRace(order: { id: string; char: string; me: boolean }[]): void {
+    this.removeShowroom()
+    this.spawn(null, order)
+    this.mode = 'playing'
+    this.phase = 'intro'
+    this.phaseTime = 0
+    this.raceTime = 0
+    this.countdownShown = 4
+    this.throttleSince = null
+    this.resultTimer = -1
+    this.resultsShown = false
+    this.finishedResult = undefined
+    this.tutorial = false
+    this.tutorialStep = 'none'
+    this.lastPlace = this.player!.place
+    this.cam.mode = 'flyby'
+    this.cam.resetTime()
+    this.cam.snap()
+    for (const l of this.scenery.startLights) (l.material as THREE.MeshBasicMaterial).color.set('#3a2440')
+    this.music.stop()
+    this.startLoops()
+  }
+
+  private spawn(playerChar: Character | null, online?: { id: string; char: string; me: boolean }[]): void {
     this.clearRace()
+    if (online) {
+      online.forEach((o, i) => {
+        const r = new Racer(i, characterById(o.char), o.me, this.physics, this.track, this.track.gridSlot(i), 0.7)
+        if (!o.me) r.remoteId = o.id
+        this.scene.add(r.view.root, r.view.shadow, ...r.trails.map(t => t.mesh))
+        if (o.me) this.player = r
+        this.racers.push(r)
+      })
+      this.ordered = [...this.racers]
+      this.updateStandings()
+      return
+    }
     const others = ROSTER.filter(c => c !== playerChar)
     // Player starts 4th on the grid; AI skill decreases toward the back.
     const order: (Character | null)[] = []
@@ -345,6 +411,9 @@ export class Game {
         }
         // Air trick: tap drift while airborne off a ramp.
         if (this.launched.has(r) && r.kart.airTime > 0.1 && this.input.consume('drift') && !this.trick.has(r)) this.startTrick(r)
+      } else if (r.remoteId) {
+        this.driveRemote(r)
+        continue
       } else {
         this.driveAi(r, obstacles, dt)
       }
@@ -362,13 +431,21 @@ export class Game {
         r.progress = state
         for (const e of events) this.onProgress(r, e.type, e.type === 'lap' ? e.lap : 0)
       }
-      if (r.position.y < loc.height - 8 || loc.distance > WALL + 8) this.startRespawn(r)
+      if (!r.remoteId && (r.position.y < loc.height - 8 || loc.distance > WALL + 8)) this.startRespawn(r)
       this.handleEvents(r)
     }
     this.kartContacts()
     this.updateStandings()
     this.items.step(dt, this.racers, this.ordered)
-    for (const r of this.racers) if (!r.isPlayer || r.finished || this.autopilot) this.aiItems(r, dt)
+    for (const r of this.racers) if (!r.remoteId && (!r.isPlayer || r.finished || this.autopilot)) this.aiItems(r, dt)
+    if (this.onlineSend && this.player && (this.phase === 'racing' || this.phase === 'done')) {
+      this.poseClock += dt
+      if (this.poseClock >= 1 / 15) {
+        this.poseClock = 0
+        const k = this.player.kart
+        this.onlineSend({ x: +k.position.x.toFixed(2), y: +k.position.y.toFixed(2), z: +k.position.z.toFixed(2), yaw: +k.yaw.toFixed(3), sp: +k.speed.toFixed(1), dr: k.drifting, dd: k.driftDir, gr: k.grounded, bt: k.boostTime > 0 })
+      }
+    }
     if (this.player && racing) this.playerChecks(dt)
     if (this.resultTimer > 0) {
       this.resultTimer -= dt
@@ -418,7 +495,7 @@ export class Game {
           this.audio.play('stall')
         }
       }
-      for (const r of this.racers) if (!r.isPlayer && Math.random() < 0.45 + (r.driver?.skill.skill ?? 0) * 0.3) r.kart.boost(0.9, 1.08)
+      for (const r of this.racers) if (!r.isPlayer && !r.remoteId && Math.random() < 0.45 + (r.driver?.skill.skill ?? 0) * 0.3) r.kart.boost(0.9, 1.08)
       if (this.tutorial) this.hooks.hint('drive')
     }
   }
@@ -483,7 +560,11 @@ export class Game {
     r.input = driver.update(dt, path, pose, nearby)
     // Rubber band (mild) relative to the player; none in attract mode.
     const ref = this.player && !this.player.finished ? this.player : null
-    const base = r.isPlayer ? 0.96 : 0.955 + (r.driver?.skill.skill ?? 0.7) * 0.05
+    // The player is the fastest kart on the track and gets a boost when behind; rivals are a little slower and ease off when far ahead, so a clean race can be won.
+    let leaderU = -Infinity
+    for (const o of this.racers) if (!o.isPlayer && !o.finished && o.progress.u > leaderU) leaderU = o.progress.u
+    const behind = r.isPlayer && Number.isFinite(leaderU) ? Math.max(0, Math.min(1, (leaderU - r.progress.u) / 120)) : 0
+    const base = r.isPlayer ? 1.02 * (1 + behind * 0.1) : 0.88 + (r.driver?.skill.skill ?? 0.7) * 0.05
     k.speedScale = ref && !r.isPlayer ? base * catchUp(ref.progress.u - r.progress.u) : base
     // Re-decide the shortcut once per lap.
     if (Math.abs(this.track.main.delta(0, loc.s)) < 1) r.aiUseShortcut = Math.random() < CONFIG.ai.shortcutChance[Math.floor((r.driver?.skill.skill ?? 0.7) * 4.9) % 5]
@@ -802,6 +883,7 @@ export class Game {
     this.scenery.update(this.time, dt, focus)
     if (this.mode !== 'paused') this.fx.updateAmbient(dt, this.cam.camera.position)
     this.updateAudio()
+    this.renderer.adapt(frameSeconds)
     this.renderer.render(this.scene, this.cam.camera)
   }
 

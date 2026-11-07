@@ -7,6 +7,8 @@ import { SAVE_KEY, SaveStore, type SaveData } from './engine/save'
 import type { Game } from './game/game'
 import { TouchControls } from './ui/touch'
 import { Ui } from './ui/ui'
+import { Lobby } from './ui/lobby'
+import { Online } from './net/online'
 
 async function boot(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>('#game')!
@@ -41,6 +43,10 @@ async function boot(): Promise<void> {
     loop.resetAccumulator()
   }
 
+  const net = new Online()
+  let lobby: Lobby | undefined
+  let onlineRace = false
+
   const pause = () => {
     if (game?.mode !== 'playing') return
     game.pause()
@@ -54,8 +60,21 @@ async function boot(): Promise<void> {
     loop.resetAccumulator()
   }
   const toTitle = () => {
+    onlineRace = false
+    if (game) game.onlineSend = null
     game?.toTitle()
     ui.show('title')
+  }
+  const leaveOnlineRace = () => {
+    net.leave()
+    toTitle()
+  }
+  const backToLobby = () => {
+    onlineRace = false
+    if (game) game.onlineSend = null
+    game?.toTitle()
+    ui.show('title')
+    if (!lobby?.backToRoom()) lobby?.show()
   }
 
   const ui = new Ui(document.getElementById('ui')!, i18n, save, audio, input, {
@@ -65,13 +84,18 @@ async function boot(): Promise<void> {
       ui.show('select')
     },
     selectChanged: id => game?.showSelect(id),
+    online: () => {
+      audio.unlock()
+      lobby?.show()
+    },
     startRace: id => beginRace(id),
     backToTitle: toTitle,
     resume,
-    restart: () => beginRace(lastCharacter),
-    quit: toTitle,
-    again: () => beginRace(lastCharacter),
+    restart: () => (onlineRace ? leaveOnlineRace() : beginRace(lastCharacter)),
+    quit: () => (onlineRace ? leaveOnlineRace() : toTitle()),
+    again: () => (onlineRace ? backToLobby() : beginRace(lastCharacter)),
     change: () => {
+      if (onlineRace) { backToLobby(); return }
       game?.toTitle()
       game?.showSelect(lastCharacter)
       ui.show('select')
@@ -127,6 +151,24 @@ async function boot(): Promise<void> {
   applySettings(save.data)
   ui.setTrackOutline(game.track.outline(4))
   const g = game
+  lobby = new Lobby(
+    document.getElementById('ui')!,
+    net,
+    () => lastCharacter,
+    order => {
+      onlineRace = true
+      audio.unlock()
+      ui.resetHud()
+      ui.showTutorial(false)
+      g.onlineSend = pose => net.send('pose', { id: net.me?.id, ...pose })
+      g.startOnlineRace(order)
+      ui.show('hud')
+      input.clearPresses()
+      loop.resetAccumulator()
+    },
+    () => ui.show('title'),
+  )
+  net.onPose = (id, p) => g.remotePose(id, p as never)
 
   let stepped = false
   const loop = new GameLoop({

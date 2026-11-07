@@ -1843,7 +1843,7 @@ export class Game implements CombatWorld {
   }
 
   private applyAimAssist(frameDt: number): void {
-    if (!this.aimAssistEnabled || this.mode !== 'playing' || !this.player.alive || (!this.input.held('fire') && !this.input.held('ads'))) return
+    if (!this.aimAssistEnabled || this.mode !== 'playing' || !this.player.alive) return
     const origin = this.player.eye(1, tmp3).clone()
     const forward = this.player.forward(tmp2).clone()
     const targets: AimAssistTarget<number>[] = []
@@ -1854,7 +1854,8 @@ export class Game implements CombatWorld {
       for (const b of this.bots) if (b.wave) addBot(b)
       for (const h of this.hornets) if (h.alive) targets.push({ id: -100 - h.id, team: 'enemy', alive: true, point: { x: h.pos.x, y: h.pos.y + 0.2, z: h.pos.z } })
     } else for (const b of this.dmBots) addBot(b)
-    const target = selectAimAssistTarget(origin, forward, targets, candidate => this.aimAssistTargetVisible(origin, candidate))
+    // Auto aim is always on: the gun swings to the enemy nearest the crosshair (a wide cone, in sight only), so the player just has to shoot.
+    const target = selectAimAssistTarget(origin, forward, targets, candidate => this.aimAssistTargetVisible(origin, candidate), 95, Math.PI / 6)
     if (!target) return
     const dx = target.point.x - origin.x
     const dy = target.point.y - origin.y
@@ -1862,7 +1863,8 @@ export class Game implements CombatWorld {
     const wantedYaw = Math.atan2(-dx, -dz)
     const yawError = Math.atan2(Math.sin(wantedYaw - this.player.yaw), Math.cos(wantedYaw - this.player.yaw))
     const wantedPitch = Math.atan2(dy, Math.hypot(dx, dz))
-    const rate = this.input.held('fire') ? 15 : 7
+    const turning = Math.min(1, Math.hypot(this.lastLook.x, this.lastLook.y) * 90)
+    const rate = (this.input.held('fire') ? 30 : 16) * (1 - 0.65 * turning)
     const blend = 1 - Math.exp(-rate * Math.min(0.05, Math.max(0, frameDt)))
     this.player.yaw += yawError * blend
     this.player.pitch = THREE.MathUtils.clamp(THREE.MathUtils.lerp(this.player.pitch, wantedPitch, blend), -1.5, 1.5)

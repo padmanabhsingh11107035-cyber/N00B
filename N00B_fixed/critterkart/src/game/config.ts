@@ -65,8 +65,8 @@ export const CONFIG = {
   },
   ai: {
     /** Catch-up: top-speed multiplier range relative to the player's track distance. */
-    catchUpMax: 0.07,
-    slowDownMax: 0.06,
+    catchUpMax: 0.015,
+    slowDownMax: 0.12,
     catchUpRange: 140,
     shortcutChance: [0.15, 0.35, 0.55, 0.7, 0.85],
   },

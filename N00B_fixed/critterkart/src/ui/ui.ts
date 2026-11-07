@@ -12,6 +12,7 @@ export type Screen = 'boot' | 'title' | 'select' | 'hud' | 'pause' | 'settings' 
 
 export type UiActions = {
   race(): void
+  online(): void
   selectChanged(id: string): void
   startRace(id: string): void
   backToTitle(): void
@@ -98,6 +99,7 @@ export class Ui {
           <p class="tagline" data-i18n="game.tagline"></p>
           <nav class="menu">
             <button class="btn btn-primary btn-big" data-nav data-act="race">${ICON.flag}<span data-i18n="menu.race"></span></button>
+            <button class="btn" data-nav data-act="online" ${window.parent !== window ? '' : 'hidden'}>${ICON.flag}<span>Play online</span></button>
             <button class="btn" data-nav data-act="leaderboard">${ICON.trophy}<span data-i18n="menu.leaderboard"></span></button>
             <button class="btn" data-nav data-act="settings">${ICON.gear}<span data-i18n="menu.settings"></span></button>
           </nav>
@@ -196,6 +198,10 @@ export class Ui {
         this.audio.play(sfx)
         this.renderBoard()
         this.show('leaderboard')
+        break
+      case 'online':
+        this.audio.play(sfx)
+        this.actions.online()
         break
       case 'settings':
         this.audio.play(sfx)

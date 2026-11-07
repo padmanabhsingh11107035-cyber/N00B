@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
+import { supabase } from '../../../services/supabase';
 import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone, gameScoreBoard, gameScoreSubmit } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
@@ -22,6 +23,8 @@ interface HostedGameFrameProps {
   ranking?: 'color-sort' | 'brick-escape';
   /** a score game (public.game_score_rules): the game sends its score and asks for the board with the messages of public/games/_shared/noob-score.js; this page answers. */
   scoreGame?: string;
+  /** an online race: the game asks this page to open a Supabase Realtime room, and this page passes the small messages between the players' phones (nothing else is shared). */
+  multiplayer?: { game: string; id: string; name: string };
 }
 
 const useUpright = (): boolean => {
@@ -35,7 +38,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame, multiplayer }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -97,6 +100,49 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [scoreGame]);
+
+  // Online race: {noobMp: <game>, type: 'join', room} opens the room's channel; {type: 'send', event, payload} goes to the other players; what they send comes back as {type: 'msg', event, payload}.
+  useEffect(() => {
+    if (!multiplayer) return;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let subscribed = false;
+    const queue: { event: string; payload: unknown }[] = [];
+    const reply = (m: Record<string, unknown>) => frameRef.current?.contentWindow?.postMessage({ noobMp: multiplayer.game, ...m }, window.location.origin);
+    const close = () => {
+      if (channel) { try { void supabase.removeChannel(channel); } catch { /* already gone */ } }
+      channel = null; subscribed = false; queue.length = 0;
+    };
+    const onMessage = (e: MessageEvent) => {
+      const win = frameRef.current?.contentWindow;
+      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      const d = e.data as { noobMp?: string; type?: string; room?: unknown; event?: unknown; payload?: unknown } | null;
+      if (!d || d.noobMp !== multiplayer.game) return;
+      if (d.type === 'join' && typeof d.room === 'string' && /^[A-Z0-9]{4,8}$/.test(d.room)) {
+        close();
+        try {
+          const ch = supabase.channel(`noob-mp-${multiplayer.game}-${d.room}`, { config: { broadcast: { self: false, ack: false } } });
+          ch.on('broadcast', { event: 'm' }, (msg: { payload?: { event?: string; payload?: unknown } }) => {
+            const p = msg.payload;
+            if (p && typeof p.event === 'string') reply({ type: 'msg', event: p.event, payload: p.payload });
+          });
+          ch.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              subscribed = true;
+              reply({ type: 'ready', me: { id: multiplayer.id, name: multiplayer.name } });
+              while (queue.length) { const q = queue.shift()!; void ch.send({ type: 'broadcast', event: 'm', payload: q }); }
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') reply({ type: 'error' });
+          });
+          channel = ch;
+        } catch { reply({ type: 'error' }); }
+      } else if (d.type === 'send' && typeof d.event === 'string') {
+        const m = { event: d.event, payload: d.payload };
+        if (channel && subscribed) { try { void channel.send({ type: 'broadcast', event: 'm', payload: m }); } catch { /* the next message gets through */ } }
+        else if (queue.length < 20) queue.push(m);
+      } else if (d.type === 'leave') close();
+    };
+    window.addEventListener('message', onMessage);
+    return () => { window.removeEventListener('message', onMessage); close(); };
+  }, [multiplayer?.game, multiplayer?.id, multiplayer?.name]);
 
   // The keyboard goes to the game as soon as it is brought into view; on a phone Play goes straight to full screen.
   useEffect(() => {

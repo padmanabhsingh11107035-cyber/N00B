@@ -2,9 +2,9 @@ import type { Quality } from './save'
 
 export type ResolutionRange = { min: number; max: number }
 export const RESOLUTION_RANGES: Record<Quality, ResolutionRange> = {
-  low: { min: 0.55, max: 0.78 },
-  medium: { min: 0.62, max: 0.9 },
-  high: { min: 0.68, max: 1 },
+  low: { min: 0.8, max: 1 },
+  medium: { min: 0.8, max: 1 },
+  high: { min: 0.85, max: 1.25 },
 }
 
 /** Adjust pixel ratio only after sustained pressure; ignore background stalls and isolated spikes. */

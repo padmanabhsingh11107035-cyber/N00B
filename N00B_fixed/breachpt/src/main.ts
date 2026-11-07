@@ -248,6 +248,13 @@ async function boot(): Promise<void> {
   await physics.initPhysics()
   parts.code = 1
   progress('BUILDING ARENA')
+  // a phone that saved a heavier setting before: once, go to the light one (smooth first; it can be raised in Settings)
+  try {
+    if (window.matchMedia?.('(pointer: coarse)').matches && !localStorage.getItem('breach.phoneLow')) {
+      localStorage.setItem('breach.phoneLow', '1')
+      if (save.data.quality !== 'low') save.update({ quality: 'low' })
+    }
+  } catch { /* storage off */ }
   if (firstRun) {
     save.update({ quality: suggestQuality() })
     ui.refreshSettings()
@@ -333,6 +340,7 @@ async function boot(): Promise<void> {
     if (document.hidden) pause()
   })
   window.addEventListener('game:pause', pause)
+  audio.startKeepAlive()
   // a phone or tablet: the on-screen controls (stick, look, fire, scope, reload ...)
   const touchUi = window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window
     ? new TouchControls(document.getElementById('ui')!, input, () => (game!.mode === 'playing' || game!.mode === 'countdown') && !game!.choosingPerk)

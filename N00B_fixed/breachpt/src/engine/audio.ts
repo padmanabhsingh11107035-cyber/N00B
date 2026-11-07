@@ -113,7 +113,23 @@ export class Audio {
   }
 
   unlock(): void {
-    if (this.ctx.state === 'suspended') void this.ctx.resume()
+    if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined)
+  }
+
+  private watchdog = 0
+  /** Phones pause web audio now and then (a call, a notification, a stalled download). While the game is running, bring it back within a second or so. */
+  startKeepAlive(): void {
+    if (this.watchdog) return
+    const wake = () => {
+      if (this.paused || document.hidden) return
+      if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined)
+      const tr = this.current ? this.tracks.get(this.current) : undefined
+      if (tr && tr.el.paused && !this.silenced) void tr.el.play().catch(() => undefined)
+    }
+    this.watchdog = window.setInterval(wake, 1200)
+    this.ctx.addEventListener('statechange', wake)
+    document.addEventListener('visibilitychange', wake)
+    for (const type of ['pointerdown', 'touchend']) window.addEventListener(type, wake, { passive: true })
   }
 
   /** True once the browser has allowed audio (after the first user gesture). */

@@ -29,6 +29,10 @@ export class TouchControls {
     const stop = (e: Event) => e.preventDefault()
     this.el.addEventListener('contextmenu', stop)
     this.el.addEventListener('touchstart', stop, { passive: false })
+    this.el.addEventListener('touchmove', stop, { passive: false })
+    // a finger that left the screen some odd way (a system gesture, a call) must not leave the stick or a button held
+    window.addEventListener('blur', () => this.releaseAll())
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseAll() })
     this.bindStick()
     this.bindLook()
     this.bindButtons()
@@ -74,7 +78,6 @@ export class TouchControls {
       knob.style.transform = `translate(${dx * radius * 0.55}px, ${dy * radius * 0.55}px)`
     }
     base.addEventListener('pointerdown', e => {
-      if (id !== -1) return
       id = e.pointerId
       base.setPointerCapture(id)
       set(e)
@@ -90,6 +93,7 @@ export class TouchControls {
     }
     base.addEventListener('pointerup', end)
     base.addEventListener('pointercancel', end)
+    base.addEventListener('lostpointercapture', end)
   }
 
   private bindLook(): void {
@@ -98,7 +102,6 @@ export class TouchControls {
     let lx = 0
     let ly = 0
     pad.addEventListener('pointerdown', e => {
-      if (id !== -1) return
       id = e.pointerId
       pad.setPointerCapture(id)
       lx = e.clientX
@@ -114,6 +117,7 @@ export class TouchControls {
     const end = (e: PointerEvent) => { if (e.pointerId === id) id = -1 }
     pad.addEventListener('pointerup', end)
     pad.addEventListener('pointercancel', end)
+    pad.addEventListener('lostpointercapture', end)
   }
 
   private bindButtons(): void {

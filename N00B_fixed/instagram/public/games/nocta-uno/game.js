@@ -199,6 +199,30 @@
     });
   }
 
+  /* ---------------- saved game: an unfinished game is kept on this device and carries on when the page opens again ---------------- */
+  var SAVE_KEY = 'noob.nocta.save.v1';
+  function saveGame() {
+    try {
+      if (!S.G || S.mode === 'online') return;
+      if (S.G.phase === 'over') { localStorage.removeItem(SAVE_KEY); return; }
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, mode: S.mode, count: S.count, seats: S.seats, opts: S.opts, G: S.G, LOG: S.LOG.slice(-40) }));
+    } catch (e) { /* storage is off: the game just is not kept */ }
+  }
+  function resumeSaved() {
+    try {
+      var d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!d || d.v !== 1 || !d.G || !Array.isArray(d.G.players) || !d.G.players.length || d.G.phase === 'over' || d.mode === 'online') return false;
+      S.mode = d.mode; S.count = d.count; S.seats = d.seats; S.opts = d.opts; S.G = d.G; S.LOG = d.LOG || [];
+      $('#setup').classList.add('hidden');
+      $('#table').classList.remove('hidden');
+      $('#modeLabel').textContent = S.mode === 'solo' ? 'SOLO' : 'PASS & PLAY';
+      render();
+      toast('Welcome back - your game carries on', 'ok');
+      botTick();
+      return true;
+    } catch (e) { return false; }
+  }
+
   /* ---------------- start ---------------- */
   function startGame() {
     S.LOG = [];
@@ -252,6 +276,7 @@
     var v = view();
     if (!v) return;
     var G = S.G;
+    saveGame();
     var mySeat = v.seat;
     var myTurn = v.turn === mySeat && v.phase !== 'over';
 
@@ -755,6 +780,7 @@
   /* boot */
   setCount(4, true);
   setMode('solo');
+  if (location.hash !== '#demo') resumeSaved();
   if (location.hash === '#demo') {
     setCount(4, true);
     S.seats[1].name = 'Maya'; S.seats[2].name = 'Zane'; S.seats[3].name = 'Priya';

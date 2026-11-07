@@ -7,11 +7,12 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { FullScreenQuad, Pass } from 'three/examples/jsm/postprocessing/Pass.js'
 import type { Quality } from './save'
 
-type Preset = { pixelRatio: number; shadows: boolean; shadowMap: number; bloom: boolean; samples: number; particles: number }
+type Preset = { pixelRatio: number; shadows: boolean; shadowMap: number; bloom: boolean; samples: number; particles: number; post: boolean }
 export const QUALITY_PRESETS: Record<Quality, Preset> = {
-  low: { pixelRatio: 0.78, shadows: false, shadowMap: 512, bloom: false, samples: 0, particles: 0.35 },
-  medium: { pixelRatio: 0.9, shadows: true, shadowMap: 1024, bloom: false, samples: 0, particles: 0.6 },
-  high: { pixelRatio: 1, shadows: true, shadowMap: 2048, bloom: true, samples: 0, particles: 0.85 },
+  // low (phones): one picture pixel per screen pixel, no shadows and no post-processing passes (drawn straight to the screen); damage / low-health tint is a plain overlay
+  low: { pixelRatio: 1, shadows: false, shadowMap: 512, bloom: false, samples: 0, particles: 0.3, post: false },
+  medium: { pixelRatio: 1, shadows: true, shadowMap: 1024, bloom: false, samples: 0, particles: 0.6, post: true },
+  high: { pixelRatio: 1.25, shadows: true, shadowMap: 2048, bloom: true, samples: 0, particles: 0.85, post: true },
 }
 
 export function suggestQuality(): Quality {
@@ -249,6 +250,19 @@ export class Renderer {
     }
   }
 
+  private tintEl?: HTMLElement
+  /** The cheap path has no grading pass: hits and low health show as a red edge glow drawn by the page. */
+  private updateTint(): void {
+    if (!this.tintEl) {
+      const el = document.createElement('div')
+      el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;background:radial-gradient(ellipse at center, rgba(160,0,0,0) 45%, rgba(190,10,10,0.75) 100%);transition:opacity 0.08s linear'
+      this.canvas.parentElement?.appendChild(el) ?? document.body.appendChild(el)
+      this.tintEl = el
+    }
+    const v = Math.min(1, Math.max(this.fx.damage, this.fx.lowHealth * 0.6, this.fx.flash * 0.4))
+    this.tintEl.style.opacity = v < 0.02 ? '0' : String(v)
+  }
+
   render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, time: number): void {
     const w = this.canvas.clientWidth || window.innerWidth
     const h = this.canvas.clientHeight || window.innerHeight
@@ -256,6 +270,12 @@ export class Renderer {
       camera.aspect = w / h
       camera.updateProjectionMatrix()
     }
+    if (!this.preset.post) {
+      this.updateTint()
+      this.gl.render(scene, camera)
+      return
+    }
+    this.tintEl && (this.tintEl.style.opacity = '0')
     const composer = this.ensureComposer(scene, camera)
     if (this.grade) {
       const u = this.grade.uniforms

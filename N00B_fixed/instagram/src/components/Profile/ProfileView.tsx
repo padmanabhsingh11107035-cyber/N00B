@@ -117,6 +117,7 @@ import { buildDataExport } from '../../utils/exportMyData';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
+import { ProfilePostViewer, type PostActions } from './ProfilePostViewer';
 import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
 import { safeExternalUrl } from '../../utils/safeUrl';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
@@ -146,6 +147,9 @@ interface ProfileViewProps {
   posts: Post[];
   reels: Reel[];
   onSelectPost: (post: Post) => void;
+  // When given, a post tapped in a grid opens right there (the person's posts as one page, on the tapped post) instead of jumping to the Home feed
+  postActions?: PostActions;
+  onOpenReel?: (reelId: string) => void;
   onUpdateBio: (newBio: string) => void;
   onOpenProfessionalDashboard: () => void;
   onLogout?: () => void;
@@ -182,6 +186,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   posts,
   reels,
   onSelectPost,
+  postActions,
+  onOpenReel,
   onUpdateBio,
   onOpenProfessionalDashboard,
   onLogout,
@@ -207,6 +213,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [feedVideos, setFeedVideos] = useState<{ userId: string; posts: Post[] } | null>(null);
   const [longVideos, setLongVideos] = useState<{ userId: string; videos: LongVideo[] } | null>(null);
   const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
+  const [postViewer, setPostViewer] = useState<{ list: Post[]; startId: string; title: string } | null>(null);
+  const openPostFrom = (post: Post, list: Post[], title: string) => {
+    if (postActions) setPostViewer({ list, startId: post.id, title });
+    else onSelectPost(post);
+  };
   const [collections, setCollections] = useState<SavedCollection[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
@@ -1325,7 +1336,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {displayedPosts.map((post) => (
                 <div
                   key={post.id}
-                  onClick={() => onSelectPost(post)}
+                  onClick={() => openPostFrom(post, displayedPosts, 'Posts')}
                   className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                 >
                   <PostThumbnailMedia
@@ -1361,6 +1372,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {displayedReels.map((reel) => (
               <div
                 key={reel.id}
+                onClick={() => onOpenReel?.(reel.id)}
                 className="relative aspect-[9/16] bg-zinc-900 overflow-hidden group cursor-pointer"
               >
                 {reel.thumbnailUrl ? (
@@ -1507,7 +1519,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {savedPosts.map((post) => (
                   <div
                     key={post.id}
-                    onClick={() => onSelectPost(post)}
+                    onClick={() => openPostFrom(post, savedPosts, 'Saved')}
                     className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                   >
                     <PostThumbnailMedia
@@ -1573,7 +1585,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {likedPosts.map((post) => (
               <div
                 key={post.id}
-                onClick={() => onSelectPost(post)}
+                onClick={() => openPostFrom(post, likedPosts, 'Liked')}
                 className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
               >
                 <PostThumbnailMedia
@@ -1598,7 +1610,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {archivedPosts.map((post) => (
                 <div
                   key={post.id}
-                  onClick={() => onSelectPost(post)}
+                  onClick={() => openPostFrom(post, archivedPosts, 'Archive')}
                   className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                 >
                   <PostThumbnailMedia
@@ -1714,6 +1726,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onClose={() => setWatchVideoPost(null)}
           onNavigateToProfile={(u) => onNavigateToUserProfile?.(u)}
+        />
+      )}
+
+      {postViewer && postActions && (
+        <ProfilePostViewer
+          title={postViewer.title}
+          posts={postViewer.list}
+          startId={postViewer.startId}
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onClose={() => setPostViewer(null)}
+          onNavigateToProfile={onNavigateToUserProfile}
+          onToggleFollowUser={onToggleFollowUser as any}
+          {...postActions}
         />
       )}
 

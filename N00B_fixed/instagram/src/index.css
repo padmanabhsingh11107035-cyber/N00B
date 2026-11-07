@@ -1754,3 +1754,38 @@ html body.light:not(.x) [class~="bg-teal-950"]:not(.force-dark):not(.force-dark 
    in, which looked like the Wallet, QR code, menu and legal pages "getting smaller and bigger". The page never scrolls sideways, never pinch-zooms, and text keeps its size. */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: clip; max-width: 100%; touch-action: pan-x pan-y; }
 body { overflow-x: clip; max-width: 100vw; }
+
+/* NOOB Forms: its own quiet grey-and-white look, like a document tool. Everything inside .nf is repainted here (the forms code keeps its usual class names), so the
+   builder, the dashboard and the answers page look nothing like the dark NOOB app. A published form keeps the colours its maker chose. */
+.nf { background: #f1f3f4 !important; color: #202124 !important; font-family: "Google Sans", Roboto, "Segoe UI", Arial, sans-serif; color-scheme: light; max-width: 100vw; overflow-x: hidden; }
+.nf, .nf * { -webkit-tap-highlight-color: transparent; }
+.nf .bg-black, .nf .bg-zinc-950, .nf .bg-zinc-900, .nf [class*="bg-zinc-900/"], .nf [class*="bg-zinc-950/"] { background-color: #ffffff !important; }
+.nf .bg-zinc-800, .nf [class*="bg-zinc-800/"], .nf .bg-zinc-700 { background-color: #f1f3f4 !important; }
+.nf .hover\:bg-zinc-800:hover, .nf .hover\:bg-zinc-900:hover { background-color: #e8eaed !important; }
+.nf .border-zinc-700, .nf .border-zinc-800, .nf .border-zinc-900, .nf .border-zinc-600, .nf .divide-zinc-800 > * + *, .nf .divide-zinc-900 > * + * { border-color: #dadce0 !important; }
+.nf .text-white, .nf .text-zinc-100, .nf .text-zinc-200 { color: #202124 !important; }
+.nf .text-zinc-300 { color: #3c4043 !important; }
+.nf .text-zinc-400, .nf .text-zinc-500 { color: #5f6368 !important; }
+.nf .text-zinc-600 { color: #80868b !important; }
+.nf .placeholder\:text-zinc-500::placeholder, .nf input::placeholder, .nf textarea::placeholder { color: #80868b !important; }
+.nf .bg-white { background-color: #3c4043 !important; color: #ffffff !important; }
+.nf .bg-white *, .nf .bg-white.text-black, .nf .text-black { color: inherit; }
+.nf .bg-white.text-black { color: #ffffff !important; }
+.nf .text-emerald-300, .nf .text-emerald-400 { color: #188038 !important; }
+.nf .bg-emerald-500\/15 { background-color: #e6f4ea !important; }
+.nf .border-emerald-400\/60 { border-color: #9aa0a6 !important; }
+.nf .text-amber-300 { color: #b06000 !important; }
+.nf .bg-amber-500\/15 { background-color: #fef7e0 !important; }
+.nf .text-red-300, .nf .text-red-200, .nf .text-red-400 { color: #c5221f !important; }
+.nf .bg-red-500\/10 { background-color: #fce8e6 !important; }
+.nf .border-red-500\/40 { border-color: #f28b82 !important; }
+.nf .text-sky-300 { color: #3c4043 !important; }
+.nf .bg-sky-500\/15 { background-color: #e8eaed !important; }
+.nf input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), .nf textarea, .nf select { color: #202124 !important; }
+.nf input:focus-visible, .nf textarea:focus-visible, .nf select:focus-visible, .nf button:focus-visible { outline: 2px solid #5f6368 !important; outline-offset: 1px; }
+.nf .shadow-2xl, .nf .shadow-xl, .nf .shadow-lg { box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15) !important; }
+.nf-card { box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); }
+.nf-tile { transition: box-shadow .15s, transform .15s; }
+.nf-tile:hover { box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15); }
+.nf-tile:active { transform: scale(.98); }
+@media (prefers-reduced-motion: no-preference) { .nf-rise { animation: nf-rise .3s ease-out both; } @keyframes nf-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } }

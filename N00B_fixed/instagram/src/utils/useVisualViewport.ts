@@ -47,7 +47,9 @@ const readBox = (fraction: number): SheetBox => {
   return {
     phone: true,
     keyboard: kb,
-    style: { position: 'fixed', left: 0, right: 0, bottom: 'auto', top: top + visible - height, height: height + kb, paddingBottom: kb || 'env(safe-area-inset-bottom)' },
+    style: { position: 'fixed', left: 0, right: 0, bottom: 'auto', top: top + visible - height, height: height + kb, paddingBottom: kb || 'env(safe-area-inset-bottom)',
+      // the sheet's own colour carries on below it (a solid shadow): whatever is under the keyboard's see-through glass or its bar (the "^ v done" row) is the sheet, never the post or reel behind
+      boxShadow: '0 140px 0 140px #09090b' },
   };
 };
 

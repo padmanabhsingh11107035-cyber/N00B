@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Archive, ArrowLeft, BarChart3, Copy, FileText, FolderInput, LayoutGrid, List, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
+import { Archive, ArrowLeft, BarChart3, Copy, FileText, FolderInput, LayoutGrid, List, Plus, RotateCcw, Search, Sparkles, Star, Trash2, X } from 'lucide-react';
 import { aiCall, createForm, deleteFormForever, duplicateForm, formLink, listForms, myRoles, updateMeta, type FormRow } from '../../services/formsApi';
 import { BLANK_DRAFT, QTYPES, TEMPLATES, fixTemplateLogic, fromAiForm, importDefinition, type FormDraft } from '../../utils/forms';
 
@@ -51,24 +51,33 @@ export const FormsDashboard: React.FC<Props> = ({ meId, onOpen, onResponses, onB
   const create = (title: string, description: string, draft: ReturnType<typeof BLANK_DRAFT>) => run('new', async () => { const f = await createForm({ title, description, draft }); onOpen(f.id); });
 
   return (
-    <div className="min-h-full text-white" data-testid="forms-dashboard">
-      <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur border-b border-zinc-800">
-        <div className="max-w-5xl mx-auto px-3 pt-2.5 pb-2 flex items-center gap-2">
-          <button type="button" onClick={onBack} aria-label="Back" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
-          <h1 className="font-extrabold text-lg flex-1">NOOB Forms</h1>
-          <label className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer inline-flex items-center">Import<input type="file" accept="application/json,.json" className="sr-only" data-testid="forms-import" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; if (f.size > 1_000_000) { setNote('That file is too big for a form.'); return; } void f.text().then((t) => { const d = importDefinition(t); return create(d.title, d.description, d.draft); }).catch((err) => setNote(err instanceof Error ? err.message : 'Could not read the file.')); }} /></label>
-          <button type="button" onClick={() => setAi(true)} className="px-3.5 h-9 rounded-full border border-emerald-400/60 text-emerald-300 text-sm font-bold cursor-pointer" data-testid="forms-ai">Create with AI</button>
-          <button type="button" onClick={() => setGallery(true)} className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer" data-testid="forms-templates">Templates</button>
-          <button type="button" disabled={busy === 'new'} onClick={() => void create('Untitled form', '', BLANK_DRAFT())} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60" data-testid="forms-new"><Plus className="w-4 h-4" />New form</button>
+    <div className="min-h-full max-w-full overflow-x-hidden" data-testid="forms-dashboard">
+      <div className="sticky top-0 z-30 bg-white border-b border-zinc-800">
+        <div className="max-w-5xl mx-auto px-3 py-2 flex items-center gap-2">
+          <button type="button" onClick={onBack} aria-label="Back" className="w-10 h-10 shrink-0 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-5 h-5" /></button>
+          <span className="shrink-0 w-8 h-8 rounded-md bg-zinc-700 flex items-center justify-center"><FileText className="w-5 h-5 text-white" aria-hidden="true" /></span>
+          <h1 className="font-medium text-[19px] shrink-0">Forms</h1>
+          <label className="relative flex-1 min-w-0 ml-1"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search your forms" className="w-full h-10 rounded-full bg-zinc-800 border border-transparent pl-9 pr-3 text-sm outline-none focus:bg-white focus:border-zinc-700" /></label>
+          <button type="button" onClick={() => setView(!grid)} aria-label={grid ? 'Show as a list' : 'Show as a grid'} className="w-10 h-10 shrink-0 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer">{grid ? <List className="w-5 h-5" /> : <LayoutGrid className="w-5 h-5" />}</button>
         </div>
-        <div className="max-w-5xl mx-auto px-3 pb-2 flex flex-wrap items-center gap-2">
-          <label className="relative flex-1 min-w-[10rem]"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your forms" aria-label="Search your forms" className="w-full h-9 rounded-full bg-zinc-800/70 border border-zinc-700 pl-9 pr-3 text-sm outline-none focus-visible:ring-2 ring-white/40" /></label>
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort" className="h-9 rounded-full bg-zinc-800 border border-zinc-700 text-xs px-3"><option value="modified">Last changed</option><option value="created">Newest</option><option value="name">A to Z</option><option value="responses">Most answers</option></select>
-          {folders.length > 0 && <select value={folder} onChange={(e) => setFolder(e.target.value)} aria-label="Folder" className="h-9 rounded-full bg-zinc-800 border border-zinc-700 text-xs px-3"><option value="">All folders</option>{folders.map((f) => <option key={f}>{f}</option>)}</select>}
-          <button type="button" onClick={() => setView(true)} aria-label="Grid" aria-pressed={grid} className={`w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer ${grid ? 'bg-white text-black' : 'border-zinc-700'}`}><LayoutGrid className="w-4 h-4" /></button>
-          <button type="button" onClick={() => setView(false)} aria-label="List" aria-pressed={!grid} className={`w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer ${!grid ? 'bg-white text-black' : 'border-zinc-700'}`}><List className="w-4 h-4" /></button>
+      </div>
+
+      <section className="bg-zinc-800" aria-label="Start a new form">
+        <div className="max-w-5xl mx-auto px-3 pt-4 pb-5">
+          <div className="flex items-center justify-between mb-2.5"><h2 className="text-sm font-medium text-zinc-300">Start a new form</h2><button type="button" onClick={() => setGallery(true)} className="text-sm text-zinc-300 hover:underline cursor-pointer" data-testid="forms-templates">Template gallery</button></div>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+            <button type="button" disabled={busy === 'new'} onClick={() => void create('Untitled form', '', BLANK_DRAFT())} className="nf-tile nf-card shrink-0 w-[8.5rem] rounded-lg bg-white border border-zinc-700 overflow-hidden text-left cursor-pointer disabled:opacity-60" data-testid="forms-new"><span className="h-24 flex items-center justify-center"><Plus className="w-12 h-12 text-zinc-500" strokeWidth={1.25} /></span><span className="block px-3 py-2 border-t border-zinc-800 text-sm font-medium">Blank form</span></button>
+            <button type="button" onClick={() => setAi(true)} className="nf-tile nf-card shrink-0 w-[8.5rem] rounded-lg bg-white border border-zinc-700 overflow-hidden text-left cursor-pointer" data-testid="forms-ai"><span className="h-24 flex items-center justify-center"><Sparkles className="w-10 h-10 text-zinc-500" strokeWidth={1.25} /></span><span className="block px-3 py-2 border-t border-zinc-800 text-sm font-medium">Create with AI</span></button>
+            <label className="nf-tile nf-card shrink-0 w-[8.5rem] rounded-lg bg-white border border-zinc-700 overflow-hidden text-left cursor-pointer"><span className="h-24 flex items-center justify-center"><FolderInput className="w-10 h-10 text-zinc-500" strokeWidth={1.25} /></span><span className="block px-3 py-2 border-t border-zinc-800 text-sm font-medium">Import a file</span><input type="file" accept="application/json,.json" className="sr-only" data-testid="forms-import" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; if (f.size > 1_000_000) { setNote('That file is too big for a form.'); return; } void f.text().then((tx) => { const d = importDefinition(tx); return create(d.title, d.description, d.draft); }).catch((err) => setNote(err instanceof Error ? err.message : 'Could not read the file.')); }} /></label>
+            {TEMPLATES.slice(0, 4).map((tp) => <button key={tp.id} type="button" onClick={() => { const bd = tp.build(); void create(bd.title, bd.description, { ...bd.draft, questions: fixTemplateLogic(bd.draft.questions) }); }} className="nf-tile nf-card shrink-0 w-[8.5rem] rounded-lg bg-white border border-zinc-700 overflow-hidden text-left cursor-pointer"><span className="h-24 flex items-center justify-center bg-zinc-800 px-3 text-center text-[11px] leading-snug text-zinc-400 line-clamp-4">{tp.description}</span><span className="block px-3 py-2 border-t border-zinc-800 text-sm font-medium truncate">{tp.name}</span></button>)}
+          </div>
         </div>
-        <div className="max-w-5xl mx-auto px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar" role="tablist">{FILTERS.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={filter === id} onClick={() => setFilter(id)} className={`h-8 px-3.5 rounded-full text-xs font-bold whitespace-nowrap cursor-pointer ${filter === id ? 'bg-white text-black' : 'border border-zinc-700 text-zinc-300'}`}>{label}</button>)}</div>
+      </section>
+
+      <div className="max-w-5xl mx-auto px-3 pt-3 flex items-center gap-2">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0" role="tablist">{FILTERS.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={filter === id} onClick={() => setFilter(id)} className={`h-8 px-3.5 rounded-full text-[13px] font-medium whitespace-nowrap cursor-pointer ${filter === id ? 'bg-white text-black' : 'bg-white border border-zinc-700 text-zinc-300'}`}>{label}</button>)}</div>
+        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort" className="h-8 shrink-0 max-w-[7.5rem] rounded-full bg-white border border-zinc-700 text-xs px-2.5"><option value="modified">Last changed</option><option value="created">Newest</option><option value="name">A to Z</option><option value="responses">Most answers</option></select>
+        {folders.length > 0 && <select value={folder} onChange={(e) => setFolder(e.target.value)} aria-label="Folder" className="h-8 shrink-0 max-w-[6.5rem] rounded-full bg-white border border-zinc-700 text-xs px-2.5"><option value="">All folders</option>{folders.map((f) => <option key={f}>{f}</option>)}</select>}
       </div>
 
       <div className="max-w-5xl mx-auto px-3 py-4 pb-28">
@@ -79,9 +88,9 @@ export const FormsDashboard: React.FC<Props> = ({ meId, onOpen, onResponses, onB
           <div className="text-center py-16 space-y-3"><FileText className="w-10 h-10 mx-auto text-zinc-600" aria-hidden="true" /><p className="font-semibold">{forms.length === 0 ? 'You have no forms yet' : 'No forms here'}</p><p className="text-sm text-zinc-400">{forms.length === 0 ? 'Start with a blank form or pick a template.' : 'Change the search or the filter.'}</p>{forms.length === 0 && <button type="button" onClick={() => setGallery(true)} className="px-5 h-10 rounded-full bg-white text-black font-bold cursor-pointer">Browse templates</button>}</div>)}
         <div className={grid ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-2'}>
           {shown.map((f) => (
-            <article key={f.id} className={`rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden ${grid ? '' : 'flex'}`} data-testid="forms-card">
+            <article key={f.id} className={`nf-card nf-rise rounded-lg bg-white border border-zinc-800 overflow-hidden ${grid ? '' : 'flex'}`} data-testid="forms-card">
               <button type="button" onClick={() => (f.deleted_at ? undefined : roles[f.id] === 'viewer' ? onResponses(f.id) : onOpen(f.id))} className={`text-left cursor-pointer min-w-0 ${grid ? 'block w-full' : 'flex-1'}`}>
-                <span className="block h-2" style={{ background: 'linear-gradient(90deg,#22f23c,#22f5a8)' }} />
+                <span className="block h-1.5 bg-zinc-700" />
                 <span className="block p-4">
                   <span className="block font-bold truncate">{f.title || 'Untitled form'}</span>
                   {grid && <span className="block text-xs text-zinc-400 line-clamp-2 min-h-[2rem] mt-0.5">{f.description || 'No description'}</span>}

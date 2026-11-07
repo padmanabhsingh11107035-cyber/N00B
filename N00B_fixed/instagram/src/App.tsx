@@ -1722,6 +1722,16 @@ export default function App() {
       onSelectPost={(post) => {
         handleNavigateToPost(post.id);
       }}
+      postActions={{
+        onToggleLike: handleToggleLike,
+        onToggleSave: handleToggleSave,
+        onToggleArchive: handleToggleArchive,
+        onToggleComments: handleToggleComments,
+        onToggleLikeCount: handleToggleLikeCount,
+        onDeletePost: handleDeletePost,
+        onDeleteSlide: handleDeleteSlide
+      }}
+      onOpenReel={(reelId) => { void handleNavigateToReel(reelId); }}
       onUpdateBio={handleUpdateBio}
       onOpenProfessionalDashboard={() => setShowProfessionalDashboardModal(true)}
       onLogout={handleLogout}

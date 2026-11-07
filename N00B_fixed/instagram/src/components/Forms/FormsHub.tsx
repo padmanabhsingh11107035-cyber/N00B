@@ -17,7 +17,7 @@ interface Props {
   onLogin?: () => void;
 }
 
-const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="fixed inset-0 z-[96] overflow-y-auto overscroll-contain bg-black text-white">{children}</div>;
+const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="nf fixed inset-0 z-[96] overflow-y-auto overflow-x-hidden overscroll-contain">{children}</div>;
 
 export const FormsHub: React.FC<Props> = ({ currentUser, location, onNavigate, onBack, onHome, onLogin }) => {
   if (location.feature === 'form') return <PublicFormPage slug={location.target ?? ''} signedIn={!!currentUser} onHome={onHome} onJoin={onLogin ?? onHome} />;

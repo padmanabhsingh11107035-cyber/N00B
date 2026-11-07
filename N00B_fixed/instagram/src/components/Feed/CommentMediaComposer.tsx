@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Image as ImageIcon, Mic, Smile, Sticker as StickerIcon, Square, X, RefreshCw, Volume2 } from 'lucide-react';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
@@ -40,6 +41,29 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Where the panel goes: right above the row of buttons, inside the visible part of the screen. It is drawn on the page itself (not inside the comments sheet, which cuts
+  // off anything that sticks out of it), so it is always whole and in front.
+  const [pos, setPos] = useState<{ left: number; bottom: number; width: number; maxH: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!panel) { setPos(null); return; }
+    const place = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const vv = window.visualViewport;
+      const top0 = vv ? vv.offsetTop : 0;
+      const width = Math.min(window.innerWidth - 16, 360);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+      setPos({ left, width, bottom: Math.max(8, window.innerHeight - r.top + 8), maxH: Math.max(160, Math.min(340, r.top - top0 - 16)) });
+    };
+    place();
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', place);
+    vv?.addEventListener('scroll', place);
+    window.addEventListener('resize', place);
+    return () => { vv?.removeEventListener('resize', place); vv?.removeEventListener('scroll', place); window.removeEventListener('resize', place); };
+  }, [panel]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -148,7 +172,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <input
         ref={fileInputRef}
         type="file"
@@ -211,8 +235,14 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
 
       {error && <p className="text-[10px] text-red-400 mt-1 px-1">{error}</p>}
 
-      {panel && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto bg-zinc-950 border border-neutral-800 rounded-2xl p-2.5 shadow-2xl z-10">
+      {panel && pos && createPortal(
+        <>
+        <div className="fixed inset-0 z-[299]" onClick={() => setPanel(null)} aria-hidden="true" />
+        <div
+          data-testid="comment-media-panel"
+          style={{ position: 'fixed', left: pos.left, bottom: pos.bottom, width: pos.width, maxHeight: pos.maxH }}
+          className="overflow-y-auto overscroll-contain bg-zinc-950 border border-neutral-700 rounded-2xl p-2.5 shadow-2xl z-[300]"
+        >
           {panel === 'emoji' && <EmojiPanel onPick={(e) => onInsertEmoji(e)} />}
           {panel === 'sticker' && (
             <AnimatedStickerPanel
@@ -232,6 +262,8 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
             />
           )}
         </div>
+        </>,
+        document.body
       )}
     </div>
   );

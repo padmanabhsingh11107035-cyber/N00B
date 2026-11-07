@@ -92,6 +92,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
     return () => stopGameMusic();
   }, [quietGame]);
   const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Outside click listener for the 3-dot dropdown menu
@@ -178,6 +179,11 @@ export const GamesView: React.FC<GamesViewProps> = ({
     ...CATEGORIES.filter((c) => c.key !== 'all').map((c) => ({ id: c.key, title: c.label, games: ALL_50_MINI_GAMES.filter((g) => g.category === c.key) }))
   ].filter((s) => s.games.length > 0);
 
+  // our own big games (the ones with a picture of their own): "the hottest"
+  const hot = ALL_50_MINI_GAMES.filter((g) => g.embedUrl && g.posters && g.posters.length > 0).slice(0, 8);
+  // everybody who has played at least one game, the most played first
+  const players = allUsers.filter((u) => u.id !== currentUser.id && (u.gamesPlayedCount || 0) >= 1).sort((a, b) => (b.gamesPlayedCount || 0) - (a.gamesPlayedCount || 0));
+
   const tile = (game: MiniGameMeta, wide = false) => (
     <button
       key={game.id}
@@ -208,9 +214,9 @@ export const GamesView: React.FC<GamesViewProps> = ({
   );
 
   return (
-    <div className="rbx w-full min-h-screen bg-[#121316] text-white md:px-8 lg:px-12 px-3 pb-28 md:pb-12" data-testid="games-page">
+    <div className="rbx w-full min-h-screen bg-[#121316] text-white md:px-8 lg:px-12 px-4 pb-28 md:pb-12" data-testid="games-page">
       {/* Top bar: back (laptop / computer), search in the middle, points and the small buttons on the right */}
-      <header className="sticky top-0 z-30 -mx-3 md:-mx-8 lg:-mx-12 px-3 md:px-8 lg:px-12 py-3 bg-[#121316]/95 flex items-center gap-3">
+      <header className="sticky top-0 z-30 -mx-4 md:-mx-8 lg:-mx-12 px-4 md:px-8 lg:px-12 py-3 bg-[#121316] flex items-center gap-3">
         {onBack && (
           <button
             type="button"
@@ -222,17 +228,12 @@ export const GamesView: React.FC<GamesViewProps> = ({
             Back
           </button>
         )}
-        <div className="relative flex-1 max-w-[560px] md:mx-auto min-w-0">
-          <Search className="w-4 h-4 text-[#bdbebe] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search games"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 bg-[#232527] rounded-full pl-10 pr-4 text-sm text-white placeholder-[#8d8e90] focus:outline-none focus:ring-2 focus:ring-white/30"
-          />
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-[22px] leading-none font-black italic tracking-tight">NOOB</span>
+          <span className="px-2 h-5 rounded-md bg-[#232527] text-[10px] font-extrabold tracking-wider inline-flex items-center">GAMES</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setShowSearch((v) => !v)} aria-label="Search games" className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"><Search className="w-4 h-4" /></button>
           <span className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-[#232527] text-sm font-bold" title="Your NOOBs">
             <span className="w-4 h-4 rounded-full bg-amber-400 inline-block" />
             {formatNoobPoints(userPoints)}
@@ -286,18 +287,60 @@ export const GamesView: React.FC<GamesViewProps> = ({
         </div>
       </header>
 
-      {/* Games / Leaderboard */}
-      <div className="flex items-center gap-2 mt-1 mb-4">
-        <button onClick={() => setActiveTab('games')} className={`h-9 px-4 rounded-full text-sm font-bold cursor-pointer transition-colors ${activeTab === 'games' ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}>
-          <span className="inline-flex items-center gap-1.5"><Gamepad2 className="w-4 h-4" />Games</span>
-        </button>
-        <button onClick={() => setActiveTab('leaderboard')} className={`h-9 px-4 rounded-full text-sm font-bold cursor-pointer transition-colors ${activeTab === 'leaderboard' ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}>
-          <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4" />Leaderboard</span>
-        </button>
+      {(showSearch || searchQuery) && (
+        <div className="relative mb-2">
+          <Search className="w-4 h-4 text-[#bdbebe] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input autoFocus type="text" placeholder="Search games" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-10 bg-[#232527] rounded-full pl-10 pr-4 text-sm text-white placeholder-[#8d8e90] focus:outline-none focus:ring-2 focus:ring-white/30" />
+        </div>
+      )}
+
+      {/* For You / Charts */}
+      <div className="flex items-center gap-6 mb-4 border-b border-white/10">
+        <button onClick={() => setActiveTab('games')} className={`pb-2.5 text-[15px] font-bold cursor-pointer border-b-2 transition-colors ${activeTab === 'games' ? 'text-white border-white' : 'text-[#8d8e90] border-transparent hover:text-white'}`}>For You</button>
+        <button onClick={() => setActiveTab('leaderboard')} className={`pb-2.5 text-[15px] font-bold cursor-pointer border-b-2 transition-colors ${activeTab === 'leaderboard' ? 'text-white border-white' : 'text-[#8d8e90] border-transparent hover:text-white'}`}>Charts</button>
       </div>
 
       {activeTab === 'games' ? (
         <>
+          {/* People who have played at least one game (their picture, then their name and how many games) */}
+          {!searching && (
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0" data-testid="games-players">
+              {[{ ...currentUser, __me: true } as any, ...players].map((u: any) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { if (!u.__me && onNavigateToUserProfile) onNavigateToUserProfile(u); }}
+                  className="shrink-0 w-[72px] text-center cursor-pointer"
+                >
+                  <span className="relative block w-[64px] h-[64px] mx-auto rounded-full overflow-hidden bg-[#232527] ring-1 ring-white/10">
+                    <img src={u.avatar || '/noob-logo-circle.png'} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  </span>
+                  <span className="block mt-1.5 text-[12px] font-semibold text-white truncate">{u.__me ? 'You' : (u.displayName || u.username)}</span>
+                  <span className="block text-[11px] text-[#8d8e90] truncate">{(u.gamesPlayedCount || 0).toLocaleString()} {(u.gamesPlayedCount || 0) === 1 ? 'game' : 'games'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* The hottest games: our own big games, wide pictures */}
+          {!searching && hot.length > 0 && (
+            <section className="mt-1 mb-6" data-testid="games-hottest">
+              <h2 className="text-[22px] leading-tight font-extrabold">The hottest games</h2>
+              <p className="text-[13px] text-[#bdbebe] mb-3">What's trending today on NOOB</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x">
+                {hot.map((g) => (
+                  <button key={g.id} type="button" onClick={() => setSelectedGameForPlay(g)} className="group shrink-0 snap-start text-left cursor-pointer w-[86%] sm:w-[420px] lg:w-[520px]">
+                    <span className="block aspect-video overflow-hidden rounded-2xl bg-[#232527] ring-1 ring-white/5">
+                      <img src={g.posters![0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                    </span>
+                    <span className="block mt-2 text-[15px] font-bold truncate">{g.title}</span>
+                    <span className="block text-[12px] text-[#bdbebe] line-clamp-1">{g.description}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Category chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-3 no-scrollbar">
             {CATEGORIES.map((cat) => (

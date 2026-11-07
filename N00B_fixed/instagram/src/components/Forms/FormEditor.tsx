@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, Download, ChevronDown, ChevronUp, Copy, Eye, GripVertical, Link2, Palette, Plus, Redo2, Settings as Cog, Share2, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Download, ChevronDown, ChevronUp, Copy, Eye, GripVertical, Link2, Palette, MoreVertical, Plus, Redo2, Settings as Cog, Share2, Trash2, Undo2, X } from 'lucide-react';
 import { addCollaborator, addWebhook, aiCall, deleteWebhook, getForm, listCollaborators, listWebhooks, myRole, publishForm, removeCollaborator, saveDraft, sendWebhooksNow, setWebhook, updateMeta, formLink, type Collaborator, type Delivery, type FormRole, type FormRow, type Webhook } from '../../services/formsApi';
 import {
   QTYPES, exportDefinition, THEMES, THEME_FONTS, blankQuestion, canScore, changeType, contrastRatio, hasOptions, isAnswerable, losesSettings, newId, publishProblems, resolveTheme,
@@ -166,7 +166,7 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
 
         {tab === 'questions' && (
           <>
-            <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 space-y-2" style={{ borderTop: `6px solid ${resolveTheme(draft.theme).primary}` }}>
+            <div className="nf-card nf-surface rounded-lg border border-zinc-800 p-5 space-y-2" style={{ borderTop: `6px solid ${resolveTheme(draft.theme).primary}` }}>
               <input value={state.title} onChange={(e) => change((s) => ({ ...s, title: e.target.value }), true)} maxLength={200} aria-label="Title" className="w-full bg-transparent text-2xl font-bold outline-none border-b border-transparent focus:border-zinc-600" />
               <textarea value={state.description} onChange={(e) => change((s) => ({ ...s, description: e.target.value }), true)} maxLength={2000} rows={2} placeholder="Form description" aria-label="Form description" className="w-full bg-transparent text-sm text-zinc-300 outline-none resize-y border-b border-transparent focus:border-zinc-600" />
             </div>
@@ -207,93 +207,134 @@ const normalise = (d: FormDraft | null | undefined): FormDraft => ({ questions: 
 const inp = 'w-full bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm outline-none focus-visible:ring-2 ring-white/40';
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => <label className="block text-xs font-semibold text-zinc-300 space-y-1"><span>{label}</span>{children}</label>;
 
-const AddBar: React.FC<{ onAdd: (t: QType) => void }> = ({ onAdd }) => {
+// The "+ Add question" button floats at the bottom of the page (like Google Forms' side toolbar): it is always in reach however long the form is.
+export const AddBar: React.FC<{ onAdd: (t: QType) => void }> = ({ onAdd }) => {
   const [open, setOpen] = useState(false);
   const groups = [...new Set(QTYPES.map((t) => t.group))];
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-700 p-3">
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} data-testid="form-add-question" className="w-full flex items-center justify-center gap-2 py-2 font-bold cursor-pointer"><Plus className="w-4 h-4" />Add question</button>
-      {open && <div className="mt-2 space-y-3">{groups.map((g) => <div key={g}><p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{g}</p><div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">{QTYPES.filter((t) => t.group === g).map((t) => <button key={t.type} type="button" onClick={() => { onAdd(t.type); setOpen(false); }} className="text-left px-3 py-2 rounded-lg bg-zinc-800/70 hover:bg-zinc-700 cursor-pointer"><span className="block text-sm font-semibold">{t.label}</span><span className="block text-[11px] text-zinc-400">{t.hint}</span></button>)}</div></div>)}</div>}
+    <div className="sticky bottom-4 z-20 flex justify-end pointer-events-none">
+      <div className="pointer-events-auto relative">
+        {open && (
+          <div className="absolute bottom-14 right-0 w-[min(92vw,24rem)] max-h-[60vh] overflow-auto nf-surface nf-card rounded-xl border border-zinc-700 p-2 space-y-2" role="menu">
+            {groups.map((g) => <div key={g}><p className="px-2 pt-1 text-[11px] font-medium text-zinc-500">{g}</p>{QTYPES.filter((t) => t.group === g).map((t) => <button key={t.type} type="button" role="menuitem" onClick={() => { onAdd(t.type); setOpen(false); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-800 cursor-pointer"><span className="block text-sm font-medium">{t.label}</span><span className="block text-[11px] text-zinc-500">{t.hint}</span></button>)}</div>)}
+          </div>)}
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} data-testid="form-add-question" className="h-12 pl-4 pr-5 rounded-full bg-white text-black shadow-lg inline-flex items-center gap-2 font-medium cursor-pointer active:scale-95 transition-transform"><Plus className="w-5 h-5" />Add question</button>
+      </div>
     </div>
   );
 };
 
+const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string }> = ({ on, onChange, label }) => (
+  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`relative w-9 h-5 rounded-full shrink-0 cursor-pointer transition-colors ${on ? 'bg-zinc-600' : 'bg-zinc-700'}`} style={{ background: on ? '#3c4043' : '#bdc1c6' }}>
+    <span className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: on ? 18 : 2, background: '#fff' }} />
+  </button>
+);
+
+const lineInput = 'w-full bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-zinc-600 outline-none py-1.5 text-sm';
+
 interface QCProps { q: FormQuestion; i: number; all: FormQuestion[]; count: number; quiz: boolean; open: boolean; onOpen: () => void; onPatch: (p: Partial<FormQuestion>) => void; onChangeType: (t: QType) => void; onUp: () => void; onDown: () => void; onDup: () => void; onDel: () => void; onDrop: (from: number) => void }
-const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen, onPatch, onChangeType, onUp, onDown, onDup, onDel, onDrop }) => {
+export const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen, onPatch, onChangeType, onUp, onDown, onDup, onDel, onDrop }) => {
+  const [more, setMore] = useState(false);
   const label = QTYPES.find((t) => t.type === q.type)?.label ?? q.type;
   const earlier = all.slice(0, i).filter((x) => isAnswerable(x.type));
   const dep = earlier.find((x) => x.id === q.showIf?.q);
   const setOpt = (id: string, text: string) => onPatch({ options: q.options?.map((o) => (o.id === id ? { ...o, label: text } : o)) });
-  return (
-    <div className="rounded-2xl bg-zinc-900 border border-zinc-800" draggable={open ? false : true} onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const f = Number(e.dataTransfer.getData('text/plain')); if (Number.isInteger(f)) onDrop(f); }} data-testid="form-question-card">
-      <div className="flex items-center gap-1.5 px-2 pt-2">
-        <GripVertical className="w-4 h-4 text-zinc-600 shrink-0 cursor-grab" aria-hidden="true" />
-        <button type="button" onClick={onOpen} aria-expanded={open} className="flex-1 min-w-0 text-left px-1 py-2 cursor-pointer"><span className="block font-semibold truncate">{q.title || 'Untitled'}{q.required && <span className="text-red-400"> *</span>}</span><span className="block text-[11px] text-zinc-400">{label}{q.showIf ? ' · shown only if…' : ''}</span></button>
-        <button type="button" onClick={onUp} disabled={i === 0} aria-label="Move up" className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
-        <button type="button" onClick={onDown} disabled={i === count - 1} aria-label="Move down" className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronDown className="w-4 h-4" /></button>
+  const mark = (k: number) => (q.type === 'checkboxes' ? <span className="w-4 h-4 rounded-[3px] border-2 border-zinc-600 shrink-0" aria-hidden="true" /> : q.type === 'dropdown' || q.type === 'ranking' ? <span className="w-4 text-center text-xs text-zinc-500 shrink-0" aria-hidden="true">{k + 1}.</span> : <span className="w-4 h-4 rounded-full border-2 border-zinc-600 shrink-0" aria-hidden="true" />);
+
+  // closed: the question as the person will see it
+  if (!open) {
+    return (
+      <div className="nf-card nf-surface rounded-lg border border-zinc-800" draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const f = Number(e.dataTransfer.getData('text/plain')); if (Number.isInteger(f)) onDrop(f); }} data-testid="form-question-card">
+        <button type="button" onClick={onOpen} aria-expanded={false} className="w-full text-left px-5 py-4 cursor-pointer">
+          <span className="block text-[15px] font-medium">{q.title || 'Untitled question'}{q.required && <span className="text-red-400"> *</span>}</span>
+          {q.description && <span className="block text-xs text-zinc-500 mt-0.5">{q.description}</span>}
+          {hasOptions(q.type) ? <span className="block mt-2 space-y-1">{(q.options ?? []).slice(0, 4).map((o, k) => <span key={o.id} className="flex items-center gap-3 text-sm text-zinc-300">{mark(k)}<span className="truncate">{o.label}</span></span>)}{(q.options?.length ?? 0) > 4 && <span className="block text-xs text-zinc-500 pl-7">+ {(q.options?.length ?? 0) - 4} more</span>}</span>
+            : <span className="block text-[11px] text-zinc-500 mt-1">{label}{q.showIf ? ' · shown only if…' : ''}</span>}
+        </button>
       </div>
-      {open && (
-        <div className="p-4 pt-2 space-y-3">
-          <Row label={q.type === 'section' ? 'Page title' : 'Question'}><input value={q.title} onChange={(e) => onPatch({ title: e.target.value })} maxLength={300} className={inp} data-testid="q-title" /></Row>
-          {q.type !== 'section' && q.type !== 'hidden' && <AiTools q={q} onPatch={onPatch} />}
-          <Row label="Description (optional)"><input value={q.description ?? ''} onChange={(e) => onPatch({ description: e.target.value })} maxLength={600} className={inp} /></Row>
+    );
+  }
+
+  const answerable = isAnswerable(q.type) && q.type !== 'hidden';
+  return (
+    <div className="nf-card nf-surface relative rounded-lg border border-zinc-600 overflow-hidden" data-testid="form-question-card">
+      <span className="absolute left-0 top-0 bottom-0 w-1 bg-zinc-600" aria-hidden="true" />
+      <div className="flex justify-center pt-1.5 text-zinc-400"><GripVertical className="w-4 h-4 rotate-90" aria-hidden="true" /></div>
+      <div className="px-5 pb-3 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input value={q.title} onChange={(e) => onPatch({ title: e.target.value })} maxLength={300} placeholder={q.type === 'section' ? 'Page title' : 'Question'} aria-label={q.type === 'section' ? 'Page title' : 'Question'} className="flex-1 min-w-0 bg-zinc-800 border-b-2 border-zinc-600 px-3 py-3 text-base outline-none focus:border-zinc-700" data-testid="q-title" />
+          <select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} aria-label="Question type" className="sm:w-56 h-12 rounded-md border border-zinc-700 nf-surface px-3 text-sm">{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>
+        </div>
+        <input value={q.description ?? ''} onChange={(e) => onPatch({ description: e.target.value })} maxLength={600} placeholder="Description (optional)" aria-label="Description" className={lineInput + ' text-zinc-400'} />
+
+        {hasOptions(q.type) && (
+          <div className="space-y-0.5">
+            {q.options?.map((o, k) => (
+              <div key={o.id} className="flex items-center gap-3 group">
+                {mark(k)}
+                <input value={o.label} onChange={(e) => setOpt(o.id, e.target.value)} maxLength={200} aria-label={`Option ${k + 1}`} className={lineInput} />
+                {q.type === 'image_choice' && <input value={o.img ?? ''} onChange={(e) => onPatch({ options: q.options?.map((x) => (x.id === o.id ? { ...x, img: e.target.value.trim() } : x)) })} maxLength={500} placeholder="Picture link (https://…)" aria-label={`Picture of option ${k + 1}`} className={lineInput} />}
+                <button type="button" aria-label="Move option up" disabled={k === 0} onClick={() => { const c = [...(q.options ?? [])]; [c[k - 1], c[k]] = [c[k], c[k - 1]]; onPatch({ options: c }); }} className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full hover:bg-zinc-800 disabled:opacity-25 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
+                <button type="button" aria-label="Move option down" disabled={k === (q.options?.length ?? 0) - 1} onClick={() => { const c = [...(q.options ?? [])]; [c[k + 1], c[k]] = [c[k], c[k + 1]]; onPatch({ options: c }); }} className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full hover:bg-zinc-800 disabled:opacity-25 cursor-pointer"><ChevronDown className="w-4 h-4" /></button>
+                <button type="button" aria-label="Delete option" onClick={() => onPatch({ options: q.options?.filter((x) => x.id !== o.id) })} className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-800 hover:text-red-500 cursor-pointer"><X className="w-4 h-4" /></button>
+              </div>))}
+            {q.allowOther && <div className="flex items-center gap-3 py-1.5 text-sm text-zinc-500">{mark(q.options?.length ?? 0)}<span className="flex-1">Other…</span><button type="button" aria-label="Remove Other" onClick={() => onPatch({ allowOther: false })} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-800 cursor-pointer"><X className="w-4 h-4" /></button></div>}
+            <div className="flex items-center gap-3 pt-1 text-sm">
+              {mark(q.options?.length ?? 0)}
+              <button type="button" onClick={() => onPatch({ options: [...(q.options ?? []), { id: newId(), label: `Option ${(q.options?.length ?? 0) + 1}` }] })} className="text-zinc-500 hover:text-zinc-900 cursor-pointer text-left py-1.5">Add option</button>
+              {!q.allowOther && <><span className="text-zinc-500">or</span><button type="button" onClick={() => onPatch({ allowOther: true })} className="font-medium text-zinc-700 hover:underline cursor-pointer">add "Other"</button></>}
+            </div>
+          </div>)}
+        {(q.type === 'short' || q.type === 'paragraph' || q.type === 'number') && <p className="border-b border-dotted border-zinc-600 py-1.5 text-sm text-zinc-500 w-full sm:w-3/5">{q.type === 'short' ? 'Short answer text' : q.type === 'paragraph' ? 'Long answer text' : 'Number'}</p>}
+
+        {(['short', 'paragraph', 'number', 'checkboxes', 'scale', 'rating', 'heart'] as QType[]).includes(q.type) && (
           <div className="grid grid-cols-2 gap-3">
-            <Row label="Type"><select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} className={inp}>{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select></Row>
-            {isAnswerable(q.type) && q.type !== 'hidden' && <label className="flex items-end gap-2 pb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" checked={!!q.required} onChange={(e) => onPatch({ required: e.target.checked })} className="w-4 h-4" />Required</label>}
-          </div>
-          {hasOptions(q.type) && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-semibold text-zinc-300">Options</p>
-              {q.options?.map((o, k) => (
-                <div key={o.id} className="flex items-center gap-1.5">
-                  <input value={o.label} onChange={(e) => setOpt(o.id, e.target.value)} maxLength={200} aria-label={`Option ${k + 1}`} className={inp} />
-                  {q.type === 'image_choice' && <input value={o.img ?? ''} onChange={(e) => onPatch({ options: q.options?.map((x) => (x.id === o.id ? { ...x, img: e.target.value.trim() } : x)) })} maxLength={500} placeholder="Picture link (https://…)" aria-label={`Picture of option ${k + 1}`} className={inp} />}
-                  <button type="button" aria-label="Move option up" disabled={k === 0} onClick={() => { const c = [...(q.options ?? [])]; [c[k - 1], c[k]] = [c[k], c[k - 1]]; onPatch({ options: c }); }} className="w-8 h-8 shrink-0 flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
-                  <button type="button" aria-label="Move option down" disabled={k === (q.options?.length ?? 0) - 1} onClick={() => { const c = [...(q.options ?? [])]; [c[k + 1], c[k]] = [c[k], c[k + 1]]; onPatch({ options: c }); }} className="w-8 h-8 shrink-0 flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronDown className="w-4 h-4" /></button>
-                  <button type="button" aria-label="Delete option" onClick={() => onPatch({ options: q.options?.filter((x) => x.id !== o.id) })} className="w-8 h-8 shrink-0 flex items-center justify-center text-zinc-400 hover:text-red-400 cursor-pointer"><X className="w-4 h-4" /></button>
-                </div>))}
-              <div className="flex flex-wrap gap-3 items-center">
-                <button type="button" onClick={() => onPatch({ options: [...(q.options ?? []), { id: newId(), label: `Option ${(q.options?.length ?? 0) + 1}` }] })} className="text-sm font-bold underline cursor-pointer">Add option</button>
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.allowOther} onChange={(e) => onPatch({ allowOther: e.target.checked })} />Add "Other"</label>
-              </div>
-            </div>)}
-          {(['short', 'paragraph', 'number', 'checkboxes', 'scale', 'rating', 'heart'] as QType[]).includes(q.type) && (
-            <div className="grid grid-cols-2 gap-3">
-              <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Fewest characters' : q.type === 'checkboxes' ? 'Choose at least' : q.type === 'number' ? 'Smallest number' : 'From'}><input type="number" value={q.min ?? ''} onChange={(e) => onPatch({ min: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
-              <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Most characters' : q.type === 'checkboxes' ? 'Choose at most' : q.type === 'number' ? 'Largest number' : 'To'}><input type="number" value={q.max ?? ''} onChange={(e) => onPatch({ max: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
-            </div>)}
-          {(q.type === 'scale' || q.type === 'nps') && <div className="grid grid-cols-2 gap-3"><Row label="Label at the low end"><input value={q.minLabel ?? ''} onChange={(e) => onPatch({ minLabel: e.target.value })} maxLength={40} className={inp} /></Row><Row label="Label at the high end"><input value={q.maxLabel ?? ''} onChange={(e) => onPatch({ maxLabel: e.target.value })} maxLength={40} className={inp} /></Row></div>}
-          {q.type === 'image_choice' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.multi} onChange={(e) => onPatch({ multi: e.target.checked, correct: undefined })} />People can pick more than one picture</label>}
-          {q.type === 'ranking' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.partial} onChange={(e) => onPatch({ partial: e.target.checked })} />People may rank only some of the options</label>}
-          {q.type === 'grid' && <GridEditor q={q} onPatch={onPatch} />}
-          {q.type === 'file_upload' && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Row label="Accepted kinds (pdf,png,jpg; empty = any)"><input value={q.accept ?? ''} onChange={(e) => onPatch({ accept: e.target.value.replace(/[^A-Za-z0-9,]/g, '').slice(0, 80) })} className={inp} /></Row>
-              <Row label="Most files"><input type="number" min={1} max={10} value={q.max ?? 3} onChange={(e) => onPatch({ max: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
-              <Row label="Biggest file (MB, 10 at most)"><input type="number" min={1} max={10} value={q.maxSizeMb ?? 10} onChange={(e) => onPatch({ maxSizeMb: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
-              <p className="sm:col-span-3 text-xs text-zinc-400">Files are private: only you and the people you share the form with can open them.</p>
-            </div>)}
-          {q.type === 'hidden' && <Row label="Link parameter: a link ending in ?ref=abc fills this field with abc (people never see it)"><input value={q.param ?? ''} onChange={(e) => onPatch({ param: e.target.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 30) })} className={inp} /></Row>}
-          {q.type === 'calculated' && <Row label="Formula. #1, #2 … are the answers of the 1st, 2nd … question (numbers). For example (#1 + #2) * 2"><input value={q.formula ?? ''} onChange={(e) => onPatch({ formula: e.target.value.slice(0, 200) })} className={inp} /></Row>}
-          {quiz && canScore(q.type) && <QuizFields q={q} onPatch={onPatch} />}
-          {isAnswerable(q.type) && q.type !== 'hidden' && <EndRule q={q} onPatch={onPatch} />}
-          {q.type !== 'section' && (
-            <div className="rounded-xl border border-zinc-800 p-3 space-y-2">
-              <p className="text-xs font-semibold text-zinc-300">Show this only if…</p>
-              {earlier.length === 0 ? <p className="text-xs text-zinc-500">Add a question above this one to use it in a rule.</p> : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <select aria-label="Question" value={q.showIf?.q ?? ''} onChange={(e) => onPatch({ showIf: e.target.value ? { q: e.target.value, op: 'notEmpty' } : null })} className={inp}><option value="">Always show</option>{earlier.map((x) => <option key={x.id} value={x.id}>{x.title || 'Untitled'}</option>)}</select>
-                  {q.showIf && <select aria-label="Condition" value={q.showIf.op} onChange={(e) => onPatch({ showIf: { ...q.showIf!, op: e.target.value as never } })} className={inp}>{[['eq', 'is'], ['neq', 'is not'], ['contains', 'contains'], ['notEmpty', 'is answered'], ['empty', 'is empty'], ['gt', 'is more than'], ['lt', 'is less than']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>}
-                  {q.showIf && !['empty', 'notEmpty'].includes(q.showIf.op) && (dep && hasOptions(dep.type)
-                    ? <select aria-label="Value" value={String(q.showIf.value ?? '')} onChange={(e) => onPatch({ showIf: { ...q.showIf!, value: e.target.value } })} className={inp}><option value="">Choose…</option>{dep.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
-                    : <input aria-label="Value" value={String(q.showIf.value ?? '')} onChange={(e) => onPatch({ showIf: { ...q.showIf!, value: ['gt', 'lt'].includes(q.showIf!.op) || ['scale', 'rating', 'nps', 'number'].includes(dep?.type ?? '') ? Number(e.target.value) : e.target.value } })} className={inp} />)}
-                </div>)}
-            </div>)}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onDup} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full border border-zinc-700 text-sm cursor-pointer"><Copy className="w-4 h-4" />Duplicate</button>
-            <button type="button" onClick={onDel} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm cursor-pointer" data-testid="q-delete"><Trash2 className="w-4 h-4" />Delete</button>
-          </div>
-        </div>)}
+            <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Fewest characters' : q.type === 'checkboxes' ? 'Choose at least' : q.type === 'number' ? 'Smallest number' : 'From'}><input type="number" value={q.min ?? ''} onChange={(e) => onPatch({ min: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
+            <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Most characters' : q.type === 'checkboxes' ? 'Choose at most' : q.type === 'number' ? 'Largest number' : 'To'}><input type="number" value={q.max ?? ''} onChange={(e) => onPatch({ max: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
+          </div>)}
+        {(q.type === 'scale' || q.type === 'nps') && <div className="grid grid-cols-2 gap-3"><Row label="Label at the low end"><input value={q.minLabel ?? ''} onChange={(e) => onPatch({ minLabel: e.target.value })} maxLength={40} className={inp} /></Row><Row label="Label at the high end"><input value={q.maxLabel ?? ''} onChange={(e) => onPatch({ maxLabel: e.target.value })} maxLength={40} className={inp} /></Row></div>}
+        {q.type === 'image_choice' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.multi} onChange={(e) => onPatch({ multi: e.target.checked, correct: undefined })} />People can pick more than one picture</label>}
+        {q.type === 'ranking' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.partial} onChange={(e) => onPatch({ partial: e.target.checked })} />People may rank only some of the options</label>}
+        {q.type === 'grid' && <GridEditor q={q} onPatch={onPatch} />}
+        {q.type === 'file_upload' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Row label="Accepted kinds (pdf,png,jpg; empty = any)"><input value={q.accept ?? ''} onChange={(e) => onPatch({ accept: e.target.value.replace(/[^A-Za-z0-9,]/g, '').slice(0, 80) })} className={inp} /></Row>
+            <Row label="Most files"><input type="number" min={1} max={10} value={q.max ?? 3} onChange={(e) => onPatch({ max: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
+            <Row label="Biggest file (MB, 10 at most)"><input type="number" min={1} max={10} value={q.maxSizeMb ?? 10} onChange={(e) => onPatch({ maxSizeMb: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
+            <p className="sm:col-span-3 text-xs text-zinc-400">Files are private: only you and the people you share the form with can open them.</p>
+          </div>)}
+        {q.type === 'hidden' && <Row label="Link parameter: a link ending in ?ref=abc fills this field with abc (people never see it)"><input value={q.param ?? ''} onChange={(e) => onPatch({ param: e.target.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 30) })} className={inp} /></Row>}
+        {q.type === 'calculated' && <Row label="Formula. #1, #2 … are the answers of the 1st, 2nd … question (numbers). For example (#1 + #2) * 2"><input value={q.formula ?? ''} onChange={(e) => onPatch({ formula: e.target.value.slice(0, 200) })} className={inp} /></Row>}
+        {quiz && canScore(q.type) && <QuizFields q={q} onPatch={onPatch} />}
+
+        {more && (
+          <div className="space-y-3 rounded-lg bg-zinc-800 p-3">
+            {q.type !== 'section' && q.type !== 'hidden' && <AiTools q={q} onPatch={onPatch} />}
+            {answerable && <EndRule q={q} onPatch={onPatch} />}
+            {q.type !== 'section' && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-zinc-300">Show this only if…</p>
+                {earlier.length === 0 ? <p className="text-xs text-zinc-500">Add a question above this one to use it in a rule.</p> : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select aria-label="Question" value={q.showIf?.q ?? ''} onChange={(e) => onPatch({ showIf: e.target.value ? { q: e.target.value, op: 'notEmpty' } : null })} className={inp}><option value="">Always show</option>{earlier.map((x) => <option key={x.id} value={x.id}>{x.title || 'Untitled'}</option>)}</select>
+                    {q.showIf && <select aria-label="Condition" value={q.showIf.op} onChange={(e) => onPatch({ showIf: { ...q.showIf!, op: e.target.value as never } })} className={inp}>{[['eq', 'is'], ['neq', 'is not'], ['contains', 'contains'], ['notEmpty', 'is answered'], ['empty', 'is empty'], ['gt', 'is more than'], ['lt', 'is less than']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>}
+                    {q.showIf && !['empty', 'notEmpty'].includes(q.showIf.op) && (dep && hasOptions(dep.type)
+                      ? <select aria-label="Value" value={String(q.showIf.value ?? '')} onChange={(e) => onPatch({ showIf: { ...q.showIf!, value: e.target.value } })} className={inp}><option value="">Choose…</option>{dep.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
+                      : <input aria-label="Value" value={String(q.showIf.value ?? '')} onChange={(e) => onPatch({ showIf: { ...q.showIf!, value: ['gt', 'lt'].includes(q.showIf!.op) || ['scale', 'rating', 'nps', 'number'].includes(dep?.type ?? '') ? Number(e.target.value) : e.target.value } })} className={inp} />)}
+                  </div>)}
+              </div>)}
+          </div>)}
+      </div>
+
+      {/* the card's own toolbar: copy, delete, required, move, more */}
+      <div className="flex items-center justify-end gap-1 px-3 py-2 border-t border-zinc-800">
+        <button type="button" onClick={onUp} disabled={i === 0} aria-label="Move up" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center disabled:opacity-25 cursor-pointer"><ChevronUp className="w-5 h-5" /></button>
+        <button type="button" onClick={onDown} disabled={i === count - 1} aria-label="Move down" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center disabled:opacity-25 cursor-pointer"><ChevronDown className="w-5 h-5" /></button>
+        <button type="button" onClick={onDup} aria-label="Duplicate" title="Duplicate" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer"><Copy className="w-[18px] h-[18px]" /></button>
+        <button type="button" onClick={onDel} aria-label="Delete" title="Delete" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center text-zinc-600 hover:text-red-600 cursor-pointer" data-testid="q-delete"><Trash2 className="w-[18px] h-[18px]" /></button>
+        {answerable && <><span className="w-px h-6 bg-zinc-700 mx-1.5" aria-hidden="true" /><span className="text-sm text-zinc-300 mr-1.5">Required</span><Toggle on={!!q.required} onChange={(v) => onPatch({ required: v })} label="Required" /></>}
+        <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} aria-label="More options" title="More options" className={`ml-1 w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer ${more ? 'bg-zinc-800' : ''}`}><MoreVertical className="w-5 h-5" /></button>
+      </div>
     </div>
   );
 };

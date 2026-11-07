@@ -188,7 +188,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
       key={game.id}
       type="button"
       onClick={() => setSelectedGameForPlay(game)}
-      className={`rbx-tile group text-left shrink-0 cursor-pointer ${wide ? 'w-full' : 'w-[200px] sm:w-[230px] lg:w-[260px]'}`}
+      className={`rbx-tile group text-left shrink-0 self-start cursor-pointer ${wide ? 'w-full' : 'w-[200px] sm:w-[230px] lg:w-[260px]'}`}
       data-testid={`game-tile-${game.id}`}
     >
       <div className="relative aspect-video overflow-hidden rounded-xl bg-[#232527] ring-1 ring-white/5 transition-transform duration-200 group-hover:scale-[1.03]">
@@ -329,14 +329,14 @@ export const GamesView: React.FC<GamesViewProps> = ({
             <section className="mt-1 mb-6" data-testid="games-hottest">
               <h2 className="text-[22px] leading-tight font-extrabold">The hottest games</h2>
               <p className="text-[13px] text-[#bdbebe] mb-3">What's trending today on NOOB</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x">
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x">
                 {hot.map((g) => (
-                  <button key={g.id} type="button" onClick={() => setSelectedGameForPlay(g)} className="group shrink-0 snap-start text-left cursor-pointer w-[86%] sm:w-[420px] lg:w-[520px]">
+                  <button key={g.id} type="button" onClick={() => setSelectedGameForPlay(g)} className="group shrink-0 snap-start self-start flex flex-col items-stretch justify-start text-left cursor-pointer w-[86%] sm:w-[420px] lg:w-[520px]">
                     <span className="block aspect-video overflow-hidden rounded-2xl bg-[#232527] ring-1 ring-white/5">
                       <img src={g.posters![0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
                     </span>
                     <span className="block mt-2 text-[15px] font-bold truncate">{g.title}</span>
-                    <span className="block text-[12px] text-[#bdbebe] line-clamp-1">{g.description}</span>
+                    <span className="hidden md:block text-[12px] text-[#bdbebe] line-clamp-2 min-h-[2.6em]">{g.description}</span>
                   </button>
                 ))}
               </div>
@@ -377,7 +377,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                     <h2 className="text-xl font-extrabold">{s.title}</h2>
                     {s.id !== 'new' && <ChevronRight className="w-5 h-5 text-[#bdbebe]" />}
                   </button>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 md:mx-0 md:px-0 snap-x">
+                  <div className="flex items-start gap-3 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 md:mx-0 md:px-0 snap-x">
                     {s.games.map((g) => tile(g))}
                   </div>
                 </section>

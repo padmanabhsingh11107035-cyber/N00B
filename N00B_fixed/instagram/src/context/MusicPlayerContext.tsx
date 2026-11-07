@@ -207,7 +207,9 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           src={currentTrack.audioUrl}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
-          onLoadedMetadata={(e) => { const d = (e.target as HTMLAudioElement).duration; setTotalSec(isFinite(d) ? d : 0); setElapsedSec(0); }}
+          onLoadedMetadata={(e) => { const el = e.target as HTMLAudioElement; el.defaultPlaybackRate = 1; el.playbackRate = 1; (el as HTMLAudioElement & { preservesPitch?: boolean }).preservesPitch = true; const d = el.duration; setTotalSec(isFinite(d) ? d : 0); setElapsedSec(0); }}
+          // songs always play at their own speed and pitch: nothing else may change it
+          onRateChange={(e) => { const el = e.target as HTMLAudioElement; if (el.playbackRate !== 1) el.playbackRate = 1; }}
           onError={(e) => {
             console.warn('Audio playback error:', e);
             setIsPlaying(false);

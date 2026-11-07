@@ -17,7 +17,7 @@ export const QUALITY_PRESETS: Record<Quality, Preset> = {
 export function suggestQuality(): Quality {
   const device = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } }
   const cores = device.hardwareConcurrency ?? 4
-  if (cores <= 4 || (device.deviceMemory !== undefined && device.deviceMemory <= 4) || device.connection?.saveData) return 'low'
+  if (window.matchMedia?.('(pointer: coarse)').matches || cores <= 4 || (device.deviceMemory !== undefined && device.deviceMemory <= 4) || device.connection?.saveData) return 'low'
   return 'medium'
 }
 

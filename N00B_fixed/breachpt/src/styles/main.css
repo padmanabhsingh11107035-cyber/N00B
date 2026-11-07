@@ -491,3 +491,21 @@ body[data-screen='pause'] .screen-hud, body[data-screen='settings'] .screen-hud,
   .global-actions { margin-top: 4px; }
   .title-foot { position: fixed; bottom: 8px; }
 }
+
+/* ─── phone controls ───────────────────────────────────── */
+.tc { --tcb: 92px; position: fixed; inset: 0; z-index: 30; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+.tc[hidden] { display: none; }
+.tc > * { pointer-events: auto; touch-action: none; }
+.tc-look { position: absolute; top: 0; right: 0; bottom: 0; left: 38%; z-index: 0; }
+.tc-stick { position: absolute; left: max(22px, env(safe-area-inset-left)); bottom: calc(var(--tcb) - 6px); width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.10); border: 2px solid rgba(255, 255, 255, 0.32); z-index: 2; }
+.tc-stick i { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255, 255, 255, 0.45); border: 2px solid rgba(255, 255, 255, 0.7); will-change: transform; }
+.tc-btn { position: absolute; z-index: 2; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); background: rgba(20, 24, 30, 0.55); color: #fff; font: 800 11px / 1 system-ui, sans-serif; letter-spacing: 0.04em; padding: 0; -webkit-tap-highlight-color: transparent; }
+.tc-btn.down, .tc-btn.on { background: rgba(255, 255, 255, 0.55); color: #000; }
+.tc-fire { right: max(24px, env(safe-area-inset-right)); bottom: var(--tcb); width: 88px; height: 88px; font-size: 14px; background: rgba(220, 40, 50, 0.6); border-color: rgba(255, 255, 255, 0.8); }
+.tc-scope { right: calc(max(24px, env(safe-area-inset-right)) + 100px); bottom: calc(var(--tcb) + 70px); width: 58px; height: 58px; }
+.tc-jump { right: calc(max(24px, env(safe-area-inset-right)) + 104px); bottom: var(--tcb); width: 58px; height: 58px; }
+.tc-reload { right: calc(max(24px, env(safe-area-inset-right)) + 2px); bottom: calc(var(--tcb) + 104px); width: 54px; height: 54px; }
+.tc-crouch { right: calc(max(24px, env(safe-area-inset-right)) + 170px); bottom: calc(var(--tcb) + 6px); width: 50px; height: 50px; }
+.tc-nade { right: calc(max(24px, env(safe-area-inset-right)) + 70px); bottom: calc(var(--tcb) + 140px); width: 48px; height: 48px; }
+.tc-switch { right: calc(max(16px, env(safe-area-inset-right)) + 52px); top: max(10px, env(safe-area-inset-top)); width: 44px; height: 44px; }
+.tc-pause { right: max(16px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 40px; height: 40px; font-size: 14px; }

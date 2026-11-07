@@ -1,4 +1,5 @@
 import './styles/main.css'
+import { TouchControls } from './ui/touch'
 import { createLeaderboardClient, type RunTicket } from '../leaderboard.js'
 import { Audio } from './engine/audio'
 import { AdaptiveResolution } from './engine/adaptive-resolution'
@@ -299,6 +300,7 @@ async function boot(): Promise<void> {
       // Real frame time drives the VFX budget (bulk emitters shed particles when frames run long).
       game!.fx.frameTime(frameSeconds * 1000)
       input.update()
+      touchUi?.frame()
       if (input.consume('pause') && performance.now() - lockLostAt > 300) {
         if (game!.mode === 'playing' || game!.mode === 'countdown') pause()
         else if (game!.mode === 'paused' && ui.screen === 'pause') resume()
@@ -331,6 +333,10 @@ async function boot(): Promise<void> {
     if (document.hidden) pause()
   })
   window.addEventListener('game:pause', pause)
+  // a phone or tablet: the on-screen controls (stick, look, fire, scope, reload ...)
+  const touchUi = window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window
+    ? new TouchControls(document.getElementById('ui')!, input, () => (game!.mode === 'playing' || game!.mode === 'countdown') && !game!.choosingPerk)
+    : null
   canvas.addEventListener('click', () => {
     if ((game!.mode === 'playing' || game!.mode === 'countdown') && !game!.choosingPerk) input.lockPointer()
   })

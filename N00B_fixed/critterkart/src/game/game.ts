@@ -564,7 +564,7 @@ export class Game {
     let leaderU = -Infinity
     for (const o of this.racers) if (!o.isPlayer && !o.finished && o.progress.u > leaderU) leaderU = o.progress.u
     const behind = r.isPlayer && Number.isFinite(leaderU) ? Math.max(0, Math.min(1, (leaderU - r.progress.u) / 120)) : 0
-    const base = r.isPlayer ? 1.02 * (1 + behind * 0.1) : 0.88 + (r.driver?.skill.skill ?? 0.7) * 0.05
+    const base = r.isPlayer ? 1.05 * (1 + behind * 0.12) : 0.8 + (r.driver?.skill.skill ?? 0.7) * 0.05
     k.speedScale = ref && !r.isPlayer ? base * catchUp(ref.progress.u - r.progress.u) : base
     // Re-decide the shortcut once per lap.
     if (Math.abs(this.track.main.delta(0, loc.s)) < 1) r.aiUseShortcut = Math.random() < CONFIG.ai.shortcutChance[Math.floor((r.driver?.skill.skill ?? 0.7) * 4.9) % 5]

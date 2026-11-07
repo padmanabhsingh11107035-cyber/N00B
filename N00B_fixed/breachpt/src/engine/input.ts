@@ -35,6 +35,9 @@ const PAD_BINDINGS: Partial<Record<Action, number[]>> = { jump: [0], sprint: [10
 export class Input {
   readonly move = { x: 0, y: 0 }
   readonly look = { x: 0, y: 0 }
+  /** Phone controls: the stick, the buttons that are held, and (see touchPress) the buttons just tapped. */
+  readonly touchMove = { x: 0, y: 0 }
+  readonly touchHeld = new Set<Action>()
   method: InputMethod = 'keyboard'
   sensitivity = 1
   invertY = false
@@ -100,6 +103,11 @@ export class Input {
     this.pressed_.set(action, performance.now())
   }
 
+  /** A phone button was tapped. */
+  touchPress(action: Action): void {
+    this.press(action)
+  }
+
   /** Test hook: headless browsers cannot take pointer lock. */
   debugLock = false
   get locked(): boolean {
@@ -128,6 +136,11 @@ export class Input {
     this.held_.clear()
     for (const [action, codes] of Object.entries(KEY_BINDINGS) as [Action, string[]][]) {
       if (k(codes)) this.held_.add(action)
+    }
+    for (const a of this.touchHeld) this.held_.add(a)
+    if (this.touchMove.x !== 0 || this.touchMove.y !== 0) {
+      x = this.touchMove.x
+      y = this.touchMove.y
     }
     if (this.mouse.has(0)) this.held_.add('fire')
     if (this.mouse.has(2)) this.held_.add('ads')

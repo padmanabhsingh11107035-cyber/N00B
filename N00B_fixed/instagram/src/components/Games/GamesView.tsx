@@ -25,7 +25,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { MiniGameMeta, ALL_50_MINI_GAMES, GameCategory } from './types';
-import { GameBannerArtwork } from './GameIcons';
 import { warmHelixFilesWhenIdle } from '../../utils/helixWarmup';
 import { warmUnderhallFilesWhenIdle } from '../../utils/underhallWarmup';
 import { warmCanyonFilesWhenIdle } from '../../utils/canyonWarmup';
@@ -189,21 +188,24 @@ export const GamesView: React.FC<GamesViewProps> = ({
       key={game.id}
       type="button"
       onClick={() => setSelectedGameForPlay(game)}
-      className={`rbx-tile group text-left shrink-0 cursor-pointer ${wide ? 'w-full' : 'w-[138px] sm:w-[160px] lg:w-[176px]'}`}
+      className={`rbx-tile group text-left shrink-0 cursor-pointer ${wide ? 'w-full' : 'w-[200px] sm:w-[230px] lg:w-[260px]'}`}
       data-testid={`game-tile-${game.id}`}
     >
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#232527] ring-1 ring-white/5 transition-transform duration-200 group-hover:scale-[1.03]">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#232527] ring-1 ring-white/5 transition-transform duration-200 group-hover:scale-[1.03]">
         {game.posters && game.posters[0] ? (
-          <img src={game.posters[0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover object-top" />
+          <img src={game.posters[0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover object-center" />
         ) : (
-          <GameBannerArtwork id={game.id} className="w-full h-full" />
+          // no picture of its own yet: one clean, same-size card (the game's colours, its name) instead of the old cartoon banner
+          <div className={`w-full h-full bg-gradient-to-br ${game.bannerBg} flex items-center justify-center p-3 text-center`}>
+            <span className="text-[15px] sm:text-base font-black leading-tight text-white drop-shadow line-clamp-3">{game.title}</span>
+          </div>
         )}
         {game.isNew && <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#00b06f] text-[10px] font-extrabold text-white">NEW</span>}
         <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity">
           <span className="w-11 h-11 rounded-full bg-white/95 flex items-center justify-center"><Play className="w-5 h-5 text-black fill-black ml-0.5" /></span>
         </span>
       </div>
-      <p className="mt-2 text-[13px] font-bold text-white leading-snug line-clamp-2">{game.title}</p>
+      <p className="mt-2 text-[13px] font-bold text-white leading-snug line-clamp-2 min-h-[2.6em]">{game.title}</p>
       <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#bdbebe] truncate">
         <Users className="w-3 h-3 shrink-0" />
         <span className="truncate">{game.players}</span>
@@ -357,7 +359,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
           {searching ? (
             <>
               <h2 className="text-xl font-extrabold mt-3 mb-3">{searchQuery.trim() ? `Results for “${searchQuery.trim()}”` : CATEGORIES.find((c) => c.key === selectedCategory)?.label}</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-x-3 gap-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-5">
                 {filteredGames.map((g) => tile(g, true))}
               </div>
               {filteredGames.length === 0 && (

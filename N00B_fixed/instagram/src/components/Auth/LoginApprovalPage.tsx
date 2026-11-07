@@ -65,7 +65,7 @@ const LoginApprovalPage: React.FC = () => {
       <>
         {icon('good', <CheckCircle2 className="w-8 h-8" />)}
         <h1 className="mt-4 text-2xl font-black text-emerald-400">Approved</h1>
-        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">The device that is waiting logs in by itself now. You can close this page.</p>
+        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">You can leave this tab now: the device that was waiting is being logged in to NOOB by itself, no need to do anything else.</p>
       </>
     );
   } else if (step === 'denied') {

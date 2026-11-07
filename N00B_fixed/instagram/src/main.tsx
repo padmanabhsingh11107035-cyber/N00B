@@ -5,6 +5,7 @@ import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
 import { InstallInvite } from './components/Common/InstallInvite.tsx';
+import { AppUpdateGate } from './components/Common/AppUpdateGate.tsx';
 import '@fontsource/dejavu-sans/latin-400.css';
 import '@fontsource/dejavu-sans/latin-700.css';
 import './index.css';
@@ -149,6 +150,7 @@ createRoot(document.getElementById('root')!).render(
           <App />
           <InstallInvite />
           <ServiceGate />
+          <AppUpdateGate />
         </MusicPlayerProvider>
       )}
     </ErrorBoundary>

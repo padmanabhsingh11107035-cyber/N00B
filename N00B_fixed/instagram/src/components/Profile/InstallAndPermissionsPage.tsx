@@ -75,6 +75,8 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
   }, [isNative]);
 
   useEffect(() => {
+    // inside the Android app the browser's own notification state means nothing (and used to overwrite the phone's answer with "off")
+    if (Capacitor.isNativePlatform()) return undefined;
     warmPushSetup();   // the notification key and the helper are got ready while the page is read, so the button has nothing left to wait for
     let alive = true;
     getPushDeviceState().then((state) => {
@@ -254,7 +256,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
             </button>
 
             {notifHint && <p className="text-[11px] text-amber-300/90 leading-relaxed">{notifHint}</p>}
-            {isNative && nativeDiag && <p className="text-[10px] text-zinc-500 leading-relaxed break-words" data-testid="native-push-diag">{nativeDiag}</p>}
+            <p className="text-[10px] text-zinc-500 leading-relaxed break-words" data-testid="native-push-diag">{isNative ? (nativeDiag || 'Checking this phone…') : 'Running in a browser (not the Android app)'}</p>
           </div>
         </div>
       </div>

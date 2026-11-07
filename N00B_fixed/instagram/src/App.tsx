@@ -512,6 +512,8 @@ export default function App() {
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
   const [selectedVideoId, setSelectedVideoId] = useState<string | undefined>(undefined);
   const [selectedPostId, setSelectedPostId] = useState<string | undefined>(undefined);
+  const [reelsVisited, setReelsVisited] = useState(false);
+  useEffect(() => { if (activeTab === 'reels') setReelsVisited(true); }, [activeTab]);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [pendingCallChatId, setPendingCallChatId] = useState<string | null>(null);
@@ -1925,7 +1927,10 @@ export default function App() {
           </KeepAliveTab>
         )}
 
-        {activeTab === 'reels' && (
+        {/* Reels is built the first time it is opened and then only hidden (like Home and Explore): going to another page and coming back finds the same reels in the same
+            order, on the reel that was being watched, until the app is refreshed. Whatever plays is paused while it is hidden. */}
+        {(activeTab === 'reels' || reelsVisited) && (
+          <KeepAliveTab hidden={activeTab !== 'reels'}>
           <div className="py-2 px-2">
             <React.Suspense fallback={<TabBurgerLoading />}><ReelsView
               reels={reels}
@@ -1937,6 +1942,7 @@ export default function App() {
               onUseSound={(sound) => { setCreateSound(sound); setCreateKind('reel'); }}
             /></React.Suspense>
           </div>
+          </KeepAliveTab>
         )}
 
         {activeTab === 'videos' && (

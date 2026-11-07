@@ -879,7 +879,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useEffect(() => {
     // On a computer: S / ↓ = next reel, W / ↑ = previous (like swiping up / down on a phone).
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (anyModalOpen || Date.now() < wheelLockRef.current) return;
+      if (pageHiddenRef.current || anyModalOpen || Date.now() < wheelLockRef.current) return;   // not while another page is showing
       const dir = navKey(e);
       if (dir === 'down') { e.preventDefault(); slideTo(1); }
       else if (dir === 'up') { e.preventDefault(); slideTo(-1); }

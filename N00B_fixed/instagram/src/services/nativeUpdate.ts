@@ -101,6 +101,13 @@ export interface NativeUpdateInfo {
 }
 
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
+  // An app installed from Google Play has a small version number (1, 2, 3 ...); the app files made by the build workflow carry the time of the build (a very large number).
+  // A Google Play app is updated by Google Play only, so it is never offered an app file of its own, even when it has no installer of its own inside.
+  try {
+    const { App } = await import('@capacitor/app');
+    const b = Number((await App.getInfo()).build);
+    if (Number.isFinite(b) && b > 0 && b < 1_000_000) return { supported: false, canInstall: false, installed: b, latest: b, state: 'newest' };
+  } catch { /* not the Android app, or no way to ask: go on as before */ }
   let installed: number | null = null;
   let supported = true;
   let canInstall = false;

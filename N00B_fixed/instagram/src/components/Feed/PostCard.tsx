@@ -1036,9 +1036,6 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Captions with Formatted Line Breaks */}
         <div className="mt-1.5 text-xs text-zinc-200">
-          <span onClick={() => goToProfile(post.userId)} className="font-bold text-white mr-1.5 cursor-pointer underline decoration-1 underline-offset-[3px] decoration-zinc-50/70">
-            {post.username}
-          </span>
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
             {post.caption || ''}
           </span>
@@ -1102,14 +1099,12 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* Comments Preview Button */}
-        {!post.isCommentsDisabled && (
+        {!post.isCommentsDisabled && post.commentsCount > 0 && (
           <button
             onClick={() => onOpenComments(post)}
             className="mt-2 text-xs text-zinc-400 hover:text-zinc-200 block text-left cursor-pointer"
           >
-            {post.commentsCount > 0
-              ? `View all ${post.commentsCount} ${post.commentsCount === 1 ? 'comment' : 'comments'}`
-              : 'Add a comment...'}
+            {`View all ${post.commentsCount} ${post.commentsCount === 1 ? 'comment' : 'comments'}`}
           </button>
         )}
 

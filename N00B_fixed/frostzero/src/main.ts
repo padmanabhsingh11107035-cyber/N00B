@@ -23,10 +23,34 @@ async function boot(): Promise<void> {
     if (game) game.motionReduced = d.reducedMotion
   }
 
+  // the run in progress: kept on this device at every checkpoint, so leaving the game does not lose it
+  const RUN_KEY = 'frostline.run'
+  type SavedRun = { cp: number; elapsed: number; deaths: number }
+  const readRun = (): SavedRun | null => {
+    try {
+      const v = JSON.parse(localStorage.getItem(RUN_KEY) || 'null')
+      return v && Number.isFinite(v.cp) && v.cp > 0 && Number.isFinite(v.elapsed) && Number.isFinite(v.deaths) ? { cp: v.cp, elapsed: v.elapsed, deaths: v.deaths } : null
+    } catch { return null }
+  }
+  const writeRun = (r: SavedRun | null) => {
+    try { if (r) localStorage.setItem(RUN_KEY, JSON.stringify(r)); else localStorage.removeItem(RUN_KEY) } catch { /* storage is off: the run is just not kept */ }
+  }
+  const refreshContinue = () => ui.setContinue(readRun() ? `Continue (checkpoint ${readRun()!.cp})` : null)
+
+  const continueRun = () => {
+    const r = readRun()
+    if (!game || !r) return startRun()
+    audio.unlock()
+    audio.startMusic()
+    game.startFrom(r.cp, r.elapsed, r.deaths)
+    ui.show('hud')
+    loop.resetAccumulator()
+  }
   const startRun = () => {
     if (!game) return
     audio.unlock()
     audio.startMusic()
+    writeRun(null)
     save.update({ attempts: save.data.attempts + 1 })
     game.start()
     ui.show('hud')
@@ -46,6 +70,7 @@ async function boot(): Promise<void> {
 
   const ui = new Ui(i18n, save, audio, input, {
     play: startRun,
+    continueRun,
     restart: startRun,
     resume,
     retry: () => {
@@ -58,6 +83,7 @@ async function boot(): Promise<void> {
     quit: () => {
       game?.toTitle()
       ui.show('title')
+      refreshContinue()
     },
     settings: patch => {
       const qualityChanged = patch.quality !== undefined && patch.quality !== save.data.quality
@@ -85,12 +111,17 @@ async function boot(): Promise<void> {
       ui.death(cause)
       void run
     },
-    checkpoint: (n, total) => ui.checkpoint(n, total),
+    checkpoint: (n, total) => {
+      ui.checkpoint(n, total)
+      const run = game?.runState()
+      if (run) writeRun({ cp: n, elapsed: run.elapsed, deaths: run.deaths })
+    },
     section: (key, hint) => ui.section(key, hint),
     perfect: () => ui.toast(i18n.t('hud.perfect'), 'perfect'),
     boost: () => ui.toast(i18n.t('hud.boost'), 'boost'),
     respawned: () => undefined,
     finish: run => {
+      writeRun(null)
       if (run.unranked) {
         window.setTimeout(() => ui.showResults(run, false), 1500)
         return
@@ -132,7 +163,7 @@ async function boot(): Promise<void> {
   })
   window.addEventListener('game:pause', pause)
   new TouchControls(document.getElementById('ui')!, input)
-  window.setTimeout(() => ui.show('title'), 250)
+  window.setTimeout(() => { ui.show('title'); refreshContinue() }, 250)
   // Any first gesture on the title unlocks audio so the title music can play.
   const unlock = () => {
     audio.unlock()

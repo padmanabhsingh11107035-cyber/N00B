@@ -11,6 +11,7 @@ export type Screen = 'boot' | 'title' | 'hud' | 'pause' | 'settings' | 'results'
 
 export type UiActions = {
   play(): void
+  continueRun(): void
   resume(): void
   retry(): void
   restart(): void
@@ -65,6 +66,15 @@ export class Ui {
   }
 
   // ─── screens ────────────────────────────────────────────────────────────
+  /** The title screen offers "Continue" when a run was left at a checkpoint. */
+  setContinue(label: string | null): void {
+    const btn = this.root.querySelector<HTMLElement>('[data-continue]')
+    if (!btn) return
+    btn.hidden = !label
+    const span = btn.querySelector<HTMLElement>('[data-continue-label]')
+    if (span && label) span.textContent = label
+  }
+
   show(screen: Screen): void {
     this.stack.length = 0
     this.setScreen(screen)
@@ -241,6 +251,7 @@ export class Ui {
     }
     switch (target.dataset.action) {
       case 'play': this.actions.play(); break
+      case 'continue': this.actions.continueRun(); break
       case 'resume': this.actions.resume(); break
       case 'retry': this.actions.retry(); break
       case 'restart': this.actions.restart(); break
@@ -406,6 +417,7 @@ export class Ui {
     </div>
     <p class="tagline" data-i18n="game.tagline"></p>
     <nav class="menu">
+      <button class="btn btn-primary" data-nav data-action="continue" data-continue hidden><span data-continue-label>Continue</span></button>
       <button class="btn btn-primary" data-nav data-action="play"><span data-i18n="menu.play"></span></button>
       <button class="btn" data-nav data-action="settings"><span data-i18n="menu.settings"></span></button>
     </nav>

@@ -99,6 +99,24 @@ export class Game {
     this.hooks.section(LEVEL.sections[0].key, LEVEL.sections[0].hint)
   }
 
+  /** The run as it stands now (for saving it at a checkpoint). */
+  runState(): RunState {
+    return this.run
+  }
+
+  /** Continue a saved run: the rider stands on the saved checkpoint, with the time and deaths so far. */
+  startFrom(cp: number, elapsed: number, deaths: number): void {
+    const n = Math.max(0, Math.min(LEVEL.checkpoints.length - 1, Math.floor(cp)))
+    this.run = { ...createRun(), checkpoint: n, elapsed: Math.max(0, elapsed), deaths: Math.max(0, Math.floor(deaths)) }
+    this.sim = createSim(LEVEL, n)
+    this.mode = 'playing'
+    this.fx.clear()
+    this.audio.setIntensity(1)
+    this.snapView()
+    const sec = LEVEL.sections[this.sim.section] ?? LEVEL.sections[0]
+    this.hooks.section(sec.key, sec.hint)
+  }
+
   /** Back to the last checkpoint without the death animation (pause menu / after a mistake). */
   retryCheckpoint(): void {
     if (this.mode !== 'playing' && this.mode !== 'paused' && this.mode !== 'dying') return

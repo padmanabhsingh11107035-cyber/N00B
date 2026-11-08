@@ -1809,7 +1809,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
           : 'relative h-[calc(100dvh-var(--nav-h))] lg:h-[calc(100dvh-1.5rem-var(--nav-h))] xl:h-[calc(100dvh-1.5rem)] min-h-[460px] rounded-none border-0 shadow-none'
       }`}
     >
-      {stripInfo !== null && typeof document !== 'undefined' && createPortal(<pre onClick={() => setStripInfo(null)} style={{ position: 'fixed', left: 6, right: 6, bottom: 90, zIndex: 2147483002, margin: 0, padding: 10, borderRadius: 12, background: 'rgba(0,0,0,.88)', color: '#9fff9f', font: '11px/1.35 ui-monospace,Menlo,monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{stripInfo}</pre>, document.body)}
+      {stripInfo !== null && typeof document !== 'undefined' && createPortal(
+        <div style={{ position: 'fixed', left: 6, right: 6, bottom: 90, zIndex: 2147483002, padding: 10, borderRadius: 12, background: 'rgba(0,0,0,.9)', color: '#9fff9f', font: '11px/1.35 ui-monospace,Menlo,monospace' }}>
+          <pre onClick={() => setStripInfo(null)} style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{stripInfo}{'
+cover mode: ' + (document.documentElement.classList.contains('ios-cover') ? 'ON' : 'off')}</pre>
+          <button type="button" onClick={() => { try { if (document.documentElement.classList.contains('ios-cover') || localStorage.getItem('noob_cover') === '1') localStorage.removeItem('noob_cover'); else localStorage.setItem('noob_cover', '1'); } catch { /* storage off */ } window.location.reload(); }} style={{ marginTop: 8, padding: '9px 14px', borderRadius: 10, border: '1px solid #9fff9f', background: 'transparent', color: '#9fff9f', font: 'inherit' }}>Switch full-screen test mode on / off (reloads)</button>
+        </div>, document.body)}
       {mobileView === 'list' && stripOn && typeof document !== 'undefined' && createPortal(<div className={`msg-safe-strip ${stripGreen ? 'on' : ''}`} aria-hidden="true" />, document.body)}
 
       {chatBlockedNotice && (

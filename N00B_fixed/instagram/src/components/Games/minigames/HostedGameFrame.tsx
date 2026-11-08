@@ -44,6 +44,10 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
   const upright = useUpright();
+  // A game that was shown and then hidden is closed for good (its frame is removed), so its music and sounds stop. Only a game that was never shown may sit hidden, loading in advance.
+  const [wasShown, setWasShown] = useState(false);
+  useEffect(() => { if (visible) setWasShown(true); }, [visible]);
+  useEffect(() => { if (!visible && wasShown) setLoaded(false); }, [visible, wasShown]);
 
   const enterFull = () => {
     setFull(true);
@@ -182,7 +186,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
   return (
     <div className={visible ? 'space-y-2' : 'fixed left-[-10000px] top-0 w-[800px] h-[450px] opacity-0 pointer-events-none'} aria-hidden={!visible}>
       <div className="relative w-full overflow-hidden rounded-2xl bg-black" style={boxStyle}>
-        {(visible || !lazy) && <iframe
+        {(visible || (!lazy && !wasShown)) && <iframe
           ref={frameRef}
           title={title}
           src={url}

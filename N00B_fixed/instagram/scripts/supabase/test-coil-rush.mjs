@@ -35,7 +35,7 @@ const hosted = read('src/utils/hostedGameWarmup.ts'), warm = read('src/utils/coi
 check(/warmHostedGame\(game\.id\)/.test(modal) && /coil_rush/.test(hosted) && /warmCoilRushFiles\('race'\)/.test(hosted), "when the game's own page opens, its files are fetched");
 check(/warmCoilRushFiles/.test(hosted) && /requestIdleCallback/.test(warm), 'the quiet fetch waits for the browser to be idle');
 check(/warm\.json/.test(warm) && /dataSaver/.test(warm) && /2g/.test(warm) && /BASE = '\/games\/coil-rush\/'/.test(warm), 'from a list the build writes; nothing on a data saver or 2G');
-check(/lazy=\{game\.embedLazy\}/.test(modal) && /\(visible \|\| !lazy\) && <iframe/.test(read('src/components/Games/minigames/HostedGameFrame.tsx')), 'the frame is made when Play is pressed (the files are already in the browser by then)');
+check(/lazy=\{game\.embedLazy\}/.test(modal) && /\(visible \|\| \(!lazy && !wasShown\)\) && <iframe/.test(read('src/components/Games/minigames/HostedGameFrame.tsx')), 'the frame is made when Play is pressed (the files are already in the browser by then)');
 const plan = JSON.parse(read(path.join(GAME, 'warm.json')));
 check(plan.shell.length >= 15 && plan.race.length >= 20, `the list has ${plan.shell.length} files to start and ${plan.race.length} for the first match`);
 check([...plan.shell, ...plan.race].every((f) => fs.existsSync(path.join(GAME, f))), 'every file on the list exists');

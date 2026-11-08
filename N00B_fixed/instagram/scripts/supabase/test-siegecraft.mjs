@@ -34,7 +34,7 @@ const hosted = read('src/utils/hostedGameWarmup.ts'), warm = read('src/utils/sie
 check(/warmHostedGame\(game\.id\)/.test(modal) && /id === 'siegecraft'/.test(hosted) && /warmSiegecraftFiles\('race'\)/.test(hosted), 'when the game\'s own page opens, its files are fetched');
 check(/warmSiegecraftFilesWhenIdle\(\)/.test(view) && /requestIdleCallback/.test(warm), 'while the Games page is open and the browser is idle, they are fetched too');
 check(/warm\.json/.test(warm) && /dataSaver/.test(warm) && /2g/.test(warm) && /BASE = '\/games\/siegecraft\/'/.test(warm), 'from a list the build writes; nothing on a data saver or 2G');
-check(/lazy=\{game\.embedLazy\}/.test(modal) && /\(visible \|\| !lazy\) && <iframe/.test(read('src/components/Games/minigames/HostedGameFrame.tsx')), 'the frame is made when Play is pressed (the files are already in the browser by then)');
+check(/lazy=\{game\.embedLazy\}/.test(modal) && /\(visible \|\| \(!lazy && !wasShown\)\) && <iframe/.test(read('src/components/Games/minigames/HostedGameFrame.tsx')), 'the frame is made when Play is pressed (the files are already in the browser by then)');
 const plan = JSON.parse(read(path.join(GAME, 'warm.json')));
 check(plan.shell.length >= 9, `the list has ${plan.shell.length} files`);
 check([...plan.shell, ...plan.race].every((f) => fs.existsSync(path.join(GAME, f))), 'every file on the list exists');

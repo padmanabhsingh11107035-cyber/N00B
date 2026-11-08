@@ -73,7 +73,7 @@ export function parseContentQuery(search: string): ContentRoute | null {
 }
 
 // Pages that are their own files on the website (not part of the app): they are served by the host, never by the app.
-export const STATIC_PAGES = ['/about', '/screenshots', '/privacy', '/terms', '/data-deletion', '/offline', '/app-down', '/404'];
+export const STATIC_PAGES = ['/about', '/noob-features', '/screenshots', '/privacy', '/terms', '/data-deletion', '/offline', '/app-down', '/404'];
 
 // Feature pages (one for each thing NOOB does): a search engine can list them, and anyone who opens one without an account is asked to log in first, then lands on the real page.
 export interface FeaturePage { slug: string; title: string; description: string; tab?: NavTab; path: string }

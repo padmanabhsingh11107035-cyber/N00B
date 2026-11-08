@@ -1928,6 +1928,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
           <span aria-hidden="true" className="hidden sm:inline">•</span>
           <a href="/about" className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
           <span aria-hidden="true" className="hidden sm:inline">•</span>
+          <a href="/noob-features" className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer">NOOB Features</a>
+          <span aria-hidden="true" className="hidden sm:inline">•</span>
           <a href="/screenshots" className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer">Screenshots</a>
           {/android/i.test(navigator.userAgent) && !isNativeApp() && (
             <>

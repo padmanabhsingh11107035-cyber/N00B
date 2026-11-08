@@ -146,6 +146,7 @@ export const AboutPage: React.FC<PageProps> = ({ ctx, go, back }) => {
       </Section>
       <Section>
         <Row icon={Info} label="About NOOB" sub="Who we are and everything NOOB can do" onClick={() => go('about-noob')} testId="about-open" />
+        <Row icon={Sparkles} label="NOOB Features" sub="Every feature of NOOB, page by page" onClick={() => openLink(`${window.location.origin}/noob-features`)} testId="features-open" />
         <Row icon={FileText} label="Terms of use" onClick={ctx.actions.openTerms} />
         <Row icon={Lock} label="Privacy policy" onClick={ctx.actions.openPrivacyPolicy} />
         <Row icon={Package} label="Version" value={build ? build.slice(0, 10) : 'Latest'} />

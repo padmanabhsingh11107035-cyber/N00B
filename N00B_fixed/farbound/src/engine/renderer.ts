@@ -7,7 +7,7 @@ import type { Quality } from './save'
 
 type Preset = { pixelRatio: number; shadows: boolean; shadowMap: number; bloom: boolean; antialias: boolean }
 export const QUALITY_PRESETS: Record<Quality, Preset> = {
-  low: { pixelRatio: 0.65, shadows: false, shadowMap: 512, bloom: false, antialias: false },
+  low: { pixelRatio: 1.2, shadows: false, shadowMap: 512, bloom: false, antialias: true },
   medium: { pixelRatio: 1.5, shadows: true, shadowMap: 1024, bloom: false, antialias: true },
   high: { pixelRatio: 2, shadows: true, shadowMap: 2048, bloom: true, antialias: true },
 }

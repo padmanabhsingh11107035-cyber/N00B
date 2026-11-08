@@ -1850,3 +1850,30 @@ html.ios-cover body::after { top: var(--sat) !important; }
 /* the strip behind the clock is one flat bar in the page's strip colour (the colour of html), so nothing that scrolls shows through it; bars that stick at the top stop just below it */
 html.ios-cover::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background-color: inherit; z-index: 2147483000; pointer-events: none; }
 html.ios-cover .sticky.top-0:not(.fixed *) { top: env(safe-area-inset-top, 0px) !important; }
+
+/* ---- Sign-in page, new look (auth-v3): sunny yellow on top with friends holding phones that show NOOB, a black sheet underneath with yellow buttons. Only colours, shapes and movement: the sign-in itself is untouched. ---- */
+@layer base { html body .doodle-wallpaper-login.auth-v2, html body .doodle-wallpaper-login.auth-v2.force-dark { background: #ffd60a !important; background-image: radial-gradient(900px 520px at 85% -10%, rgba(255, 255, 255, .55), transparent 60%), radial-gradient(700px 480px at -10% 30%, rgba(255, 140, 0, .38), transparent 62%), linear-gradient(180deg, #ffe14d 0%, #ffd60a 45%, #ffb800 100%) !important; } }
+.auth-v2 .auth-orb { display: none; }
+.auth-v2 .auth-orbs::after { background-image: radial-gradient(rgba(0,0,0,.55) 1.6px, transparent 1.9px); background-size: 22px 22px; opacity: .10; -webkit-mask-image: linear-gradient(180deg, #000, transparent 75%); mask-image: linear-gradient(180deg, #000, transparent 75%); }
+.auth-v2 .auth-head h1 { background: none; -webkit-text-fill-color: #151100; color: #151100 !important; font-size: 24px; margin-top: 2px; }
+.auth-v2 .auth-head p { color: rgba(21, 17, 0, .74) !important; }
+html body .auth-v2 .auth-sheet { background: #111113; border-top: 0; box-shadow: 0 -14px 0 rgba(0, 0, 0, .10), 0 -30px 60px -20px rgba(120, 70, 0, .45); border-radius: 36px 36px 0 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html body .auth-v2 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), html body .auth-v2 select, html body .auth-v2 textarea { background: #1d1d21 !important; border: 1.5px solid #34343a !important; border-radius: 16px !important; }
+html body .auth-v2 input:focus, html body .auth-v2 select:focus, html body .auth-v2 textarea:focus { background: #222227 !important; border-color: #ffd60a !important; box-shadow: 0 0 0 4px rgba(255, 214, 10, .20) !important; }
+html body .auth-v2 input::placeholder, html body .auth-v2 textarea::placeholder { color: #8b8a93 !important; }
+html body .auth-v2 label { color: #f4f4f5; }
+html body .auth-v2 input[type="checkbox"] { accent-color: #ffd60a; }
+html body .auth-v2 .text-cyan-400, html body .auth-v2 .text-cyan-300, html body .auth-v2 .text-blue-400, html body .auth-v2 .text-blue-300 { color: #ffd60a !important; }
+html body .auth-v2 form button[type="submit"], html body .auth-v2 [data-testid="login-choose-login"] { background: linear-gradient(100deg, #ffd60a 0%, #ffbe0b 100%) !important; color: #141100 !important; box-shadow: 0 12px 28px -10px rgba(255, 190, 11, .75), inset 0 -3px 0 rgba(0, 0, 0, .14) !important; }
+html body .auth-v2 form button[type="submit"] *, html body .auth-v2 [data-testid="login-choose-login"] * { color: #141100 !important; }
+html body .auth-v2 form button[type="submit"] .animate-spin { border-color: #141100 !important; border-top-color: transparent !important; }
+html body .auth-v2 [data-testid="login-choose-signup"] { background: #1d1d21 !important; border-color: #3a3a41 !important; }
+html body .auth-v2 [data-testid="auth-social-top"] button:hover, html body .auth-v2 [data-testid="auth-social-top"] a:hover { box-shadow: 0 12px 26px -8px rgba(255, 214, 10, .5); }
+/* floating bubbles of the background (white, soft) */
+.auth-v2 .auth-orbs i { position: absolute; bottom: -40px; width: var(--s, 14px); height: var(--s, 14px); border-radius: 50%; background: rgba(255, 255, 255, .35); border: 1px solid rgba(255, 255, 255, .6); left: var(--x, 10%); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-v2 .auth-orbs i { animation: auth-bubble var(--d, 14s) linear var(--t, 0s) infinite; }
+  .auth-v2 [data-testid="login-choose"] button { transition: transform .18s, box-shadow .2s; }
+  .auth-v2 [data-testid="login-choose"] button:active { transform: scale(.97); }
+}
+@keyframes auth-bubble { 0% { transform: translateY(0) scale(.6); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(-105vh) scale(1.15); opacity: 0; } }

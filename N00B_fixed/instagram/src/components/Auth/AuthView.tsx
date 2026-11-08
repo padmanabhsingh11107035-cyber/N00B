@@ -1,3 +1,5 @@
+import { LoginHero } from './LoginHero';
+import { LoginScene } from './LoginScene';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { HatBoy } from './HatBoy';
 
@@ -1021,7 +1023,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
 
   return (
     <div className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
-      <div className="auth-orbs" aria-hidden="true"><span className="auth-orb o1" /><span className="auth-orb o2" /><span className="auth-orb o3" /></div>
+      <div className="auth-orbs" aria-hidden="true"><span className="auth-orb o1" /><span className="auth-orb o2" /><span className="auth-orb o3" /><i style={{ ['--x' as string]: '8%', ['--s' as string]: '12px', ['--d' as string]: '15s', ['--t' as string]: '-0s' }} /><i style={{ ['--x' as string]: '22%', ['--s' as string]: '18px', ['--d' as string]: '19s', ['--t' as string]: '-6s' }} /><i style={{ ['--x' as string]: '38%', ['--s' as string]: '10px', ['--d' as string]: '13s', ['--t' as string]: '-3s' }} /><i style={{ ['--x' as string]: '52%', ['--s' as string]: '22px', ['--d' as string]: '21s', ['--t' as string]: '-9s' }} /><i style={{ ['--x' as string]: '66%', ['--s' as string]: '14px', ['--d' as string]: '16s', ['--t' as string]: '-1s' }} /><i style={{ ['--x' as string]: '78%', ['--s' as string]: '20px', ['--d' as string]: '18s', ['--t' as string]: '-7s' }} /><i style={{ ['--x' as string]: '90%', ['--s' as string]: '12px', ['--d' as string]: '14s', ['--t' as string]: '-4s' }} /></div>
       {SHOW_AUTH_DOODLES && (<>
       {/* Premium Gen Z Background glow accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
@@ -1160,9 +1162,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
 
       {/* Top Header: the NOOB logo written on the page (no box around it), centered */}
       <header className="auth-head w-full flex flex-col items-center justify-center z-10 pt-8 pb-14 px-6 text-center" data-testid="auth-head">
-        <div className="auth-mark" aria-hidden="true"><img src="/noob-app-512.png" alt="" width={96} height={96} draggable={false} /></div>
+        <LoginHero />
         <h1 className="text-[28px] leading-tight font-extrabold tracking-tight text-white" data-testid="auth-title">{mode === 'signup' ? 'Create Account' : 'Log In'}</h1>
         <p className="mt-1.5 text-[13px] leading-snug text-white/80 max-w-[17rem]">{mode === 'signup' ? 'Fill your information below or register with your social account.' : 'Fill your information below or log in with your social account.'}</p>
+              <LoginScene />
       </header>
 
       {/* Main Authentication Card */}

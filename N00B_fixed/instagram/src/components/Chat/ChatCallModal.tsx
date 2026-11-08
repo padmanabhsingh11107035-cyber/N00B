@@ -140,9 +140,14 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
     return stop;
   }, [isOutgoing, chatId, currentUser.id]);
 
+  // when the call was picked up, for the length written on the Calls page
+  const joinedAtRef = useRef<number | null>(null);
+  if (joined && joinedAtRef.current === null) joinedAtRef.current = Date.now();
   const handleClose = () => {
     if (closedRef.current) return;
     closedRef.current = true;
+    // a call that was connected: the person who started it writes it down once (with how long it lasted)
+    if (isOutgoing && joined && joinedAtRef.current) void logCallEvent(chatId, 'ended', (Date.now() - joinedAtRef.current) / 1000);
     // Nobody ever picked up — let their phones stop ringing instead of leaving them hanging, and log
     // it as a missed call (whether that's because the ring timed out or the caller gave up early).
     if (isOutgoing && !joined) {

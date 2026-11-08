@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listenForRings, sendRing, type RingEvent } from '../../services/ringSignaling';
 import type { User } from '../../types';
+import { logCallEvent } from '../../services/api';
 
 // Cold-starting the app from an incoming-call push notification (the app was fully closed, so the
 // original ring:<id> broadcast is long gone — see ringSignaling.ts) carries the call's details in the
@@ -58,6 +59,7 @@ export function useIncomingCalls(me: User | null) {
     const cur = incomingRef.current;
     if (!cur || !me) return;
     setIncoming(null);
+    void logCallEvent(cur.chatId, 'declined');
     void sendRing(cur.from.id, {
       type: 'declined',
       chatId: cur.chatId,

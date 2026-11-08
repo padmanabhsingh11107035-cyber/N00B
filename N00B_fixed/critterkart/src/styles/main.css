@@ -1860,6 +1860,7 @@ body.touch-device .prompts {
 }
 
 /* ─── online lobby ─────────────────────────────────────── */
+.lobby, .lobby :is(button, input, .panel) { pointer-events: auto; }
 .lobby { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(40, 20, 50, 0.55); padding: 12px; }
 .lobby[hidden] { display: none; }
 .lobby-panel { width: min(420px, 100%); max-height: 100%; overflow: auto; text-align: center; }

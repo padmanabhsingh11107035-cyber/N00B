@@ -993,7 +993,7 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 .st-notice-warn { background: color-mix(in srgb, var(--st-warn) 14%, transparent); border-color: color-mix(in srgb, var(--st-warn) 35%, transparent); }
 .st-notice-ok { background: color-mix(in srgb, var(--st-ok) 14%, transparent); border-color: color-mix(in srgb, var(--st-ok) 35%, transparent); }
 
-.st-head { display: flex; align-items: center; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: color-mix(in srgb, var(--st-bg) 78%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--st-border); flex: none; }
+.st-head { display: flex; align-items: center; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: var(--st-bg); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: 1px solid var(--st-border); flex: none; }
 .st-nav { display: flex; justify-content: space-around; gap: 2px; padding: 6px 8px max(8px, env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--st-bg) 86%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--st-border); flex: none; }
 .st-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; border-radius: 14px; font-size: 10.5px; font-weight: 800; color: var(--st-faint); background: none; border: 0; cursor: pointer; transition: color .15s ease, background .15s ease; }
 .st-nav-item[data-on='true'] { color: var(--st-accent); background: var(--st-accent-soft); }
@@ -1822,3 +1822,12 @@ html[data-theme="light"] body .msg-bub-mine :where(.text-white, .text-zinc-100, 
 html body .msg-bub-theirs :where(.text-zinc-400, .text-zinc-500), html[data-theme="light"] body .msg-bub-mine :where(.text-zinc-400, .text-zinc-500) { color: #52525b !important; }
 html body .msg-bub-mine :where(.text-zinc-400, .text-zinc-500), html[data-theme="light"] body .msg-bub-theirs :where(.text-zinc-400, .text-zinc-500) { color: #a1a1aa !important; }
 }
+
+/* ---- No blur at the top of any page: a page's top bar (and the strip behind the clock) is the page's own flat colour ---- */
+html body header[class*="backdrop-blur"], html body [class*="backdrop-blur"][class*="sticky"], html body [class*="backdrop-blur"][class*="top-0"], html body [class*="backdrop-blur"][class*="top-2"],
+html body .chat-bar, html body .nst-header, html body .msg-head, html body .msg-page header {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+/* the bars that were see-through (95 % or less) are the page colour, solid */
+html body header[class*="bg-zinc-950/"], html body header[class*="bg-black/"] { background-color: var(--page) !important; }
+html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop-blur"] { background-color: var(--page) !important; }

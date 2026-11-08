@@ -426,7 +426,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       )}
 
       {/* 1. Explore Search Bar & Shuffle Trigger */}
-      <div className="flex items-center gap-2 w-full">
+      <div className="flex items-center gap-2 w-full pt-2">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
             <Search className="w-4 h-4" />
@@ -438,7 +438,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             placeholder="Search anything"
             aria-label="Search people, handles, bios, posts and reels"
             enterKeyHint="search"
-            className="w-full bg-zinc-900/90 text-sm text-white pl-10 pr-9 py-3 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-500 shadow-inner"
+            className="w-full bg-zinc-900/90 text-sm text-white pl-10 pr-9 h-[46px] py-0 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-500 shadow-inner"
           />
           {searchQuery && (
             <button
@@ -454,7 +454,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         {joinTeamOpen && (
           <button
             onClick={() => setShowJoinUsModal(true)}
-            className="p-3 rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
+            className="shrink-0 w-[46px] h-[46px] p-0 flex items-center justify-center rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
             title="Join the NOOB team"
             aria-label="Join the NOOB team"
           >

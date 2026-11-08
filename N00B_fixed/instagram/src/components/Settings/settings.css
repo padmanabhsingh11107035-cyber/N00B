@@ -10,7 +10,7 @@
 }
 
 /* ---------- the bar on top: glass, with a hairline and a shadow that fade in once the page has been scrolled */
-.nst-header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--page) 74%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid transparent; transition: border-color 0.25s, box-shadow 0.25s; }
+.nst-header { position: sticky; top: 0; z-index: 10; background: var(--page); -webkit-backdrop-filter: none; backdrop-filter: none; border-bottom: 1px solid transparent; transition: border-color 0.25s, box-shadow 0.25s; }
 .nst-header.is-stuck { border-bottom-color: var(--nst-line); box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.55); }
 .nst-header-in { max-width: 42rem; margin: 0 auto; padding: 0 14px; height: 64px; display: flex; align-items: center; gap: 12px; }
 .nst-back { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--color-zinc-900); border: 1.5px solid var(--nst-line-strong); box-shadow: 2px 2px 0 rgba(var(--doodle-rgb), 0.12); cursor: pointer; transition: transform 0.3s var(--nst-spring), border-color 0.2s, box-shadow 0.2s; }

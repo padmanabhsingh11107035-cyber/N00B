@@ -43,6 +43,7 @@ export const ROWS: RowDef[] = [
   { id: 'app-icon', section: 'Your account', label: 'App icon', sub: 'NOOB Pro members can pick the Pro icon', icon: Crown, page: 'app-icon', keywords: 'icon logo home screen pro app icon change', value: (c) => (c.currentUser.proTier ? undefined : 'NOOB Pro') },
 
   // ---------------------------------------------------------------- How you use NOOB
+  { id: 'find-contacts', section: 'How you use NOOB', label: 'Find users from my contacts', sub: 'See which of your contacts are on NOOB', icon: UserPlus, action: 'openFindContacts', keywords: 'contacts phone numbers friends find people invite address book' },
   { id: 'saved', section: 'How you use NOOB', label: 'Saved', icon: Bookmark, action: 'showProfileTab', keywords: 'bookmarks collections saved posts' },
   { id: 'archive', section: 'How you use NOOB', label: 'Archive', icon: Archive, page: 'archive', keywords: 'archived posts stories old' },
   { id: 'activity', section: 'How you use NOOB', label: 'Your activity', icon: Activity, page: 'activity', keywords: 'likes comments time spent history interactions' },

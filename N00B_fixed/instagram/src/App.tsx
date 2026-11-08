@@ -945,6 +945,13 @@ export default function App() {
     return () => { cancelled = true; stopPresence(); };
   }, [currentUser?.id, activityStatusOn]);
 
+  // "Find users from my contacts" (Settings and activity): opens the same page, any time
+  useEffect(() => {
+    const open = () => setShowFindFriendsModal(true);
+    window.addEventListener('noob-open-find-friends', open);
+    return () => window.removeEventListener('noob-open-find-friends', open);
+  }, []);
+
   // Prompt for contacts access (to suggest friends already on NOOB) once per
   // install, and only on the native app — there is no contacts permission to
   // request on the website, so this must never fire there.

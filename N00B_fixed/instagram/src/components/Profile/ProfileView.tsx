@@ -542,6 +542,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openDevices: () => setShowDevices(true),
       openInstall: () => setShowInstallPermissionsPage(true),
       openBlocked: () => setShowBlockedAccountsModal(true),
+      openFindContacts: () => window.dispatchEvent(new Event('noob-open-find-friends')),
       openHideProfile: () => setShowHideProfileModal(true),
       openPro: () => setShowProFeaturesModal(true),
       openGetVerified: () => setShowGetVerifiedModal(true),

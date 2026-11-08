@@ -14,6 +14,7 @@ export interface SettingsActions {
   openDevices: () => void;
   openInstall: () => void;
   openBlocked: () => void;
+  openFindContacts: () => void;                  // "Find users from my contacts" (asks for the permission, then lists the people who are on NOOB)
   openHideProfile: () => void;
   openPro: () => void;
   openGetVerified: () => void;

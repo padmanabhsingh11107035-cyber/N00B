@@ -49,7 +49,12 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
     const r = await scanContacts();
     if (r.status === 'ok') { setPeople(r.users); setStage('results'); }
     else if (r.status === 'denied') setStage('denied');
-    else if (r.status === 'empty') setStage('empty');
+    else if (r.status === 'empty') {
+      // nobody from the contacts is on NOOB: a few other people to follow instead
+      const pool = registeredUsers.filter((u) => u.id !== currentUser.id && !u.isFollowing);
+      setPeople([...pool].sort(() => Math.random() - 0.5).slice(0, 6));
+      setStage('empty');
+    }
     else setStage('error');
   };
 
@@ -122,8 +127,14 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
             <div className="ff-center">
               <div className="ff-shield"><Users size={40} /></div>
               <h3 className="ff-h1">None of your contacts are on NOOB yet</h3>
-              <span>When they join with the number saved in your phone, they will show up here. You can invite them now.</span>
+              <span>When they join with the number saved in your phone, they will show up here. You can invite them now, or follow some people below.</span>
             </div>
+          )}
+          {stage === 'empty' && people.length > 0 && (
+            <>
+              <p className="ff-note" style={{ textAlign: 'left', fontWeight: 800, color: '#0f172a', fontSize: 14 }}>People you might like</p>
+              {list}
+            </>
           )}
 
           {stage === 'denied' && (

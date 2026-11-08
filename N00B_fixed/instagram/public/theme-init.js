@@ -31,10 +31,10 @@
 (function () {
   try {
     var q = window.location.search;
-    if (/[?&]nocover=1/.test(q)) localStorage.setItem('noob_no_cover', '1');
-    if (/[?&]cover=1/.test(q)) localStorage.removeItem('noob_no_cover');
+    if (/[?&]nocover=1/.test(q)) localStorage.removeItem('noob_cover');
+    if (/[?&]cover=1/.test(q)) localStorage.setItem('noob_cover', '1');
     var ios = /iPhone|iPod/.test(navigator.userAgent) && navigator.standalone === true;
-    if (!ios || localStorage.getItem('noob_no_cover') === '1') return;
+    if (!ios || localStorage.getItem('noob_cover') !== '1') return;   // OFF unless switched on with ?cover=1 (it is being reworked)
     var vp = document.querySelector('meta[name="viewport"]');
     if (vp && !/viewport-fit=cover/.test(vp.getAttribute('content') || '')) vp.setAttribute('content', (vp.getAttribute('content') || '') + ', viewport-fit=cover');
     document.documentElement.classList.add('ios-cover');

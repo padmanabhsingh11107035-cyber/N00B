@@ -74,7 +74,7 @@ import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
-import { setStripColour, forceStripColour } from '../../utils/statusStrip';
+import { setStripColour, forceStripColour, stripDebugText } from '../../utils/statusStrip';
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -1694,6 +1694,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const [stripGreen, setStripGreen] = useState(true);
+  // a hidden check for the colour behind the clock: tap the word Messages five times
+  const [stripInfo, setStripInfo] = useState<string | null>(null);
+  const titleTaps = useRef({ n: 0, t: 0 });
+  const tapTitle = () => {
+    const now = Date.now();
+    titleTaps.current = { n: now - titleTaps.current.t < 1500 ? titleTaps.current.n + 1 : 1, t: now };
+    if (titleTaps.current.n >= 5) { titleTaps.current.n = 0; setStripInfo((v) => (v === null ? stripDebugText() : null)); }
+  };
+  useEffect(() => {
+    if (stripInfo === null) return;
+    const id = window.setInterval(() => setStripInfo(stripDebugText()), 500);
+    return () => window.clearInterval(id);
+  }, [stripInfo === null]);
   // the strip is on only while this page is really on screen (the page stays mounted, hidden, when another tab is open)
   const [stripOn, setStripOn] = useState(false);
   useLayoutEffect(() => {
@@ -1796,6 +1809,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           : 'relative h-[calc(100dvh-var(--nav-h))] lg:h-[calc(100dvh-1.5rem-var(--nav-h))] xl:h-[calc(100dvh-1.5rem)] min-h-[460px] rounded-none border-0 shadow-none'
       }`}
     >
+      {stripInfo !== null && typeof document !== 'undefined' && createPortal(<pre onClick={() => setStripInfo(null)} style={{ position: 'fixed', left: 6, right: 6, bottom: 90, zIndex: 2147483002, margin: 0, padding: 10, borderRadius: 12, background: 'rgba(0,0,0,.88)', color: '#9fff9f', font: '11px/1.35 ui-monospace,Menlo,monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{stripInfo}</pre>, document.body)}
       {mobileView === 'list' && stripOn && typeof document !== 'undefined' && createPortal(<div className={`msg-safe-strip ${stripGreen ? 'on' : ''}`} aria-hidden="true" />, document.body)}
 
       {chatBlockedNotice && (
@@ -1827,7 +1841,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div ref={headRef} className="msg-head force-dark px-5 pb-[calc(20px+var(--msg-r))] will-change-transform" data-testid="messages-header">
             {/* title row: "Messages" with the number of chats; the menu (back, calls, new group, settings ...) is the three dots at the right */}
             <div className="flex items-end gap-2.5 h-[38px]">
-              <h1 className="min-w-0 text-[33px] leading-[38px] font-bold text-white tracking-[-0.5px]">
+              <h1 onClick={tapTitle} className="min-w-0 text-[33px] leading-[38px] font-bold text-white tracking-[-0.5px]">
                 <span className="block truncate">Messages</span>
               </h1>
               <span className="shrink-0 mb-[-5px] h-6 min-w-[26px] px-2.5 rounded-full bg-[var(--mint)] text-[#033b2a] text-[13px] leading-6 font-bold text-center tabular-nums">

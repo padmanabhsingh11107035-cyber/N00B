@@ -143,6 +143,33 @@ export function setStripColour(colour: string | null, owner?: () => Element | nu
 /** Paint the strip again from what is on screen now. */
 export function repaintStrip(): void { last = ''; queue(); }
 
+/** A few lines about the strip, for the hidden check (tap the word Messages five times): what the page set, and what is really at the top edge. */
+export function stripDebugText(): string {
+  try {
+    const root = document.documentElement;
+    const bar = document.getElementById('noob-top-edge');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const vp = document.querySelector('meta[name="viewport"]');
+    const top = document.elementFromPoint(Math.floor(window.innerWidth / 2), 3);
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';
+    document.body.appendChild(probe);
+    const env = probe.getBoundingClientRect().height;
+    probe.remove();
+    return [
+      `html bg: ${getComputedStyle(root).backgroundColor}`,
+      `forced: ${forced || '-'}  last: ${last || '-'}  override: ${override || '-'}`,
+      `top edge bar: ${bar ? getComputedStyle(bar).backgroundColor + ' h=' + bar.getBoundingClientRect().height : 'none'}`,
+      `meta theme-color: ${meta?.getAttribute('content') || '-'}`,
+      `viewport: ${vp?.getAttribute('content') || '-'}`,
+      `safe-area top: ${env}px  standalone: ${(navigator as unknown as { standalone?: boolean }).standalone === true}`,
+      `at y=3: ${top ? top.tagName.toLowerCase() + '.' + String(top.className).slice(0, 40) : '-'}`,
+      `scroll: ${window.scrollY}  inner: ${window.innerWidth}x${window.innerHeight}`,
+      `ua: ${navigator.userAgent.slice(0, 80)}`,
+    ].join('\n');
+  } catch (e) { return String(e); }
+}
+
 let started = false;
 /** Call once at start-up. Only does anything on a touch screen (a phone or tablet): on a computer the browser's own bar is not part of the page. */
 export function initStatusStrip(): void {

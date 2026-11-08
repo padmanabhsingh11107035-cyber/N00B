@@ -26,7 +26,7 @@ check(/og:site_name" content="NOOB Socials"/.test(html) && /og:title" content="N
 check(/og:image" content="https:\/\/noobsocials\.com\/brand\/og-card\.png"/.test(html) && /og:image:width" content="1200"/.test(html) && /og:image:height" content="630"/.test(html), 'and a proper 1200x630 share card');
 const g = ld(html)['@graph'];
 const org = g.find((x) => x['@type'] === 'Organization'), site = g.find((x) => x['@type'] === 'WebSite'), app = g.find((x) => x['@type'] === 'WebApplication');
-check(org && org.name === 'NOOB Socials' && org.alternateName.includes('noobsocials') && org.alternateName.includes('NOOB') && /students/.test(org.description), 'structured data: the organisation is "NOOB Socials", also known as NOOB / noobsocials, run by students');
+check(org && org.name === 'NOOB Socials' && org.alternateName.includes('noobsocials') && org.alternateName.includes('NOOB') && /student/.test(org.description) && org.founder && org.founder.name === "Padmanabh Singh Vaghela", 'structured data: the organisation is "NOOB Socials", also known as NOOB / noobsocials, run by students');
 check(org.sameAs.includes('https://www.instagram.com/nooob.xyz') && !/[?&]utm_|vrfl/.test(JSON.stringify(org.sameAs)), 'structured data: our official Instagram is linked to the organisation (clean address, no tracking)');
 check(org.alternateName.includes('noob socials') && site.alternateName.includes('noob socials'), 'the spaced spelling "noob socials" is a known name too');
 check(site && site.name === 'NOOB Socials' && site.alternateName.includes('noobsocials') && site.url === 'https://noobsocials.com/', 'structured data: the site name search results should show');

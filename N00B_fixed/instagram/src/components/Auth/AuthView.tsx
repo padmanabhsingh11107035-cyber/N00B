@@ -1226,7 +1226,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
           {mode === 'login' && loginStage === 'choose' && (
             <div className="space-y-3" data-testid="login-choose">
               <button type="button" onClick={() => setLoginStage('form')} data-testid="login-choose-login" className="w-full py-3.5 rounded-2xl bg-white text-black font-black text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-transform">
-                <Lock className="w-4 h-4" /> Log in with ID, email or phone
+                <Lock className="w-4 h-4" /> Log in
               </button>
               <button type="button" onClick={openSignupPage} data-testid="login-choose-signup" className="w-full py-3.5 rounded-2xl bg-white/5 border border-white/20 text-white font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-white/10 transition-colors">
                 <Zap className="w-4 h-4 text-cyan-400" /> Create a new account

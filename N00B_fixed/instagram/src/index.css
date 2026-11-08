@@ -1877,3 +1877,7 @@ html body .auth-v2 [data-testid="auth-social-top"] button:hover, html body .auth
   .auth-v2 [data-testid="login-choose"] button:active { transform: scale(.97); }
 }
 @keyframes auth-bubble { 0% { transform: translateY(0) scale(.6); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(-105vh) scale(1.15); opacity: 0; } }
+
+/* No scroll bars or scroll indicators anywhere in the app (phones, tablets and computers). Everything still scrolls with a finger, a wheel or the keyboard. */
+html, html * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+html::-webkit-scrollbar, html *::-webkit-scrollbar, html ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; background: transparent !important; }

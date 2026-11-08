@@ -70,9 +70,8 @@ function poke(colour: string, viewport: boolean): void {
       let bar = edgeBar();
       if (bar && bar.parentNode) { const fresh = bar.cloneNode(false) as HTMLElement; bar.replaceWith(fresh); edge = fresh; bar = fresh; }
       if (bar) bar.style.height = bar.style.height === '3px' ? '2px' : '3px';
-      // a changed viewport tag (same meaning) makes an iPhone measure the top of the screen again
-      const vp = viewport ? document.querySelector('meta[name="viewport"]') : null;   // (only when a page with its own colour comes or goes)
-      if (vp) { const c = vp.getAttribute('content') || ''; vp.setAttribute('content', /viewport-fit=auto/.test(c) ? c.replace(/,\s*viewport-fit=auto/, '') : c + ', viewport-fit=auto'); }
+      // (the viewport tag is never changed any more: changing it could leave the phone's strip blank, pure black, until the next page change)
+      void viewport;
     } catch { /* a nudge is never a reason to fail */ }
   }, ms));
 }

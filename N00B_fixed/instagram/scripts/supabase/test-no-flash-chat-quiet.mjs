@@ -16,7 +16,7 @@ section('1. The strip behind the clock can not flash the page');
 const sampled = strip.slice(strip.indexOf('function paint(): void {'), strip.indexOf('const queue ='));
 check(!/applyColour\([^)]*,\s*(true|'full'|'light')\)/.test(sampled.replace(/applyColour\(own, 'light'\)/, '')), 'a colour read from the screen is never applied with a nudge (the nudge changes the phone\'s layout)');
 check(/if \(bouncing\(\)\) return;/.test(sampled) && /lightness\(colour\) > 0\.75/.test(sampled) && /if \(pending === colour\)/.test(sampled), 'nothing is read during a rubber-band bounce, a nearly white reading is never used in the dark theme, and any other new colour must be seen twice');
-check(/function poke\(colour: string, viewport: boolean\)/.test(strip) && /const vp = viewport \? document\.querySelector/.test(strip), 'the viewport tag is only touched when asked to');
+check(/function poke\(colour: string, viewport: boolean\)/.test(strip) && !/vp\.setAttribute\('content'/.test(strip), 'the viewport tag is never changed (changing it left the iPhone strip pure black)');
 check(/const transition = \(colour === null\) !== \(override === null\)/.test(strip) && /const mode = transition \? 'full' : 'light'/.test(strip) && /poke\(colour, nudge === 'full'\)/.test(strip), 'and only when a page with its own colour (Messages) comes or goes');
 check(!/viewport/.test(read('src/App.tsx').replace(/viewport-fit/g, '')) || !/setAttribute\('content'/.test(read('src/App.tsx')), 'nothing else in the app changes the viewport tag while the app is used');
 const others = fs.readdirSync('src', { recursive: true }).filter((f) => /\.(tsx?|ts)$/.test(String(f)) && !/statusStrip/.test(String(f))).filter((f) => /meta\[name="viewport"\]/.test(read(`src/${f}`)));

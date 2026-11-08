@@ -1794,3 +1794,8 @@ body { overflow-x: clip; max-width: 100vw; }
 /* The long strip on the left of a laptop / computer touches the top, the bottom and the left edge of the screen, and stays there while the page scrolls. */
 [data-testid="desktop-side-menu"] .nmenu-panel { position: fixed; left: 0; top: 0; bottom: 0; width: 80px; border-radius: 0; border-width: 0 1px 0 0; box-shadow: none; }
 [data-testid="desktop-side-menu"] .nmenu-panel.is-open { width: 272px; }
+
+/* Chat wallpaper: the supplied colourful "social media" doodle picture (public/brand/chat-doodle.webp, mirrored so it tiles with no seam), softened so the messages stay easy to read. */
+html body .chat-wallpaper { background-color: var(--page) !important; background-image: linear-gradient(rgba(10, 10, 10, 0.55), rgba(10, 10, 10, 0.55)), url('/brand/chat-doodle.webp') !important; background-size: auto, 700px auto !important; background-repeat: no-repeat, repeat !important; }
+html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35)), url('/brand/chat-doodle.webp') !important; }
+@layer base { html body .chat-wallpaper, html body.light .chat-wallpaper { background-color: var(--page) !important; } }

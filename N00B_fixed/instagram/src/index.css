@@ -1805,7 +1805,7 @@ html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 25
 /* ---- Messages: the strip behind the clock (iPhone) is a bar of the page itself, green while the header is in view, the page colour once it has scrolled away (both Dark and Light) ---- */
 .msg-safe-strip { display: none; }
 @media (pointer: coarse) {
-  html body .msg-safe-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 45; pointer-events: none; background: #0a0c0e; }
+  html body .msg-safe-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 2147483001; pointer-events: none; background: #0a0c0e; }
   html body .msg-safe-strip.on { background: #0E4B37; }
   html[data-theme="light"] body .msg-safe-strip:not(.on) { background: #ffffff; }
 }

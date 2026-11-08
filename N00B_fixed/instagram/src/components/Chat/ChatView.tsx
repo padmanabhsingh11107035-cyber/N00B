@@ -8,6 +8,7 @@ import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Archive,
   ChevronDown,
@@ -1693,6 +1694,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const [stripGreen, setStripGreen] = useState(true);
+  // the strip is on only while this page is really on screen (the page stays mounted, hidden, when another tab is open)
+  const [stripOn, setStripOn] = useState(true);
+  useEffect(() => {
+    const check = () => { const el = document.getElementById('chat-view-container'); setStripOn(!!el && el.getClientRects().length > 0 && !document.hidden); };
+    check();
+    const id = window.setInterval(check, 300);
+    document.addEventListener('visibilitychange', check);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', check); };
+  }, []);
   const setStrip = (green: boolean, nudge = false) => {
     setStripGreen(green);
     const root = document.documentElement;
@@ -1779,6 +1789,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           : 'relative h-[calc(100dvh-var(--nav-h))] lg:h-[calc(100dvh-1.5rem-var(--nav-h))] xl:h-[calc(100dvh-1.5rem)] min-h-[460px] rounded-none border-0 shadow-none'
       }`}
     >
+      {mobileView === 'list' && stripOn && typeof document !== 'undefined' && createPortal(<div className={`msg-safe-strip ${stripGreen ? 'on' : ''}`} aria-hidden="true" />, document.body)}
+
       {chatBlockedNotice && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-rose-500/40 text-rose-300 text-xs font-semibold shadow-2xl max-w-[90%] text-center">
           {chatBlockedNotice}
@@ -1796,7 +1808,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }`}
         >
           {/* The strip behind the clock on a phone: part of THIS page, so it is green exactly while the Messages list is open and its header is in view (it is gone with the page, never left behind). */}
-          <div className={`msg-safe-strip ${stripGreen ? 'on' : ''}`} aria-hidden="true" />
           {/* Instants: a small tab at the right edge of the list (Instagram style), it takes no room from the chats */}
           <InstantsStack
             onOpenCamera={() => setShowInstantCamera(true)}
@@ -1847,6 +1858,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 className="w-[45px] h-[45px] rounded-full bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white flex items-center justify-center cursor-pointer transition-colors">
                 <UserPlus className="w-[21px] h-[21px]" strokeWidth={2.1} />
               </button>
+              {callsOn && (
+                <button type="button" onClick={() => setShowCallLogs(true)} aria-label="Calls" title="Calls" data-testid="messages-calls"
+                  className="w-[45px] h-[45px] rounded-full bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white flex items-center justify-center cursor-pointer transition-colors">
+                  <CallIcon className="w-[21px] h-[21px]" strokeWidth={2.1} />
+                </button>
+              )}
               {/* Family Map: rooms where a family or friends see each other live on a map (opens over the chats) */}
               {familyOn && (
                 <button type="button" onClick={openFamily} onPointerDown={preloadFamily} aria-label="Family Map: see your family live on a map" title="Family Map" data-testid="messages-family-map"
@@ -2117,11 +2134,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <button onClick={() => { setShowLeftMenu(false); if (window.history.length > 1) window.history.back(); }} data-testid="messages-back" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <ChevronLeft className="w-4 h-4 text-zinc-300" /> Back
                     </button>
-                    {callsOn && (
-                      <button onClick={() => { setShowLeftMenu(false); setShowCallLogs(true); }} data-testid="messages-calls" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
-                        <CallIcon className="w-4 h-4 text-[var(--mint)]" /> Calls
-                      </button>
-                    )}
                     <button onClick={() => { setShowLeftMenu(false); setShowCreateGroup(true); }} data-testid="messages-new-group" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Users className="w-4 h-4 text-[var(--mint)]" /> New Group Chat
                     </button>
@@ -2241,18 +2253,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </span>
                     )}
                     {/* Only says "encrypted" when this chat really is: the server is asked, and the answer is shown as it is */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowEncryption(true);
-                      }}
-                      className={`shrink-0 cursor-pointer ${chatCrypto?.encryptable ? 'text-noob' : 'text-amber-300'}`}
-                      title={chatCrypto === null ? 'Checking encryption…' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
-                      aria-label={chatCrypto === null ? 'Checking encryption' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
-                    >
-                      {chatCrypto?.encryptable ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
-                    </button>
                     {chatCrypto?.peer?.changed && (
                       <span className="text-amber-300 font-bold truncate">Security code changed</span>
                     )}
@@ -2397,11 +2397,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {cs['chat.encryptionNotice'] && (
             <div className="flex justify-center my-2">
               <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-400 text-[10px] font-medium flex items-center gap-1.5 shadow-sm">
-                <Lock className="w-3 h-3 text-noob shrink-0" />
+                {chatCrypto?.encryptable ? <Lock className="w-3 h-3 text-noob shrink-0" /> : <LockOpen className="w-3 h-3 text-amber-300 shrink-0" />}
                 <span>
-                  Text messages here are{' '}
-                  <button type="button" onClick={() => setShowE2eePage(true)} className="text-blue-400 hover:text-blue-300 underline underline-offset-2 decoration-blue-400/70 font-semibold cursor-pointer">end-to-end encrypted</button>
-                  {' '}when the top of the chat shows the lock.
+                  {chatCrypto === null ? 'Checking privacy of this chat…' : chatCrypto.encryptable ? (
+                    <>This chat is{' '}<button type="button" onClick={() => setShowEncryption(true)} className="text-blue-400 hover:text-blue-300 underline underline-offset-2 decoration-blue-400/70 font-semibold cursor-pointer">end-to-end encrypted</button>: only the people in it can read the text messages.</>
+                  ) : (
+                    <>This chat is <button type="button" onClick={() => setShowEncryption(true)} className="text-amber-300 underline underline-offset-2 font-semibold cursor-pointer">not end-to-end encrypted</button> right now.</>
+                  )}
                 </span>
               </div>
             </div>
@@ -2876,7 +2878,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <>
               <div className="fixed inset-0 z-[115]" onClick={() => setActiveMessageMenu(null)} onContextMenu={(e) => { e.preventDefault(); setActiveMessageMenu(null); }} />
               <div
-                className="fixed z-[116] -translate-x-1/2 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[180px]"
+                ref={(el) => {
+                  if (!el || !activeMessageMenu) return;
+                  // keep the whole menu on the screen: a message near the bottom or the side opens it upwards / inwards
+                  const w = el.offsetWidth, h = el.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+                  el.style.left = `${Math.max(w / 2 + 8, Math.min(activeMessageMenu.x, vw - w / 2 - 8))}px`;
+                  el.style.top = `${Math.max(8, Math.min(activeMessageMenu.y, vh - h - 12))}px`;
+                }}
+                className="fixed z-[116] -translate-x-1/2 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[180px] max-h-[calc(100dvh-24px)] overflow-y-auto"
                 style={{ left: activeMessageMenu.x, top: activeMessageMenu.y }}
               >
                 <div className="flex items-center justify-between gap-1 px-1 pb-1.5 border-b border-zinc-800 mb-1">

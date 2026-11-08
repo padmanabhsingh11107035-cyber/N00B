@@ -19,7 +19,7 @@ check(html.indexOf('/coaching-init.js') < iData && html.indexOf('/editor-init.js
 check(!/<script>\s*\(function/.test(html) && !/<script>[^<]*opening/.test(html), 'no script is written inside the page (the security policy does not allow it)');
 check(/#noob-splash img \{ display: none; \}/.test(html) && /#noob-splash\.logo img \{ display: block;/.test(html), 'the splash has no logo (no glow, nothing before the animation); only an address that asks for it shows one');
 check(/splash\.className = 'logo'/.test(read('public/coaching-init.js')) && /splash\.className = 'logo'/.test(read('public/editor-init.js')), 'the coaching (NOOB STUDY) and editor (Studio) addresses ask for their logo');
-check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=3/.test(html), 'the files are kept for a year, their address carries a version number');
+check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=4/.test(html), 'the files are kept for a year, their address carries a version number');
 
 section('2. The app opens straight out of it');
 check(/__noobOpening\?: unknown/.test(main) && /if \(splash && !\(window as unknown as \{ __noobOpening\?: unknown \}\)\.__noobOpening\)/.test(main), 'src/main.tsx leaves the splash to the animation when it is running (and removes it as before when it is not)');
@@ -50,7 +50,7 @@ const sandbox = {
   performance: { now: () => now }, Path2D: class { moveTo() {} quadraticCurveTo() {} closePath() {} },
   Audio: class { constructor() { this.volume = 1; } addEventListener() {} play() { return Promise.resolve(); } },
   requestAnimationFrame: (f) => { frames.push(f); return frames.length; }, cancelAnimationFrame() {},
-  Math, Number, Array, Object, Promise,
+  Math, Number, Array, Object, Promise, Image: class {},
 };
 sandbox.window = Object.assign(sandbox, { innerWidth: 390, innerHeight: 844, devicePixelRatio: 3, matchMedia: () => ({ matches: false }), setTimeout: (f, ms) => { timers.push([f, ms]); return timers.length; } });
 vm.createContext(sandbox);
@@ -94,7 +94,7 @@ section('3b. The sound where the browser refuses it (an iPhone, a phone\'s brows
     },
     performance: { now: () => now2 }, Path2D: class { moveTo() {} quadraticCurveTo() {} closePath() {} },
     Audio: class { constructor() { this.volume = 1; this.readyState = 4; this.currentTime = 0; } play() { plays.push(this.currentTime); return refuse ? Promise.reject(new Error('NotAllowedError')) : Promise.resolve(); } },
-    requestAnimationFrame: (f) => { frames2.push(f); return frames2.length; }, cancelAnimationFrame() {}, Math, Number, Array, Object, Promise,
+    requestAnimationFrame: (f) => { frames2.push(f); return frames2.length; }, cancelAnimationFrame() {}, Math, Number, Array, Object, Promise, Image: class {},
   };
   sb.window = Object.assign(sb, { innerWidth: 390, innerHeight: 844, devicePixelRatio: 3, matchMedia: () => ({ matches: false }), setTimeout: () => 1, clearTimeout() {} });
   vm.createContext(sb);

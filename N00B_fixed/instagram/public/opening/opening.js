@@ -258,6 +258,21 @@
     }
   }
 
+  // the doodle picture of NOOB's icons (white on clear) fills the dark behind the word, drifting slowly; it fades out as the camera dives into the eye
+  var BG = new Image(), bgReady = false;
+  BG.onload = function () { bgReady = true; };
+  BG.src = '/brand/doodle-white.webp';
+  function backdrop(t) {
+    if (!bgReady) return;
+    var a = smooth(prog(t, 0, 0.6)) * (1 - smooth(prog(t, 2.5, 3.05))) * 0.85;
+    if (a <= 0.01) return;
+    var tw = Math.max(cw * 0.95, 360 * K), th = tw * BG.height / BG.width;
+    var ox = -((t * 14 * K) % tw), oy = -((t * 8 * K) % th);
+    ctx.globalAlpha = a;
+    for (var x = ox; x < cw; x += tw) for (var y = oy; y < ch; y += th) ctx.drawImage(BG, x, y, tw + 1, th + 1);
+    ctx.globalAlpha = 1;
+  }
+
   function drawFrame(t) {
     size();
     setCam(t);
@@ -265,6 +280,7 @@
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     glow(0, 0);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+    backdrop(t);
     world(t);
     drawVignette();
     iris(t);

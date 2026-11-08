@@ -25,3 +25,18 @@
     document.documentElement.setAttribute('data-theme', 'dark');
   }
 })();
+
+// iPhone, installed from the Home Screen: the page is drawn all the way up under the clock (viewport-fit=cover), so the strip behind the clock is drawn by the page itself and always has the page's own colour.
+// (Without this the phone paints that strip by itself and kept it black after a chat.) Everything that belongs to this lives under html.ios-cover in index.css. Off switch: open the app with ?nocover=1, on again with ?cover=1.
+(function () {
+  try {
+    var q = window.location.search;
+    if (/[?&]nocover=1/.test(q)) localStorage.setItem('noob_no_cover', '1');
+    if (/[?&]cover=1/.test(q)) localStorage.removeItem('noob_no_cover');
+    var ios = /iPhone|iPod/.test(navigator.userAgent) && navigator.standalone === true;
+    if (!ios || localStorage.getItem('noob_no_cover') === '1') return;
+    var vp = document.querySelector('meta[name="viewport"]');
+    if (vp && !/viewport-fit=cover/.test(vp.getAttribute('content') || '')) vp.setAttribute('content', (vp.getAttribute('content') || '') + ', viewport-fit=cover');
+    document.documentElement.classList.add('ios-cover');
+  } catch (e) { /* the page just stays as it was */ }
+})();

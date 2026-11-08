@@ -41,8 +41,8 @@ export function forceStripColour(colour: string | null): void {
   if (typeof window === 'undefined') return;
   if (forced === colour) { if (colour) applyColour(colour); return; }
   forced = colour;
-  if (colour) { pending = ''; applyColour(colour, 'light'); window.setTimeout(() => { if (forced === colour) applyColour(colour); }, 120); }
-  else { last = ''; queue(); }
+  if (colour) { pending = ''; applyColour(colour, 'full'); window.setTimeout(() => { if (forced === colour) applyColour(colour); }, 120); }
+  else { last = ''; applyColour(pageColour(), 'full'); queue(); }
 }
 
 function edgeBar(): HTMLElement | null {
@@ -66,7 +66,9 @@ function poke(colour: string, viewport: boolean): void {
     try {
       const old = document.querySelector('meta[name="theme-color"]');
       if (old && old.getAttribute('content') === colour) old.replaceWith(old.cloneNode());
-      const bar = edgeBar();
+      // a brand-new thin bar at the top edge (the phone samples the colour from what sits there): the old one is replaced by a copy, then made 1 px taller or shorter
+      let bar = edgeBar();
+      if (bar && bar.parentNode) { const fresh = bar.cloneNode(false) as HTMLElement; bar.replaceWith(fresh); edge = fresh; bar = fresh; }
       if (bar) bar.style.height = bar.style.height === '3px' ? '2px' : '3px';
       // a changed viewport tag (same meaning) makes an iPhone measure the top of the screen again
       const vp = viewport ? document.querySelector('meta[name="viewport"]') : null;   // (only when a page with its own colour comes or goes)

@@ -1834,7 +1834,8 @@ html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop
 
 /* ---- iPhone installed app (html.ios-cover, see public/theme-init.js): the page is drawn under the clock, so the strip behind the clock is the page's own colour (html's background, which the strip logic sets).
    Everything that used to start below the strip is pushed down by --sat (the height of that strip) again. ---- */
-html.ios-cover { --sat: env(safe-area-inset-top, 0px); }
+/* the phone still starts the page below the clock (it is inset by itself), so no extra room is added: --sat stays 0 (it was the height of the strip and doubled the gap) */
+html.ios-cover { --sat: 0px; }
 html.ios-cover body { padding-top: var(--sat); box-sizing: border-box; }
 /* the Messages list is as tall as the screen under the strip */
 html.ios-cover #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }

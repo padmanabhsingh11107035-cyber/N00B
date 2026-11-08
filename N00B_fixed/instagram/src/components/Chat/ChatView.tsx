@@ -74,7 +74,7 @@ import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
-import { setStripColour } from '../../utils/statusStrip';
+import { setStripColour, forceStripColour } from '../../utils/statusStrip';
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -1695,14 +1695,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const [stripGreen, setStripGreen] = useState(true);
   // the strip is on only while this page is really on screen (the page stays mounted, hidden, when another tab is open)
-  const [stripOn, setStripOn] = useState(true);
-  useEffect(() => {
+  const [stripOn, setStripOn] = useState(false);
+  useLayoutEffect(() => {
     const check = () => { const el = document.getElementById('chat-view-container'); setStripOn(!!el && el.getClientRects().length > 0 && !document.hidden); };
     check();
-    const id = window.setInterval(check, 300);
+    const id = window.setInterval(check, 120);
     document.addEventListener('visibilitychange', check);
     return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', check); };
   }, []);
+  // the strip behind the clock is put by this page itself, with no looking at the screen: green while the list is on screen with its header in view, the page colour once the header has scrolled away
+  useLayoutEffect(() => {
+    const on = mobileView === 'list' && stripOn;
+    const light = document.documentElement.getAttribute('data-theme') === 'light';
+    forceStripColour(on ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : null);
+  }, [mobileView, stripOn, stripGreen]);
+  useEffect(() => () => forceStripColour(null), []);
   const setStrip = (green: boolean, nudge = false) => {
     setStripGreen(green);
     const root = document.documentElement;

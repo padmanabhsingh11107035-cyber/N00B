@@ -34,6 +34,17 @@ const shown = (el: Element | null): boolean => !!el && (el as HTMLElement).getCl
 const activeOverride = (): string | null => (override && (!overrideOwner || shown(overrideOwner())) ? override : null);
 let edge: HTMLElement | null = null;
 
+// A colour that a page puts on the strip by itself, with no looking at the screen and no owner check: the page that sets it also clears it (the Messages list while it is on screen).
+let forced: string | null = null;
+/** Messages calls this with the colour while its list is on screen, and with null when it is not. */
+export function forceStripColour(colour: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (forced === colour) { if (colour) applyColour(colour); return; }
+  forced = colour;
+  if (colour) { pending = ''; applyColour(colour, 'light'); window.setTimeout(() => { if (forced === colour) applyColour(colour); }, 120); }
+  else { last = ''; queue(); }
+}
+
 function edgeBar(): HTMLElement | null {
   if (typeof document === 'undefined' || !document.body) return null;
   if (edge && edge.isConnected) return edge;
@@ -95,6 +106,7 @@ function bouncing(): boolean {
 function paint(): void {
   queued = false;
   if (document.hidden) return;
+  if (forced) { pending = ''; applyColour(forced); return; }
   const own = activeOverride();
   if (own) { pending = ''; applyColour(own, 'light'); return; }
   if (bouncing()) return;

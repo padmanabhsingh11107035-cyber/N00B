@@ -1846,3 +1846,7 @@ html.ios-cover .sticky.top-0:not(.fixed *) { top: var(--sat) !important; }
 html.ios-cover .fixed.top-0:not(.inset-0):not(.bottom-0) { top: var(--sat) !important; }
 /* the strip behind the clock is one flat colour: the doodle layer starts below it */
 html.ios-cover body::after { top: var(--sat) !important; }
+
+/* the strip behind the clock is one flat bar in the page's strip colour (the colour of html), so nothing that scrolls shows through it; bars that stick at the top stop just below it */
+html.ios-cover::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background-color: inherit; z-index: 2147483000; pointer-events: none; }
+html.ios-cover .sticky.top-0:not(.fixed *) { top: env(safe-area-inset-top, 0px) !important; }

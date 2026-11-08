@@ -1,0 +1,48 @@
+/* "Find friends" page: a white, calm "trust" design (it stays white in Dark mode too, like a bank or a government app: plain words, a green shield, clear choices). */
+.ff-root {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  background: #ffffff; color: #0f172a;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 15px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; animation: ff-in .2s ease-out both;
+}
+@keyframes ff-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.ff-root *, .ff-root *::before, .ff-root *::after { box-sizing: border-box; }
+.ff-root button { font-family: inherit; cursor: pointer; }
+.ff-bar { flex: none; display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; border-bottom: 1px solid #eef0f3; background: #fff; }
+.ff-back { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; border: 0; background: #f3f5f7; color: #0f172a; }
+.ff-title { margin: 0; font-size: 17px; font-weight: 800; color: #0f172a; }
+.ff-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 22px 18px 24px; }
+.ff-col { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.ff-hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ff-shield { width: 84px; height: 84px; border-radius: 28px; display: grid; place-items: center; background: #e8f5ef; color: #0e6b4a; box-shadow: 0 10px 30px rgba(14, 107, 74, .14); }
+.ff-h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 800; color: #0f172a; }
+.ff-lead { margin: 0; color: #475569; max-width: 420px; }
+.ff-card { border: 1px solid #e5e9ee; border-radius: 20px; padding: 6px 16px; background: #fff; }
+.ff-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; }
+.ff-row + .ff-row { border-top: 1px solid #eef0f3; }
+.ff-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: #e8f5ef; color: #0e6b4a; }
+.ff-row b { display: block; color: #0f172a; font-size: 15px; font-weight: 700; }
+.ff-row span { display: block; color: #64748b; font-size: 13.5px; margin-top: 2px; }
+.ff-note { margin: 0; text-align: center; color: #64748b; font-size: 12.5px; }
+.ff-note a { color: #0e6b4a; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.ff-foot { flex: none; padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid #eef0f3; background: #fff; }
+.ff-foot-in { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.ff-btn { min-height: 52px; border-radius: 16px; border: 0; font-size: 15.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 0 18px; transition: transform .12s, opacity .12s; }
+.ff-btn:active { transform: scale(.98); }
+.ff-btn:disabled { opacity: .55; }
+.ff-btn.primary { background: #0e6b4a; color: #fff; box-shadow: 0 10px 24px rgba(14, 107, 74, .25); }
+.ff-btn.ghost { background: #f3f5f7; color: #334155; }
+.ff-spin { width: 34px; height: 34px; border-radius: 50%; border: 4px solid #dcefe6; border-top-color: #0e6b4a; animation: ff-spin 0.9s linear infinite; }
+@keyframes ff-spin { to { transform: rotate(360deg); } }
+.ff-center { text-align: center; padding: 36px 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #475569; }
+.ff-chip { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 14px; background: #e8f5ef; color: #0e6b4a; font-size: 13.5px; font-weight: 700; }
+.ff-person { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e9ee; border-radius: 18px; background: #fff; }
+.ff-person + .ff-person { margin-top: 10px; }
+.ff-person img { width: 48px; height: 48px; border-radius: 16px; object-fit: cover; background: #f1f5f9; flex: none; }
+.ff-who { min-width: 0; flex: 1; }
+.ff-who b { display: flex; align-items: center; gap: 4px; font-size: 14.5px; color: #0f172a; font-weight: 700; }
+.ff-who b span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ff-who small { display: block; color: #64748b; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ff-follow { flex: none; min-height: 38px; padding: 0 14px; border-radius: 12px; border: 0; font-size: 13.5px; font-weight: 800; background: #0e6b4a; color: #fff; display: flex; align-items: center; gap: 6px; }
+.ff-follow.on { background: #eef2f6; color: #334155; }
+.ff-steps { margin: 0; padding-left: 20px; color: #475569; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }

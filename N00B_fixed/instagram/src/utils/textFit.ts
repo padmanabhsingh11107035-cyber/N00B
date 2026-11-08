@@ -21,6 +21,9 @@ function sticksOut(bar: HTMLElement): boolean {
 
 /** Make the text of one bar as big as it can be while everything in it still fits. */
 export function fitBar(bar: HTMLElement): number {
+  // a bar that is not on screen (a page that is kept hidden, like Home while another tab is open) keeps the size it had: measured while hidden everything "fits", which put the big text
+  // back and made the bar show big for a moment when its page came back
+  if (bar.getClientRects().length === 0) return Number(bar.getAttribute('data-fit') || 0);
   bar.removeAttribute('data-fit');
   let step = 0;
   while (step < MAX_STEP && sticksOut(bar)) {

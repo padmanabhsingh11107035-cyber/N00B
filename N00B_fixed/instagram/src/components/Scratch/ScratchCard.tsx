@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bookmark, Check, Download, Eye, Flame, Heart, Link2, Loader2, MessageCircle, RefreshCw, Rocket, Skull, Sparkles, Tag, ThumbsUp, Trash2 } from 'lucide-react';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
-import { siteOrigin } from '../../utils/siteUrl';
+import { siteOrigin, isNativeApp } from '../../utils/siteUrl';
 import { ScratchCanvas } from './ScratchCanvas';
 import { ago, deleteCard, failed, markRevealed, react, short, toggleSave, type ReactionKind, type ScratchCard as Card } from './scratchData';
 import type { ScratchTool } from './scratchEngine';
@@ -85,16 +85,35 @@ export const ScratchCardView: React.FC<Props> = ({ card, tool, brushMultiplier, 
     catch { say('Copying is not available here.', 'bad'); }
   };
 
+  // Download the picture. A browser saves it as a file. Inside the Android app a plain "download" does nothing, so there the phone's own share sheet opens with the picture (Save to Photos / Files / send it), and if that is not there the picture opens so it can be held and saved.
   const download = async () => {
+    const name = `noob-scratch-${card.id.slice(0, 8)}.jpg`;
+    let blob: Blob | null = null;
+    try { const res = await fetch(card.imageSrc); if (res.ok) blob = await res.blob(); } catch { blob = null; }
+    if (blob) {
+      try {
+        const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
+        const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+        if (isNativeApp() && navigator.share && nav.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: card.title }); return; }
+      } catch (e) { if ((e as { name?: string })?.name === 'AbortError') return; }
+      if (!isNativeApp()) {
+        try {
+          const a = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          a.href = url; a.download = name;
+          document.body.appendChild(a); a.click(); a.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+          say('Saved to your downloads.', 'good');
+          return;
+        } catch { /* fall through to opening the picture */ }
+      }
+    }
+    say('Opening the picture: hold it, then choose Download image.', 'good');
+    const abs = /^https?:/i.test(card.imageSrc) ? card.imageSrc : siteOrigin() + (card.imageSrc.startsWith('/') ? '' : '/') + card.imageSrc;
     try {
-      const res = await fetch(card.imageSrc);
-      const blob = await res.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `noob-scratch-${card.id.slice(0, 8)}.jpg`;
-      document.body.appendChild(a); a.click(); a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    } catch { window.open(card.imageSrc, '_blank', 'noopener'); }
+      if (isNativeApp()) { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url: abs }); return; }
+    } catch { /* use the normal way below */ }
+    window.open(abs, '_blank', 'noopener');
   };
 
   const remove = async () => {

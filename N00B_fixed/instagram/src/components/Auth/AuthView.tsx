@@ -1022,7 +1022,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   }
 
   return (
-    <div className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
+    <div data-onepage={mode === 'login' && loginStage === 'choose' ? '1' : undefined} className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
       <div className="auth-orbs" aria-hidden="true"><span className="auth-orb o1" /><span className="auth-orb o2" /><span className="auth-orb o3" /><i style={{ ['--x' as string]: '8%', ['--s' as string]: '12px', ['--d' as string]: '15s', ['--t' as string]: '-0s' }} /><i style={{ ['--x' as string]: '22%', ['--s' as string]: '18px', ['--d' as string]: '19s', ['--t' as string]: '-6s' }} /><i style={{ ['--x' as string]: '38%', ['--s' as string]: '10px', ['--d' as string]: '13s', ['--t' as string]: '-3s' }} /><i style={{ ['--x' as string]: '52%', ['--s' as string]: '22px', ['--d' as string]: '21s', ['--t' as string]: '-9s' }} /><i style={{ ['--x' as string]: '66%', ['--s' as string]: '14px', ['--d' as string]: '16s', ['--t' as string]: '-1s' }} /><i style={{ ['--x' as string]: '78%', ['--s' as string]: '20px', ['--d' as string]: '18s', ['--t' as string]: '-7s' }} /><i style={{ ['--x' as string]: '90%', ['--s' as string]: '12px', ['--d' as string]: '14s', ['--t' as string]: '-4s' }} /></div>
       {SHOW_AUTH_DOODLES && (<>
       {/* Premium Gen Z Background glow accents */}

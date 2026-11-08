@@ -1881,3 +1881,18 @@ html body .auth-v2 [data-testid="auth-social-top"] button:hover, html body .auth
 /* No scroll bars or scroll indicators anywhere in the app (phones, tablets and computers). Everything still scrolls with a finger, a wheel or the keyboard. */
 html, html * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 html::-webkit-scrollbar, html *::-webkit-scrollbar, html ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; background: transparent !important; }
+
+/* Sign-in page: the black area runs to the bottom of the screen (the footer is part of it), and the first screen (Log in / Create account) fits on ONE screen with no scrolling,
+   on a phone and on a computer: the picture and the writing shrink with the height of the screen. */
+.auth-v2 > footer { max-width: none !important; width: 100%; background: #111113; border-top: 0 !important; margin-top: 0 !important; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: relative; z-index: 10; }
+.auth-v2 > footer p { color: #6f6f78 !important; }
+.auth-v2 > footer a { color: #b4b4bc; }
+.auth-v2[data-onepage="1"] { height: 100dvh; min-height: 0 !important; overflow: hidden; }
+.auth-v2[data-onepage="1"] .auth-head { padding-top: clamp(2px, 1.2vh, 20px) !important; padding-bottom: clamp(18px, 3.5vh, 40px) !important; flex: 0 0 auto; }
+.auth-v2[data-onepage="1"] .lh-word { font-size: clamp(42px, 9vh, 74px); }
+.auth-v2[data-onepage="1"] .ls-root { width: min(360px, 92vw, 43vh); margin-top: clamp(22px, 4vh, 34px); margin-bottom: -22px; }
+.auth-v2[data-onepage="1"] .auth-sheet { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: clamp(14px, 3vh, 28px); padding-bottom: clamp(8px, 2vh, 24px); }
+.auth-v2[data-onepage="1"] > footer { flex: 0 0 auto; padding-top: clamp(4px, 1vh, 12px); padding-bottom: max(clamp(4px, 1vh, 12px), env(safe-area-inset-bottom)); }
+@media (max-height: 860px) { .auth-v2[data-onepage="1"] .auth-head p { display: none; } .auth-v2[data-onepage="1"] .auth-head h1 { font-size: 21px; } }
+@media (max-height: 700px) { .auth-v2[data-onepage="1"] .lh-line { display: none; } .auth-v2[data-onepage="1"] .ls-chip { display: none; } .auth-v2[data-onepage="1"] .ls-root { width: min(300px, 80vw, 38vh); } }
+@media (max-height: 560px) { .auth-v2[data-onepage="1"] .ls-root { display: none; } .auth-v2[data-onepage="1"] .auth-head { padding-bottom: 24px !important; } }

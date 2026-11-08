@@ -135,7 +135,7 @@ export function setStripColour(colour: string | null, owner?: () => Element | nu
   void nudge;
   const mode = transition ? 'full' : 'light';
   if (colour && activeOverride()) { applyColour(colour, mode); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour, 'light'); }, 90); }
-  else if (!colour) applyColour(pageColour(), mode);
+  else if (!colour) applyColour(forced || pageColour(), forced ? false : mode);
   queue();
 }
 

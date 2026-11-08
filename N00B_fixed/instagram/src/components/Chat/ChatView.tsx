@@ -1718,9 +1718,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, []);
   // the strip behind the clock is put by this page itself, with no looking at the screen: green while the list is on screen with its header in view, the page colour once the header has scrolled away
   useLayoutEffect(() => {
-    const on = mobileView === 'list' && stripOn;
+    // Messages keeps the strip as it was while a chat is open (it does not change when a chat opens or closes): the iPhone only re-reads the colour behind the clock when it changes, and it failed to take the green back after a chat, so there is no change to miss
     const light = document.documentElement.getAttribute('data-theme') === 'light';
-    forceStripColour(on ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : null);
+    forceStripColour(stripOn ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : null);   // (opening a chat does not change it)
   }, [mobileView, stripOn, stripGreen]);
   useEffect(() => () => forceStripColour(null), []);
   const setStrip = (green: boolean, nudge = false) => {

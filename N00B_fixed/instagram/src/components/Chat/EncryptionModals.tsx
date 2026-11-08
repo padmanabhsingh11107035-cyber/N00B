@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Check, KeyRound, Lock, LockOpen, ShieldCheck, Smartphone, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Eye, KeyRound, Lock, LockOpen, Smartphone, Trash2, Unlock } from 'lucide-react';
 import { e2ee } from '../../services/api';
 import type { ChatCrypto, KeyStatus } from '../../e2ee/service.ts';
+import './premium.css';
+
+// Full-screen pages (their look lives in premium.css: midnight ink and champagne gold, not the app's own black and white).
 
 // ------------------------------------------------------------------------------------------------ what a chat's lock means
 interface ChatEncryptionModalProps {
@@ -32,66 +35,72 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
   const locked = !!info?.encryptable;
   const groups = info?.peer?.code ? info.peer.code.split(' ') : [];
   return (
-    <div className="fixed inset-0 z-[125] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Chat encryption">
-      <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
-        <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${locked ? 'bg-noob/15 border-noob/40' : 'bg-amber-500/15 border-amber-500/30'}`}>
-            {locked ? <Lock className="w-4 h-4 text-noob" /> : <LockOpen className="w-4 h-4 text-amber-300" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-black text-white">{locked ? 'This chat is end-to-end encrypted' : 'This chat is not end-to-end encrypted'}</h3>
-            <p className="text-[11px] text-zinc-400 leading-snug mt-0.5 truncate" translate="no">{title}</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0" aria-label="Close">
-            <X className="w-4 h-4 text-zinc-400" />
-          </button>
-        </header>
+    <div className="pm-root fixed inset-0 z-[125]" role="dialog" aria-modal="true" aria-label="Chat encryption" data-testid="chat-encryption-page">
+      <div className="pm-top">
+        <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
+        <div className="pm-top-text">
+          <h3 className="pm-title">Chat privacy</h3>
+          <p className="pm-sub" translate="no">{title}</p>
+        </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[12px] text-zinc-300 leading-relaxed">
-          {locked ? (
-            <p>Messages here are locked on your device and only opened on the devices of the people in this chat. Nobody else can read them, not even NOOB&apos;s servers.</p>
-          ) : (
-            <p>{info ? reasonText(info) : 'Checking…'}</p>
-          )}
+      <div className="pm-body">
+        <div className="pm-col">
+          <div className="pm-hero">
+            <div className={`pm-hero-icon ${locked ? '' : 'warn'}`}>{locked ? <Lock size={34} /> : <LockOpen size={34} />}</div>
+            <h2 className="pm-h1">{locked ? 'This chat is end-to-end encrypted' : 'This chat is not encrypted'}</h2>
+            <p className="pm-lead">
+              {locked
+                ? 'Messages here are locked on your device and only opened on the devices of the people in this chat. Nobody else can read them, not even NOOB’s servers.'
+                : info ? reasonText(info) : 'Checking…'}
+            </p>
+          </div>
 
           {locked && info?.peer?.changed && (
-            <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-              <div className="space-y-2">
-                <p className="text-amber-100">
-                  <span translate="no">@{info.peer.username}</span>&apos;s security code has changed. This usually means they started using a new phone or browser. If you want to be sure, compare the new code with them.
-                </p>
-                <button type="button" onClick={onAcknowledge} className="px-3 py-1.5 rounded-lg bg-amber-500 text-black text-[11px] font-black cursor-pointer">Got it</button>
+            <div className="pm-notice warn" style={{ display: 'flex', gap: 12 }}>
+              <AlertTriangle size={20} style={{ flex: 'none', marginTop: 2 }} />
+              <div className="pm-stack">
+                <span><span translate="no">@{info.peer.username}</span>&apos;s security code has changed. This usually means they started using a new phone or browser. If you want to be sure, compare the new code with them.</span>
+                <button type="button" onClick={onAcknowledge} className="pm-btn ghost" style={{ alignSelf: 'flex-start', minHeight: 40 }}>Got it</button>
               </div>
             </div>
           )}
 
           {locked && info?.peer && (
-            <div>
-              <div className="text-[11px] font-black text-white mb-1.5 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-noob" /> Security code</div>
-              <div className="grid grid-cols-4 gap-1.5 rounded-2xl bg-black/50 border border-zinc-800 p-3 font-mono text-sm text-white text-center" translate="no" dir="ltr">
-                {groups.map((g, i) => <span key={i}>{g}</span>)}
-              </div>
-              <p className="mt-1.5 text-zinc-400">
+            <section>
+              <p className="pm-eyebrow">Security code</p>
+              <div className="pm-code" translate="no" dir="ltr">{groups.map((g, i) => <span key={i}>{g}</span>)}</div>
+              <p className="pm-muted" style={{ marginTop: 8 }}>
                 Compare this number with <span translate="no">@{info.peer.username}</span> in person or on a call. If it is exactly the same on both phones, nobody is listening in the middle.
               </p>
-            </div>
+            </section>
           )}
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 space-y-1.5">
-            <div className="text-[11px] font-black text-white">What is locked, and what is not</div>
-            <p><span className="text-noob font-bold">Locked:</span> text messages, replies, edits, and GIFs and stickers.</p>
-            <p><span className="text-amber-300 font-bold">Not locked yet:</span> photos, videos, voice notes, shared music and game invites are stored normally.</p>
-            <p><span className="text-zinc-400 font-bold">Still visible to NOOB:</span> who is in a chat and when messages are sent. Notifications only say &quot;New message&quot;.</p>
-            <p className="text-zinc-400">Pressing translate on a locked message sends that one message to the translator. Messages are also kept on your own device so the app opens quickly.</p>
-          </div>
+          <section>
+            <p className="pm-eyebrow">What is locked, and what is not</p>
+            <div className="pm-card">
+              <div className="pm-row">
+                <span className="pm-dot"><Lock size={16} /></span>
+                <div className="pm-row-text"><p className="pm-row-title">Locked</p><p className="pm-row-desc">Text messages, replies, edits, and GIFs and stickers.</p></div>
+              </div>
+              <div className="pm-row">
+                <span className="pm-dot warn"><Unlock size={16} /></span>
+                <div className="pm-row-text"><p className="pm-row-title">Not locked yet</p><p className="pm-row-desc">Photos, videos, voice notes, shared music and game invites are stored normally.</p></div>
+              </div>
+              <div className="pm-row">
+                <span className="pm-dot dim"><Eye size={16} /></span>
+                <div className="pm-row-text"><p className="pm-row-title">Still visible to NOOB</p><p className="pm-row-desc">Who is in a chat and when messages are sent. Notifications only say &quot;New message&quot;.</p></div>
+              </div>
+            </div>
+            <p className="pm-muted" style={{ marginTop: 10 }}>Pressing translate on a locked message sends that one message to the translator. Messages are also kept on your own device so the app opens quickly.</p>
+          </section>
         </div>
+      </div>
 
-        <footer className="p-3 border-t border-zinc-800">
-          <button type="button" onClick={onOpenSettings} className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-bold text-white flex items-center justify-center gap-2 cursor-pointer">
-            <KeyRound className="w-4 h-4 text-noob" /> My encryption keys &amp; backup
-          </button>
-        </footer>
+      <div className="pm-foot">
+        <div className="pm-foot-in">
+          <button type="button" onClick={onOpenSettings} className="pm-btn gold"><KeyRound size={18} /> My encryption keys &amp; backup</button>
+        </div>
       </div>
     </div>
   );
@@ -151,102 +160,91 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
     return added > 0 ? 'Done. Older messages can now be opened on this device.' : 'Your backup was read. This device already had all of those keys.';
   });
 
-  const input = 'w-full bg-black/60 text-xs text-white px-3 py-2.5 rounded-xl border border-zinc-700 outline-none focus:border-noob/60';
-  const btn = 'px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50';
-
   return (
-    <div className="fixed inset-0 z-[130] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Encryption keys and backup">
-      <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
-        <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/40 flex items-center justify-center shrink-0">
-            <KeyRound className="w-4 h-4 text-noob" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-black text-white">Encryption keys &amp; backup</h3>
-            <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">Your private chat key lives only on your devices. NOOB never has it.</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0" aria-label="Close">
-            <X className="w-4 h-4 text-zinc-400" />
-          </button>
-        </header>
+    <div className="pm-root fixed inset-0 z-[130]" role="dialog" aria-modal="true" aria-label="Encryption keys and backup" data-testid="encryption-keys-page">
+      <div className="pm-top">
+        <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
+        <div className="pm-top-text">
+          <h3 className="pm-title">Keys &amp; backup</h3>
+          <p className="pm-sub">Your private chat key lives only on your devices.</p>
+        </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-[12px] text-zinc-300 leading-relaxed">
+      <div className="pm-body">
+        <div className="pm-col">
+          <div className="pm-hero">
+            <div className="pm-hero-icon"><KeyRound size={34} /></div>
+            <h2 className="pm-h1">Your chat keys</h2>
+            <p className="pm-lead">NOOB never has your private key. A backup lets a new phone open your older messages.</p>
+          </div>
+
           {!status ? (
-            <p className="text-zinc-400">Loading…</p>
+            <p className="pm-muted" style={{ textAlign: 'center' }}>Loading&hellip;</p>
           ) : !status.available ? (
-            <p>Chat encryption is not available on this device right now. (This can happen in a private browsing window, or before the app has finished updating.)</p>
+            <div className="pm-notice warn">Chat encryption is not available on this device right now. (This can happen in a private browsing window, or before the app has finished updating.)</div>
           ) : (
             <>
-              <section className="space-y-2">
-                <div className="text-[11px] font-black text-white uppercase tracking-wider">Chat key devices</div>
-                {status.devices.filter((d) => d.active).map((d) => (
-                  <div key={d.kid} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
-                    <Smartphone className="w-4 h-4 text-zinc-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-white truncate" translate="no">
-                        {d.label || 'Device'} {d.thisDevice && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase">this device</span>}
+              <section>
+                <p className="pm-eyebrow">Chat key devices</p>
+                <div className="pm-card">
+                  {status.devices.filter((d) => d.active).map((d) => (
+                    <div key={d.kid} className="pm-device">
+                      <span className="pm-dot dim"><Smartphone size={16} /></span>
+                      <div className="pm-row-text">
+                        <p className="pm-row-title" translate="no" style={{ overflowWrap: 'anywhere' }}>{d.label || 'Device'}{d.thisDevice && <span className="pm-badge">this device</span>}</p>
+                        <p className="pm-muted" translate="no" style={{ margin: 0 }}>{d.kid.slice(0, 8)} &middot; {when(d.createdAt)}</p>
                       </div>
-                      <div className="text-[10px] text-zinc-500" translate="no">{d.kid.slice(0, 8)} · {when(d.createdAt)}{d.active ? '' : ' · switched off'}</div>
+                      {!d.thisDevice && d.active && (
+                        <button type="button" disabled={busy} onClick={() => run(async () => { await e2ee.removeDevice(d.kid); return 'That device is switched off: new messages are no longer locked for it.'; })} className="pm-icon-btn" title="Switch this device off" aria-label="Switch this device off"><Trash2 size={18} /></button>
+                      )}
                     </div>
-                    {!d.thisDevice && d.active && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => run(async () => { await e2ee.removeDevice(d.kid); return 'That device is switched off: new messages are no longer locked for it.'; })}
-                        className="p-2 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-400 cursor-pointer disabled:opacity-50"
-                        title="Switch this device off"
-                        aria-label="Switch this device off"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <p className="text-zinc-500 text-[11px]">Switching a device off only stops NEW messages being locked for it. If a phone is lost or stolen, also change your password and log out everywhere.</p>
+                  ))}
+                </div>
+                <p className="pm-muted" style={{ marginTop: 8 }}>Switching a device off only stops NEW messages being locked for it. If a phone is lost or stolen, also change your password and log out everywhere.</p>
               </section>
 
-              <section className="space-y-2">
-                <div className="text-[11px] font-black text-white uppercase tracking-wider">Key backup</div>
-                <p>
-                  A new phone, or a cleared browser, can not read older messages unless it has your old keys. A backup keeps them, locked with a passphrase that only you know. Without a backup, older messages can not be recovered by anyone, including NOOB.
-                </p>
-                {status.hasBackup && (
-                  <div className="flex items-center gap-2 rounded-xl border border-noob/30 bg-noob/10 px-3 py-2 text-noob">
-                    <Check className="w-4 h-4 shrink-0" /> Backup saved {when(status.backupAt)}
+              <section>
+                <p className="pm-eyebrow">Key backup</p>
+                <div className="pm-card pm-stack">
+                  <p style={{ color: '#c3c1d4' }}>A new phone, or a cleared browser, can not read older messages unless it has your old keys. A backup keeps them, locked with a passphrase that only you know. Without a backup, older messages can not be recovered by anyone, including NOOB.</p>
+                  {status.hasBackup && <div className="pm-notice" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Check size={18} /> Backup saved {when(status.backupAt)}</div>}
+                  <input type="password" autoComplete="new-password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={status.hasBackup ? 'New passphrase (to update the backup)' : 'Choose a passphrase (10+ characters)'} className="pm-input" />
+                  <input type="password" autoComplete="new-password" value={pass2} onChange={(e) => setPass2(e.target.value)} placeholder="Type it again" className="pm-input" />
+                  <div className="pm-btns">
+                    <button type="button" disabled={busy || !pass} onClick={saveBackup} className="pm-btn gold">{busy ? 'Working…' : status.hasBackup ? 'Update backup' : 'Create backup'}</button>
+                    {status.hasBackup && <button type="button" disabled={busy} onClick={() => run(async () => { await e2ee.deleteBackup(); return 'The backup was deleted.'; })} className="pm-btn danger">Delete backup</button>}
                   </div>
-                )}
-                <input type="password" autoComplete="new-password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={status.hasBackup ? 'New passphrase (to update the backup)' : 'Choose a passphrase (10+ characters)'} className={input} />
-                <input type="password" autoComplete="new-password" value={pass2} onChange={(e) => setPass2(e.target.value)} placeholder="Type it again" className={input} />
-                <div className="flex gap-2">
-                  <button type="button" disabled={busy || !pass} onClick={saveBackup} className={`${btn} bg-noob text-black`}>{busy ? 'Working…' : status.hasBackup ? 'Update backup' : 'Create backup'}</button>
-                  {status.hasBackup && (
-                    <button type="button" disabled={busy} onClick={() => run(async () => { await e2ee.deleteBackup(); return 'The backup was deleted.'; })} className={`${btn} bg-zinc-900 border border-zinc-700 text-zinc-200`}>Delete backup</button>
-                  )}
+                  <p className="pm-muted">Use a long phrase of several words that you do not use anywhere else. Anybody who gets the backup can try to guess the passphrase, so it is only as strong as the passphrase.</p>
                 </div>
-                <p className="text-zinc-500 text-[11px]">Use a long phrase of several words that you do not use anywhere else. Anybody who gets the backup can try to guess the passphrase, so it is only as strong as the passphrase.</p>
               </section>
 
               {status.hasBackup && (
-                <section className="space-y-2">
-                  <div className="text-[11px] font-black text-white uppercase tracking-wider">Restore on this device</div>
-                  <p>On a new device, enter your passphrase to open your older messages here.</p>
-                  <input type="password" autoComplete="current-password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder="Your backup passphrase" className={input} />
-                  <button type="button" disabled={busy || !restorePass} onClick={restore} className={`${btn} bg-zinc-900 border border-zinc-700 text-white`}>{busy ? 'Working…' : 'Restore keys'}</button>
+                <section>
+                  <p className="pm-eyebrow">Restore on this device</p>
+                  <div className="pm-card pm-stack">
+                    <p style={{ color: '#c3c1d4' }}>On a new device, enter your passphrase to open your older messages here.</p>
+                    <input type="password" autoComplete="current-password" value={restorePass} onChange={(e) => setRestorePass(e.target.value)} placeholder="Your backup passphrase" className="pm-input" />
+                    <button type="button" disabled={busy || !restorePass} onClick={restore} className="pm-btn ghost block">{busy ? 'Working…' : 'Restore keys'}</button>
+                  </div>
                 </section>
               )}
             </>
           )}
 
-          {notice && (
-            <div className={`rounded-xl border px-3 py-2 ${notice.ok ? 'border-noob/30 bg-noob/10 text-noob' : 'border-red-500/40 bg-red-500/10 text-red-300'}`} role="status">{notice.text}</div>
-          )}
+          {notice && <div className={`pm-notice ${notice.ok ? '' : 'bad'}`} role="status">{notice.text}</div>}
 
-          <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3 space-y-1.5 text-[11px] text-zinc-400">
-            <div className="text-[11px] font-black text-white">Honest limits</div>
-            <p>NOOB can not read locked messages, but the app can not stop a server from lying about who owns a key. Comparing the security code in a chat with the other person is what proves nobody is in the middle.</p>
-            <p>If somebody takes your unlocked phone, or gets your keys, they can read what those keys can open. This is not the &quot;keys change with every message&quot; design that Signal uses.</p>
+          <section>
+            <p className="pm-eyebrow">Honest limits</p>
+            <div className="pm-card pm-muted">
+              <p>NOOB can not read locked messages, but the app can not stop a server from lying about who owns a key. Comparing the security code in a chat with the other person is what proves nobody is in the middle.</p>
+              <p>If somebody takes your unlocked phone, or gets your keys, they can read what those keys can open. This is not the &quot;keys change with every message&quot; design that Signal uses.</p>
+            </div>
           </section>
         </div>
+      </div>
+
+      <div className="pm-foot">
+        <div className="pm-foot-in"><button type="button" onClick={onClose} className="pm-btn gold">Done</button></div>
       </div>
     </div>
   );

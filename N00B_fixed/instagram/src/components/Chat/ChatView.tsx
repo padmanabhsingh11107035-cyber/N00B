@@ -3,6 +3,7 @@ import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
+import { ChatThemeModal } from './ChatThemeModal';
 import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
@@ -252,14 +253,6 @@ function renderMessageWithLinks(text: string): React.ReactNode[] {
 // Chat colours saved before the black-and-white look (the old orange) are shown as white now.
 const oldAccent = (c?: string | null): string | undefined => (c && c.toLowerCase() === '#d97757' ? '#ffffff' : c || undefined);
 
-const THEME_COLORS = [
-  { name: 'White', hex: '#ffffff' },
-  { name: 'Neon Emerald', hex: '#00FF66' },
-  { name: 'Cyber Cyan', hex: '#00E5FF' },
-  { name: 'Electric Purple', hex: '#D946EF' },
-  { name: 'Sunset Coral', hex: '#FF6B6B' }
-];
-
 export const ChatView: React.FC<ChatViewProps> = ({
   currentUser,
   onPlayGame,
@@ -314,6 +307,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
     return oldAccent(localStorage.getItem('noob_chat_theme')) || '#ffffff';
+  });
+  // The colour picked for each chat, kept on this device. It always wins over what the server (or the other person, or a refresh of the list) says, so a pick can never flip to another colour by itself.
+  const [chatThemes, setChatThemes] = useState<Record<string, string>>(() => {
+    try { const v = JSON.parse(localStorage.getItem('noob_chat_themes') || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
   });
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -936,6 +933,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
+  const activeTheme = (activeChat && chatThemes[activeChat.id]) || oldAccent(activeChat?.themeColor) || globalChatTheme;
   const headerPartner = activeChat?.participants.find((p) => p.id !== currentUser.id);
   // When the other person was last seen (only what the server allows: they and I both let it be seen, and we are connected). Asked again every minute while the chat is open.
   const lastSeenPartnerId = activeChat && !activeChat.isGroup ? headerPartner?.id : undefined;
@@ -1542,16 +1540,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const handleUpdateTheme = async (hex: string) => {
-    setGlobalChatTheme(hex);
-    safeLocalStorageSet('noob_chat_theme', hex);
-
-    const updated = conversations.map((c) =>
-      !activeChat || c.id === activeChat.id ? { ...c, themeColor: hex } : c
-    );
-    setConversations(updated);
-    safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(updated));
-
     if (activeChat) {
+      const next = { ...chatThemes, [activeChat.id]: hex };
+      setChatThemes(next);
+      safeLocalStorageSet('noob_chat_themes', JSON.stringify(next));
+    } else {
+      setGlobalChatTheme(hex);
+      safeLocalStorageSet('noob_chat_theme', hex);
+    }
+    if (activeChat) {
+      setConversations((list) => list.map((c) => (c.id === activeChat.id ? { ...c, themeColor: hex } : c)));
       try {
         await updateChatSettings(activeChat.id, { themeColor: hex });
       } catch (err) {
@@ -2487,7 +2485,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     }
                     style={
                       !isSticker && isMine
-                        ? bubbleStyle(ownBubbleColor(oldAccent(activeChat?.themeColor) || globalChatTheme, ownOrder.get(m.id) ?? 0))
+                        ? bubbleStyle(ownBubbleColor(activeTheme, ownOrder.get(m.id) ?? 0))
                         : undefined
                     }
                   >
@@ -3275,7 +3273,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   onClick={() => setShowAttachMenu((v) => !v)}
                   disabled={isUploadingAttachment}
                   className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 text-white shadow-md"
-                  style={{ background: bubbleStyle(oldAccent(activeChat?.themeColor) || globalChatTheme).background }}
+                  style={{ background: bubbleStyle(activeTheme).background }}
                   title="Attach a photo or video"
                   aria-label="Attach a photo or video"
                   data-testid="composer-plus"
@@ -3342,7 +3340,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <button
                   type="submit"
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md cursor-pointer shrink-0"
-                  style={{ background: bubbleStyle(oldAccent(activeChat?.themeColor) || globalChatTheme).background }}
+                  style={{ background: bubbleStyle(activeTheme).background }}
                   aria-label="Send"
                   data-testid="composer-send"
                 >
@@ -3489,83 +3487,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      {/* 3. Settings Modal (Themes, Custom Nicknames, etc.) */}
+      {/* 3. Chat colour page (full screen) */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Palette className="w-4 h-4 text-noob" /> Chat Customization
-              </h3>
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs text-zinc-400 block mb-2 font-medium">Chat Bubble Theme</label>
-              <div className="grid grid-cols-2 gap-2.5">
-                {THEME_COLORS.map((t) => {
-                  const currentTheme = oldAccent(activeChat?.themeColor) || globalChatTheme;
-                  const isSelected = currentTheme === t.hex;
-                  return (
-                    <button
-                      key={t.hex}
-                      type="button"
-                      onClick={() => handleUpdateTheme(t.hex)}
-                      className={`flex items-center justify-between p-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-zinc-800/90 text-white shadow-lg ring-1'
-                          : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900 text-zinc-300'
-                      }`}
-                      style={{
-                        borderColor: isSelected ? t.hex : undefined,
-                        boxShadow: isSelected ? `0 0 14px ${t.hex}40` : undefined,
-                        ringColor: isSelected ? t.hex : undefined
-                      }}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="w-3.5 h-3.5 rounded-full ring-2 ring-black shrink-0"
-                          style={{ backgroundColor: t.hex }}
-                        />
-                        <span className="truncate">{t.name}</span>
-                      </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: t.hex }} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-400 flex items-center justify-between">
-              <span>Selected Theme Preview:</span>
-              <span
-                className="px-2.5 py-1 rounded-xl font-bold text-white text-[10px] border shadow-sm"
-                style={{
-                  backgroundColor: `${oldAccent(activeChat?.themeColor) || globalChatTheme}30`,
-                  borderColor: oldAccent(activeChat?.themeColor) || globalChatTheme,
-                  boxShadow: `0 0 10px ${oldAccent(activeChat?.themeColor) || globalChatTheme}33`
-                }}
-              >
-                Sample Message Bubble
-              </span>
-            </div>
-
-            <div className="pt-2 border-t border-zinc-800 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(false)}
-                className="px-5 py-2 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-noob/20"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <ChatThemeModal
+          current={activeTheme}
+          chatName={activeChat?.name || 'Chat'}
+          onPick={handleUpdateTheme}
+          onClose={() => setShowSettingsModal(false)}
+        />
       )}
 
       {/* 4. New Direct Message Modal (Button between + and 3 dots) */}

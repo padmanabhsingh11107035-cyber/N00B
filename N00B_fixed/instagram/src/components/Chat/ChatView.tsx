@@ -177,7 +177,7 @@ import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
 import { InstantsStack } from './InstantsStack';
 import { CallLogsPage } from './CallLogsPage';
-import { bubbleStyle, ownBubbleColor } from '../../utils/bubbleColor';
+import { bubbleStyle, ownBubbleColor, isDefaultAccent } from '../../utils/bubbleColor';
 import { Phone as CallIcon, Camera } from 'lucide-react';
 import { InstantCamera } from './InstantCamera';
 import { InstantViewer } from './InstantViewer';
@@ -306,11 +306,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showCallLogs, setShowCallLogs] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
+    try { if (!localStorage.getItem('noob_mono_bubbles_v1')) return '#ffffff'; } catch { /* storage off */ }
     return oldAccent(localStorage.getItem('noob_chat_theme')) || '#ffffff';
   });
   // The colour picked for each chat, kept on this device. It always wins over what the server (or the other person, or a refresh of the list) says, so a pick can never flip to another colour by itself.
   const [chatThemes, setChatThemes] = useState<Record<string, string>>(() => {
-    try { const v = JSON.parse(localStorage.getItem('noob_chat_themes') || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+    try {
+      // one time: everybody starts on the black-and-white message boxes (a colour can be picked again on the Chat colour page)
+      if (!localStorage.getItem('noob_mono_bubbles_v1')) { localStorage.setItem('noob_mono_bubbles_v1', '1'); localStorage.removeItem('noob_chat_themes'); localStorage.removeItem('noob_chat_theme'); return {}; } const v = JSON.parse(localStorage.getItem('noob_chat_themes') || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
   });
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -933,7 +936,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
-  const activeTheme = (activeChat && chatThemes[activeChat.id]) || oldAccent(activeChat?.themeColor) || globalChatTheme;
+  const activeTheme = (activeChat && chatThemes[activeChat.id]) || globalChatTheme;
   const headerPartner = activeChat?.participants.find((p) => p.id !== currentUser.id);
   // When the other person was last seen (only what the server allows: they and I both let it be seen, and we are connected). Asked again every minute while the chat is open.
   const lastSeenPartnerId = activeChat && !activeChat.isGroup ? headerPartner?.id : undefined;
@@ -1689,7 +1692,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => { io?.disconnect(); window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
+  const [stripGreen, setStripGreen] = useState(true);
   const setStrip = (green: boolean, nudge = false) => {
+    setStripGreen(green);
     const root = document.documentElement;
     const rest = root.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0c0e';   // the colour of the sheet once the green header has scrolled away
     root.style.setProperty('--msg-strip', green ? '#0E4B37' : rest);
@@ -1699,7 +1704,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
-    setStrip(true, true);
+    setStrip((listRef.current?.scrollTop ?? 0) < 90, true);
     // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)
     const again = [80, 400, 1000, 2200].map((ms) => window.setTimeout(() => {
       if (!root.classList.contains('msg-open')) return;
@@ -1790,6 +1795,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             mobileView === 'chat' ? 'hidden' : 'flex'
           }`}
         >
+          {/* The strip behind the clock on a phone: part of THIS page, so it is green exactly while the Messages list is open and its header is in view (it is gone with the page, never left behind). */}
+          <div className={`msg-safe-strip ${stripGreen ? 'on' : ''}`} aria-hidden="true" />
           {/* Instants: a small tab at the right edge of the list (Instagram style), it takes no room from the chats */}
           <InstantsStack
             onOpenCamera={() => setShowInstantCamera(true)}
@@ -2226,7 +2233,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {!activeChat?.isGroup && headerPartner && (isUserOnline(headerPartner.id) ? (
                       <span className="text-noob font-semibold" data-testid="chat-online-text">Online</span>
                     ) : lastSeenMap[headerPartner.id] ? (
-                      <span className="text-zinc-300 font-medium truncate min-w-0" data-testid="chat-last-seen">{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
+                      <span className="chat-last-seen text-zinc-300 font-medium min-w-0" data-testid="chat-last-seen" style={{ fontSize: 11, lineHeight: 1.2 }}>{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
                     ) : null)}
                     {!activeChat?.isGroup && activeChat?.vanishMode && (
                       <span className="text-noob font-medium flex items-center gap-1">
@@ -2479,12 +2486,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         ? 'max-w-[62%] relative'
                         : `max-w-[82%] px-4 py-2.5 rounded-[22px] text-[13.5px] leading-snug relative ${
                             isMine
-                              ? 'text-white'
-                              : 'bg-zinc-900 text-zinc-100'
+                              ? (isDefaultAccent(activeTheme) ? 'msg-bub-mine' : 'text-white')
+                              : 'msg-bub-theirs'
                           }`
                     }
                     style={
-                      !isSticker && isMine
+                      !isSticker && isMine && !isDefaultAccent(activeTheme)
                         ? bubbleStyle(ownBubbleColor(activeTheme, ownOrder.get(m.id) ?? 0))
                         : undefined
                     }

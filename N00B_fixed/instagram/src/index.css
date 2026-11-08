@@ -1799,3 +1799,26 @@ body { overflow-x: clip; max-width: 100vw; }
 html body .chat-wallpaper { background-color: var(--page) !important; background-image: linear-gradient(rgba(10, 10, 10, 0.55), rgba(10, 10, 10, 0.55)), url('/brand/chat-doodle.webp') !important; background-size: auto, 700px auto !important; background-repeat: no-repeat, repeat !important; }
 html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35)), url('/brand/chat-doodle.webp') !important; }
 @layer base { html body .chat-wallpaper, html body.light .chat-wallpaper { background-color: var(--page) !important; } }
+
+/* (inside the base layer, like the Light-theme rules these have to beat) */
+@layer base {
+/* ---- Messages: the strip behind the clock (iPhone) is a bar of the page itself, green while the header is in view, the page colour once it has scrolled away (both Dark and Light) ---- */
+.msg-safe-strip { display: none; }
+@media (pointer: coarse) {
+  html body .msg-safe-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 45; pointer-events: none; background: #0a0c0e; }
+  html body .msg-safe-strip.on { background: #0E4B37; }
+  html[data-theme="light"] body .msg-safe-strip:not(.on) { background: #ffffff; }
+}
+/* the "last seen" line under the name in a chat: small, and shown whole */
+html body .chat-last-seen { font-size: 11px !important; line-height: 1.2 !important; white-space: nowrap; overflow: visible; text-overflow: clip; }
+
+/* ---- Message boxes: Dark mode = what you send is black with white text, what you receive is white with black text; Light mode = the other way round ---- */
+html body .msg-bub-mine, html[data-theme="light"] body .msg-bub-theirs { background: #000 !important; background-image: none !important; color: #fff !important; box-shadow: none !important; border: 1px solid rgba(255, 255, 255, .22); }
+html body .msg-bub-theirs, html[data-theme="light"] body .msg-bub-mine { background: #fff !important; background-image: none !important; color: #0a0a0a !important; box-shadow: none !important; border: 1px solid rgba(0, 0, 0, .14); }
+html body .msg-bub-mine :where(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300):not(:where([class*="bg-black"], [class*="bg-gradient"], [class*="bg-zinc-9"], [class*="bg-noob"]) *),
+html[data-theme="light"] body .msg-bub-theirs :where(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300):not(:where([class*="bg-black"], [class*="bg-gradient"], [class*="bg-zinc-9"], [class*="bg-noob"]) *) { color: #fff !important; }
+html body .msg-bub-theirs :where(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300):not(:where([class*="bg-black"], [class*="bg-gradient"], [class*="bg-zinc-9"], [class*="bg-noob"]) *),
+html[data-theme="light"] body .msg-bub-mine :where(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300):not(:where([class*="bg-black"], [class*="bg-gradient"], [class*="bg-zinc-9"], [class*="bg-noob"]) *) { color: #0a0a0a !important; }
+html body .msg-bub-theirs :where(.text-zinc-400, .text-zinc-500), html[data-theme="light"] body .msg-bub-mine :where(.text-zinc-400, .text-zinc-500) { color: #52525b !important; }
+html body .msg-bub-mine :where(.text-zinc-400, .text-zinc-500), html[data-theme="light"] body .msg-bub-theirs :where(.text-zinc-400, .text-zinc-500) { color: #a1a1aa !important; }
+}

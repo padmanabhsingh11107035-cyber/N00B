@@ -22,6 +22,7 @@ type Stage = 'intro' | 'loading' | 'results' | 'empty' | 'denied' | 'error' | 'w
 export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser, registeredUsers, onClose, onToggleFollowUser }) => {
   const [stage, setStage] = useState<Stage>('intro');
   const [people, setPeople] = useState<User[]>([]);
+  const [detail, setDetail] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -55,7 +56,7 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
       setPeople([...pool].sort(() => Math.random() - 0.5).slice(0, 6));
       setStage('empty');
     }
-    else setStage('error');
+    else { setDetail(r.detail || ''); setStage('error'); }
   };
 
   const follow = (user: User) => {
@@ -158,7 +159,8 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
             <div className="ff-center">
               <div className="ff-shield"><ShieldCheck size={40} /></div>
               <h3 className="ff-h1">That did not work this time</h3>
-              <span>Nothing was saved. Please check your internet and try again.</span>
+              <span>Nothing was saved. Please check your internet and try again. If you have not updated NOOB from Google Play yet, please update it first.</span>
+              {detail && <span style={{ fontSize: 11.5, color: '#94a3b8', wordBreak: 'break-word' }}>Details: {detail}</span>}
             </div>
           )}
 

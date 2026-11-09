@@ -53,16 +53,20 @@ export async function findFriendsFromContacts(): Promise<User[]> {
   }
 }
 
-export type ContactScan = { status: 'ok' | 'empty' | 'denied' | 'unsupported' | 'error'; users: User[] };
+export type ContactScan = { status: 'ok' | 'empty' | 'denied' | 'unsupported' | 'error'; users: User[]; detail?: string };
 
 /** The "Find friends" button: asks for the permission (only now, never before) and then looks for the people in the phone's contacts who are on NOOB. Says WHY when there is nobody to show. */
 export async function scanContacts(): Promise<ContactScan> {
   if (!Capacitor.isNativePlatform()) return { status: 'unsupported', users: [] };
+  let step = 'starting';
   try {
+    step = 'loading the contacts tool';
     const { Contacts } = await import('@capacitor-community/contacts');
+    step = 'checking the permission';
     let permission = await Contacts.checkPermissions();
-    if (permission.contacts !== 'granted') permission = await Contacts.requestPermissions();
+    if (permission.contacts !== 'granted') { step = 'asking for the permission'; permission = await Contacts.requestPermissions(); }
     if (permission.contacts !== 'granted') return { status: 'denied', users: [] };
+    step = 'reading the contacts';
     const { contacts } = await Contacts.getContacts({ projection: { name: true, phones: true } });
     const phoneNumbers = contacts.flatMap((c) => c.phones?.map((p) => p.number) || []).filter((n): n is string => !!n);
     if (phoneNumbers.length === 0) return { status: 'empty', users: [] };
@@ -70,6 +74,6 @@ export async function scanContacts(): Promise<ContactScan> {
     return users.length ? { status: 'ok', users } : { status: 'empty', users: [] };
   } catch (err) {
     console.error('Contact sync failed:', err);
-    return { status: 'error', users: [] };
+    return { status: 'error', users: [], detail: `${step}: ${String((err as { message?: string })?.message || err)}`.slice(0, 200) };
   }
 }

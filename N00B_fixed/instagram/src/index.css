@@ -1896,3 +1896,13 @@ html::-webkit-scrollbar, html *::-webkit-scrollbar, html ::-webkit-scrollbar { d
 @media (max-height: 860px) { .auth-v2[data-onepage="1"] .auth-head p { display: none; } .auth-v2[data-onepage="1"] .auth-head h1 { font-size: 21px; } }
 @media (max-height: 700px) { .auth-v2[data-onepage="1"] .lh-line { display: none; } .auth-v2[data-onepage="1"] .ls-chip { display: none; } .auth-v2[data-onepage="1"] .ls-root { width: min(300px, 80vw, 38vh); } }
 @media (max-height: 560px) { .auth-v2[data-onepage="1"] .ls-root { display: none; } .auth-v2[data-onepage="1"] .auth-head { padding-bottom: 24px !important; } }
+@media (max-height: 780px) {
+  .auth-v2[data-onepage="1"] .auth-sheet { padding-top: 14px; }
+  .auth-v2[data-onepage="1"] [data-testid="auth-social-top"] { margin-bottom: 10px; }
+  .auth-v2[data-onepage="1"] [data-testid="auth-social-top"] > div.flex { margin-top: 10px; }
+  .auth-v2[data-onepage="1"] [data-testid="login-choose"] { gap: 8px; }
+  .auth-v2[data-onepage="1"] [data-testid="login-choose"] > button { padding-top: 12px; padding-bottom: 12px; }
+  .auth-v2[data-onepage="1"] > footer > div { font-size: 11px; gap: 2px 12px; margin-bottom: 2px; }
+  .auth-v2[data-onepage="1"] > footer p { font-size: 10px; }
+  .auth-v2[data-onepage="1"] > footer { padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+}

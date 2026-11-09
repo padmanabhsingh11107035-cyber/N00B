@@ -232,7 +232,7 @@ const BUSINESS_CATEGORIES = [
 // the old hand-drawn doodles, glows and the phone demo behind the sign-in page: off since the page was redesigned (teal header, dark sheet); the pieces stay in the code
 const SHOW_AUTH_DOODLES = false;
 
-export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint }) => {
+export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
 
   // Sign-up is its own page: "Create Account" opens it as a new page (the phone's back button / browser Back return to the log-in page, like any other page), and the Back
@@ -1183,9 +1183,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
             </button>
           </div>
         )}
-        {hint && !errorMessage && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-white/5 border border-white/15 text-zinc-200 text-xs text-center font-semibold" role="note" data-testid="auth-hint">{hint}</div>
-        )}
+        {/* (the "Log in to open ..." note that used to stand here is gone: the sign-in screen is one clear screen, with Log in and Create account always in view) */}
         {errorMessage && (
           <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5 animate-shake">
             <AlertCircle className="w-4 h-4 shrink-0" />

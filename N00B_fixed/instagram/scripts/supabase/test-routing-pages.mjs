@@ -92,7 +92,7 @@ check(['public-login', 'public-signup', 'public-like', 'public-comment', 'public
 check(/recordPublicView\(item\.kind, item\.id\)/.test(pub) && /counted\.current/.test(pub), 'a view is counted once, when the video is played');
 const api = read('src/services/publicContent.ts');
 check(/'public_reel'/.test(api) && /'public_video'/.test(api) && /'public_post'/.test(api) && /'public_profile'/.test(api) && /'record_public_view'/.test(api), 'the page uses only the five public functions');
-check(/hint=\{bootNotice \|\| undefined\}/.test(app) && /data-testid="auth-hint"/.test(read('src/components/Auth/AuthView.tsx')) && /Log in to open \$\{feature\.title\}\./.test(app), 'an address of a page, opened while logged out, says "Log in to open NOOB Reels." on the sign-in page');
+check(!/data-testid="auth-hint"/.test(read('src/components/Auth/AuthView.tsx')), 'the sign-in page shows no "Log in to open ..." note any more: Log in and Create account are always in view');
 const m5 = read('supabase/migrations/20261020000005_public_content.sql');
 check(/public_account_ok/.test(m5) && /account_type <> 'private'/.test(m5) && /not p\.is_suspended/.test(m5) && /revoke all on public\.public_content_views from anon, authenticated/.test(m5), 'the database only answers for public, not suspended accounts, and keeps its table of views closed');
 

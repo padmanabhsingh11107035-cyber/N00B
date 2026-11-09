@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/patch-contacts-plugin.mjs",
     "guard": "node scripts/guard.mjs",
     "audit:db": "node scripts/security-audit-db.mjs",
     "dev": "tsx server.ts",

@@ -556,7 +556,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openCalculator: () => setShowCalculatorPage(true),
       openFollowUs: () => setShowFollowUsModal(true),
       openLiveAvatar: () => setShowLiveAvatarModal(true),
-      openAvatars: () => { setShowSettingsHub(false); setShowAvatarPicker(true); },
+      openAvatars: () => setShowAvatarPicker(true),
       openAdmin: () => setShowAdminControlModal(true),
       openSwitchAccount: () => setShowSwitchAccount(true),
       openExport: () => {
@@ -565,7 +565,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         setExportText(buildDataExport(currentUser, posts.filter((p) => mine(p) && !p.isArchived).sort(newestFirst), reels.filter(mine).sort(newestFirst)));
       },
       openDeleteAccount: () => setShowDeleteAccountModal(true),
-      openProfessionalDashboard: () => { setShowSettingsHub(false); onOpenProfessionalDashboard(); },
+      openProfessionalDashboard: () => onOpenProfessionalDashboard(),
       openProfileQr: () => setShowProfileQrModal(true),
       logout: () => { setShowSettingsHub(false); onLogout?.(); },
       close: closeSettingsHub

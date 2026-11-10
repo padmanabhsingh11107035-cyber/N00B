@@ -22,7 +22,7 @@ const modal = read(C + 'Support/CustomerSupportModal.tsx');
 check(/React\.lazy\(\(\) => import\('\.\.\/Legal\/TermsAndConditions'\)/.test(modal) && /React\.lazy\(\(\) => import\('\.\.\/Legal\/PrivacyPolicy'\)/.test(modal), 'the help desk draws the Terms and the Privacy Policy itself');
 check(modal.indexOf('<TermsAndConditions') > modal.indexOf('data-testid="support-page"') && !/leaveTo|onOpenTerms\?|onOpenPrivacy\?/.test(modal), 'on top of itself (drawn after it), and it no longer closes itself first');
 check(/setLegal\('terms'\)/.test(modal) && /setLegal\('privacy'\)/.test(modal) && /onClose=\{\(\) => setLegal\(null\)\}/.test(modal), 'opening one only sets what is on top; closing it only clears that');
-check(/zs\b/.test('zs') && zs('Legal/TermsAndConditions.tsx')[0] === 50 && zs('Legal/PrivacyPolicy.tsx')[0] === 50, 'they are full-screen layers like the help desk, drawn later, so they cover it');
+check(/zs\b/.test('zs') && Number((read(C + 'Legal/legal.css').match(/z-index: (\d+)/) || [])[1]) > 50, 'they are full-screen layers like the help desk, drawn later, so they cover it');
 for (const [f, label] of [['App.tsx', 'App'], ['Profile/ProfileView.tsx', 'the profile page'], ['Feed/FeedView.tsx', 'Home']]) {
   const src = read(f.startsWith('App') ? 'src/App.tsx' : C + f);
   const use = around(src, '<CustomerSupportModal', 400);
@@ -76,8 +76,8 @@ const REVIEWED = new Set([
   'Stories/StoryTray.tsx|setSelectedNoteViewer|onOpenStatusNoteModal(',                    // the note viewer plays a song by itself: it must stop while the note is edited
   'Profile/ProfileView.tsx|setActiveHighlightForViewer|setShowHighlightManager(true)',    // the highlight viewer plays stories by itself: it must stop while the highlight is edited
   'Profile/ProfileView.tsx|setEditingHighlight|setShowHighlightManager(true)',            // a new highlight: nothing was open
-  'Profile/ProfileView.tsx|setShowSettingsHub|onOpenProfessionalDashboard(',              // the Settings hub walks the browser history itself (its own back stack)
-  'Profile/ProfileView.tsx|setShowSettingsHub|setShowAvatarPicker(true)',                 // the avatar page replaces the Settings hub (which walks its own history)
+  // the Settings hub walks the browser history itself (its own back stack)
+  // the avatar page replaces the Settings hub (which walks its own history)
 ]);
 const pat = /(?:(set[A-Z]\w*)\((?:false|null)\)|\b(onClose)\(\))\s*;\s*(?:\n\s*)?(set[A-Z]\w*\(true\)|on(?:Open|Navigate|Upgrade|Select)\w*\()/g;
 const found = [];

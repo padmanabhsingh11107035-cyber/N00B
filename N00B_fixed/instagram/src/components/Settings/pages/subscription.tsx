@@ -52,7 +52,7 @@ export const SubscriptionHistoryPage: React.FC<PageProps> = ({ ctx, back }) => {
                 ? <p className="text-[11px] text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-start gap-2" data-testid="shortfall"><AlertTriangle className="w-4 h-4 shrink-0 mt-px" />{c.autoRenew ? 'It is set to renew by itself, but' : 'To renew it'} you still need <b>{nf(c.shortfall)} more points</b> in your wallet.</p>
                 : <p className="text-[11px] text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5 flex items-start gap-2" data-testid="enough"><CheckCircle2 className="w-4 h-4 shrink-0 mt-px" />Your wallet has enough to renew it.</p>
             )}
-            <button onClick={() => { ctx.actions.close(); ctx.actions.openPro(); }} className="w-full py-2.5 rounded-xl bg-white text-black text-xs font-black cursor-pointer" data-testid="open-pro">{c.tier ? 'Change or renew my plan' : 'See the NOOB Pro plans'}</button>
+            <button onClick={() => ctx.actions.openPro()} className="w-full py-2.5 rounded-xl bg-white text-black text-xs font-black cursor-pointer" data-testid="open-pro">{c.tier ? 'Change or renew my plan' : 'See the NOOB Pro plans'}</button>
           </div>
 
           <Section title="All your plans" note="Every NOOB Pro plan you bought, renewed, had paid by a friend, or won. Newest first.">

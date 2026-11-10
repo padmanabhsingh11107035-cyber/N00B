@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Zap, Upload, Check, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Zap, Upload, Check, Loader2, Sparkles } from 'lucide-react';
+import './liveProfilePicture.css';
 import { User } from '../../types';
 import { fetchLiveAvatarPresets, applyLiveAvatar, uploadMediaFile, LiveAvatarPreset } from '../../services/api';
 import { AvatarAdjustEditor } from '../Common/AvatarAdjustEditor';
@@ -114,127 +115,64 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
           onDone={handleAdjustDone}
         />
       )}
-      <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-zinc-950 border border-cyan-500/30 rounded-3xl shadow-2xl max-h-[88vh] flex flex-col overflow-hidden">
-        <div className="p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
-              <Zap className="w-4.5 h-4.5 text-cyan-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Live Profile Picture</h3>
-              <p className="text-[11px] text-zinc-400">Animated avatars — NOOB Pro exclusive</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+      <div className="lpp-page fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Live Profile Picture">
+        <div className="lpp-top">
+          <button type="button" onClick={onClose} className="lpp-back" aria-label="Back"><ArrowLeft size={20} /></button>
+          <h3>Live Profile Picture</h3>
         </div>
 
         {!isPro ? (
-          <div className="p-6 flex flex-col items-center text-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/40 flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-cyan-400" />
-            </div>
-            <div>
-              <h4 className="text-base font-bold text-white">Unlock Live Profile Pictures</h4>
-              <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
-                NOOB Pro members can apply an animated profile picture from our curated presets, or upload their own
-                short video — free accounts get a standard static photo.
-              </p>
-            </div>
-            <button
-              onClick={onUpgradeClick}   // the upgrade page opens on top (it is drawn above this one), so closing it comes back here
-              className="px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-emerald-400 text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
-            >
-              Upgrade to NOOB Pro
-            </button>
+          <div className="lpp-lock">
+            <div className="lpp-ring" style={{ width: 96, height: 96 }}><Sparkles size={38} /></div>
+            <h4>Unlock live pictures</h4>
+            <p>NOOB Pro members can use an animated profile picture from our presets, or upload their own short video. Free accounts get a standard photo.</p>
+            <button type="button" className="lpp-btn" onClick={onUpgradeClick}>Upgrade to NOOB Pro</button>
           </div>
         ) : (
-          <div className="p-5 space-y-4 overflow-y-auto">
-            {error && (
-              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">{error}</div>
-            )}
-            {successMsg && (
-              <div className="p-2.5 rounded-xl bg-noob/10 border border-noob/30 text-xs text-noob">
-                {successMsg}
+          <>
+            <div className="lpp-scroll">
+              <div className="lpp-hero">
+                <div className="lpp-ring"><img src={currentUser.avatar} alt="Your profile picture" /></div>
+                <span className="lpp-chip"><Zap size={12} /> NOOB Pro</span>
+                <p>This is how you show up now. Pick a motion below and it changes straight away.</p>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-zinc-300 block">Choose a Preset</span>
-              {loadingPresets ? (
-                <div className="py-8 flex justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {presets.map((preset) => {
-                    const isActive = currentUser.avatar === preset.url;
-                    return (
-                      <button
-                        key={preset.id}
-                        onClick={() => handleApplyPreset(preset)}
-                        disabled={applyingId === preset.id}
-                        className={`relative p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
-                          isActive ? 'border-cyan-400 bg-cyan-500/10' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'
-                        }`}
-                      >
-                        <img src={preset.url} alt={preset.name} className="w-20 h-20 rounded-full object-cover" />
-                        <span className="text-xs font-bold text-white">{preset.name}</span>
-                        {isActive && (
-                          <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-cyan-400 text-black flex items-center justify-center">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </span>
-                        )}
-                        {applyingId === preset.id && (
-                          <span className="absolute inset-0 rounded-2xl bg-black/60 flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              {error && <div className="lpp-msg" data-kind="err">{error}</div>}
+              {successMsg && <div className="lpp-msg">{successMsg}</div>}
 
-            <div className="space-y-2 pt-1">
-              <span className="text-xs font-bold text-zinc-300 block">Or Upload Your Own Video</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handlePickFile}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 border border-dashed border-zinc-700 hover:border-cyan-500/50 text-white text-xs font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
-                  </>
+              <div>
+                <p className="lpp-label">Pick a motion</p>
+                {loadingPresets ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '28px 0' }}><Loader2 className="animate-spin" size={22} /></div>
                 ) : (
-                  <>
-                    <Upload className="w-4 h-4 text-cyan-400" /> Upload a Short Video
-                  </>
+                  <div className="lpp-grid">
+                    {presets.map((preset) => {
+                      const isActive = currentUser.avatar === preset.url;
+                      return (
+                        <button key={preset.id} type="button" className="lpp-item" data-on={isActive ? '1' : undefined} onClick={() => handleApplyPreset(preset)} disabled={applyingId === preset.id}>
+                          <span className="lpp-pic">
+                            <img src={preset.url} alt={preset.name} />
+                            {isActive && <span className="lpp-tick"><Check size={14} strokeWidth={3} /></span>}
+                            {applyingId === preset.id && <span className="lpp-busy"><Loader2 className="animate-spin" size={20} /></span>}
+                          </span>
+                          <span className="lpp-name">{preset.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-              </button>
-              <p className="text-[10px] text-zinc-500">
-                A real video, not a picture — you'll adjust the framing next. It plays on loop, muted, wherever your
-                profile picture shows.
-              </p>
+              </div>
             </div>
-          </div>
+
+            <div className="lpp-bar">
+              <input ref={fileInputRef} type="file" accept="video/*" onChange={handlePickFile} className="hidden" />
+              <button type="button" className="lpp-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                {isUploading ? (<><Loader2 className="animate-spin" size={18} /> Uploading...</>) : (<><Upload size={18} /> Upload your own video</>)}
+              </button>
+              <p className="lpp-note">A real short video, not a picture. You will adjust the framing next. It plays on loop, muted, wherever your picture shows.</p>
+            </div>
+          </>
         )}
-      </div>
       </div>
     </>
   );

@@ -66,7 +66,7 @@ check(/data-testid="profile-three-dots"/.test(profile) && /title=\{isOwnProfile 
 check(/\{showSettingsHub && isOwnProfile && \(/.test(profile) && /React\.lazy\(\(\) => import\('\.\.\/Settings\/SettingsHub'\)/.test(profile), 'the hub is drawn only for your own profile and loaded when first needed');
 check(/Actions for other user profiles/.test(profile) && /Report @/.test(profile) && /Share Profile/.test(profile), "other people's profiles keep their small menu (block, hide, report, share)");
 check(!/Settings & Account Controls/.test(profile) && !/handleSavePrivacySettings/.test(profile) && !/Update Password/.test(profile), 'the old Settings window is gone: everything it did has a page');
-check(/openProfessionalDashboard: \(\) => \{ setShowSettingsHub\(false\); onOpenProfessionalDashboard\(\); \}/.test(profile) && /logout: \(\) => \{ setShowSettingsHub\(false\); onLogout\?\.\(\); \}/.test(profile), 'leaving for another page or logging out closes Settings first');
+check(/openProfessionalDashboard: \(\) => onOpenProfessionalDashboard\(\)/.test(profile) && /logout: \(\) => \{ setShowSettingsHub\(false\); onLogout\?\.\(\); \}/.test(profile), 'logging out closes Settings first; the dashboard opens on top of it (Back comes back to it)');
 check(/canLogout: !!onLogout/.test(profile) && /canDeleteAccount: !!onDeleteMyAccount/.test(profile) && /isStaff: isStaff\(currentUser\)/.test(profile), 'logging out, deleting and the admin row follow what the person may do');
 check(/const closeAll = useCallback/.test(hub) && /actions: \{ \.\.\.parentCtx\.actions, close: closeAll \}/.test(hub), 'closing from inside a page goes through the hub');
 

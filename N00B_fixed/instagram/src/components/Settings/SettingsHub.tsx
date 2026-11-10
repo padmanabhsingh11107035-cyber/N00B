@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PageLock } from '../Common/AppLockGate';
 import { ArrowLeft, Moon, Search, Sun, X } from 'lucide-react';
 import { useFullPage } from '../../utils/fullPage';
@@ -63,6 +63,7 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   stackRef.current = stack;
   const pushed = useRef(false);
   const scroller = useRef<HTMLDivElement | null>(null);
+  const savedScroll = useRef<number[]>([]);
   const [mark, stuck] = useStuck();
   const lastDepth = useRef(0);
   const settings = useAccountSettings();
@@ -99,6 +100,7 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
 
   const go = useCallback((page: string) => {
     if (!PAGES[page]) return;
+    savedScroll.current[stackRef.current.length] = scroller.current?.scrollTop || 0;   // remember exactly where this page was, so Back puts it there again
     try { window.history.pushState({ noobSettings: stackRef.current.length + 2 }, ''); ownedEntries = stackRef.current.length + 2; } catch { /* not important */ }
     setStack((s) => [...s, page]);
   }, []);
@@ -116,8 +118,19 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   }, [onClose]);
   const ctx = useMemo<SettingsContext>(() => ({ ...parentCtx, actions: { ...parentCtx.actions, close: closeAll } }), [parentCtx, closeAll]);
 
-  // every page starts at its top
-  useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [stack.length]);
+  // a page opened from another starts at its top; coming back to a page puts it exactly where it was (the page below may fill in a moment later, so it is set again a few times)
+  const prevLen = useRef(0);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    const was = prevLen.current;
+    prevLen.current = stack.length;
+    if (!el) return;
+    if (stack.length >= was) { el.scrollTo({ top: 0 }); return; }
+    const y = savedScroll.current[stack.length] || 0;
+    el.scrollTo({ top: y });
+    const timers = [60, 200, 500].map((ms) => window.setTimeout(() => { if (Math.abs(el.scrollTop - y) > 2) el.scrollTo({ top: y }); }, ms));
+    return () => timers.forEach(window.clearTimeout);
+  }, [stack.length]);
   // going deeper slides the next page in from the right, going back slides it in from the left
   const goingBack = stack.length < lastDepth.current;
   useEffect(() => { lastDepth.current = stack.length; }, [stack.length]);

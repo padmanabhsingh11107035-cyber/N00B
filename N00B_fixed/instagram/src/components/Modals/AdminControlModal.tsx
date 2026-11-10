@@ -167,10 +167,6 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'team_member_unpinned': return `${who} unpinned ${d.name || 'a member'} on the Our Team page.`;
     case 'team_member_removed': return `${who} removed ${target || 'someone'} from the Our Team page and deleted what they filled in.`;
     case 'team_member_moved': return `${who} moved ${d.name || 'a member'} ${d.direction === 'up' ? 'up' : 'down'} on the Our Team page.`;
-    case 'study_settings_changed': return `${who} set NOOB Study to ${d.mode === 'on' ? 'ON' : d.mode === 'off' ? 'OFF' : 'COMING SOON'}${d.admissionsOpen === false ? ', admissions closed' : ''}.`;
-    case 'study_student_viewed': return `${who} opened the NOOB Study record of ${target || 'a student'}.`;
-    case 'study_student_blocked': return `${who} paused ${target || 'a student'} in NOOB Study.`;
-    case 'study_student_restored': return `${who} let ${target || 'a student'} back into NOOB Study.`;
     case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;
     case 'explore_unpin': return `${who} unpinned ${target || 'an account'} from Explore.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;

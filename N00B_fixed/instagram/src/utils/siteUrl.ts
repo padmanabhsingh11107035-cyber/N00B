@@ -18,7 +18,7 @@ export const MAIN_SITE: string = (() => {
   return 'https://noobsocials.com';
 })();
 
-/** Is this host NOOB itself (the site, www, or a subdomain such as ai. or coaching.)? */
+/** Is this host NOOB itself (the site, www, or a subdomain such as ai.)? */
 export function isOwnHost(host: string | null | undefined): boolean {
   const h = String(host || '').toLowerCase().replace(/^www\./, '');
   return !!h && SITE_DOMAINS.some((d) => h === d || h.endsWith('.' + d));
@@ -46,7 +46,7 @@ export function mediaOrigin(): string {
 }
 
 /** Is this host the OLD main address (nooob.xyz, or www.nooob.xyz) — one of NOOB's two addresses that is not the main one? Sub-addresses such as ai. (NOOB AI) and
- *  coaching. (NOOB STUDY) are other apps and are never "old". */
+ *  ai. is another app and are never "old". */
 export function isOtherNoobHost(host: string | null | undefined): boolean {
   const h = String(host || '').toLowerCase().replace(/^www\./, '');
   try { return (SITE_DOMAINS as readonly string[]).includes(h) && h !== new URL(MAIN_SITE).hostname; } catch { return false; }

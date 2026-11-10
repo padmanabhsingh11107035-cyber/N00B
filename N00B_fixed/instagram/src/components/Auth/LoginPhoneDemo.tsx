@@ -1,12 +1,12 @@
 import React from 'react';
 
 // The phone on the sign-in page: a small working demo of the app. Seven screens take turns (about 3.4 seconds each) and loop for ever: the home feed with stories, reels,
-// a chat, the games, a live voice room, the Daily NOOB challenge and the AI study helper, each with a little hand-written caption under the phone. Everything is drawn
+// a chat, the games, a live voice room, the Daily NOOB challenge and the AI assistant, each with a little hand-written caption under the phone. Everything is drawn
 // here in the page's black-and-white doodle style and moved by CSS alone (see .demo-* in index.css): no timers, no pictures to download, nothing to tap. It is decoration:
 // hidden from screen readers, never catches a tap, and for people who ask their device for less motion it simply shows the first screen.
 // Each screen is drawn on a fixed 160 x 284 sheet that is scaled to fit the phone (smaller on tablets, full size from 1280px wide).
 
-const CAPTIONS = ['Share moments', 'Watch reels', 'Chat with friends', 'Play 50+ games', 'Hang out live', 'Daily challenge', 'Study with AI'];
+const CAPTIONS = ['Share moments', 'Watch reels', 'Chat with friends', 'Play 50+ games', 'Hang out live', 'Daily challenge', 'Ask NOOB AI'];
 
 const NAV = [
   'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -145,14 +145,14 @@ export const LoginPhoneDemo: React.FC = () => (
             <Nav />
           </Screen>
 
-          {/* 7 - AI study helper */}
+          {/* 7 - the AI assistant */}
           <Screen n={6}>
-            <div className="flex items-center gap-1.5 px-3 pt-3 pb-2 border-b border-white/15"><span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center text-[8px] font-black">AI</span><span className="text-[10px] font-black">NOOB Study</span></div>
+            <div className="flex items-center gap-1.5 px-3 pt-3 pb-2 border-b border-white/15"><span className="w-5 h-5 rounded-full bg-white text-black flex items-center justify-center text-[8px] font-black">AI</span><span className="text-[10px] font-black">NOOB AI</span></div>
             <div className="px-3 pt-3 space-y-2 text-[8.5px]">
-              <div className="demo-at demo-pop ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-white text-black px-2 py-1.5 font-semibold origin-right" style={at(6, 0.1)}>make me a study plan for maths</div>
+              <div className="demo-at demo-pop ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-white text-black px-2 py-1.5 font-semibold origin-right" style={at(6, 0.1)}>plan my weekend, please</div>
               <div className="demo-at demo-pop max-w-[88%] rounded-2xl rounded-bl-sm border border-white/25 px-2 py-2 space-y-1.5" style={at(6, 0.8)}>
-                <div className="font-bold">Your plan for the week</div>
-                {['Algebra basics', 'Practice quiz', 'Review mistakes'].map((t, i) => (
+                <div className="font-bold">Your weekend</div>
+                {['Morning walk', 'Movie with friends', 'Call home'].map((t, i) => (
                   <div key={i} className="flex items-center gap-1.5"><span className="demo-at demo-pop w-3 h-3 rounded-full bg-white text-black flex items-center justify-center" style={at(6, 1.6 + i * 0.5)}><svg viewBox="0 0 24 24" className="w-2 h-2" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 6" /></svg></span>{t}</div>
                 ))}
               </div>

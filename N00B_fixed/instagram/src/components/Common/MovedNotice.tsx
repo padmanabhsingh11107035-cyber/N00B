@@ -5,7 +5,7 @@ import { isOnOtherNoobAddress, installAddress, MAIN_SITE } from '../../utils/sit
 // Shown on the OLD address (nooob.xyz) only: a curved, fully black card with white hand-drawn doodles that says NOOB has a new home, gives the new address and a button
 // that goes and installs it there (an app can only be installed from the address it is opened on). It has no close button: everyone who opens the old address is sent
 // to the new one, and the old address does not run the app at all any more (main.tsx shows only this card there) — every update goes to the new address only. The one way past it is for NOOB's own support: opening  nooob.xyz/?old=1  (kept for the rest of that tab's visit) lets someone reach the old app,
-// e.g. to help a person whose older private chats are still unlocked only there. Never shown on the new address, on ai. / coaching., or inside the Android app. On a
+// e.g. to help a person whose older private chats are still unlocked only there. Never shown on the new address, on ai., or inside the Android app. On a
 // developer's own computer it can be looked at with  http://localhost:5173/?show=moved .
 const BYPASS_KEY = 'noob.movedNoticeBypass';
 

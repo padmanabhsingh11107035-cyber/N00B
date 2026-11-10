@@ -124,7 +124,7 @@ export const AdminFeaturesPanel: React.FC = () => {
       ))}
 
       <p className="px-1 text-[11px] text-zinc-500 leading-relaxed">
-        NOOB Study and the Food Stall have their own switches in their own tabs, and the maintenance locks (Live Lounge, NOOB AI, NOOB Rooms) in the Platform tab: those show a message instead of hiding the page.
+        The Food Stall has its own switch in its own tab, and the maintenance locks (Live Lounge, NOOB AI, NOOB Rooms) in the Platform tab: those show a message instead of hiding the page.
       </p>
     </div>
   );

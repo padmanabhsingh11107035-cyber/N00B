@@ -39,10 +39,13 @@ const readBox = (fraction: number): SheetBox => {
   if (!phone) return { phone: false, style: undefined, keyboard: 0 };
   const page = window.innerHeight;
   const vv = window.visualViewport;
-  const top = vv ? Math.round(vv.offsetTop) : 0;
-  const visible = vv ? Math.round(vv.height) : page;
-  const keyboard = Math.max(0, page - (top + visible));
+  const vTop = vv ? Math.round(vv.offsetTop) : 0;
+  const vVisible = vv ? Math.round(vv.height) : page;
+  const keyboard = Math.max(0, page - (vTop + vVisible));
   const kb = keyboard < 80 ? 0 : keyboard;   // a few pixels of difference is the address bar, not a keyboard
+  // with no keyboard the sheet is measured against the page itself: the browser's address bar sliding in and out changes the visible area by a few pixels, and the sheet must not follow it
+  const top = kb ? vTop : 0;
+  const visible = kb ? vVisible : page;
   const height = Math.max(160, Math.min(Math.round(page * fraction), visible - 24));
   return {
     phone: true,
@@ -56,7 +59,7 @@ const readBox = (fraction: number): SheetBox => {
 export function useSheetBox(fraction: number): SheetBox {
   const [box, setBox] = useState<SheetBox>(() => readBox(fraction));
   useEffect(() => {
-    const on = () => setBox(readBox(fraction));
+    const on = () => setBox((prev) => { const next = readBox(fraction); return prev.phone === next.phone && prev.keyboard === next.keyboard && JSON.stringify(prev.style) === JSON.stringify(next.style) ? prev : next; });   // the same size again is not a change (no redraw)
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     vv?.addEventListener('resize', on);
     vv?.addEventListener('scroll', on);

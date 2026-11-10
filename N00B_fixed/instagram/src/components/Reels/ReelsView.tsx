@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useState, useRef, useEffect } from 'react';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
@@ -1359,7 +1360,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       </div>
 
       {/* 4. Sliding Comments Sheet Overlay */}
-      {showComments && (
+      {showComments && createPortal(
         <div className="fixed inset-0 z-[60] sm:flex sm:items-center sm:justify-center sm:p-4" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
         <div ref={commentsDrag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={() => setShowComments(false)} aria-hidden="true" />
         <div
@@ -1482,7 +1483,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
         </div>
         </div>
-      )}
+        , document.body)}
 
       {showLikesViewsSheet && (
         <LikesViewsSheet

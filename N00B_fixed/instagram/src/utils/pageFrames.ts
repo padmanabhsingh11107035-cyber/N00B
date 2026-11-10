@@ -16,8 +16,8 @@ export const ROW_ATTR = 'data-noob-row';
 export const KEEP_ATTR = 'data-noob-keep';   // a layer that must stay exactly as it is
 
 /** What is this layer? `card` is the biggest thing inside it. */
-export function classifyOverlay(viewport: { width: number; height: number }, card: Box, opts: { hasMedia?: boolean; keep?: boolean } = {}): FrameKind {
-  if (opts.keep || opts.hasMedia) return 'skip';
+export function classifyOverlay(viewport: { width: number; height: number }, card: Box, opts: { hasMedia?: boolean; keep?: boolean; sheet?: boolean } = {}): FrameKind {
+  if (opts.keep || opts.hasMedia || opts.sheet) return 'skip';
   if (viewport.width < 200 || viewport.height < 200) return 'skip';
   const full = card.width >= viewport.width * 0.97 && card.height >= viewport.height * 0.95;
   if (full) return 'page';
@@ -42,6 +42,9 @@ export function pickClose(cands: Candidate[], cardTop: number): { hasBack: boole
 // ------------------------------------------------------------------------------------------------------- the part that looks at the screen
 const BACK_LABEL = /^(back|go back|previous)/i;
 const CLOSE_LABEL = /close|dismiss/i;
+
+/** A bottom sheet (it has the grey drag handle, or says so) is NEVER turned into a page: its size is its own. This is what stopped sheets (Create, comments) growing and shrinking by turns. */
+function isSheet(el: Element): boolean { return !!el.querySelector('[data-testid="sheet-grip"], .cs-sheet, [data-noob-sheet]'); }
 
 function hasMediaInside(el: Element): boolean { return !!el.querySelector('canvas, video, iframe'); }
 
@@ -79,8 +82,8 @@ export function enhanceOverlay(overlay: HTMLElement): void {
   const card = biggestChild(overlay);
   if (!card) return;
   const r = card.getBoundingClientRect();
-  const kind = classifyOverlay(viewport, { top: r.top, left: r.left, width: r.width, height: r.height }, { hasMedia: hasMediaInside(overlay), keep: overlay.hasAttribute(KEEP_ATTR) });
-  if (kind === 'skip') { overlay.removeAttribute(PAGE_ATTR); return; }
+  const kind = classifyOverlay(viewport, { top: r.top, left: r.left, width: r.width, height: r.height }, { hasMedia: hasMediaInside(overlay), keep: overlay.hasAttribute(KEEP_ATTR), sheet: isSheet(overlay) });
+  if (kind === 'skip') { if (overlay.getAttribute(PAGE_ATTR) === 'page' || overlay.getAttribute(PAGE_ATTR) === 'card') return; overlay.removeAttribute(PAGE_ATTR); return; }
   overlay.setAttribute(PAGE_ATTR, kind);
   card.setAttribute(CARD_ATTR, '1');
   const { list, els } = candidatesIn(card);
@@ -99,6 +102,7 @@ export function installPageFrames(): () => void {
   installed = true;
   let queued = false, last = 0;
   const seen = new WeakMap<Element, number>();
+  const born = new WeakMap<Element, number>();
   const run = () => {
     queued = false; last = Date.now();
     document.querySelectorAll<HTMLElement>('.fixed.inset-0').forEach((el) => {
@@ -106,8 +110,13 @@ export function installPageFrames(): () => void {
         if (getComputedStyle(el).position !== 'fixed') return;
         const st = el.getAttribute(PAGE_ATTR);
         const at = seen.get(el) || 0;
+        if (!born.has(el)) born.set(el, Date.now());
+        // the first look happens only when the layer has settled (its opening animation is over), so a sliding layer is never measured half-way
+        if (!st && Date.now() - (born.get(el) || 0) < 450) return;
+        // a layer judged a page / card stays one while it is on screen: it is not measured again (that measuring is what made pages jump between two sizes)
+        if (st === 'page' || st === 'card') return;
         // a layer that was judged a page is checked again (its top row may have been drawn again); one that was left alone is looked at again now and then (it may have filled up since)
-        if (!st || Date.now() - at > (st === 'skip' ? 1200 : 400)) { seen.set(el, Date.now()); enhanceOverlay(el); if (!el.hasAttribute(PAGE_ATTR)) el.setAttribute(PAGE_ATTR, 'skip'); }
+        if (!st || Date.now() - at > 1200) { seen.set(el, Date.now()); enhanceOverlay(el); if (!el.hasAttribute(PAGE_ATTR)) el.setAttribute(PAGE_ATTR, 'skip'); }
       } catch { /* a layer that can not be measured is left alone */ }
     });
   };

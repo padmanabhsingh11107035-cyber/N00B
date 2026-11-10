@@ -46,5 +46,15 @@ check(/rpc\('admin_signup_sources'\)/.test(panel) && /data-testid="signup-source
 check(/activeTab === 'signupSources' && main \?/.test(admin) && /Where from/.test(admin) && /'signupSources' \| 'userLogs'/.test(admin), 'it is a tab of the admin panel ("Where from"), for the main administrator only');
 
 
+section('7. The page-size rule: a layer is never measured into two sizes by turns (the "pages grow and shrink" bug)');
+const pf = read('src/utils/pageFrames.ts'), vv = read('src/utils/useVisualViewport.ts');
+check(classifyOverlay(phone, box(0, 0, 375, 812), { sheet: true }) === 'skip' && classifyOverlay(phone, box(40, 8, 359, 730), { sheet: true }) === 'skip', 'a bottom sheet (it has the grip) is NEVER a page, whatever its size is at that moment');
+check(/data-testid="sheet-grip"/.test(pf) && /\.cs-sheet/.test(pf), 'sheets are recognised by their grip');
+check(/if \(st === 'page' \|\| st === 'card'\) return;/.test(pf) && /getAttribute\(PAGE_ATTR\) === 'page'/.test(pf), 'a layer judged a page / card stays one: it is not measured again and never flipped back to "skip"');
+check(/< 450\) return;/.test(pf), 'a layer is first judged when it has settled (its opening slide is over), never half-way');
+check(/const top = kb \? vTop : 0;/.test(vv) && /const visible = kb \? vVisible : page;/.test(vv), 'a sheet is sized against the page when no keyboard is open (the address bar moving does not resize it)');
+check(/JSON\.stringify\(prev\.style\) === JSON\.stringify\(next\.style\) \? prev : next/.test(vv), 'the same size again is not a change');
+
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

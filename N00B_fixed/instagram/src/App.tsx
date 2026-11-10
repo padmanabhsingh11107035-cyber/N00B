@@ -268,7 +268,7 @@ export default function App() {
     const measure = () => {
       if (!mq.matches) { root.removeAttribute('data-doodle-mid'); root.style.removeProperty('--doodle-l'); root.style.removeProperty('--doodle-r'); return; }
       const left = document.querySelector('[data-testid="desktop-side-menu"]') as HTMLElement | null;
-      const right = document.querySelector('[data-right-panel]') as HTMLElement | null;
+      const right = document.querySelector('[data-testid="desktop-people-panel"]') as HTMLElement | null;
       const l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
       const r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
       root.style.setProperty('--doodle-l', `${l}px`);
@@ -277,7 +277,7 @@ export default function App() {
     };
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    [document.querySelector('[data-testid="desktop-side-menu"]'), document.querySelector('[data-right-panel]'), document.body].forEach((el) => { if (el && ro) ro.observe(el); });
+    [document.querySelector('[data-testid="desktop-side-menu"]'), document.querySelector('[data-testid="desktop-people-panel"]'), document.body].forEach((el) => { if (el && ro) ro.observe(el); });
     window.addEventListener('resize', measure);
     const t = window.setInterval(measure, 1500);   // a page that changes the side panels (Games, Music) is caught within a moment
     return () => { ro?.disconnect(); window.removeEventListener('resize', measure); window.clearInterval(t); root.removeAttribute('data-doodle-mid'); };
@@ -2080,7 +2080,7 @@ export default function App() {
       </main>
 
       {/* 3. Right Desktop Sidebar (Registered People & Community) */}
-      <aside data-right-panel="1" className={`${pageTab === 'music' || pageTab === 'games' ? 'hidden' : 'hidden lg:flex'} flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
+      <aside className={`${pageTab === 'music' || pageTab === 'games' ? 'hidden' : 'hidden lg:flex'} flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
         {/* Community People Directory: fills the sidebar from the top down to the footer links, and scrolls when there are more people */}
         <div className="bg-zinc-900/40 p-5 rounded-[28px] border border-white/5 shadow-xl backdrop-blur-md flex-1 min-h-0 flex flex-col">
           <div className="flex items-center justify-between mb-3.5 shrink-0">

@@ -118,7 +118,7 @@ section('8. Remembering the choice');
 
 section('9. On the page');
 check(/data-testid="reel-sound-button"/.test(view) && /Volume2/.test(view) && /VolumeX/.test(view), 'there is a visible sound button (there was none: nobody could turn the sound on or off)');
-check(/Tap for sound/.test(view) && /data-testid="reel-tap-for-sound"/.test(view), 'while the sound is refused, "Tap for sound" says so');
+check(!/Tap for sound/.test(view) && !/data-testid="reel-tap-for-sound"/.test(view), 'no "Tap for sound" notice is shown (the next tap still turns the sound on)');
 check(/now - tapUnmutedAtRef\.current < 700\) return;\s*\/\/ this tap only switched the sound on/.test(view), 'the tap that switches the sound on does not also pause the reel');
 check(/Date\.now\(\) - tapUnmutedAtRef\.current < 700\) return;\s*\/\/ this very tap already switched the sound on/.test(view), 'and tapping the sound button while "Tap for sound" shows does not switch it straight back off');
 check(/playReel\(video, soundWantedRef\.current\)/.test(view), 'every reel (and every resume after a pause) asks for sound first');

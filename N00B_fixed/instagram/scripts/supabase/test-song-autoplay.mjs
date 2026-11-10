@@ -277,7 +277,7 @@ section('13. Wired into the screens');
   const api = read('src/services/supabaseApi.ts');
   check(/reportSongVisibility\(post\.id, songUrl,/.test(post) && /forgetSong\(post\.id\)/.test(post), 'every post with a song tells the player how much of it is on screen, and leaves when it goes');
   check(!/new Audio\(/.test(post), 'a post no longer needs a tap on its tag to start (no per-post audio, the shared player plays)');
-  check(/data-testid="post-sound-button"/.test(post) && /data-testid="post-tap-for-sound"/.test(post) && /data-testid="post-song-tag"/.test(post), 'speaker button, "Tap for sound" hint and the song tag are on the post');
+  check(/data-testid="post-sound-button"/.test(post) && !/data-testid="post-tap-for-sound"/.test(post) && /data-testid="post-song-tag"/.test(post), 'speaker button and the song tag are on the post (no "Tap for sound" hint)');
   check(/onDoubleClick=\{\(e\) => e\.stopPropagation\(\)\}/.test(post), 'double-tapping the speaker does not like the post');
   check(/holdSongs\(\)/.test(post) && /onVolumeChange/.test(post), 'a post\'s own video being un-muted silences its song');
   check(/useSyncExternalStore\(subscribeFeedSong, getFeedSongView, getFeedSongView\)/.test(post), 'the post shows live state of the song player');

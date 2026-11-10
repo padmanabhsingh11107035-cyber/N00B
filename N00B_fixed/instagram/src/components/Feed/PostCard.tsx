@@ -765,11 +765,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               {speakerOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
           )}
-          {songNeedsTap && (
-            <div data-testid="post-tap-for-sound" className="absolute bottom-3 left-14 z-20 pointer-events-none px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold backdrop-blur-md border border-white/10">
-              Tap for sound
-            </div>
-          )}
 
           {/* Opens the full YouTube-style watch page (like/dislike/comments/share/save/playlist/
               download/up next) — the inline player above still works exactly as before; this is an

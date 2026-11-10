@@ -514,7 +514,8 @@ export {
   reportAnonMessage,
   fetchAnonMessagesAdmin,
   adminRemoveAnonMessage,
-  adminDismissAnonMessageReports
+  adminDismissAnonMessageReports,
+  isAccountSuspended
 } from './supabaseApi';
 
 export type {

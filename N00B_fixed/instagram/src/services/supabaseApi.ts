@@ -55,6 +55,11 @@ async function rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise
   return data as T;
 }
 
+/** Is this account suspended? (the profile page then shows "This account has been suspended" instead of the person's content) */
+export async function isAccountSuspended(userId: string): Promise<boolean> {
+  try { return (await rpc<boolean>('is_account_suspended', { p_user: userId })) === true; } catch { return false; }
+}
+
 const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
 // Short in-memory cache for comment/likers/viewers lists: the dominant cost of reopening one of

@@ -33,6 +33,7 @@ import {
   UserX,
   Flag,
   ArrowLeft,
+  Ban,
   Trash2,
   Share2,
   UserPlus,
@@ -72,7 +73,8 @@ import {
   type MutualFollower,
   updateFullProfile,
   setMyAvatarChoice,
-  fetchAvatarChoice
+  fetchAvatarChoice,
+  isAccountSuspended
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -277,6 +279,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Target User (Either currentUser or viewingUser)
   const targetUser: User = viewingUser || currentUser;
   const isOwnProfile = !viewingUser || viewingUser.id === currentUser.id;
+  // a suspended account: its profile shows only this notice, to everyone except the administrators (who may review it)
+  const [suspendedView, setSuspendedView] = useState(false);
+  useEffect(() => {
+    setSuspendedView(false);
+    if (isOwnProfile || !viewingUser?.id || isStaff(currentUser)) return;
+    let off = false;
+    void isAccountSuspended(viewingUser.id).then((s) => { if (!off) setSuspendedView(s); });
+    return () => { off = true; };
+  }, [isOwnProfile, viewingUser?.id, currentUser]);
   useScreenshotAlert('profile', targetUser.id, !isOwnProfile);
   const isTargetBlocked = (currentUser.blockedUserIds || []).includes(targetUser.id);
   const [isTargetFollowing, setIsTargetFollowing] = useState<boolean>(() => {
@@ -627,6 +638,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       { id: 'archive' as const, label: 'Archive', title: 'Archived Posts Vault', Icon: Archive }
     ] : [])
   ];
+
+  if (suspendedView) {
+    return (
+      <div id="profile-view-container" className="w-full max-w-4xl mx-auto px-4 pt-4 pb-28" data-testid="profile-suspended">
+        <button onClick={onGoBack} aria-label="Go to previous page" className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white cursor-pointer"><ArrowLeft className="w-4 h-4" /> Back</button>
+        <div className="mt-24 flex flex-col items-center text-center gap-3 px-6">
+          <div className="w-20 h-20 rounded-full border-2 border-white/40 flex items-center justify-center"><Ban className="w-9 h-9 text-white" /></div>
+          <h2 className="text-xl font-black text-white">This account has been suspended</h2>
+          <p className="text-sm text-zinc-400 max-w-xs">Its posts, reels and everything else it shared are hidden while it is suspended.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="profile-view-container" className="w-full max-w-4xl mx-auto px-4 pt-4 pb-28">

@@ -118,7 +118,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
   // Sound: on unless the person switched it off. `soundBlocked` = the browser refused sound (no real tap yet), so the reel plays silently and
-  // "Tap for sound" shows until the next real tap (see src/utils/reelAudio.ts for why).
+  // the sound is refused by the phone until the next real tap (see src/utils/reelAudio.ts for why).
   const [soundWanted, setSoundWanted] = useState(() => getSoundPreference());
   const [soundBlocked, setSoundBlocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -975,14 +975,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               <div className="p-5 rounded-full bg-black/40 backdrop-blur-sm">
                 <div className="w-0 h-0 border-y-[14px] border-y-transparent border-l-[22px] border-l-white ml-1" />
               </div>
-            </div>
-          )}
-
-          {isCur && soundBlocked && soundWanted && (
-            <div className="absolute top-3 inset-x-0 z-30 flex justify-center pointer-events-none" data-testid="reel-tap-for-sound">
-              <span className="px-3 py-1.5 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-md flex items-center gap-1.5">
-                <VolumeX className="w-3.5 h-3.5" /> Tap for sound
-              </span>
             </div>
           )}
 

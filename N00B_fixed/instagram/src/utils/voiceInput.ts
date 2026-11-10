@@ -1,6 +1,5 @@
-// NOOB STUDY: speaking with the tutor. Listening uses the device's own speech recognition when it has one (free, instant, the student sees and can
-// fix the words), or a short recording sent for transcription when the server has that switched on. Reading aloud uses the device's own voices.
-// Nothing is recorded unless the student taps the microphone, and nothing is kept: the sound is turned into words and thrown away.
+// Speaking to the notepad: listening uses the device's own speech recognition when it has one (free, instant, the person sees and can fix the words), or a short recording sent for transcription
+// when the server has that switched on. Reading aloud uses the device's own voices. Nothing is recorded unless the person taps the microphone, and nothing is kept: the sound is turned into words and thrown away.
 
 import { createSpeaker } from './supportSpeech.ts';
 

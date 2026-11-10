@@ -282,10 +282,10 @@ section('7. Short words are words, emoji are never said (support call AND the NO
     check(!/[^\p{L}\p{N}\s]/u.test(t), `no emoji or sign is left in "${e}"`, JSON.stringify(t));
   }
   // the tutor's own voice goes through the same engine
-  const studyVoice = fs.readFileSync('src/utils/studyVoice.ts', 'utf8').split(String.fromCharCode(13)).join('');
+  const studyVoice = fs.readFileSync('src/utils/voiceInput.ts', 'utf8').split(String.fromCharCode(13)).join('');
   check(/import \{ createSpeaker \} from '\.\/supportSpeech\.ts'/.test(studyVoice) && /speaker\.speak\(clean/.test(studyVoice) && !/new SpeechSynthesisUtterance\(c\)/.test(studyVoice), 'the NOOB STUDY tutor speaks through the same speaker (emoji never said, short words stay words)');
   check(!/\(\?<[=!]/.test(studyVoice), 'and its file has no regex look-behind either (older iPhones refuse to load a page with one)');
-  const V = await import(pathToFileURL(path.resolve('src/utils/studyVoice.ts')).href);
+  const V = await import(pathToFileURL(path.resolve('src/utils/voiceInput.ts')).href);
   const out = S.splitForSpeech(S.prepareSpeech(V.cleanForSpeech('## Tip 😀\n- **NO** need to worry 🎉\n- Use $x^2$ and YES it works ✅'))).map((x) => x.text).join(' ');
   check(!/[^\p{L}\p{N}\s]/u.test(out) && out.includes('No need') && out.includes('x squared') && out.includes('Yes'), 'a tutor answer with headings, bold, maths and emoji is said as plain words', out);
   // a voice the student chose is used; others fall back to the best one

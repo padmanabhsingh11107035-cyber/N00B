@@ -5,7 +5,7 @@ import { useFlash } from '../kit';
 import type { PageProps } from '../types';
 import { NOTE_MAX_CHARS, createNote, deleteNote, filterNotes, listNotes, noteStats, noteTitle, saveNote, type Note } from '../../../services/notesApi';
 import { continueList, joinNote, splitNote, styleSelection, toggleList, type Edit, type ListKind } from '../../../utils/notepadFormat';
-import { canRecognize, listen, type Listener } from '../../../utils/studyVoice';
+import { canRecognize, listen, type Listener } from '../../../utils/voiceInput';
 
 // The Notepad: plain text notes (what you write and paste, kept on your account, so they are on every device you log in on). A list of notes, and an editor with a title, the text, and a
 // floating bar for Bold / Italic / Underline (special letters, still plain text), check boxes, bullets, numbers and speaking instead of typing. It saves by itself a moment after you

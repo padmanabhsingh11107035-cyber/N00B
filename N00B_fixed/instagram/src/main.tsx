@@ -27,7 +27,6 @@ import { installHistoryGate } from './utils/historyGate.ts';
 import { cleanPath, isKnownPath } from './utils/routes.ts';
 import { parseFunPath } from './utils/funRoutes.ts';
 import { isNativeApp } from './utils/siteUrl.ts';
-import { isCoachingHost } from './components/Study/studyStore.ts';
 import { SystemPage } from './components/Common/SystemPage.tsx';
 import { ServiceGate } from './components/Common/ServiceGate.tsx';
 import { isEditorHost } from './components/Studio/studioStore.ts';
@@ -132,7 +131,7 @@ const oldAddress = movedNoticeBlocksApp();
 // An address that is not a page of NOOB shows only the "page not found" page: the app is not even started (no sign-in screen, no loading, no browser error page).
 const editorPage = !oldAddress && !isNativeApp() && isEditorHost();
 const approvalPage = !oldAddress && !editorPage && !isNativeApp() && cleanPath(window.location.pathname) === '/login-approval';
-const pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
+const pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -48,12 +48,8 @@ import { useFullPage } from '../../utils/fullPage';
 import { captureScroll, restoreScroll, usePageHidden, LAYERS_BACK_EVENT, LAYERS_CLEARED_EVENT, type ScrollSnapshot } from '../../utils/pageLayers';
 import { markMenuEntry, currentMenuEntry, scrollToMenuEntry } from '../../utils/menuReturn';
 import { useNoobDrawOpen } from '../Draw/drawStore';
-import { useStudyNav } from '../Study/studyStore';
 import { Zap, MessageCircleQuestion, Smile, BarChart3 } from 'lucide-react';
 import { FUN_FEATURES, type FunFeature, type FunLocation } from '../../utils/funRoutes';
-import { openStudy } from '../Study/studyStore';
-import { useStudyStatus } from '../Study/studyStatus';
-import { preloadNoobStudy } from '../Study/StudyHost';
 import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -214,7 +210,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showNoobMenu, setShowNoobMenu] = useState(false);
   // the "Scroll for more" doodle at the bottom of the three-line menu, while the list is cut off
   const menuScroll = useScrollMore(showNoobMenu);
-  const studyStatus = useStudyStatus();
   // The menu page that was open when the app was closed / refreshed opens again (see utils/pageResume.ts).
   const [restoredPage] = useState(() => takeRestorePage(currentUser.id));
   const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
@@ -304,8 +299,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // pushes the screen up or a finger drags past the end of the page, its videos and songs stop, and the app knows this is not the place to refresh. When the page is closed Home
   // comes back exactly as it was: same posts, same place (the scroll is noted when the menu is opened, which is always before any of its pages).
   const drawOpen = useNoobDrawOpen();
-  const studyOpen = useStudyNav().open;
-  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || openPage || drawOpen || studyOpen);
+  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || openPage || drawOpen);
   useFullPage(menuPageOpen);
   const homeSnapshot = useRef<ScrollSnapshot | null>(null);
   useEffect(() => { if (showNoobMenu) homeSnapshot.current = captureScroll(containerRef.current, 'feed'); }, [showNoobMenu]);
@@ -573,7 +567,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
         featOn('daily') && { id: 'daily', entryId: 'daily', label: 'Daily NOOB', icon: <Flame />, hint: "Today's challenge: win real points", onClick: go('daily', () => setShowDailyNoob(true)) },
         featOn('draw') && { id: 'draw', entryId: 'draw', label: 'NOOB Draw', tag: 'NEW', icon: <Gift />, hint: 'Free weekly spins: win Pro, the tick and millions', onPointerDown: preloadNoobDraw, onClick: go('draw', openNoobDraw) },
         featOn('studio') && { id: 'studio', entryId: 'studio', testId: 'menu-studio', label: 'NOOB Studio', tag: 'NEW', icon: <Wand2 />, hint: 'Edit photos and videos: filters, text, music, export', onPointerDown: preloadStudio, onClick: go('studio', openStudio) },
-        (isMainAdmin(currentUser) || studyStatus?.mode === 'on' || studyStatus?.mode === 'coming_soon') && { id: 'study', entryId: 'study', label: 'NOOB Study', tag: studyStatus?.mode === 'on' ? 'NEW' : isMainAdmin(currentUser) ? 'Admin' : 'Soon', icon: <GraduationCap />, hint: 'Your AI tutor, plan and study space', onPointerDown: preloadNoobStudy, onClick: go('study', () => openStudy('home')) },
         featOn('team') && { id: 'team', entryId: 'team', label: 'Our Team', icon: <Users />, hint: 'Meet the people behind NOOB', onPointerDown: preloadOurTeam, onClick: go('team', () => setShowOurTeam(true)) },
         joinTeamOpen && { id: 'join', entryId: 'join', label: 'Join the NOOB team', icon: <Handshake />, hint: 'Apply to help build NOOB', onClick: go('join', () => setShowJoinUsModal(true)) },
         { id: 'spark', entryId: 'spark', label: 'Join our SparkX team', icon: <Rocket />, hint: 'IIT Bombay Techfest', onClick: go('spark', () => setShowSparkXModal(true)) },

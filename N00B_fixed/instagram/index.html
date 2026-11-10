@@ -18,12 +18,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NOOB" />
-    <meta name="description" content="NOOB Socials (noobsocials.com) is a free social app run by students: share photos, reels and stories, chat, play 50+ games, go live, study with AI and make friends." />
-    <meta name="keywords" content="NOOB Socials, noobsocials, NOOB app, student run social app, social media for students, reels, stories, chat, games, live streaming, NOOB Study, NOOB AI" />
+    <meta name="description" content="NOOB Socials (noobsocials.com) is a free social app run by students: share photos, reels and stories, chat, play 50+ games, go live and make friends." />
+    <meta name="keywords" content="NOOB Socials, noobsocials, NOOB app, student run social app, social media for students, reels, stories, chat, games, live streaming, NOOB AI" />
     <meta property="og:site_name" content="NOOB Socials" />
     <meta property="og:locale" content="en" />
     <meta property="og:title" content="NOOB Socials | The student-run social app" />
-    <meta property="og:description" content="Free social app and website run by students: reels, stories, chat, 50+ games, live rooms, AI study space and more." />
+    <meta property="og:description" content="Free social app and website run by students: reels, stories, chat, 50+ games, live rooms and more." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://noobsocials.com/" />
     <meta property="og:image" content="https://noobsocials.com/brand/og-card.png" />
@@ -32,7 +32,7 @@
     <meta property="og:image:alt" content="NOOB Socials - the student-run social app" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="NOOB Socials | The student-run social app" />
-    <meta name="twitter:description" content="Free social app and website run by students: reels, stories, chat, 50+ games, live rooms, AI study space and more." />
+    <meta name="twitter:description" content="Free social app and website run by students: reels, stories, chat, 50+ games, live rooms and more." />
     <meta name="twitter:image" content="https://noobsocials.com/brand/og-card.png" />
     <!-- What search engines read about us: who we are (a student-run team), the site's name (so results say "NOOB Socials", also for "noobsocials"), and the app with everything it does.
          Matches the visible text of /about. -->
@@ -51,7 +51,7 @@
           "slogan": "Connect. Share. Grow.",
           "founder": { "@type": "Person", "@id": "https://noobsocials.com/about#founder", "name": "Padmanabh Singh Vaghela", "jobTitle": "Founder, CEO and Owner of NOOB Socials", "worksFor": { "@id": "https://noobsocials.com/#org" } },
           "foundingLocation": "India",
-          "description": "NOOB Socials is a free social app and website built and run by student developers and founded by Padmanabh Singh Vaghela (Founder, CEO and Owner): reels, stories, chat, games, live rooms, AI study space and more."
+          "description": "NOOB Socials is a free social app and website built and run by student developers and founded by Padmanabh Singh Vaghela (Founder, CEO and Owner): reels, stories, chat, games, live rooms and more."
         },
         {
           "@type": "WebSite",
@@ -72,7 +72,7 @@
           "browserRequirements": "Requires JavaScript",
           "isAccessibleForFree": true,
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-          "description": "A free social app run by students, with photo posts, reels, stories, chat, voice and video calls, 50+ games, live streaming, voice rooms, Daily NOOB challenges, an AI assistant and an AI study space.",
+          "description": "A free social app run by students, with photo posts, reels, stories, chat, voice and video calls, 50+ games, live streaming, voice rooms, Daily NOOB challenges and an AI assistant.",
           "featureList": [
             "Photo posts, reels, longer videos and 24-hour stories",
             "Private and group chat with voice messages, photos, videos, reactions and end-to-end encryption",
@@ -81,7 +81,7 @@
             "Live streaming, Live Lounge and NOOB Rooms voice rooms",
             "Daily NOOB challenge with NOOB Points rewards",
             "Anonymous messages, Ask Me Anything, This or That, Mood Status and public polls",
-            "NOOB AI assistant and NOOB Study AI study space",
+            "NOOB AI assistant",
             "Music Hub, NOOB Draw, shop and food stall"
           ],
           "screenshot": [
@@ -128,7 +128,7 @@
     <!-- Opening splash: a full black screen, drawn by the page itself so it shows the very first moment the app is opened. public/opening/opening.js (loaded below)
          takes it over and plays the 4-second opening animation on it (a pen draws NOOB, the camera dives into an eye, the app opens like an iris) and removes it at the end.
          There is no logo on it: where that script does not run (reduced motion, a missing file) src/main.tsx fades the plain black screen away as soon as the app has started.
-         Only the coaching and editor addresses (NOOB STUDY, NOOB Studio) show their logo on it: coaching-init.js / editor-init.js add the class "logo". -->
+         Only the editor address (NOOB Studio) shows its logo on it: editor-init.js adds the class "logo". -->
     <div id="noob-splash" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483000;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease;">
       <style>
         @keyframes noob-splash-in { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
@@ -139,9 +139,6 @@
       </style>
       <img src="/noob-logo-circle.png" alt="" width="116" height="116" />
     </div>
-    <!-- On the coaching address (coaching.nooob.xyz, or any address opened with ?coaching=1) the page is NOOB STUDY: its own logo on the black opening screen
-         (3 seconds), its own name and icon. Everywhere else nothing changes. -->
-    <script src="/coaching-init.js"></script>
     <!-- The editor address (editor.noobsocials.com, or ?editor=1) is NOOB Studio: its own tab name and a short opening screen. Nothing changes elsewhere. -->
     <script src="/editor-init.js"></script>
     <!-- The opening animation (it must come after the two scripts above: they tell it to stay out of the way). The version number is in the address because the files are kept for a year. -->
@@ -151,7 +148,7 @@
     <noscript>
       <style>#noob-splash { display: none !important; }</style>
       <h1>NOOB Socials</h1>
-      <p>NOOB Socials (noobsocials.com) is a free social app and website run by students: share photos, reels and stories, chat, play 50+ games, go live, study with AI and connect with friends. Turn on JavaScript to use it.</p>
+      <p>NOOB Socials (noobsocials.com) is a free social app and website run by students: share photos, reels and stories, chat, play 50+ games, go live and connect with friends. Turn on JavaScript to use it.</p>
       <p><a href="/about">About NOOB Socials and all its features</a> · <a href="/screenshots">NOOB Socials screenshots</a></p>
       <p><a href="/features">All features</a> · <a href="/features/reels">NOOB Reels</a> · <a href="/features/videos">NOOB Videos</a> · <a href="/features/chat">NOOB Chat</a> · <a href="/features/games">NOOB Games</a> · <a href="/features/music">NOOB Music</a> · <a href="/features/explore">NOOB Explore</a> · <a href="/features/stories">NOOB Stories</a> · <a href="/features/points">NOOB Points</a></p>
       <p><a href="/privacy.html">Privacy Policy</a> &middot; <a href="/terms.html">Terms &amp; Conditions</a></p>

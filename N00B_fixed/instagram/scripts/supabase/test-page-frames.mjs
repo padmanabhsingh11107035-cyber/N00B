@@ -45,10 +45,6 @@ check(percent(1, 4) === 25 && percent(0, 0) === 0 && percent(2, 3) === 67, 'perc
 check(/rpc\('admin_signup_sources'\)/.test(panel) && /data-testid="signup-source-row"/.test(panel) && /What people typed under/.test(panel) && /Refresh/.test(panel), 'bars per place, what people typed under "Somewhere else", a refresh button');
 check(/activeTab === 'signupSources' && main \?/.test(admin) && /Where from/.test(admin) && /'signupSources' \| 'userLogs'/.test(admin), 'it is a tab of the admin panel ("Where from"), for the main administrator only');
 
-section('5. The tutor and pictures');
-const fn = read('supabase/functions/study-ai/index.ts');
-check(/opts\.vision \? \[\.\.\.buildProviders\(\)\]\.sort\(\(a, b\) => \(b\.id === 'gemini' \? 1 : 0\) - \(a\.id === 'gemini' \? 1 : 0\)\)/.test(fn), 'a photo question asks Gemini (best at reading pictures) first');
-check(/attempts: opened\.tried\.slice\(0, 12\)/.test(fn), 'when no provider answers, the answer lists which models were tried and what they said (no keys), so it can be diagnosed');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -72,11 +72,6 @@ section('2. The app itself (src/utils/theme.ts)');
   check(p.attrs['data-theme'] === 'dark', 'and back to Dark');
 }
 
-section('3. NOOB STUDY');
-{
-  const sp = read('src/utils/studyPrefs.ts');
-  check(/DEFAULT_PREFS: StudyPrefs = \{ theme: 'dark'/.test(sp), 'NOOB STUDY starts in dark too');
-}
 
 section('4. The static pages (privacy, terms, data deletion)');
 for (const f of ['privacy', 'terms', 'data-deletion']) {

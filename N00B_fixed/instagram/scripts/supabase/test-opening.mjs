@@ -15,10 +15,8 @@ const code = read('public/opening/opening.js'), data = read('public/opening/open
 section('1. The page loads it, in the right place');
 const iData = html.indexOf('<script src="/opening/opening-data.js?v='), iCode = html.indexOf('<script src="/opening/opening.js?v=');
 check(iData > 0 && iCode > iData, 'the shapes come before the animation');
-check(html.indexOf('/coaching-init.js') < iData && html.indexOf('/editor-init.js') < iData && html.indexOf('id="noob-splash"') < html.indexOf('/coaching-init.js'), 'both come after the splash and after the two scripts that give the coaching / editor addresses their own opening screen');
 check(!/<script>\s*\(function/.test(html) && !/<script>[^<]*opening/.test(html), 'no script is written inside the page (the security policy does not allow it)');
 check(/#noob-splash img \{ display: none; \}/.test(html) && /#noob-splash\.logo img \{ display: block;/.test(html), 'the splash has no logo (no glow, nothing before the animation); only an address that asks for it shows one');
-check(/splash\.className = 'logo'/.test(read('public/coaching-init.js')) && /splash\.className = 'logo'/.test(read('public/editor-init.js')), 'the coaching (NOOB STUDY) and editor (Studio) addresses ask for their logo');
 check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=4/.test(html), 'the files are kept for a year, their address carries a version number');
 
 section('2. The app opens straight out of it');

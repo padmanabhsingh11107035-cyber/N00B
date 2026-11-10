@@ -73,7 +73,6 @@ import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
 import { AdminSignInPanel } from './AdminSignInPanel';
 import { AdminTeamPanel } from './AdminTeamPanel';
-import { AdminStudyPanel } from './AdminStudyPanel';
 import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
 import { siteOrigin } from '../../utils/siteUrl';
 import { hasNativeApp } from '../../utils/appPlatform';
@@ -124,7 +123,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'gifts' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'gifts' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1401,19 +1400,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <BarChart3 className="w-4 h-4" /> Analytics
-            </button>
-          )}
-
-          {main && (
-            <button
-              onClick={() => setActiveTab('study')}
-              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'study'
-                  ? 'border-amber-400 text-amber-300'
-                  : 'border-transparent text-zinc-400 hover:text-white'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" /> NOOB Study
             </button>
           )}
 
@@ -2815,8 +2801,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminVisitorsPanel />
           ) : activeTab === 'analytics' && main ? (
             <AdminAnalyticsPanel />
-          ) : activeTab === 'study' && main ? (
-            <AdminStudyPanel />
           ) : activeTab === 'daily' && main ? (
             <AdminDailyNoobPanel />
           ) : activeTab === 'storage' && main ? (

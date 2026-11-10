@@ -81,11 +81,6 @@ check(manifest.icons.every((i) => /noob-app-/.test(i.src) && fs.existsSync('publ
 const png = fs.readFileSync('public/noob-support-character.png');
 check(png.readUInt32BE(16) === 256 && png[25] === 6, 'the character is a 256 px picture with a see-through background (RGBA)');
 
-section('6. The tutor');
-const fn = read('supabase/functions/study-ai/index.ts');
-check(/ACCURACY: before you send an answer, check it once/.test(fn) && /SPEAKING: answers may be read aloud/.test(fn) && /no emojis/.test(fn) && /Indian English/.test(fn), 'it is told to check facts and sums, to write for speaking, to use no emojis and to use Indian English');
-check(/mode === 'teach' \? 0\.4 : 0\.35/.test(fn), 'it answers with less guesswork (lower temperature)');
-check(/I could not look at your picture just now/.test(fn) && /picture: true/.test(fn), 'a picture that could not be read gets its own plain message');
 
 section('6. The battery at the last visit, in the admin panel');
 const { batteryBadge } = await import('../../src/utils/deviceInfo.ts');

@@ -21,13 +21,13 @@ const pollsPage = read('src/components/Fun/PollsPage.tsx');
 const funPages = ['ThisOrThatPage', 'AskPage', 'MoodPage', 'PollsPage'].map((n) => read(`src/components/Fun/${n}.tsx`));
 
 section('1. The pages of the three-line menu are separate pages');
-check(/const menuPageOpen = !!\(showAnonymous \|\| showOurTeam \|\| showCreations \|\| openPage \|\| drawOpen \|\| studyOpen\);/.test(feed), 'one flag knows when any of them is open: Anonymous Messages, Our Team, More of our creations, Daily NOOB, Rooms, Guess the Song, Live Lounge, the shop, the food stall, NOOB AI, Suggestion Box, Support, NOOB Draw, NOOB Study');
+check(/const menuPageOpen = !!\(showAnonymous \|\| showOurTeam \|\| showCreations \|\| openPage \|\| drawOpen\);/.test(feed), 'one flag knows when any of them is open: Anonymous Messages, Our Team, More of our creations, Daily NOOB, Rooms, Guess the Song, Live Lounge, the shop, the food stall, NOOB AI, Suggestion Box, Support, NOOB Draw, NOOB Study');
 check(/openPage = showDailyNoob \? 'daily' : showNoobRooms \? 'rooms' : showGuessTheSong \? 'song' : showLiveLoungePage \? 'lounge'\s*:\s*showStorePage \? 'store' : showFoodStall \? 'food' : showNoobAi \? 'ai' : showSupportModal \? 'support' : showSuggestionBox \? 'suggestions' : null;/.test(feed), '... including every page the menu opens');
 check(/<div data-home-content style=\{\{ display: menuPageOpen \? 'none' : 'contents' \}\}>/.test(feed), 'while one is open the Home page is HIDDEN (display: none), not just covered: nothing of it can show through when the keyboard pushes the screen up or a finger drags past the end');
 check(/<\/div>\s*\{showAnonymous && \(/.test(feed), 'the pages themselves sit outside that hidden part, so they stay visible');
 check(/useEffect\(\(\) => \{ if \(showNoobMenu\) homeSnapshot\.current = captureScroll\(containerRef\.current, 'feed'\); \}, \[showNoobMenu\]\);/.test(feed) && /if \(menuPageWasOpen\.current && !menuPageOpen && homeSnapshot\.current\) \{ restoreScroll\(homeSnapshot\.current\); homeSnapshot\.current = null; \}/.test(feed), 'Home comes back exactly as it was: the place is noted when the menu opens and put back when the page closes');
 check(/useFullPage\(menuPageOpen\);/.test(feed) && /export function useFullPage/.test(fullPage) && /export function useAnyFullPage/.test(fullPage), 'the app is told a full page is open (it matters for the refresh rule below)');
-check(/const drawOpen = useNoobDrawOpen\(\);/.test(feed) && /const studyOpen = useStudyNav\(\)\.open;/.test(feed), 'NOOB Draw and NOOB Study (drawn by the app itself) count as separate pages too');
+check(/const drawOpen = useNoobDrawOpen\(\);/.test(feed), 'NOOB Draw and NOOB Study (drawn by the app itself) count as separate pages too');
 check(/Fun pages|FunHub|PageLayerSlot layerId=\{0\} hidden=\{pageLayers\.layers\.length > 0\}/.test(app), 'the Fun pages are layers: the page under them is hidden the same way');
 
 section('2. Only the Home page can be refreshed');

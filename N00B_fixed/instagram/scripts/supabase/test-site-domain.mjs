@@ -56,7 +56,6 @@ const ib = read('src/utils/inAppBrowser.ts');
 check(/SITE_DOMAINS\.some/.test(ib) && !/'nooob\.xyz'/.test(ib), 'a link to either of NOOB\'s addresses opens normally, never in the in-app browser');
 const push = read('src/utils/pushSupport.ts');
 check(!/Open nooob\.xyz|address https:\/\/nooob\.xyz/.test(push), 'the notification help names the main address, not a fixed one');
-check(/siteOrigin\(\)/.test(read('src/components/Study/studyStore.ts')) && /siteOrigin\(\)/.test(read('src/components/Modals/AdminSignInPanel.tsx')), 'closing NOOB STUDY and the admin sign-in guide use the current address');
 check(/VITE_SITE_URL: \$\{\{ vars\.SITE_URL \|\| 'https:\/\/noobsocials\.com' \}\}/.test(fs.readFileSync(path.resolve('../../.github/workflows/android-build.yml'), 'utf8')), 'the Android build takes the main address from the repo variable SITE_URL');
 check(parseProfileQrBothDomains(), 'a profile QR code from either address is read');
 function parseProfileQrBothDomains() {

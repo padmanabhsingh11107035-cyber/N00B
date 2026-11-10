@@ -31,7 +31,7 @@ check(org.sameAs.includes('https://www.instagram.com/nooob.xyz') && !/[?&]utm_|v
 check(org.alternateName.includes('noob socials') && site.alternateName.includes('noob socials'), 'the spaced spelling "noob socials" is a known name too');
 check(site && site.name === 'NOOB Socials' && site.alternateName.includes('noobsocials') && site.url === 'https://noobsocials.com/', 'structured data: the site name search results should show');
 check(app && app.applicationCategory === 'SocialNetworkingApplication' && app.offers.price === '0' && app.featureList.length >= 8, 'structured data: a free social app with its list of features');
-check(app.featureList.some((f) => /Ludo/.test(f)) && app.featureList.some((f) => /NOOB Study/.test(f)) && app.featureList.some((f) => /Daily NOOB/.test(f)), '... that names the real features');
+check(app.featureList.some((f) => /Ludo/.test(f)) && app.featureList.some((f) => /Daily NOOB/.test(f)), '... that names the real features');
 check(/<noscript>[\s\S]*<h1>NOOB Socials<\/h1>[\s\S]*student/.test(html) && /<a href="\/about">/.test(html), 'a visitor (or crawler) without scripts still reads who we are, with a link to the About page');
 check(/<script type="module" src="\/src\/main\.tsx"><\/script>/.test(html) && /id="root"/.test(html), 'the app itself is untouched');
 
@@ -40,7 +40,7 @@ check(/<link rel="canonical" href="https:\/\/noobsocials\.com\/about" \/>/.test(
 check(/<title>About NOOB Socials/.test(about) && /<h1>|class="tag">The student-run social app/.test(about) && /built and run by students/.test(about), 'it says plainly that it is student-run');
 const aboutLd = ld(about)['@graph'];
 check(aboutLd.some((x) => x['@type'] === 'AboutPage') && aboutLd.some((x) => x['@type'] === 'BreadcrumbList'), 'structured data for an About page with a breadcrumb');
-for (const feature of ['Reels', 'Stories', 'Voice and video calls', 'Ludo', 'Chess', 'Monopoly', 'Guess the Song', 'Live streaming', 'NOOB Rooms', 'Daily NOOB', 'Anonymous Messages', 'Ask Me Anything', 'This or That', 'Mood Status', 'public polls', 'NOOB AI', 'NOOB Study', 'NOOB Draw', 'Shop NOOB', 'Food Stall', 'NOOB Points', 'NOOB Pro', 'Suggestion Box', 'end-to-end encrypted']) {
+for (const feature of ['Reels', 'Stories', 'Voice and video calls', 'Ludo', 'Chess', 'Monopoly', 'Guess the Song', 'Live streaming', 'NOOB Rooms', 'Daily NOOB', 'Anonymous Messages', 'Ask Me Anything', 'This or That', 'Mood Status', 'public polls', 'NOOB AI', 'NOOB Draw', 'Shop NOOB', 'Food Stall', 'NOOB Points', 'NOOB Pro', 'Suggestion Box', 'end-to-end encrypted']) {
   check(new RegExp(feature, 'i').test(about), `lists ${feature}`);
 }
 check(/href="https:\/\/www\.instagram\.com\/nooob\.xyz"/.test(about) && !/utm_source|vrfl/.test(about), 'the About page links to the Instagram, without tracking codes');

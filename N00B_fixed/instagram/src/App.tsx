@@ -121,8 +121,6 @@ import { closeBooth } from './components/Booth/boothStore';
 import { closeFamily } from './components/Family/familyStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
-import { StudyHost } from './components/Study/StudyHost';
-import { isCoachingHost, openStudy } from './components/Study/studyStore';
 import { openTeamJoin, rememberTeamJoin, hasRememberedTeamJoin, forgetTeamJoin } from './components/Team/teamJoinStore';
 import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
@@ -229,14 +227,6 @@ const ProfileSkeleton: React.FC<{ user: User }> = ({ user }) => (
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
-// On the coaching address NOOB STUDY is opened as soon as the person is signed in
-const CoachingEntry: React.FC<{ currentUser: User }> = ({ currentUser }) => {
-  useEffect(() => { openStudy('home'); }, []);
-  // The icon on the phone's home screen follows the NOOB Pro plan: the Pro icon while a plan that chose it runs, the normal one when it ends (utils/appIcon.ts; only the Android app can change it)
-  useEffect(() => { if (currentUser) void applyAppIcon(currentUser.proTier); }, [currentUser?.proTier]);
-  return <StudyHost currentUser={currentUser} />;
-};
-
 // What can be opened on top of the page that is showing: someone's profile, or the Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls).
 type AppLayer =
   | { id: string; kind: 'profile'; user: User }
@@ -244,10 +234,13 @@ type AppLayer =
 
 export default function App() {
   // The page the address bar names (/explore, /reels ...) is the page that opens; anything else (/, a shared reel or profile link) opens Home.
-  const [activeTab, setActiveTabState] = useState<NavTab>(() => { const t = typeof window !== 'undefined' && !isCoachingHost() ? tabFromPath(window.location.pathname) : null; return t && t !== 'post' ? t : 'feed'; });   // ('post' is the Create button, a window over a page, never a page of its own)
+  const [activeTab, setActiveTabState] = useState<NavTab>(() => { const t = typeof window !== 'undefined' ? tabFromPath(window.location.pathname) : null; return t && t !== 'post' ? t : 'feed'; });   // ('post' is the Create button, a window over a page, never a page of its own)
   // "Go to previous page": a profile opens as a LAYER on top of the page that is showing (Home, Explore, Reels, Chat, another profile...) instead of replacing it, so the page
   // underneath stays exactly as it was (same posts in the same order, same scroll) and the "Go to previous page" button, or the phone's back button, brings it back (utils/pageLayers.tsx).
   const pageLayers = usePageLayers<AppLayer>(activeTab);
+  // the page that is open, for the laptop / computer rules in index.css (where the doodle shows, the colour of the middle box). (Kept up here, before any early return: a hook below one would crash the app when somebody logs in.)
+  const openPageName: NavTab = pageLayers.layers.length > 0 ? 'profile' : activeTab;
+  useEffect(() => { document.documentElement.setAttribute('data-page', openPageName); window.dispatchEvent(new Event('noob-page')); return () => { document.documentElement.removeAttribute('data-page'); }; }, [openPageName]);
   const clearPageLayers = pageLayers.clear;
   // Any jump to a page (a bottom-bar tab, "open this post", "message this person"...) closes the profile layers first.
   const setActiveTab = useCallback((tab: NavTab) => { clearPageLayers({ restore: false }); setActiveTabState(tab); }, [clearPageLayers]);
@@ -1147,7 +1140,7 @@ export default function App() {
   const addressFirst = useRef(true);
   const cameByHistory = useRef(false);
   useEffect(() => {
-    if (!currentUser || bootFun || isCoachingHost()) return;
+    if (!currentUser || bootFun) return;
     const tab = activeTab;
     afterHistoryIdle(() => {
       if (layerCountRef.current > 0) return;   // a page opened on top of this one has its own address
@@ -1159,7 +1152,6 @@ export default function App() {
   // The browser's Back / Forward (or the phone's back button) landing on a page of the bottom bar: show that page
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
-      if (isCoachingHost()) return;
       const tab = tabFromHistoryEntry(e.state, window.location.pathname);
       if (!tab || tab === activeTabRef.current) return;
       cameByHistory.current = true;
@@ -1686,16 +1678,6 @@ export default function App() {
     );
   }
 
-  // coaching.nooob.xyz: the whole page is NOOB STUDY (the logo, then the admission form for a new student, or the study space for a member)
-  if (isCoachingHost()) {
-    return (
-      <>
-        {isUpdateAvailable && <UpdateAvailableBanner />}
-        <CoachingEntry currentUser={currentUser} />
-      </>
-    );
-  }
-
   // The NOOB account opens straight into the admin console instead of the normal app — see
   // AdminControlModal's fullPage mode, which is exactly this same panel with its dialog chrome
   // swapped for a whole-screen layout and a Log Out button in place of a close button. "Use as
@@ -1746,8 +1728,6 @@ export default function App() {
   const kept = visitedTabs.current.tabs;
   // the page that is really showing: a profile layer counts as the Profile page for the layout
   const pageTab: NavTab = pageLayers.layers.length > 0 ? 'profile' : activeTab;
-  // the page that is open, for the laptop / computer rules in index.css (where the doodle shows, the colour of the middle box)
-  useEffect(() => { document.documentElement.setAttribute('data-page', pageTab); window.dispatchEvent(new Event('noob-page')); return () => { document.documentElement.removeAttribute('data-page'); }; }, [pageTab]);
 
   // The profile page: my own (the Profile tab) or someone else's (a layer on top of the page that was showing, with "Go to previous page")
   const renderProfileView = (viewing: User | null) => (
@@ -2272,7 +2252,6 @@ export default function App() {
       <FamilyHost lockUser={currentUser} />
       <FamilyTracker />
       <TeamJoinHost currentUser={currentUser} />
-      <StudyHost currentUser={currentUser} />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

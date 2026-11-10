@@ -37,7 +37,7 @@ export function useScrollMore(active: boolean) {
 }
 
 // A little doodle (a smiley and an arrow that bobs downwards) in a pill, on a soft fade at the bottom edge of the list. Pressing it scrolls the list down.
-export const ScrollMoreHint: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+export const ScrollMoreHint: React.FC<{ onClick: () => void; label?: string }> = ({ onClick, label = 'Scroll for more' }) => (
   <div className="scroll-more-hint pointer-events-none absolute inset-x-0 bottom-0 pt-12 pb-2 flex justify-center bg-gradient-to-t from-zinc-950 via-zinc-950/85 to-transparent">
     <button
       type="button"
@@ -50,7 +50,7 @@ export const ScrollMoreHint: React.FC<{ onClick: () => void }> = ({ onClick }) =
         <path d="M7 8.2v.6M13 8.2v.6" />
         <path d="M6.6 12c1 1.6 2.1 2.2 3.4 2.2s2.4-.6 3.4-2.2" />
       </svg>
-      <span>Scroll for more</span>
+      <span>{label}</span>
       <svg viewBox="0 0 16 16" className="scroll-more-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M8 2.2c-.7 2.2.6 4.2 0 7" />
         <path d="M4 7.6 8 12l4-4.4" />

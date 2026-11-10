@@ -63,6 +63,7 @@
 .cs-title h2 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: .02em; color: var(--nz-fg); }
 .cs-title h2::after { content: ""; display: block; width: 28px; height: 3px; margin: 7px auto 0; border-radius: 3px; background: var(--nz-acc); }
 .cs-x { position: absolute; right: 14px; top: 4px; width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--nz-line); background: var(--nz-card); color: var(--nz-fg); align-items: center; justify-content: center; cursor: pointer; }
+.cs-wrap { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .cs-list { position: relative; flex: 1; min-height: 0; list-style: none; margin: 0; padding: 4px 12px 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 .cs-sheet { animation: cs-rise .42s cubic-bezier(.22, 1, .36, 1) both; will-change: transform; }
 @keyframes cs-rise { from { transform: translate3d(0, 40%, 0); opacity: .4; } to { transform: none; opacity: 1; } }
@@ -77,3 +78,5 @@
 .cs-t { display: block; font-size: 16px; font-weight: 800; letter-spacing: -.005em; line-height: 1.2; }
 .cs-b { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 600; line-height: 1.35; color: var(--nz-mute); }
 .cs-go { color: var(--nz-acc); flex: none; opacity: .85; }
+
+.cs-sheet .scroll-more-hint { z-index: 2; }

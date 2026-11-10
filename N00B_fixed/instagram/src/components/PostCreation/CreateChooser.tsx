@@ -5,6 +5,7 @@ import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, Chev
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import '../Common/nzPage.css';
+import { ScrollMoreHint, useScrollMore } from '../Feed/ScrollMoreHint';
 
 export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'studio' | 'lenses';
 
@@ -30,6 +31,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
 
 export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {
   const liveOn = useFeatureOn('live');
+  const more = useScrollMore(true);   // the sheet covers 70 % of the screen: a hint shows while more ways to create are below
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -80,7 +82,8 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
           </div>
         )}
 
-        <ul className="cs-list">
+        <div className="cs-wrap">
+        <ul className="cs-list" ref={more.ref as React.RefObject<HTMLUListElement>}>
           {ROWS.filter((r) => r.kind !== 'live' || (liveOn && !live)).map(({ kind, title, blurb, Icon, tint }) => (
             <li key={kind}>
               <button
@@ -101,6 +104,8 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
             </li>
           ))}
         </ul>
+        {more.more && <ScrollMoreHint onClick={more.scrollDown} label="More ways to create" />}
+        </div>
       </div>
     </div>
   );

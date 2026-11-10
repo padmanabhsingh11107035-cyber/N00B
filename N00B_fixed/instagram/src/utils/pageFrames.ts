@@ -16,14 +16,17 @@ export const ROW_ATTR = 'data-noob-row';
 export const KEEP_ATTR = 'data-noob-keep';   // a layer that must stay exactly as it is
 
 /** What is this layer? `card` is the biggest thing inside it. */
-export function classifyOverlay(viewport: { width: number; height: number }, card: Box, opts: { hasMedia?: boolean; keep?: boolean; sheet?: boolean } = {}): FrameKind {
+export function classifyOverlay(viewport: { width: number; height: number }, card: Box, opts: { hasMedia?: boolean; keep?: boolean; sheet?: boolean; alignEnd?: boolean; maxFrac?: number } = {}): FrameKind {
   if (opts.keep || opts.hasMedia || opts.sheet) return 'skip';
   if (viewport.width < 200 || viewport.height < 200) return 'skip';
   const full = card.width >= viewport.width * 0.97 && card.height >= viewport.height * 0.95;
   if (full) return 'page';
   const sheet = card.top > viewport.height * 0.2 && card.top + card.height >= viewport.height - 4;   // stuck to the bottom: a sheet
   if (sheet) return 'skip';
-  const tall = card.height >= viewport.height * 0.6 && card.width >= Math.min(viewport.width * 0.6, 340);
+  if (opts.alignEnd && viewport.width < 640) return 'skip';   // a layer that holds its card at the bottom edge of a phone is a sheet
+  // tall = it IS tall now, or it is built to be (a card that may grow to 60 % of the screen or more, like max-h-[88vh]): such a card is a page from its very first moment, even while it is still short and loading,
+  // so it never grows from a small box into a page when its list arrives (that growing was the "size changing" of the windows)
+  const tall = (card.height >= viewport.height * 0.6 || (opts.maxFrac || 0) >= 0.6) && card.width >= Math.min(viewport.width * 0.6, 340);
   return tall ? 'card' : 'skip';
 }
 
@@ -45,6 +48,12 @@ const CLOSE_LABEL = /close|dismiss/i;
 
 /** A bottom sheet (it has the grey drag handle, or says so) is NEVER turned into a page: its size is its own. This is what stopped sheets (Create, comments) growing and shrinking by turns. */
 function isSheet(el: Element): boolean { return !!el.querySelector('[data-testid="sheet-grip"], .cs-sheet, [data-noob-sheet]'); }
+
+/** How much of the screen's height the card is allowed to take (its max-height; 0 when it has none). */
+function declaredMaxFraction(card: HTMLElement, viewportHeight: number): number {
+  const mh = parseFloat(getComputedStyle(card).maxHeight);
+  return Number.isFinite(mh) && viewportHeight > 0 ? mh / viewportHeight : 0;
+}
 
 function hasMediaInside(el: Element): boolean { return !!el.querySelector('canvas, video, iframe'); }
 
@@ -82,7 +91,7 @@ export function enhanceOverlay(overlay: HTMLElement): void {
   const card = biggestChild(overlay);
   if (!card) return;
   const r = card.getBoundingClientRect();
-  const kind = classifyOverlay(viewport, { top: r.top, left: r.left, width: r.width, height: r.height }, { hasMedia: hasMediaInside(overlay), keep: overlay.hasAttribute(KEEP_ATTR), sheet: isSheet(overlay) });
+  const kind = classifyOverlay(viewport, { top: r.top, left: r.left, width: r.width, height: r.height }, { hasMedia: hasMediaInside(overlay), keep: overlay.hasAttribute(KEEP_ATTR), sheet: isSheet(overlay), alignEnd: getComputedStyle(overlay).alignItems === 'flex-end', maxFrac: declaredMaxFraction(card, viewport.height) });
   if (kind === 'skip') { if (overlay.getAttribute(PAGE_ATTR) === 'page' || overlay.getAttribute(PAGE_ATTR) === 'card') return; overlay.removeAttribute(PAGE_ATTR); return; }
   overlay.setAttribute(PAGE_ATTR, kind);
   card.setAttribute(CARD_ATTR, '1');
@@ -102,7 +111,6 @@ export function installPageFrames(): () => void {
   installed = true;
   let queued = false, last = 0;
   const seen = new WeakMap<Element, number>();
-  const born = new WeakMap<Element, number>();
   const run = () => {
     queued = false; last = Date.now();
     document.querySelectorAll<HTMLElement>('.fixed.inset-0').forEach((el) => {
@@ -110,9 +118,6 @@ export function installPageFrames(): () => void {
         if (getComputedStyle(el).position !== 'fixed') return;
         const st = el.getAttribute(PAGE_ATTR);
         const at = seen.get(el) || 0;
-        if (!born.has(el)) born.set(el, Date.now());
-        // the first look happens only when the layer has settled (its opening animation is over), so a sliding layer is never measured half-way
-        if (!st && Date.now() - (born.get(el) || 0) < 450) return;
         // a layer judged a page / card stays one while it is on screen: it is not measured again (that measuring is what made pages jump between two sizes)
         if (st === 'page' || st === 'card') return;
         // a layer that was judged a page is checked again (its top row may have been drawn again); one that was left alone is looked at again now and then (it may have filled up since)

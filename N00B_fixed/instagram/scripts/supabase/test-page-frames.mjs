@@ -51,7 +51,8 @@ const pf = read('src/utils/pageFrames.ts'), vv = read('src/utils/useVisualViewpo
 check(classifyOverlay(phone, box(0, 0, 375, 812), { sheet: true }) === 'skip' && classifyOverlay(phone, box(40, 8, 359, 730), { sheet: true }) === 'skip', 'a bottom sheet (it has the grip) is NEVER a page, whatever its size is at that moment');
 check(/data-testid="sheet-grip"/.test(pf) && /\.cs-sheet/.test(pf), 'sheets are recognised by their grip');
 check(/if \(st === 'page' \|\| st === 'card'\) return;/.test(pf) && /getAttribute\(PAGE_ATTR\) === 'page'/.test(pf), 'a layer judged a page / card stays one: it is not measured again and never flipped back to "skip"');
-check(/< 450\) return;/.test(pf), 'a layer is first judged when it has settled (its opening slide is over), never half-way');
+check(/maxFrac/.test(pf) && classifyOverlay(phone, box(120, 8, 359, 300), { maxFrac: 0.88 }) === 'card' && classifyOverlay(phone, box(120, 8, 359, 300)) === 'skip', 'a card built to be tall (max height 88 % of the screen) is a page from its first moment, even while it is still short and loading');
+check(classifyOverlay(phone, box(400, 0, 375, 300), { maxFrac: 0.88, alignEnd: true }) === 'skip', 'a layer that holds its card at the bottom edge of a phone is a sheet, never a page');
 check(/const top = kb \? vTop : 0;/.test(vv) && /const visible = kb \? vVisible : page;/.test(vv), 'a sheet is sized against the page when no keyboard is open (the address bar moving does not resize it)');
 check(/JSON\.stringify\(prev\.style\) === JSON\.stringify\(next\.style\) \? prev : next/.test(vv), 'the same size again is not a change');
 

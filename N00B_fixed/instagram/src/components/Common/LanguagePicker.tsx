@@ -30,9 +30,11 @@ export const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onSelect,
 
   const row = (l: LanguageInfo) => {
     const selected = l.code === value;
+    let h = 0;
+    for (const ch of l.code) h = (h * 31 + ch.charCodeAt(0)) % 360;
     return (
       <button key={l.code} type="button" onClick={() => onSelect(l.code)} aria-current={selected ? 'true' : undefined} className="lp-row">
-        <span className="lp-dot" aria-hidden="true">{l.name.slice(0, 2)}</span>
+        <span className="lp-dot" aria-hidden="true" style={{ ['--a' as string]: `hsl(${h} 85% 58%)`, ['--b' as string]: `hsl(${(h + 50) % 360} 85% 52%)` }}>{l.name.slice(0, 2)}</span>
         <span translate="no" className="lp-names">
           <span className="lp-native" dir="auto">{l.native}</span>
           <span className="lp-en">{l.name}</span>

@@ -1,19 +1,19 @@
 /* "nz" pages: full-screen pages with their own look (deep ink-blue with a teal accent in Dark, warm paper with a deep teal accent in Light), different from the rest of the app.
    They are never sheets, so they never change size. The old pop-up markup inside keeps working: the grey and green classes it uses are repainted here with this palette. */
-.nz-page { --nz-bg: #0b1020; --nz-card: #141b33; --nz-line: rgba(160, 175, 235, .16); --nz-fg: #f1f4ff; --nz-mute: #98a2c8; --nz-acc: #2dd4bf; --nz-acc2: #6366f1; --nz-on-acc: #04201c;
-  --color-white: #f1f4ff; --color-noob: #2dd4bf; --color-noob-strong: #14b8a6;
-  --color-zinc-50: #f4f6ff; --color-zinc-100: #e7ebfa; --color-zinc-200: #cdd4ee; --color-zinc-300: #aab3d6; --color-zinc-400: #8d97bf; --color-zinc-500: #727ca4; --color-zinc-600: #525a80; --color-zinc-700: #373f63; --color-zinc-800: #262d4d; --color-zinc-900: #171e3a; --color-zinc-950: #0e1428;
-  --color-violet-300: #2dd4bf; --color-violet-400: #2dd4bf; --color-violet-500: #14b8a6; --color-emerald-300: #5eead4; --color-emerald-400: #2dd4bf; --color-emerald-500: #14b8a6; --color-cyan-300: #5eead4; --color-cyan-400: #2dd4bf; --color-cyan-500: #14b8a6;
+.nz-page { --nz-bg: #0b0a08; --nz-card: #15130f; --nz-line: rgba(214, 178, 94, .20); --nz-fg: #f6f1e4; --nz-mute: #a89f8a; --nz-acc: #d6b25e; --nz-acc2: #9c7a2c; --nz-on-acc: #17120a;
+  --color-white: #f6f1e4; --color-noob: #d6b25e; --color-noob-strong: #b8954a;
+  --color-zinc-50: #faf6ea; --color-zinc-100: #efe9d9; --color-zinc-200: #d9d1bc; --color-zinc-300: #b9af96; --color-zinc-400: #978d77; --color-zinc-500: #766d5a; --color-zinc-600: #554e40; --color-zinc-700: #3b362b; --color-zinc-800: #29251d; --color-zinc-900: #1a1712; --color-zinc-950: #100e0a;
+  --color-violet-300: #e4c97f; --color-violet-400: #d6b25e; --color-violet-500: #b8954a; --color-emerald-300: #e4c97f; --color-emerald-400: #d6b25e; --color-emerald-500: #b8954a; --color-cyan-300: #e4c97f; --color-cyan-400: #d6b25e; --color-cyan-500: #b8954a;
   position: fixed; inset: 0; height: 100dvh; display: flex; flex-direction: column; background: var(--nz-bg); color: var(--nz-fg); overflow: hidden; }
-:root[data-theme="light"] .nz-page { --nz-bg: #f7f3ec; --nz-card: #ffffff; --nz-line: rgba(30, 40, 80, .14); --nz-fg: #141a33; --nz-mute: #5d6585; --nz-acc: #0f766e; --nz-acc2: #4f46e5; --nz-on-acc: #ffffff;
-  --color-white: #141a33; --color-black: #f7f3ec; --color-noob: #0f766e; --color-noob-strong: #115e59;
-  --color-zinc-50: #141a33; --color-zinc-100: #1d2442; --color-zinc-200: #2b3356; --color-zinc-300: #424b72; --color-zinc-400: #5d6585; --color-zinc-500: #7a82a2; --color-zinc-600: #aab0c8; --color-zinc-700: #d6d9e6; --color-zinc-800: #e6e7ee; --color-zinc-900: #f1efe9; --color-zinc-950: #fbf8f2;
-  --color-violet-300: #0f766e; --color-violet-400: #0f766e; --color-violet-500: #14b8a6; --color-emerald-300: #0f766e; --color-emerald-400: #0f766e; --color-emerald-500: #14b8a6; --color-cyan-300: #0f766e; --color-cyan-400: #0f766e; --color-cyan-500: #14b8a6; }
-.nz-page::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 220px; pointer-events: none; background: radial-gradient(420px 200px at 15% 0%, color-mix(in srgb, var(--nz-acc2) 32%, transparent), transparent 70%), radial-gradient(380px 180px at 90% 0%, color-mix(in srgb, var(--nz-acc) 26%, transparent), transparent 70%); }
+:root[data-theme="light"] .nz-page { --nz-bg: #f8f4ea; --nz-card: #ffffff; --nz-line: rgba(120, 88, 20, .20); --nz-fg: #1b1610; --nz-mute: #6b6252; --nz-acc: #8a6411; --nz-acc2: #b8954a; --nz-on-acc: #ffffff;
+  --color-white: #1b1610; --color-black: #f8f4ea; --color-noob: #8a6411; --color-noob-strong: #6e500c;
+  --color-zinc-50: #1b1610; --color-zinc-100: #272016; --color-zinc-200: #3a3223; --color-zinc-300: #52483a; --color-zinc-400: #6b6252; --color-zinc-500: #877d6a; --color-zinc-600: #b3a98f; --color-zinc-700: #dcd4bf; --color-zinc-800: #ebe5d3; --color-zinc-900: #f3eedf; --color-zinc-950: #fbf8f0;
+  --color-violet-300: #8a6411; --color-violet-400: #8a6411; --color-violet-500: #b8954a; --color-emerald-300: #8a6411; --color-emerald-400: #8a6411; --color-emerald-500: #b8954a; --color-cyan-300: #8a6411; --color-cyan-400: #8a6411; --color-cyan-500: #b8954a; }
+.nz-page::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 240px; pointer-events: none; background: radial-gradient(520px 220px at 50% -40px, color-mix(in srgb, var(--nz-acc) 26%, transparent), transparent 72%); }
 .nz-panel { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; }
 .nz-head { position: relative; flex: none; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px; display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--nz-line); }
 .nz-back { width: 42px; height: 42px; flex: none; border-radius: 14px; border: 1px solid var(--nz-line); background: var(--nz-card); color: var(--nz-fg); display: grid; place-items: center; cursor: pointer; }
-.nz-badge { width: 42px; height: 42px; flex: none; border-radius: 14px; display: grid; place-items: center; color: var(--nz-on-acc); background: linear-gradient(135deg, var(--nz-acc), color-mix(in srgb, var(--nz-acc) 55%, var(--nz-acc2))); }
+.nz-badge { width: 42px; height: 42px; flex: none; border-radius: 14px; display: grid; place-items: center; color: var(--nz-on-acc); background: linear-gradient(145deg, #ecd48f, var(--nz-acc) 55%, var(--nz-acc2)); }
 .nz-titles { flex: 1; min-width: 0; }
 .nz-titles h3 { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -.02em; line-height: 1.15; color: var(--nz-fg); }
 .nz-titles p { margin: 4px 0 0; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--nz-mute); }
@@ -38,7 +38,7 @@
 .nz-search svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--nz-mute); pointer-events: none; }
 .nz-search input { width: 100%; box-sizing: border-box; height: 50px; border-radius: 16px; border: 1.5px solid var(--nz-line); background: var(--nz-card); font-size: 16px; font-weight: 700; padding: 0 16px 0 46px; outline: none; }
 .nz-search input:focus { border-color: var(--nz-acc); }
-.nz-note { padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--nz-acc2) 14%, var(--nz-card)); border: 1px solid var(--nz-line); font-size: 13px; font-weight: 600; color: var(--nz-mute); }
+.nz-note { padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--nz-acc) 8%, var(--nz-card)); border: 1px solid var(--nz-line); font-size: 13px; font-weight: 600; color: var(--nz-mute); }
 .nz-note[data-kind="err"] { color: #f87171; background: rgba(248, 113, 113, .12); }
 /* devices */
 .nz-dev { display: flex; gap: 12px; padding: 14px; margin-bottom: 10px; border-radius: 20px; background: var(--nz-card); border: 1px solid var(--nz-line); }
@@ -46,3 +46,24 @@
 .nz-dev b { display: block; font-size: 15px; font-weight: 800; }
 .nz-dev small { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--nz-mute); line-height: 1.45; }
 .nz-live { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; background: var(--nz-acc); color: var(--nz-on-acc); vertical-align: middle; }
+
+/* the Create page (a full-screen "nz" page that is still dragged down to close) */
+.cc-sheet { position: relative !important; width: 100%; height: 100dvh; }
+.cc-sheet::before { height: 300px; }
+.cc-top { position: relative; padding: 4px 20px 14px; text-align: left; }
+.cc-top h2 { margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -.03em; color: var(--nz-fg); }
+.cc-top p { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--nz-mute); }
+.cc-x { position: absolute; right: 16px; top: 10px; width: 40px; height: 40px; border-radius: 14px; border: 1px solid var(--nz-line); background: var(--nz-card); color: var(--nz-fg); align-items: center; justify-content: center; cursor: pointer; }
+.cc-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+.cc-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cc-card { width: 100%; height: 100%; min-height: 140px; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; text-align: left; border-radius: 24px; border: 1px solid var(--nz-line); background: var(--nz-card); color: var(--nz-fg); cursor: pointer; position: relative; }
+.cc-card:active { transform: scale(.975); }
+.cc-grid > li { display: flex; }
+.cc-grid > li:first-child { grid-column: 1 / -1; }
+.cc-grid > li:first-child .cc-card { grid-column: 1 / -1; min-height: 120px; flex-direction: row; align-items: center; border-color: color-mix(in srgb, var(--nz-acc) 55%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--nz-acc) 16%, var(--nz-card)), var(--nz-card)); }
+.cc-ico { width: 48px; height: 48px; border-radius: 16px; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--nz-acc) 16%, transparent); color: var(--nz-acc); border: 1px solid var(--nz-line); }
+.cc-grid > li:first-child .cc-ico { width: 56px; height: 56px; background: linear-gradient(145deg, #ecd48f, var(--nz-acc) 55%, var(--nz-acc2)); color: var(--nz-on-acc); border: 0; }
+.cc-ico[data-live="1"] { color: #ef4444; background: rgba(239, 68, 68, .14); }
+.cc-t { display: block; font-size: 17px; font-weight: 900; letter-spacing: -.01em; line-height: 1.2; }
+.cc-b { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--nz-mute); }
+@media (min-width: 1024px) and (pointer: fine) { .cc-sheet > * { width: min(640px, 100%); margin-left: auto; margin-right: auto; } }

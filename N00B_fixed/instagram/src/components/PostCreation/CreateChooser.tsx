@@ -1,8 +1,9 @@
 import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect } from 'react';
-import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2, ScanFace } from 'lucide-react';
+import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, Wand2, ScanFace } from 'lucide-react';
 
 import { useSheetDrag } from '../../utils/sheetDrag';
+import '../Common/nzPage.css';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 
 export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'studio' | 'lenses';
@@ -39,28 +40,27 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
   return (
     <div
       id="create-chooser"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-contain"
+      className="fixed inset-0 z-50 overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-label="Create"
     >
-      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={drag.sheetRef}
-        className="relative w-full sm:max-w-md bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom-6 duration-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
-      >
-        {/* Handle: the grey bar and the title (drag down to close; there is no cross on a phone) */}
-        <SheetGrip drag={drag} barClassName="bg-zinc-700">
-        <div className="relative flex items-center justify-center px-5 pt-1 sm:pt-3 pb-3 border-b border-zinc-800/80">
-          <h2 className="text-base font-bold text-white">Create</h2>
-          <button onClick={onClose} className={`${CLOSE_X_CLASS} absolute right-3 top-2.5 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 cursor-pointer`} aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black" aria-hidden="true" />
+      <div ref={drag.sheetRef} className="nz-page cc-sheet">
+        {/* Handle: the bar and the title (drag down to close; a bigger screen shows a cross instead) */}
+        <SheetGrip drag={drag} barClassName="bg-zinc-600" alwaysBar>
+          <div className="cc-top" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4px)' }}>
+            <h2>Create</h2>
+            <p>What will you share today?</p>
+            <button onClick={onClose} className={`${CLOSE_X_CLASS} cc-x`} aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </SheetGrip>
+        <div className="cc-body">
 
         {live && (
-          <div className="mx-4 mt-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-3" data-testid="create-live-now">
+          <div className="mb-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-3" data-testid="create-live-now">
             <div className="flex items-center gap-2.5">
               <span className="relative flex w-3 h-3 shrink-0"><span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-70" /><span className="relative w-3 h-3 rounded-full bg-red-500" /></span>
               <div className="flex-1 min-w-0">
@@ -79,27 +79,27 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
           </div>
         )}
 
-        <ul className="py-1.5">
-          {ROWS.filter((r) => r.kind !== 'live' || (liveOn && !live)).map(({ kind, title, blurb, Icon, tint }) => (
+        <ul className="cc-grid">
+          {ROWS.filter((r) => r.kind !== 'live' || (liveOn && !live)).map(({ kind, title, blurb, Icon }) => (
             <li key={kind}>
               <button
                 type="button"
                 data-testid={`create-${kind}`}
                 onClick={() => onPick(kind)}
-                className="w-full flex items-center gap-4 px-5 py-3 text-left hover:bg-zinc-900 active:bg-zinc-900 transition-colors cursor-pointer"
+                className="cc-card"
               >
-                <span className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
-                  <Icon className={`w-[22px] h-[22px] ${tint}`} strokeWidth={1.8} />
+                <span className="cc-ico" data-live={kind === 'live' ? '1' : undefined}>
+                  <Icon className="w-[24px] h-[24px]" strokeWidth={1.8} />
                 </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[15px] font-semibold text-white leading-tight">{title}</span>
-                  <span className="block text-xs text-zinc-400 mt-0.5 truncate">{blurb}</span>
+                <span className="min-w-0">
+                  <span className="cc-t">{title}</span>
+                  <span className="cc-b">{blurb}</span>
                 </span>
-                <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
               </button>
             </li>
           ))}
         </ul>
+        </div>
       </div>
     </div>
   );

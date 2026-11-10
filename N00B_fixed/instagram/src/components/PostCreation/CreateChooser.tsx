@@ -48,7 +48,7 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
       <div ref={drag.backdropRef} className="absolute inset-0 bg-black/75" onClick={onClose} aria-hidden="true" />
       <div
         ref={drag.sheetRef}
-        className="cs-sheet animate-in slide-in-from-bottom-6 duration-200"
+        className="cs-sheet"
       >
         {/* Handle: the grey bar and the title (drag down to close; there is no cross on a phone) */}
         <SheetGrip drag={drag} barClassName="bg-zinc-600">

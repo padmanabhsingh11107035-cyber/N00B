@@ -1215,7 +1215,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               <SocialLoginButtons onError={setErrorMessage} variant="row" />
               <div className="flex items-center gap-3 mt-5">
                 <div className="flex-1 h-px bg-white/10" />
-                <span className="text-[12px] text-white/70 font-semibold">{mode === 'signup' ? 'Or sign up with' : 'Or log in with'}</span>
+                <span className="text-[12px] text-white/70 font-semibold">{mode === 'signup' ? 'Or sign up with' : 'or continue with'}</span>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
             </div>

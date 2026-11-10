@@ -1906,3 +1906,16 @@ html::-webkit-scrollbar, html *::-webkit-scrollbar, html ::-webkit-scrollbar { d
   .auth-v2[data-onepage="1"] > footer p { font-size: 10px; }
   .auth-v2[data-onepage="1"] > footer { padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 }
+
+/* ---- Laptop / computer only (nothing here touches a phone or a tablet) ---- */
+/* The long menu on the left: plain black with white words in Dark mode, plain white with black words in Light mode; the open page is the opposite colour (a white pill with black words in Dark, a black pill with white words in Light). No doodle on it. */
+@media (min-width: 768px) and (pointer: fine) {
+  html body [data-testid="desktop-side-menu"] .nmenu { --nm-bg: #000000; --nm-text: #ececec; --nm-hi: #ffffff; --nm-label: #8c8c8c; --nm-line: rgba(255, 255, 255, .16); --nm-hover: rgba(255, 255, 255, .10); --nm-on: #ffffff; --nm-shadow: none; background-color: #000000; background-image: none; }
+  html body [data-testid="desktop-side-menu"] .nmenu-item.is-active, html body [data-testid="desktop-side-menu"] .nmenu-item.is-active .nmenu-text { color: #000000; }
+  html[data-theme="light"] body [data-testid="desktop-side-menu"] .nmenu { --nm-bg: #ffffff; --nm-text: #1b1b1b; --nm-hi: #000000; --nm-label: #707070; --nm-line: rgba(0, 0, 0, .16); --nm-hover: rgba(0, 0, 0, .06); --nm-on: #0a0a0a; background-color: #ffffff; }
+  html[data-theme="light"] body [data-testid="desktop-side-menu"] .nmenu-item.is-active, html[data-theme="light"] body [data-testid="desktop-side-menu"] .nmenu-item.is-active .nmenu-text { color: #ffffff; }
+}
+/* The doodle pattern only behind the middle part (App.tsx measures where it starts and ends); the left menu and the right panel sit on the plain page colour. */
+@media (min-width: 1024px) and (pointer: fine) {
+  html[data-doodle-mid] body::after { left: var(--doodle-l, 0px); right: var(--doodle-r, 0px); }
+}

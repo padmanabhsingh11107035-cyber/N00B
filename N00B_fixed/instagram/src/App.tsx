@@ -261,6 +261,28 @@ export default function App() {
   // wide the extended strip opens over the page instead of pushing it).
   const homeMenuGroups = useMenuGroups();
   const [sideExtended, setSideExtended] = useState<boolean>(() => { try { return localStorage.getItem('noob.sideMenu') === 'open' && window.matchMedia('(min-width: 1280px)').matches; } catch { return false; } });
+  // Laptop / computer: the doodle pattern is only behind the middle part (the feed and its sides). The two numbers are where that part starts and how far from the right edge it ends.
+  useEffect(() => {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
+    const measure = () => {
+      if (!mq.matches) { root.removeAttribute('data-doodle-mid'); root.style.removeProperty('--doodle-l'); root.style.removeProperty('--doodle-r'); return; }
+      const left = document.querySelector('[data-testid="desktop-side-menu"]') as HTMLElement | null;
+      const right = document.querySelector('[data-right-panel]') as HTMLElement | null;
+      const l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
+      const r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
+      root.style.setProperty('--doodle-l', `${l}px`);
+      root.style.setProperty('--doodle-r', `${r}px`);
+      root.setAttribute('data-doodle-mid', '1');
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    [document.querySelector('[data-testid="desktop-side-menu"]'), document.querySelector('[data-right-panel]'), document.body].forEach((el) => { if (el && ro) ro.observe(el); });
+    window.addEventListener('resize', measure);
+    const t = window.setInterval(measure, 1500);   // a page that changes the side panels (Games, Music) is caught within a moment
+    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); window.clearInterval(t); root.removeAttribute('data-doodle-mid'); };
+  }, [sideExtended]);
+
   const toggleSideMenu = () => setSideExtended((v) => { const n = !v; try { localStorage.setItem('noob.sideMenu', n ? 'open' : 'closed'); } catch { /* the choice just is not remembered */ } return n; });
   useTabScroll(activeTab, KEEP_ALIVE_TABS, pageLayers.layers.length === 0 && !fullPageOpen);
   useEffect(() => { document.documentElement.setAttribute('data-refresh', refreshableHere ? 'on' : 'off'); }, [refreshableHere]);
@@ -2058,7 +2080,7 @@ export default function App() {
       </main>
 
       {/* 3. Right Desktop Sidebar (Registered People & Community) */}
-      <aside className={`${pageTab === 'music' || pageTab === 'games' ? 'hidden' : 'hidden lg:flex'} flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
+      <aside data-right-panel="1" className={`${pageTab === 'music' || pageTab === 'games' ? 'hidden' : 'hidden lg:flex'} flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
         {/* Community People Directory: fills the sidebar from the top down to the footer links, and scrolls when there are more people */}
         <div className="bg-zinc-900/40 p-5 rounded-[28px] border border-white/5 shadow-xl backdrop-blur-md flex-1 min-h-0 flex flex-col">
           <div className="flex items-center justify-between mb-3.5 shrink-0">
@@ -2143,6 +2165,8 @@ export default function App() {
               </span>
             </>
           )}
+          <span>•</span>
+          <a href="/noob-features" className="hover:underline cursor-pointer" data-testid="footer-features">NOOB Features</a>
           <div className="w-full text-zinc-600 text-[9px] mt-1">
             © 2026 NOOB • Fun & Connecting People
           </div>

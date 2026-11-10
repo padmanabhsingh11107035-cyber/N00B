@@ -38,7 +38,7 @@ let edge: HTMLElement | null = null;
 let forced: string | null = null;
 /** Messages calls this with the colour while its list is on screen, and with null when it is not. */
 export function forceStripColour(colour: string | null): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // only a phone / tablet has a strip behind a clock: on a computer this must never paint the page
   if (forced === colour) { if (colour) applyColour(colour); return; }
   forced = colour;
   if (colour) { pending = ''; applyColour(colour, 'full'); window.setTimeout(() => { if (forced === colour) applyColour(colour); }, 120); }

@@ -67,18 +67,43 @@ const YEARLY_DISCOUNT = 0.17;
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated, allUsers = [], focusTier, focusBilling }) => {
   const railRef = useRef<HTMLDivElement>(null);
   const [cardIdx, setCardIdx] = useState(() => { const i = TIERS.findIndex((t) => t.id === (focusTier || currentUser.proTier || 'pro')); return i < 0 ? 2 : i; });
+  const cardIdxRef = useRef(0);
   const onRailScroll = () => {
     const rail = railRef.current;
     if (!rail || rail.children.length === 0) return;
-    const mid = rail.scrollLeft + rail.clientWidth / 2;
+    // which card is in the middle of the row: measured on the screen (not from offsetLeft, which counted from the wrong parent), and the two ends of the row are always the first and the last card
+    const r = rail.getBoundingClientRect();
+    const mid = r.left + r.width / 2;
     let best = 0, bestD = Infinity;
-    Array.from(rail.children).forEach((c, i) => { const el = c as HTMLElement; const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid); if (d < bestD) { bestD = d; best = i; } });
+    Array.from(rail.children).forEach((c, i) => { const b = (c as HTMLElement).getBoundingClientRect(); const d = Math.abs(b.left + b.width / 2 - mid); if (d < bestD) { bestD = d; best = i; } });
+    if (rail.scrollLeft <= 2) best = 0;
+    else if (rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2) best = rail.children.length - 1;
     if (best !== cardIdx) setCardIdx(best);
   };
+  cardIdxRef.current = cardIdx;
   const railTo = (i: number) => {
     const el = railRef.current?.children[i] as HTMLElement | undefined;
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   };
+  // the keyboard: left / right arrows (and Home / End) move to the next / the first / the last card
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      const last = TIERS.length - 1;
+      let next = -1;
+      if (e.key === 'ArrowRight') next = Math.min(last, cardIdxRef.current + 1);
+      else if (e.key === 'ArrowLeft') next = Math.max(0, cardIdxRef.current - 1);
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = last;
+      if (next < 0) return;
+      e.preventDefault();
+      railTo(next);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => { const t = window.setTimeout(() => railTo(cardIdx), 60); return () => window.clearTimeout(t); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>(focusBilling === 'yearly' ? 'yearly' : 'monthly');
   const [autoRenew, setAutoRenew] = useState(true);
@@ -355,6 +380,9 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           <div
             ref={railRef}
             onScroll={onRailScroll}
+            tabIndex={0}
+            aria-label="NOOB Pro plans: use the left and right arrow keys"
+            role="group"
             className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-5 px-[11%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {TIERS.map((tier, i) => {

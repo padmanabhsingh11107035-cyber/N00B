@@ -2007,3 +2007,9 @@ html body [data-testid="noob-menu-drawer"].nmenu { --nm-bg: #000000; --nm-text: 
 html body [data-testid="noob-menu-drawer"] .nmenu-item.is-active, html body [data-testid="noob-menu-drawer"] .nmenu-item.is-active .nmenu-text { color: #000000; }
 html[data-theme="light"] body [data-testid="noob-menu-drawer"].nmenu { --nm-bg: #ffffff; --nm-text: #1b1b1b; --nm-hi: #000000; --nm-label: #707070; --nm-line: rgba(0, 0, 0, .16); --nm-hover: rgba(0, 0, 0, .06); --nm-on: #0a0a0a; background-color: #ffffff; }
 html[data-theme="light"] body [data-testid="noob-menu-drawer"] .nmenu-item.is-active, html[data-theme="light"] body [data-testid="noob-menu-drawer"] .nmenu-item.is-active .nmenu-text { color: #ffffff; }
+
+/* Doodle background OFF (Settings > App > Background): every doodle layer goes, not only the one behind the pages. The page is plain black (Dark) or plain white (Light). */
+html:root[data-doodle="off"], html:root[data-doodle="off"] .force-dark, html:root[data-doodle="off"] .media-dark { --doodle-wall: none; --doodle-feed: none; --doodle-login: none; --doodle-corners: none; }
+html[data-doodle="off"] body, html[data-doodle="off"] .doodle-wallpaper, html[data-doodle="off"] .doodle-surface, html[data-doodle="off"] .doodle-panel,
+html[data-doodle="off"] [class~="fixed"] [class~="rounded-3xl"][class*="bg-zinc-9"], html[data-doodle="off"] [class~="fixed"] [class~="rounded-t-3xl"][class*="bg-zinc-9"], html[data-doodle="off"] [class~="fixed"] [class*="sm:rounded-3xl"][class*="bg-zinc-9"] { background-image: none !important; outline: none !important; }
+html[data-doodle="off"] body::after, html[data-doodle="off"] body::before, html[data-doodle="off"] .doodle-wallpaper::after, html[data-doodle="off"] .doodle-wallpaper::before { display: none !important; background-image: none !important; }

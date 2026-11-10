@@ -22,6 +22,7 @@ import {
 import { User as UserType, AccountType } from '../../types';
 import { updateFullProfile, updateCurrentUser, uploadMediaFile } from '../../services/api';
 import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEditor';
+import { NzHeader } from '../Common/NzPage';
 import { COUNTRY_OPTIONS, GENDER_OPTIONS } from '../Auth/AuthView';
 import { BirthdayWheelPicker } from '../Auth/BirthdayWheelPicker';
 import confetti from 'canvas-confetti';
@@ -227,30 +228,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-noob to-noob-strong flex items-center justify-center text-black font-bold">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-black text-white">Edit Your Profile</h2>
-              <p className="text-[11px] text-zinc-400">Update your avatar, bio, gender, and account details</p>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="nz-page fixed inset-0 z-50">
+      <div className="nz-panel">
+        <NzHeader icon={<User size={20} />} title="Edit Your Profile" subtitle="Update your avatar, bio, gender, and account details" onBack={onClose} />
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+        <form onSubmit={handleSubmit} className="nz-scroll space-y-6">
           {errorMessage && (
             <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs font-semibold text-red-400">
               {errorMessage}

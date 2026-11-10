@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { KeyRound, Loader2, Monitor, Smartphone, Trash2, X } from 'lucide-react';
+import { KeyRound, Loader2, Monitor, Smartphone, Trash2 } from 'lucide-react';
+import { NzHeader } from '../Common/NzPage';
 import { fetchMyDevices, revokeDeviceSession } from '../../services/api';
 import type { ActiveDevice, LoginHistoryEntry } from '../../services/api';
 import { getDeviceId } from '../../utils/deviceId';
@@ -23,7 +24,7 @@ const endText = (e: LoginHistoryEntry) =>
   e.endReason === 'removed' ? 'Removed' : e.endReason === 'replaced' ? 'Signed in on another device' : 'Signed out';
 
 const DeviceIcon: React.FC<{ label?: string | null; model?: string | null }> = ({ label, model }) =>
-  isPhone(label, model) ? <Smartphone className="w-4 h-4 text-zinc-400 shrink-0" /> : <Monitor className="w-4 h-4 text-zinc-400 shrink-0" />;
+  isPhone(label, model) ? <Smartphone className="w-5 h-5 shrink-0" /> : <Monitor className="w-5 h-5 shrink-0" />;
 
 export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncryption }) => {
   const [data, setData] = useState<{ active: ActiveDevice[]; history: LoginHistoryEntry[] } | null | undefined>(undefined);
@@ -48,103 +49,59 @@ export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncry
   };
 
   return (
-    <div className="fixed inset-0 z-[130] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="My devices">
-      <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
-        <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/40 flex items-center justify-center shrink-0">
-            <Smartphone className="w-4 h-4 text-noob" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-black text-white">My devices</h3>
-            <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">Where your account is signed in, and where it has been.</p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0" aria-label="Close">
-            <X className="w-4 h-4 text-zinc-400" />
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-[12px] text-zinc-300 leading-relaxed">
+    <div className="nz-page fixed inset-0 z-[130]" role="dialog" aria-modal="true" aria-label="My devices">
+      <div className="nz-panel">
+        <NzHeader icon={<Smartphone size={20} />} title="My devices" subtitle="Where your account is signed in, and where it has been." onBack={onClose} />
+        <div className="nz-scroll">
           {data === undefined ? (
-            <p className="text-zinc-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>
+            <div className="nz-note" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
           ) : data === null ? (
-            <p className="text-zinc-400">Couldn&apos;t load your devices right now. Please try again in a moment.</p>
+            <div className="nz-note" data-kind="err">Couldn&apos;t load your devices right now. Please try again in a moment.</div>
           ) : (
             <>
-              <section className="space-y-2">
-                <div className="text-[11px] font-black text-white uppercase tracking-wider">Signed-in devices</div>
-                {data.active.length === 0 && <p className="text-zinc-500">No devices are signed in.</p>}
-                {data.active.map((d) => {
-                  const mine = d.deviceId === thisDeviceId;
-                  return (
-                    <div key={d.deviceId} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
-                      <DeviceIcon label={d.label} model={d.model} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-white truncate" translate="no">
-                          {d.label}{' '}
-                          {mine && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase">this device</span>}
-                        </div>
-                        {d.model && <div className="text-[10px] text-zinc-400 truncate" translate="no">{d.model}</div>}
-                        <div className="text-[10px] text-zinc-500">Signed in {stamp(d.loggedInAt)}</div>
-                      </div>
-                      {!mine && (
-                        <button
-                          type="button"
-                          disabled={removing !== null}
-                          onClick={() => remove(d.deviceId)}
-                          className="p-2 rounded-lg hover:bg-red-500/15 text-zinc-400 hover:text-red-400 cursor-pointer disabled:opacity-50"
-                          title="Remove this device (signs it out)"
-                          aria-label="Remove this device"
-                        >
-                          {removing === d.deviceId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
-                      )}
+              <p className="nz-label">Signed-in devices</p>
+              {data.active.length === 0 && <div className="nz-note">No devices are signed in.</div>}
+              {data.active.map((d) => {
+                const mine = d.deviceId === thisDeviceId;
+                return (
+                  <div key={d.deviceId} className="nz-dev" style={{ alignItems: 'center' }}>
+                    <span className="nz-ico"><DeviceIcon label={d.label} model={d.model} /></span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <b translate="no">{d.label}{mine && <span className="nz-live">this device</span>}</b>
+                      {d.model && <small translate="no">{d.model}</small>}
+                      <small>Signed in {stamp(d.loggedInAt)}</small>
                     </div>
-                  );
-                })}
-                <p className="text-zinc-500 text-[11px]">Removing a device signs it out of your account straight away.</p>
-              </section>
-
-              <section className="space-y-2">
-                <div className="text-[11px] font-black text-white uppercase tracking-wider">Device / login history</div>
-                {data.history.length === 0 && <p className="text-zinc-500">Nothing here yet. Each time you sign in, it is listed here.</p>}
-                {data.history.map((h) => (
-                  <div key={h.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <DeviceIcon label={h.label} model={h.model} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-white truncate" translate="no">{h.label || 'Device'}</div>
-                        {h.model && <div className="text-[10px] text-zinc-400 truncate" translate="no">{h.model}</div>}
-                      </div>
-                      {h.deviceId === thisDeviceId && !h.loggedOutAt && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase shrink-0">this device</span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 text-[10px] text-zinc-400 space-y-0.5">
-                      <div><span className="text-zinc-500">From</span> {stamp(h.loggedInAt)}</div>
-                      <div>
-                        <span className="text-zinc-500">To</span>{' '}
-                        {h.loggedOutAt ? (
-                          <>{stamp(h.loggedOutAt)} <span className="text-zinc-500">· {endText(h)}</span></>
-                        ) : (
-                          <span className="text-noob font-bold">Still signed in</span>
-                        )}
-                      </div>
-                    </div>
+                    {!mine && (
+                      <button type="button" disabled={removing !== null} onClick={() => remove(d.deviceId)} className="nz-pill" data-kind="ghost" title="Remove this device (signs it out)" aria-label="Remove this device">
+                        {removing === d.deviceId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 size={15} />} Remove
+                      </button>
+                    )}
                   </div>
-                ))}
-              </section>
+                );
+              })}
+              <div className="nz-note">Removing a device signs it out of your account straight away.</div>
+
+              <p className="nz-label">Device / login history</p>
+              {data.history.length === 0 && <div className="nz-note">Nothing here yet. Each time you sign in, it is listed here.</div>}
+              {data.history.map((h) => (
+                <div key={h.id} className="nz-dev">
+                  <span className="nz-ico"><DeviceIcon label={h.label} model={h.model} /></span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <b translate="no">{h.label || 'Device'}{h.deviceId === thisDeviceId && !h.loggedOutAt && <span className="nz-live">this device</span>}</b>
+                    {h.model && <small translate="no">{h.model}</small>}
+                    <small>From {stamp(h.loggedInAt)}</small>
+                    <small>{h.loggedOutAt ? <>To {stamp(h.loggedOutAt)} · {endText(h)}</> : <strong style={{ color: 'var(--nz-acc)' }}>Still signed in</strong>}</small>
+                  </div>
+                </div>
+              ))}
             </>
           )}
 
-          <button
-            type="button"
-            onClick={onOpenEncryption}
-            className="w-full flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900 px-3 py-2.5 text-left cursor-pointer"
-          >
-            <KeyRound className="w-4 h-4 text-emerald-300 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white">Chat encryption keys &amp; backup</div>
-              <div className="text-[10px] text-zinc-500">Manage the keys that lock your chats</div>
+          <button type="button" onClick={onOpenEncryption} className="nz-dev" style={{ width: '100%', alignItems: 'center', textAlign: 'left', cursor: 'pointer', color: 'inherit', marginTop: 18 }}>
+            <span className="nz-ico"><KeyRound size={20} /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>Chat encryption keys &amp; backup</b>
+              <small>Manage the keys that lock your chats</small>
             </div>
           </button>
         </div>

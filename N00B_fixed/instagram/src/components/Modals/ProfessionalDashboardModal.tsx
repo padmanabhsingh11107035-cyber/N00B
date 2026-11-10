@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NzHeader } from '../Common/NzPage';
 import {
   X,
   TrendingUp,
@@ -87,37 +88,13 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
   const isBusiness = currentUser.accountType === 'business' || currentUser.isBusiness;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-      <div className="w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] ring-1 ring-white/5">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-zinc-900/60">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-noob/10 border border-noob/30 flex items-center justify-center">
-              <BarChart2 className="w-5 h-5 text-noob" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-black text-white tracking-tight">Professional Creator Dashboard</h3>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
-                  REAL DATA
-                </span>
-              </div>
-              <span className="text-[11px] text-zinc-400 font-medium">
-                Live performance tracking & audience analytics
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="nz-page fixed inset-0 z-50">
+      <div className="nz-panel">
+        <NzHeader icon={<BarChart2 size={20} />} title="Professional Creator Dashboard" subtitle="Live performance tracking & audience analytics" tag="Real data" onBack={onClose} />
 
         {/* If account is not business, show upgrade prompt */}
         {!isBusiness ? (
-          <div className="p-8 text-center space-y-5">
+          <div className="nz-scroll text-center space-y-5">
             <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-noob">
               <Briefcase className="w-8 h-8" />
             </div>
@@ -146,7 +123,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
         ) : (
           <>
             {/* Tab Selector */}
-            <div className="flex items-center justify-around border-b border-white/10 bg-zinc-900/30 text-xs font-bold">
+            <div className="flex items-center border-b border-white/10 bg-zinc-900/30 text-xs font-bold overflow-x-auto whitespace-nowrap shrink-0">
               <button
                 onClick={() => setActiveSubTab('insights')}
                 className={`py-3 px-4 border-b-2 transition-all cursor-pointer ${
@@ -180,7 +157,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
             </div>
 
             {/* Content Container */}
-            <div className="p-6 overflow-y-auto space-y-6">
+            <div className="nz-scroll space-y-6">
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center space-y-3 text-zinc-400">
                   <RefreshCw className="w-6 h-6 animate-spin text-noob" />

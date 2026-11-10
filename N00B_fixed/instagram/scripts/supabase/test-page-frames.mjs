@@ -57,5 +57,11 @@ check(/const top = kb \? vTop : 0;/.test(vv) && /const visible = kb \? vVisible 
 check(/JSON\.stringify\(prev\.style\) === JSON\.stringify\(next\.style\) \? prev : next/.test(vv), 'the same size again is not a change');
 
 
+section('8. Permanent: nothing about a page is decided late or animated in size');
+const cssAll = read('src/index.css');
+check(/added\) run\(\); else schedule\(\);/.test(pf) && /addedNodes/.test(pf), 'a layer that was just added is judged in the same frame (before it is painted), so it is never seen as a small box first');
+check(/\[data-noob-page='card'\] > \[data-noob-card\][^{]*\{[^}]*animation: none !important/.test(cssAll), 'a page / card has no zoom or slide-in on its card (that scaling looked like growing)');
+check(/transition-property: opacity, background-color, color, border-color !important/.test(cssAll), 'a page / card has no width or height transition');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

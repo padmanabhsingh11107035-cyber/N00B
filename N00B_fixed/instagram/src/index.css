@@ -1867,3 +1867,10 @@ html:root[data-doodle="off"], html:root[data-doodle="off"] .force-dark, html:roo
 html[data-doodle="off"] body, html[data-doodle="off"] .doodle-wallpaper, html[data-doodle="off"] .doodle-surface, html[data-doodle="off"] .doodle-panel,
 html[data-doodle="off"] [class~="fixed"] [class~="rounded-3xl"][class*="bg-zinc-9"], html[data-doodle="off"] [class~="fixed"] [class~="rounded-t-3xl"][class*="bg-zinc-9"], html[data-doodle="off"] [class~="fixed"] [class*="sm:rounded-3xl"][class*="bg-zinc-9"] { background-image: none !important; outline: none !important; }
 html[data-doodle="off"] body::after, html[data-doodle="off"] body::before, html[data-doodle="off"] .doodle-wallpaper::after, html[data-doodle="off"] .doodle-wallpaper::before { display: none !important; background-image: none !important; }
+
+/* Pages never change size: a layer the app has made a page / card has no zoom or slide-in on its card (those animations scale it from a smaller size to its full size, which looks like "growing"),
+   no size transitions, and a plain fade when it appears. */
+[data-noob-page='card'] > [data-noob-card], [data-noob-page='page'] > [data-noob-card], [data-noob-page='card'], [data-noob-page='page'] { animation: none !important; transition-property: opacity, background-color, color, border-color !important; }
+[data-noob-page='card'], [data-noob-page='page'] { animation: noob-page-in .16s ease-out both !important; }
+@keyframes noob-page-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [data-noob-page='card'], [data-noob-page='page'] { animation: none !important; } }

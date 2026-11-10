@@ -126,7 +126,12 @@ export function installPageFrames(): () => void {
     });
   };
   const schedule = () => { if (queued) return; queued = true; setTimeout(run, Math.max(30, last + 150 - Date.now())); };
-  const obs = new MutationObserver(schedule);
+  // A layer that has just been added is judged at once, before the browser paints it: it is never on screen as a small box for a moment and then jumps to a page.
+  // (Everything else, like a class that changed, is looked at a little later, so a busy page is not measured over and over.)
+  const obs = new MutationObserver((records) => {
+    const added = records.some((r) => Array.from(r.addedNodes).some((n) => n.nodeType === 1 && ((n as Element).matches?.('.fixed.inset-0') || (n as Element).querySelector?.('.fixed.inset-0'))));
+    if (added) run(); else schedule();
+  });
   obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'data-tab-hidden'] });
   window.addEventListener('resize', schedule);
   window.addEventListener('orientationchange', schedule);

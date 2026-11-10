@@ -40,3 +40,13 @@
     document.documentElement.classList.add('ios-cover');
   } catch (e) { /* the page just stays as it was */ }
 })();
+
+// The laptop / computer chat screen (see index.css): off with ?nodeskchat=1, on again with ?deskchat=1 (remembered on this computer).
+(function () {
+  try {
+    var q = window.location.search;
+    if (/[?&]nodeskchat=1/.test(q)) localStorage.setItem('noob_nodeskchat', '1');
+    if (/[?&]deskchat=1/.test(q)) localStorage.removeItem('noob_nodeskchat');
+    if (localStorage.getItem('noob_nodeskchat') === '1') document.documentElement.setAttribute('data-nodeskchat', '1');
+  } catch (e) { /* stays on */ }
+})();

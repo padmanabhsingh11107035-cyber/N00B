@@ -269,8 +269,12 @@ export default function App() {
       if (!mq.matches) { root.removeAttribute('data-doodle-mid'); root.style.removeProperty('--doodle-l'); root.style.removeProperty('--doodle-r'); return; }
       const left = document.querySelector('[data-testid="desktop-side-menu"]') as HTMLElement | null;
       const right = document.querySelector('[data-testid="desktop-people-panel"]') as HTMLElement | null;
-      const l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
-      const r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
+      let l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
+      let r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
+      if (root.getAttribute('data-page') === 'feed') {
+        const box = document.querySelector('main') as HTMLElement | null;
+        if (box && box.getClientRects().length) { const b = box.getBoundingClientRect(); l = Math.round(b.left); r = Math.max(0, Math.round(window.innerWidth - b.right)); }
+      }
       root.style.setProperty('--doodle-l', `${l}px`);
       root.style.setProperty('--doodle-r', `${r}px`);
       root.setAttribute('data-doodle-mid', '1');
@@ -279,8 +283,9 @@ export default function App() {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     [document.querySelector('[data-testid="desktop-side-menu"]'), document.querySelector('[data-testid="desktop-people-panel"]'), document.body].forEach((el) => { if (el && ro) ro.observe(el); });
     window.addEventListener('resize', measure);
+    window.addEventListener('noob-page', measure);
     const t = window.setInterval(measure, 1500);   // a page that changes the side panels (Games, Music) is caught within a moment
-    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); window.clearInterval(t); root.removeAttribute('data-doodle-mid'); };
+    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); window.removeEventListener('noob-page', measure); window.clearInterval(t); root.removeAttribute('data-doodle-mid'); };
   }, [sideExtended]);
 
   const toggleSideMenu = () => setSideExtended((v) => { const n = !v; try { localStorage.setItem('noob.sideMenu', n ? 'open' : 'closed'); } catch { /* the choice just is not remembered */ } return n; });
@@ -1741,6 +1746,8 @@ export default function App() {
   const kept = visitedTabs.current.tabs;
   // the page that is really showing: a profile layer counts as the Profile page for the layout
   const pageTab: NavTab = pageLayers.layers.length > 0 ? 'profile' : activeTab;
+  // the page that is open, for the laptop / computer rules in index.css (where the doodle shows, the colour of the middle box)
+  useEffect(() => { document.documentElement.setAttribute('data-page', pageTab); window.dispatchEvent(new Event('noob-page')); return () => { document.documentElement.removeAttribute('data-page'); }; }, [pageTab]);
 
   // The profile page: my own (the Profile tab) or someone else's (a layer on top of the page that was showing, with "Go to previous page")
   const renderProfileView = (viewing: User | null) => (

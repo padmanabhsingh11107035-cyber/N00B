@@ -4,6 +4,8 @@ import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
 import { ChatThemeModal } from './ChatThemeModal';
+import { LoginScene } from '../Auth/LoginScene';
+import '../Auth/loginHero.css';
 import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
@@ -1803,6 +1805,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   return (
     <div
       id="chat-view-container"
+      data-view={mobileView}
       className={`w-full max-w-6xl mx-auto ${mobileView === 'list' ? 'bg-[#0a0c0e]' : 'bg-zinc-950'} border-zinc-800/80 shadow-2xl overflow-hidden flex flex-col ${
         mobileView === 'chat'
           ? 'fixed inset-0 z-50 h-[100dvh] max-w-none rounded-none border-0'
@@ -2018,6 +2021,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               return (
                 <div
                   key={c.id}
+                  data-active={c.id === activeChatId && mobileView === 'chat' ? '1' : undefined}
                   onClick={() => {
                     setActiveChatId(c.id);
                     setMobileView('chat');
@@ -2191,6 +2195,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
               : undefined
           }}
         >
+          {/* Laptop / computer, no chat open yet: a friendly empty side (hidden everywhere else, see index.css) */}
+          <div className="chat-desk-empty" aria-hidden="true">
+            <LoginScene />
+            <h2>Your messages, your people</h2>
+            <p>Pick a chat on the left to start talking. Text messages in private chats are end-to-end encrypted.</p>
+          </div>
+
           {/* Active Chat Header */}
           <div className="chat-bar chat-top relative z-10 pl-1 pr-1 py-2 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between gap-1 shrink-0">
             <div className="flex items-center gap-1 min-w-0 flex-1">

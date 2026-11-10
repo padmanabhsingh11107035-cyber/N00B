@@ -2001,3 +2001,9 @@ html body .auth-v2[data-stage="form"] .auth-orbs i { background: rgba(255, 255, 
   html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container [data-testid="composer-send"] { background: linear-gradient(135deg, #ff3d81, #ff9a1a) !important; box-shadow: 0 10px 22px -8px rgba(255, 61, 129, .8) !important; }
   html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container [data-testid="chat-composer"] { border-color: rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .06); }
 }
+
+/* The three-line menu on a phone: plain black with white words in Dark mode, plain white with black words in Light mode; the open page is the opposite colour. No doodle. */
+html body [data-testid="noob-menu-drawer"].nmenu { --nm-bg: #000000; --nm-text: #ececec; --nm-hi: #ffffff; --nm-label: #8c8c8c; --nm-line: rgba(255, 255, 255, .16); --nm-hover: rgba(255, 255, 255, .10); --nm-on: #ffffff; --nm-shadow: none; background-color: #000000; background-image: none; }
+html body [data-testid="noob-menu-drawer"] .nmenu-item.is-active, html body [data-testid="noob-menu-drawer"] .nmenu-item.is-active .nmenu-text { color: #000000; }
+html[data-theme="light"] body [data-testid="noob-menu-drawer"].nmenu { --nm-bg: #ffffff; --nm-text: #1b1b1b; --nm-hi: #000000; --nm-label: #707070; --nm-line: rgba(0, 0, 0, .16); --nm-hover: rgba(0, 0, 0, .06); --nm-on: #0a0a0a; background-color: #ffffff; }
+html[data-theme="light"] body [data-testid="noob-menu-drawer"] .nmenu-item.is-active, html[data-theme="light"] body [data-testid="noob-menu-drawer"] .nmenu-item.is-active .nmenu-text { color: #ffffff; }

@@ -1,0 +1,51 @@
+/* The "My QR Code" page: full screen, bright and moving: a colour-flowing background, a white ticket with the code, a sweeping light, floating sparks. Its own colours (the same in Dark and Light). */
+.qr-root { display: flex; flex-direction: column; overflow: hidden; color: #fff; background: linear-gradient(160deg, #ff3d81 0%, #ff7a1a 38%, #ffc400 70%, #7c4dff 130%); font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif; animation: qr-in .25s ease-out both; }
+@keyframes qr-in { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+.qr-root *, .qr-root *::before, .qr-root *::after { box-sizing: border-box; }
+.qr-blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .65; pointer-events: none; }
+.qr-blob.b1 { width: 320px; height: 320px; left: -90px; top: -60px; background: #7c4dff; }
+.qr-blob.b2 { width: 300px; height: 300px; right: -100px; top: 32%; background: #00e5ff; opacity: .5; }
+.qr-blob.b3 { width: 340px; height: 340px; left: 10%; bottom: -140px; background: #ff3d81; }
+.qr-spark { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #fff; opacity: .0; pointer-events: none; }
+.qr-spark.s1 { left: 12%; top: 22%; } .qr-spark.s2 { right: 14%; top: 18%; width: 7px; height: 7px; } .qr-spark.s3 { left: 8%; top: 62%; width: 8px; height: 8px; } .qr-spark.s4 { right: 10%; top: 70%; } .qr-spark.s5 { left: 46%; top: 12%; width: 6px; height: 6px; }
+.qr-top { position: relative; z-index: 2; flex: none; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 8px; }
+.qr-back { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .5); background: rgba(255, 255, 255, .22); color: #fff; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.qr-back:active { transform: scale(.94); }
+.qr-title { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; letter-spacing: .01em; text-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+.qr-body { position: relative; z-index: 2; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 28px 18px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+.qr-card { position: relative; width: min(340px, 100%); padding: 56px 22px 20px; border-radius: 34px; background: #fff; color: #14101f; text-align: center; box-shadow: 0 30px 60px -20px rgba(60, 0, 80, .55), 0 0 0 6px rgba(255, 255, 255, .28); }
+.qr-avatar-wrap { position: absolute; left: 50%; top: -42px; width: 88px; height: 88px; margin-left: -44px; border-radius: 50%; padding: 4px; background: conic-gradient(from 0deg, #ff3d81, #ffc400, #00e5ff, #7c4dff, #ff3d81); box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .4); }
+.qr-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #fff; border: 3px solid #fff; display: block; }
+.qr-name { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qr-handle { margin: 2px 0 14px; font-size: 14px; font-weight: 700; color: #7c4dff; }
+.qr-code-box { position: relative; width: 100%; aspect-ratio: 1; padding: 14px; border-radius: 22px; background: #f6f3ff; overflow: hidden; }
+.qr-code { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.qr-logo { position: absolute; left: 50%; top: 50%; width: 21%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 22%; background: #fff; padding: 3%; box-shadow: 0 4px 12px rgba(0, 0, 0, .25); }
+.qr-logo img { width: 100%; height: 100%; border-radius: 20%; display: block; object-fit: cover; }
+.qr-skeleton { width: 100%; height: 100%; border-radius: 14px; background: linear-gradient(90deg, #ece8f8, #f7f4ff, #ece8f8); background-size: 200% 100%; animation: qr-shimmer 1.2s linear infinite; }
+@keyframes qr-shimmer { to { background-position: -200% 0; } }
+.qr-corner { position: absolute; width: 26px; height: 26px; border: 4px solid #ff3d81; z-index: 2; }
+.qr-corner.tl { left: 6px; top: 6px; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; } .qr-corner.tr { right: 6px; top: 6px; border-left: 0; border-bottom: 0; border-top-right-radius: 12px; }
+.qr-corner.bl { left: 6px; bottom: 6px; border-right: 0; border-top: 0; border-bottom-left-radius: 12px; } .qr-corner.br { right: 6px; bottom: 6px; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+.qr-scan { position: absolute; left: 10px; right: 10px; top: 0; height: 46px; background: linear-gradient(180deg, transparent, rgba(124, 77, 255, .28), transparent); border-bottom: 2px solid rgba(124, 77, 255, .75); pointer-events: none; opacity: 0; }
+.qr-hint { margin: 12px 4px 0; font-size: 12.5px; font-weight: 600; color: #6b6480; line-height: 1.4; }
+.qr-actions { width: min(340px, 100%); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qr-btn { min-height: 52px; border-radius: 18px; border: 0; font: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; transition: transform .12s; }
+.qr-btn:active { transform: scale(.97); }
+.qr-btn.light { grid-column: 1 / -1; background: #14101f; color: #fff; box-shadow: 0 14px 30px -12px rgba(20, 16, 31, .7); }
+.qr-btn.glass { background: rgba(255, 255, 255, .26); color: #fff; border: 1px solid rgba(255, 255, 255, .55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+@media (prefers-reduced-motion: no-preference) {
+  .qr-blob.b1 { animation: qr-drift 14s ease-in-out infinite; } .qr-blob.b2 { animation: qr-drift 17s ease-in-out -4s infinite reverse; } .qr-blob.b3 { animation: qr-drift 19s ease-in-out -8s infinite; }
+  .qr-card { animation: qr-card-in .6s cubic-bezier(.2, .9, .3, 1.2) both, qr-float 5s ease-in-out .7s infinite; }
+  .qr-actions { animation: qr-card-in .6s .12s cubic-bezier(.2, .9, .3, 1.2) both; }
+  .qr-scan { animation: qr-sweep 2.8s ease-in-out infinite; }
+  .qr-avatar-wrap { animation: qr-spin-glow 6s linear infinite; }
+  .qr-spark { animation: qr-twinkle 3s ease-in-out infinite; } .qr-spark.s2 { animation-delay: -.8s; } .qr-spark.s3 { animation-delay: -1.6s; } .qr-spark.s4 { animation-delay: -2.2s; } .qr-spark.s5 { animation-delay: -.4s; }
+}
+@keyframes qr-drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(40px, 30px, 0) scale(1.15); } }
+@keyframes qr-card-in { from { opacity: 0; transform: translateY(26px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes qr-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+@keyframes qr-sweep { 0% { top: -46px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+@keyframes qr-spin-glow { to { filter: hue-rotate(360deg) drop-shadow(0 8px 14px rgba(0, 0, 0, .25)); } }
+@keyframes qr-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: .95; transform: scale(1.2); } }
+@media (max-height: 640px) { .qr-card { padding-top: 48px; } .qr-body { gap: 14px; padding-top: 18px; } }

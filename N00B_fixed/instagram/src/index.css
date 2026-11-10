@@ -1919,3 +1919,50 @@ html::-webkit-scrollbar, html *::-webkit-scrollbar, html ::-webkit-scrollbar { d
 @media (min-width: 1024px) and (pointer: fine) {
   html[data-doodle-mid] body::after { left: var(--doodle-l, 0px); right: var(--doodle-r, 0px); }
 }
+
+/* ---- Sign-in, the form screen ("Welcome back", reached with "Log in"): not the yellow page. A purple, pink and orange background that flows, the mascot on a soft card, one white floating card with big friendly fields and a bold pink-orange button. ---- */
+@layer base { html body .doodle-wallpaper-login.auth-v2[data-stage="form"], html body .doodle-wallpaper-login.auth-v2.force-dark[data-stage="form"] { background: #7c4dff !important; background-image: radial-gradient(800px 500px at 90% -10%, rgba(255, 214, 10, .55), transparent 60%), radial-gradient(700px 520px at -10% 40%, rgba(0, 229, 255, .35), transparent 62%), linear-gradient(150deg, #6a3dff 0%, #c13cff 38%, #ff3d81 72%, #ff9a1a 112%) !important; } }
+.auth-v2[data-stage="form"] .lh-line, .auth-v2[data-stage="form"] .ls-root { display: none; }
+.auth-v2[data-stage="form"] .auth-head { padding-bottom: 34px !important; }
+.auth-v2[data-stage="form"] .lh-word { color: #fff; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .18)); }
+.auth-v2[data-stage="form"] .lh-eye { box-shadow: 0 0 0 .05em #fff, inset 0 -.04em .08em rgba(0, 0, 0, .12); }
+.auth-v2[data-stage="form"] .auth-head h1 { -webkit-text-fill-color: #fff; color: #fff !important; font-size: 26px; }
+.auth-v2[data-stage="form"] .auth-head p { color: rgba(255, 255, 255, .88) !important; }
+.auth-v2[data-stage="form"] .auth-orbs::after { background-image: radial-gradient(rgba(255,255,255,.7) 1.6px, transparent 1.9px); opacity: .16; }
+html body .auth-v2[data-stage="form"] .auth-sheet { background: #ffffff; color: #1a1330; width: min(440px, calc(100% - 28px)); margin: 0 auto 22px; border-radius: 32px; flex: 0 0 auto; padding: 22px 22px 18px; box-shadow: 0 34px 70px -24px rgba(40, 0, 90, .75), 0 0 0 6px rgba(255, 255, 255, .22); }
+html body .auth-v2[data-stage="form"] .auth-sheet label { color: #1a1330; font-weight: 800; font-size: 13px; }
+html body .auth-v2[data-stage="form"] .auth-sheet input:not([type="checkbox"]):not([type="radio"]) { background: #f4f1ff !important; color: #1a1330 !important; border: 2px solid #e4ddff !important; border-radius: 18px !important; font-size: 15px; font-weight: 600; padding-top: 14px; padding-bottom: 14px; }
+html body .auth-v2[data-stage="form"] .auth-sheet input:focus { background: #fff !important; border-color: #7c4dff !important; box-shadow: 0 0 0 5px rgba(124, 77, 255, .18) !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet input::placeholder { color: #9a92b8 !important; font-weight: 500; }
+html body .auth-v2[data-stage="form"] .auth-sheet .text-cyan-400, html body .auth-v2[data-stage="form"] .auth-sheet .text-blue-400 { color: #7c4dff !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet .text-zinc-400, html body .auth-v2[data-stage="form"] .auth-sheet .text-zinc-300 { color: #6b6480 !important; }
+html body .auth-v2[data-stage="form"] [data-testid="login-form-back"] { background: #f1edff !important; color: #4b2fd0 !important; border: 0 !important; font-weight: 800; }
+@layer base { html body .auth-v2[data-stage="form"] [data-testid="login-form-back"], html body .auth-v2[data-stage="form"] [data-testid="login-form-back"] * { color: #4b2fd0 !important; } }
+html body .auth-v2[data-stage="form"] [data-testid="login-mascot"] { background: linear-gradient(180deg, #efe9ff, #ffe3f1) !important; border: 0 !important; box-shadow: 0 16px 30px -16px rgba(124, 77, 255, .6) !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet form button[type="submit"] { background: linear-gradient(100deg, #ff3d81 0%, #ff7a1a 100%) !important; color: #fff !important; box-shadow: 0 16px 30px -12px rgba(255, 61, 129, .75), inset 0 -3px 0 rgba(0, 0, 0, .14) !important; font-size: 16px; }
+html body .auth-v2[data-stage="form"] .auth-sheet form button[type="submit"] * { color: #fff !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet form button[type="submit"] .animate-spin { border-color: #fff !important; border-top-color: transparent !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet .border-white\/5 { border-color: #eee9ff !important; }
+html body .auth-v2[data-stage="form"] .auth-sheet [class*="text-red-"] { color: #d6204f !important; }
+html body .auth-v2[data-stage="form"] > footer { background: transparent; margin-top: auto !important; }
+html body .auth-v2[data-stage="form"] > footer a, html body .auth-v2[data-stage="form"] > footer p { color: rgba(255, 255, 255, .85) !important; }
+html body .auth-v2[data-stage="form"] .auth-orbs i { background: rgba(255, 255, 255, .3); }
+@media (max-height: 900px) {
+  .auth-v2[data-stage="form"] .auth-head p { display: none; }
+  .auth-v2[data-stage="form"] .lh-word { font-size: clamp(40px, 8vh, 62px); }
+  html body .auth-v2[data-stage="form"] [data-testid="login-mascot"] { max-width: 11.5rem; }
+  html body .auth-v2[data-stage="form"] .auth-sheet { padding-top: 16px; padding-bottom: 12px; margin-bottom: 10px; }
+  html body .auth-v2[data-stage="form"] .auth-sheet form { row-gap: 10px; }
+}
+@media (max-height: 830px) {
+  html body .auth-v2[data-stage="form"] [data-testid="login-mascot"] { max-width: 8.5rem; }
+  .auth-v2[data-stage="form"] .auth-head { padding-bottom: 22px !important; padding-top: 0 !important; }
+  .auth-v2[data-stage="form"] .auth-head h1 { font-size: 22px; }
+  html body .auth-v2[data-stage="form"] .auth-sheet input:not([type="checkbox"]):not([type="radio"]) { padding-top: 11px; padding-bottom: 11px; }
+  html body .auth-v2[data-stage="form"] .auth-sheet form { row-gap: 8px; }
+  html body .auth-v2[data-stage="form"] .auth-sheet { margin-bottom: 0; }
+  html body .auth-v2[data-stage="form"] .auth-head { padding-bottom: 16px !important; }
+  html body .auth-v2[data-stage="form"] .auth-sheet form button[type="submit"] { padding-top: 12px; padding-bottom: 12px; }
+  html body .auth-v2[data-stage="form"] > footer { padding-top: 2px; padding-bottom: 6px; }
+}
+@media (max-height: 700px) { html body .auth-v2[data-stage="form"] [data-testid="login-mascot"] { display: none; } }

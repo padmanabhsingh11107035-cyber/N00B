@@ -279,11 +279,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Target User (Either currentUser or viewingUser)
   const targetUser: User = viewingUser || currentUser;
   const isOwnProfile = !viewingUser || viewingUser.id === currentUser.id;
-  // a suspended account: its profile shows only this notice, to everyone except the administrators (who may review it)
+  // a suspended account: its profile shows only this notice, to everyone (the admin panel has its own tools to review it)
   const [suspendedView, setSuspendedView] = useState(false);
   useEffect(() => {
     setSuspendedView(false);
-    if (isOwnProfile || !viewingUser?.id || isStaff(currentUser)) return;
+    if (isOwnProfile || !viewingUser?.id) return;
     let off = false;
     void isAccountSuspended(viewingUser.id).then((s) => { if (!off) setSuspendedView(s); });
     return () => { off = true; };

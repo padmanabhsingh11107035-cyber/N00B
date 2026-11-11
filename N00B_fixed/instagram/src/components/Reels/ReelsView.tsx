@@ -74,6 +74,7 @@ import { usePageHidden } from '../../utils/pageLayers';
 import { useScreenAwake } from '../../utils/screenAwake';
 import { prefetchReel, prefetchedReel, cancelReelPrefetch, markReelInUse, clearReelPrefetch } from '../../utils/reelPrefetch';
 import { preloadStoryPictures } from '../../utils/preloadStoryMedia';
+import './reels.css';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -966,21 +967,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           {/* Double-tap heart animation */}
           {isCur && showHeartAnim && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
-              <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+              <Heart className="w-28 h-28 text-[#ff4d8d] fill-[#ff4d8d] drop-shadow-[0_0_24px_rgba(255,77,141,.9)]" />
             </div>
           )}
 
           {/* Paused-state indicator — tap feedback for the play/pause toggle */}
           {isCur && !isPlaying && !showHeartAnim && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-              <div className="p-5 rounded-full bg-black/40 backdrop-blur-sm">
+              <div className="rv-glass rv-play">
                 <div className="w-0 h-0 border-y-[14px] border-y-transparent border-l-[22px] border-l-white ml-1" />
               </div>
             </div>
           )}
 
           {/* Like / comment / share / save / menu: plain icons down the right edge */}
-          <div className="absolute right-3 bottom-[26px] z-20 flex flex-col items-center gap-[18px] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" data-testid="reel-actions">
+          <div className="rv-glass rv-rail absolute right-3 bottom-[26px] z-20 flex flex-col items-center gap-[18px] text-white" data-testid="reel-actions">
             <div className="flex flex-col items-center gap-1">
               <button
                 type="button"
@@ -988,7 +989,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   e.stopPropagation();
                   handleToggleLike();
                 }}
-                className={`relative cursor-pointer active:scale-90 transition-transform ${reel.isLiked ? 'text-red-500' : 'text-white'}`}
+                className={`relative cursor-pointer active:scale-90 transition-transform ${reel.isLiked ? 'rv-liked text-red-500' : 'text-white'}`}
                 aria-label={reel.isLiked ? 'Unlike' : 'Like'}
                 data-testid="reel-like-button"
               >
@@ -1006,7 +1007,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     }
                   }}
                   disabled={reel.likesCount === 0}
-                  className="text-[13px] font-semibold leading-none cursor-pointer disabled:cursor-default"
+                  className="rv-count text-[13px] font-semibold leading-none cursor-pointer disabled:cursor-default"
                   aria-label={reel.likesCount === 0 ? 'No likes yet' : `${reel.likesCount.toLocaleString()} ${reel.likesCount === 1 ? 'like' : 'likes'}`}
                 >
                   {reel.likesCount.toLocaleString()}
@@ -1024,7 +1025,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 aria-label="Comments"
               >
                 <MessageCircle className="w-[29px] h-[29px]" strokeWidth={1.8} />
-                <span className="text-[13px] font-semibold leading-none">{reel.commentsCount}</span>
+                <span className="rv-count text-[13px] font-semibold leading-none">{reel.commentsCount}</span>
               </button>
             )}
             <button
@@ -1037,7 +1038,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               aria-label="Share"
             >
               <Send className="w-[27px] h-[27px] -rotate-12" strokeWidth={1.8} />
-              <span className="text-[13px] font-semibold leading-none">{reel.sharesCount}</span>
+              <span className="rv-count text-[13px] font-semibold leading-none">{reel.sharesCount}</span>
             </button>
             <button
               type="button"
@@ -1045,7 +1046,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 e.stopPropagation();
                 handleToggleSave();
               }}
-              className={`cursor-pointer active:scale-90 transition-transform ${reel.isSaved ? 'text-noob' : 'text-white'}`}
+              className={`cursor-pointer active:scale-90 transition-transform ${reel.isSaved ? 'rv-saved text-noob' : 'text-white'}`}
               aria-label={reel.isSaved ? 'Remove from saved' : 'Save'}
             >
               <Bookmark className={`w-[28px] h-[28px] ${reel.isSaved ? 'fill-current' : ''}`} strokeWidth={1.8} />
@@ -1155,11 +1156,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 </>
               )}
             </div>
-            {soundCover('w-[34px] h-[34px]')}
+            {soundCover('rv-disc w-[38px] h-[38px]')}
           </div>
 
           {/* who posted it, the caption and the sound, at the bottom left */}
-          <div className="absolute left-4 right-[72px] bottom-[26px] z-10 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+          <div className="rv-glass rv-info absolute left-4 right-[72px] bottom-[26px] z-10 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto text-white">
             <div className="flex items-center gap-2.5 pointer-events-auto">
               <button
                 type="button"
@@ -1167,7 +1168,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   e.stopPropagation();
                   goToProfile(reel.userId);
                 }}
-                className="relative flex items-center shrink-0 cursor-pointer"
+                className="rv-av relative flex items-center shrink-0 cursor-pointer"
                 aria-label={`Open ${reel.username}'s profile`}
               >
                 <AvatarMedia
@@ -1195,7 +1196,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     e.stopPropagation();
                     goToProfile(reel.userId);
                   }}
-                  className="text-[16px] font-bold text-white truncate cursor-pointer"
+                  className="rv-name text-[16px] font-bold text-white truncate cursor-pointer"
                 >
                   {reel.username}
                 </span>
@@ -1217,8 +1218,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     e.stopPropagation();
                     handleToggleFollowCreator();
                   }}
-                  className={`shrink-0 h-8 px-4 rounded-full text-[14px] font-semibold cursor-pointer active:scale-95 transition-transform ${
-                    following || requestedIds.has(reel.userId) ? 'bg-white/20 text-white border border-transparent' : 'bg-transparent text-white border border-white/80'
+                  className={`rv-follow shrink-0 h-8 px-4 rounded-full text-[14px] font-semibold cursor-pointer active:scale-95 transition-transform ${
+                    following || requestedIds.has(reel.userId) ? 'rv-following bg-white/20 text-white border border-transparent' : 'bg-transparent text-white border border-white/80'
                   }`}
                 >
                   {following ? 'Noobed' : requestedIds.has(reel.userId) ? 'Requested' : 'Noob'}
@@ -1227,7 +1228,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </div>
 
             {reel.caption && (
-              <p translate="no" className="mt-2.5 text-[15px] leading-snug text-white line-clamp-2 pointer-events-auto">
+              <p translate="no" className="rv-caption mt-2.5 text-[15px] leading-snug text-white line-clamp-2 pointer-events-auto">
                 {linkify(reel.caption)}
               </p>
             )}
@@ -1263,8 +1264,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           )}
 
             {/* its sound */}
-            <div className="mt-2.5 flex items-center gap-2 pointer-events-auto" data-testid={isCur ? 'reel-sound-bar' : undefined}>
-              <Music className="w-4 h-4 shrink-0" />
+            <div className="rv-sound mt-2.5 flex items-center gap-2 pointer-events-auto" data-testid={isCur ? 'reel-sound-bar' : undefined}>
+              {isCur && isPlaying ? <span className="rv-eq" aria-hidden="true"><i /><i /><i /></span> : <Music className="w-4 h-4 shrink-0" />}
               <p translate="no" className="min-w-0 text-[14px] text-white truncate">
                 {(reel.audioTrack?.title || 'Original audio')} · {reel.audioTrack?.artist || reel.username}
               </p>
@@ -1293,8 +1294,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 </span>
               </div>
             )}
-            <div className={`${isCur && seekTime !== null ? 'h-[7px]' : 'h-[3px]'} bg-white/25 overflow-hidden transition-[height] duration-100`} data-testid={isCur ? 'reel-progress' : undefined}>
-              <div ref={isCur ? progressRef : undefined} className="h-full bg-white transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
+            <div className={`${isCur && seekTime !== null ? 'h-[7px]' : 'h-[3px]'} rv-track bg-white/25 overflow-hidden transition-[height] duration-100`} data-testid={isCur ? 'reel-progress' : undefined}>
+              <div ref={isCur ? progressRef : undefined} className="rv-fill h-full bg-white transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
             </div>
           </div>
         </div>
@@ -1319,21 +1320,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
       {/* Title bar: Back, "Reels", and the sound button */}
-      <div className="relative shrink-0 h-14 px-4 flex items-center justify-between text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+      <div className="relative shrink-0 h-14 px-3 flex items-center justify-between text-white">
         <div className="flex items-center gap-3 min-w-0">
           {onGoBack && (
-            <button type="button" onClick={onGoBack} className="p-1 -ml-1 text-white cursor-pointer" title="Go back" aria-label="Go back">
+            <button type="button" onClick={onGoBack} className="rv-glass rv-round text-white cursor-pointer" title="Go back" aria-label="Go back">
               <ArrowLeft className="w-6 h-6" />
             </button>
           )}
-          <h2 className="text-[26px] leading-none font-bold tracking-tight text-white">Reels</h2>
+          <h2 className="rv-glass rv-title leading-none text-white">Reels</h2>
         </div>
         <div className="flex items-center gap-3 shrink-0">
         <ReelFriendsStrip currentUser={currentUser} reelId={currentReel?.id} />
         <button
           type="button"
           onClick={toggleSound}
-          className="p-1 -mr-1 text-white cursor-pointer"
+          className="rv-glass rv-round text-white cursor-pointer"
           title={soundWanted && !soundBlocked ? 'Sound on' : 'Sound off'}
           aria-label={soundWanted && !soundBlocked ? 'Turn sound off' : 'Turn sound on'}
           data-testid="reel-sound-button"

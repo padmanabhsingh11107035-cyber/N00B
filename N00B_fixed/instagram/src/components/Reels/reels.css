@@ -1,0 +1,46 @@
+/* Reels, "Glass": the video fills the page; everything NOOB adds floats on it as frosted glass: a title pill and two round buttons on top, ONE tall glass rail of buttons on the right,
+   and one glass card at the bottom with who posted it, the words and the sound. The colour line (violet - pink - amber) is the same as on Home. Only looks: nothing here changes what a button does. */
+.rv-glass { background: rgba(18, 18, 26, .38); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .12); }
+
+/* top: the title is a pill, back and sound are round glass buttons */
+.rv-title { display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 18px 0 14px; border-radius: 9999px; font-size: 17px !important; font-weight: 800 !important; letter-spacing: -.01em !important; }
+.rv-title::before { content: ""; width: 9px; height: 9px; border-radius: 9999px; background: linear-gradient(135deg, #7c5cff, #ff4d8d 55%, #ffae42); box-shadow: 0 0 12px rgba(255, 77, 141, .9); }
+.rv-round { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 9999px; padding: 0 !important; margin: 0 !important; }
+.rv-round:active, .rv-rail button:active { transform: scale(.9); }
+
+/* right: one tall glass rail */
+.rv-rail { padding: 14px 7px 12px; border-radius: 32px; gap: 15px !important; right: 10px !important; filter: none !important; }
+.rv-rail > * { color: #fff; }
+.rv-rail svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45)); }
+.rv-rail .rv-liked { color: #ff4d8d !important; }
+.rv-rail .rv-liked svg { filter: drop-shadow(0 0 10px rgba(255, 77, 141, .95)); }
+.rv-rail .rv-saved { color: #ffae42 !important; }
+.rv-rail .rv-saved svg { filter: drop-shadow(0 0 9px rgba(255, 174, 66, .85)); }
+.rv-count { font-size: 11.5px !important; font-weight: 700 !important; letter-spacing: .01em; }
+.rv-disc { border-radius: 9999px !important; width: 38px !important; height: 38px !important; box-shadow: 0 0 0 2px rgba(255, 255, 255, .35), 0 0 0 5px rgba(0, 0, 0, .45); animation: rv-spin 7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .rv-disc { animation: none; } }
+@keyframes rv-spin { to { transform: rotate(360deg); } }
+
+/* bottom: one glass card */
+.rv-info { padding: 14px 16px 14px !important; border-radius: 28px; left: 10px !important; right: 78px !important; bottom: 14px !important; }
+.rv-av { padding: 2.5px; border-radius: 9999px; background: conic-gradient(from 210deg, #7c5cff, #ff4d8d, #ffae42, #7c5cff); }
+.rv-av img, .rv-av video { border: 2px solid #14141c; }
+.rv-name { font-size: 15.5px !important; font-weight: 800 !important; letter-spacing: -.01em; }
+.rv-follow { height: 32px !important; padding: 0 16px !important; font-size: 13px !important; font-weight: 800 !important; background: linear-gradient(135deg, #7c5cff, #ff4d8d 55%, #ffae42) !important; color: #fff !important; border: 0 !important; box-shadow: 0 8px 18px -8px rgba(255, 77, 141, .9); }
+.rv-follow.rv-following { background: rgba(255, 255, 255, .16) !important; box-shadow: none; }
+.rv-caption { font-size: 14px !important; line-height: 1.4 !important; color: rgba(255, 255, 255, .95) !important; }
+.rv-sound { display: inline-flex !important; width: fit-content; max-width: 100%; padding: 6px 12px 6px 10px; border-radius: 9999px; background: rgba(255, 255, 255, .12); }
+.rv-sound p { font-size: 12.5px !important; font-weight: 600; }
+.rv-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.rv-eq i { width: 3px; border-radius: 2px; background: linear-gradient(#ff4d8d, #ffae42); animation: rv-bar 1s ease-in-out infinite; }
+.rv-eq i:nth-child(1) { height: 60%; animation-delay: -.2s; } .rv-eq i:nth-child(2) { height: 100%; animation-delay: -.5s; } .rv-eq i:nth-child(3) { height: 45%; animation-delay: -.8s; }
+@keyframes rv-bar { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+.rv-eq i { transform-origin: bottom; }
+@media (prefers-reduced-motion: reduce) { .rv-eq i { animation: none; } }
+
+/* the line that shows how far the video has played */
+.rv-track { background: rgba(255, 255, 255, .22) !important; }
+.rv-fill { background: linear-gradient(90deg, #7c5cff, #ff4d8d 55%, #ffae42) !important; box-shadow: 0 0 10px rgba(255, 77, 141, .8); }
+
+/* paused */
+.rv-play { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 9999px; padding: 0 !important; }

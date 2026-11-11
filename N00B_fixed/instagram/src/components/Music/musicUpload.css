@@ -1,0 +1,37 @@
+/* Upload a track (NOOB Music): bright green, pink and amber, a full page of its own. Plain colours set here so no other theme rule recolours it. */
+.mu-page { --mu-bg: #0b0f0d; --mu-card: #141b18; --mu-line: rgba(255,255,255,.10); --mu-text: #f4fff9; --mu-sub: #9fb8ad; --mu-field: #0d1311; background: var(--mu-bg); color: var(--mu-text); padding-bottom: 40px; }
+:root[data-theme="light"] .mu-page { --mu-bg: #f3faf6; --mu-card: #ffffff; --mu-line: rgba(0,0,0,.10); --mu-text: #0b2a1d; --mu-sub: #5b7a6b; --mu-field: #f1f7f3; }
+.mu-hero { position: relative; padding: calc(var(--sat, 0px) + 22px) 20px 34px; background: linear-gradient(135deg, #00c27a 0%, #12d6a0 40%, #ff4d8d 100%); border-radius: 0 0 32px 32px; color: #fff; }
+.mu-hero-in { max-width: 440px; margin: 0 auto; padding-top: 22px; }
+.mu-hero h3 { font-size: 28px; font-weight: 900; letter-spacing: -.02em; margin: 10px 0 4px; }
+.mu-hero p { font-size: 13.5px; font-weight: 600; opacity: .92; margin: 0; }
+.mu-disc { width: 52px; height: 52px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.24); }
+.mu-close { position: absolute; top: calc(var(--sat, 0px) + 12px); right: 14px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,.28); color: #fff; display: flex; align-items: center; justify-content: center; border: 0; }
+.mu-form { max-width: 440px; margin: -18px auto 0; padding: 0 14px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.mu-card { background: var(--mu-card); border: 1px solid var(--mu-line); border-radius: 24px; padding: 16px; box-shadow: 0 14px 30px -18px rgba(0,0,0,.55); }
+.mu-step { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 900; margin-bottom: 14px; }
+.mu-step b { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; color: #04281a; background: linear-gradient(135deg, #1ee6a1, #ffd447); }
+.mu-files { display: grid; grid-template-columns: 124px 1fr; gap: 12px; }
+.mu-cover { position: relative; width: 124px; height: 124px; border-radius: 22px; overflow: hidden; border: 2px dashed #ff4d8d; background: var(--mu-field); color: #ff4d8d; display: flex; align-items: center; justify-content: center; padding: 0; }
+.mu-cover.is-on { border: 2px solid #1ee6a1; }
+.mu-cover img { width: 100%; height: 100%; object-fit: cover; }
+.mu-cover-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mu-cover-empty em { font-style: normal; font-size: 12px; font-weight: 800; }
+.mu-tick { position: absolute; right: 6px; bottom: 6px; width: 24px; height: 24px; border-radius: 50%; background: #1ee6a1; color: #04281a; display: flex; align-items: center; justify-content: center; }
+.mu-audio-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.mu-audio { flex: 1; min-height: 70px; border-radius: 20px; border: 2px dashed #1ee6a1; background: var(--mu-field); color: #1ee6a1; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; text-align: center; }
+.mu-audio.is-on { border-style: solid; background: linear-gradient(135deg, #00c27a, #12d6a0); color: #04281a; }
+.mu-len { display: flex; align-items: center; gap: 8px; border-radius: 16px; padding: 10px 12px; background: var(--mu-field); border: 1px solid var(--mu-line); font-size: 12.5px; font-weight: 700; color: var(--mu-sub); }
+.mu-len b { margin-left: auto; font-family: ui-monospace, monospace; color: #ffb020; font-size: 14px; }
+.mu-label { display: block; font-size: 12.5px; font-weight: 800; color: var(--mu-sub); margin-top: 12px; }
+.mu-input { display: block; width: 100%; margin-top: 6px; padding: 13px 14px; border-radius: 16px; background: var(--mu-field); border: 2px solid var(--mu-line); color: var(--mu-text); font-size: 15px; font-weight: 700; outline: none; }
+.mu-input:focus { border-color: #1ee6a1; box-shadow: 0 0 0 4px rgba(30,230,161,.18); }
+.mu-genres { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.mu-chip { padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--mu-field); color: var(--mu-text); border: 2px solid var(--mu-line); text-transform: capitalize; }
+.mu-chip.is-on { background: linear-gradient(135deg, #ff4d8d, #ffb020); border-color: transparent; color: #230a14; }
+.mu-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 14px; background: rgba(255,60,90,.14); color: #ff6b85; font-size: 12.5px; font-weight: 700; text-align: center; }
+.mu-actions { display: flex; gap: 10px; }
+.mu-cancel { flex: 0 0 auto; padding: 15px 22px; border-radius: 18px; font-size: 15px; font-weight: 800; color: var(--mu-text); background: var(--mu-card); border: 1px solid var(--mu-line); }
+.mu-publish { flex: 1; padding: 15px; border-radius: 18px; font-size: 16px; font-weight: 900; color: #04281a; border: 0; background: linear-gradient(135deg, #1ee6a1, #ffd447); box-shadow: 0 12px 24px -10px rgba(30,230,161,.7); }
+.mu-publish:disabled { opacity: .4; box-shadow: none; }
+.mu-hint { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--mu-sub); margin: -4px 0 0; }

@@ -24,6 +24,7 @@ import { getAudioDuration } from '../../utils/mediaCompressor';
 import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from '../../utils/extractAudioFromVideo';
 import { isMainAdmin } from '../../adminAccess';
 import confetti from 'canvas-confetti';
+import './musicUpload.css';
 import { MusicSplash } from './MusicSplash';
 import { NowPlaying, useSongKeys } from './NowPlaying';
 import { coverTint, fallbackTint, type CoverTint } from '../../utils/coverColor';
@@ -532,122 +533,63 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
       {showPlayer && currentPlayingTrack && <NowPlaying onClose={() => setShowPlayer(false)} />}
 
-      {/* Upload Track Modal */}
+      {/* Upload Track: a full-screen page of its own, bright NOOB Music colours (green, pink, amber) */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-white">Upload Audio Track</h3>
+        <div className="mu-page fixed inset-0 z-50 overflow-y-auto" data-testid="music-upload" data-noob-sheet="1">
+          <div className="mu-hero">
+            <button type="button" onClick={() => setShowUploadModal(false)} aria-label="Close" className="mu-close cursor-pointer"><XIcon className="w-5 h-5" /></button>
+            <div className="mu-hero-in">
+              <span className="mu-disc" aria-hidden="true"><Music className="w-6 h-6" /></span>
+              <h3>Upload a track</h3>
+              <p>Share your music on NOOB Music. Two quick steps.</p>
+            </div>
+          </div>
 
-            <form onSubmit={handleCreateTrack} className="space-y-3.5">
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1">Track Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Midnight Cyber Drive"
-                  value={titleInput}
-                  onChange={(e) => setTitleInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1">Artist / Producer</label>
-                <input
-                  type="text"
-                  required
-                  value={artistInput}
-                  onChange={(e) => setArtistInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1">Genre</label>
-                <select
-                  required
-                  value={genreInput}
-                  onChange={(e) => setGenreInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
-                >
-                  <option value="" disabled>Select a genre…</option>
-                  {genres.filter((g) => g !== 'all').map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Upload Cover & MP3 */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => coverFileRef.current?.click()}
-                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
-                    coverUrlInput
-                      ? 'bg-pink-500/10 border-pink-500/40 text-pink-300'
-                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
-                  }`}
-                >
-                  {coverUrlInput ? <Check className="w-3 h-3 text-pink-400" /> : <Upload className="w-3 h-3 text-pink-400" />} Cover Art
+          <form onSubmit={handleCreateTrack} className="mu-form">
+            <section className="mu-card">
+              <div className="mu-step"><b>1</b> Add your files</div>
+              <div className="mu-files">
+                <button type="button" onClick={() => coverFileRef.current?.click()} className={`mu-cover cursor-pointer ${coverUrlInput ? 'is-on' : ''}`} aria-label="Choose cover art">
+                  {coverUrlInput ? <img src={coverUrlInput} alt="" /> : <span className="mu-cover-empty"><ImageIcon className="w-7 h-7" /><em>Cover art</em></span>}
+                  {coverUrlInput && <i className="mu-tick"><Check className="w-3.5 h-3.5" /></i>}
                 </button>
                 <input ref={coverFileRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
-
-                <button
-                  type="button"
-                  onClick={() => audioFileRef.current?.click()}
-                  disabled={isExtractingAudio}
-                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
-                    audioUrlInput
-                      ? 'bg-noob/10 border-noob/40 text-noob'
-                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
-                  }`}
-                >
-                  {isExtractingAudio ? (
-                    <>Extracting audio…</>
-                  ) : audioUrlInput ? (
-                    <><Check className="w-3 h-3 text-noob" /> Audio File</>
-                  ) : (
-                    <><Upload className="w-3 h-3 text-noob" /> Audio File</>
-                  )}
-                </button>
+                <div className="mu-audio-col">
+                  <button type="button" onClick={() => audioFileRef.current?.click()} disabled={isExtractingAudio} className={`mu-audio cursor-pointer ${audioUrlInput ? 'is-on' : ''}`}>
+                    {isExtractingAudio ? 'Extracting audio…' : audioUrlInput ? <><Check className="w-5 h-5" /> Audio added</> : <><Upload className="w-5 h-5" /> Choose audio file</>}
+                  </button>
+                  <div className="mu-len"><Clock className="w-4 h-4" /><span>Length</span><b>{detectedDuration || '—:—'}</b></div>
+                </div>
                 <input ref={audioFileRef} type="file" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv" onChange={handleAudioUpload} className="hidden" />
               </div>
+              {audioUploadError && <p className="mu-error" role="alert">{audioUploadError}</p>}
+            </section>
 
-              {/* Auto Duration Status */}
-              <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 flex items-center justify-between text-xs">
-                <span className="text-zinc-400 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-noob" />
-                  Auto-detected Length:
-                </span>
-                <span className="font-mono font-bold text-noob bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
-                  {detectedDuration || 'Upload audio…'}
-                </span>
+            <section className="mu-card">
+              <div className="mu-step"><b>2</b> Tell us about it</div>
+              <label className="mu-label">Track title
+                <input type="text" required placeholder="e.g. Midnight Cyber Drive" value={titleInput} onChange={(e) => setTitleInput(e.target.value)} className="mu-input" />
+              </label>
+              <label className="mu-label">Artist / producer
+                <input type="text" required value={artistInput} onChange={(e) => setArtistInput(e.target.value)} className="mu-input" />
+              </label>
+              <div className="mu-label">Genre
+                <div className="mu-genres">
+                  {genres.filter((g) => g !== 'all').map((g) => (
+                    <button key={g} type="button" onClick={() => setGenreInput(g)} className={`mu-chip cursor-pointer ${genreInput === g ? 'is-on' : ''}`}>{g}</button>
+                  ))}
+                </div>
               </div>
+            </section>
 
-              {audioUploadError && (
-                <p className="text-[11px] text-rose-400 font-semibold text-center bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-1.5">
-                  {audioUploadError}
-                </p>
-              )}
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 text-xs text-zinc-400 hover:text-white cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUploading || !titleInput.trim() || !genreInput || !audioUrlInput || !coverUrlInput}
-                  className="px-5 py-2 rounded-xl bg-noob text-black font-extrabold text-xs shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {isUploading ? 'Publishing...' : 'Publish Track'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="mu-actions">
+              <button type="button" onClick={() => setShowUploadModal(false)} className="mu-cancel cursor-pointer">Cancel</button>
+              <button type="submit" disabled={isUploading || !titleInput.trim() || !genreInput || !audioUrlInput || !coverUrlInput} className="mu-publish cursor-pointer">
+                {isUploading ? 'Publishing…' : 'Publish track'}
+              </button>
+            </div>
+            <p className="mu-hint">{!coverUrlInput ? 'Add a cover picture' : !audioUrlInput ? 'Add the audio file' : !genreInput ? 'Pick a genre' : !titleInput.trim() ? 'Give it a title' : 'Ready to publish'}</p>
+          </form>
         </div>
       )}
     </div>

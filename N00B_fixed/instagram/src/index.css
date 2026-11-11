@@ -1879,7 +1879,9 @@ a.noob-link, button.noob-link { color: #4da3ff !important; text-decoration: unde
 :root[data-theme="light"] a.noob-link, :root[data-theme="light"] button.noob-link { color: #0a60d0 !important; }
 /* an open chat on a phone: the page starts at the very top of the screen and the chat's own bar reaches up under the clock (the bar is the chat's colour, the clock sits on it) */
 html.phone-edge #chat-view-container[data-view="chat"] { top: 0 !important; bottom: 0 !important; height: auto !important; margin-top: 0 !important; }
-html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) - 36px) !important; }
+/* ONE block at the top of an open chat: the strip behind the clock and the chat bar are the same solid green (white in Light), the bar's row sits right under the clock */
+html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 4px) !important; background: #0E4B37 !important; background-image: none !important; border-bottom-color: transparent !important; box-shadow: none !important; }
+html.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background: #ffffff !important; border-bottom-color: #e6e6e6 !important; }
 
 /* ---- Phones (html.phone-edge): Messages lists reach the very top (the green header is drawn behind the clock, so there is no band above it); the Settings bar and the Reels bar are see-through ---- */
 html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top: calc(var(--sat) * -1); height: calc(100dvh + env(safe-area-inset-bottom, 0px) - var(--nav-h)) !important; }
@@ -1896,7 +1898,3 @@ html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[da
 
 /* Android app (page under the clock): the middle box clips sideways only, so a profile cover can reach the very top of the screen instead of stopping below the clock */
 html.phone-edge[data-page="profile"] body main { overflow-x: clip; overflow-y: visible; }
-
-/* Android app, an open chat: the strip behind the clock is the chat bar's own solid colour and the bar's row sits BELOW it (chat top and chat are two separate things, nothing overlaps the clock) */
-html.phone-android.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 6px) !important; background-color: #18181b !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-html.phone-android.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background-color: #ffffff !important; }

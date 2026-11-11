@@ -1740,7 +1740,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   useLayoutEffect(() => {
     // Messages sets the strip only while its list is on screen (inside a chat the strip follows the chat page)
     const light = document.documentElement.getAttribute('data-theme') === 'light';
-    forceStripColour(mobileView === 'list' && stripOn ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : null);
+    forceStripColour(mobileView === 'list' && stripOn ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : (mobileView === 'chat' ? (light ? '#ffffff' : '#0E4B37') : null));   // an open chat: the strip is the chat bar's own colour, one block
   }, [mobileView, stripOn, stripGreen]);
   useEffect(() => () => forceStripColour(null), []);
   const setStrip = (green: boolean, nudge = false) => {

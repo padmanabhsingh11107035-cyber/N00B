@@ -1,0 +1,90 @@
+/* Explore, "Atlas": a calm page with a big title, one glass search field, a three-way switch, a picture mosaic with big tiles between small ones, tall reel tiles, and person cards that
+   carry the person's own profile colours. Same colour line as Home and Reels (violet - pink - amber). Dark = ink black, Light = warm white. */
+#explore-view-container {
+  --ex-grad: linear-gradient(135deg, #7c5cff 0%, #ff4d8d 55%, #ffae42 100%);
+  --ex-surface: rgba(255, 255, 255, .07);
+  --ex-surface-2: rgba(255, 255, 255, .12);
+  --ex-line: rgba(255, 255, 255, .10);
+  --ex-text: #f5f5fa;
+  --ex-muted: #9b9bb0;
+  --ex-card: #121216;
+}
+:root[data-theme="light"] #explore-view-container {
+  --ex-surface: #f1eff8;
+  --ex-surface-2: #e7e3f3;
+  --ex-line: rgba(20, 20, 40, .10);
+  --ex-text: #15151f;
+  --ex-muted: #6d6d82;
+  --ex-card: #ffffff;
+}
+
+/* title and search */
+.ex-title { font-size: 30px; line-height: 1.05; font-weight: 900; letter-spacing: -.035em; color: var(--ex-text); }
+.ex-sub { margin-top: 4px; font-size: 13.5px; color: var(--ex-muted); }
+.ex-search { position: relative; }
+.ex-search input { width: 100%; height: 50px; padding: 0 44px 0 46px; border-radius: 18px; background: var(--ex-surface) !important; border: 1.5px solid transparent !important; color: var(--ex-text) !important; font-size: 15px; font-weight: 500; outline: none; box-shadow: none !important; transition: border-color .15s, background .15s, box-shadow .2s; }
+.ex-search input::placeholder { color: var(--ex-muted); }
+.ex-search input:focus { background: var(--ex-card) !important; border-color: #8b6cff !important; box-shadow: 0 0 0 4px rgba(124, 92, 255, .18) !important; }
+.ex-search .ex-ico { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ex-muted); pointer-events: none; }
+.ex-search .ex-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9999px; color: var(--ex-muted); }
+
+/* the three-way switch */
+.ex-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 18px; background: var(--ex-surface); }
+.ex-seg button { height: 40px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: var(--ex-muted) !important; background: transparent !important; transition: background .2s, color .2s, box-shadow .2s; min-width: 0; white-space: nowrap; }
+.ex-seg button.ex-on { background: var(--ex-grad) !important; color: #fff !important; box-shadow: 0 10px 22px -10px rgba(255, 77, 141, .8); }
+
+/* category pills */
+.ex-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+.ex-chips::-webkit-scrollbar { display: none; }
+.ex-chip { flex: none; height: 36px; padding: 0 16px; border-radius: 9999px; font-size: 13px; font-weight: 700; background: var(--ex-surface) !important; color: var(--ex-muted) !important; border: 0 !important; white-space: nowrap; }
+.ex-chip.ex-on { background: var(--ex-text) !important; color: var(--page) !important; }
+
+/* the picture mosaic: three columns, thin gaps, every few pictures a big one */
+.ex-mosaic { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; grid-auto-flow: dense; border-radius: 20px; overflow: hidden; }
+.ex-tile { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--ex-surface); cursor: pointer; }
+.ex-tile[data-big] { grid-column: span 2; grid-row: span 2; }
+.ex-tile img, .ex-tile video { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.ex-tile:hover img, .ex-tile:hover video { transform: scale(1.04); }
+.ex-tile .ex-badge { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 9999px; background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; }
+.ex-tile .ex-over { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 10px; background: linear-gradient(to top, rgba(0, 0, 0, .6), transparent 55%); opacity: 0; transition: opacity .2s; color: #fff; font-size: 12px; font-weight: 800; gap: 12px; }
+.ex-tile:hover .ex-over { opacity: 1; }
+@media (pointer: coarse) { .ex-tile .ex-over { display: none; } }
+
+/* tall reel tiles, the second column a little lower */
+.ex-reels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 640px) { .ex-reels { grid-template-columns: repeat(3, 1fr); } }
+.ex-reels > .ex-reel:nth-child(even) { margin-top: 22px; }
+@media (min-width: 640px) { .ex-reels > .ex-reel:nth-child(even) { margin-top: 0; } .ex-reels > .ex-reel:nth-child(3n+2) { margin-top: 22px; } }
+.ex-reel { position: relative; aspect-ratio: 9 / 16; border-radius: 24px; overflow: hidden; background: var(--ex-surface); cursor: pointer; box-shadow: 0 18px 34px -24px rgba(0, 0, 0, .8); }
+.ex-reel img, .ex-reel video { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.ex-reel:hover img, .ex-reel:hover video { transform: scale(1.04); }
+.ex-reel::after { content: ""; position: absolute; inset: auto 0 0 0; height: 45%; background: linear-gradient(to top, rgba(0, 0, 0, .72), transparent); pointer-events: none; }
+.ex-reel .ex-views { position: absolute; top: 10px; right: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px 4px 7px; border-radius: 9999px; background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font-size: 11.5px; font-weight: 800; }
+.ex-reel .ex-by { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 8px; color: #fff; font-size: 13px; font-weight: 800; min-width: 0; }
+.ex-reel .ex-by span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* a person: a cover in their own colours, the picture over its edge, then the details */
+.ex-user { position: relative; border-radius: 26px; overflow: hidden; background: var(--ex-card); border: 1px solid var(--ex-line); box-shadow: 0 20px 40px -30px rgba(0, 0, 0, .8); transition: transform .2s, box-shadow .2s; }
+:root[data-theme="light"] .ex-user { box-shadow: 0 20px 40px -30px rgba(60, 40, 120, .5); }
+.ex-user:hover { transform: translateY(-2px); }
+.ex-user-cover { height: 78px; cursor: pointer; }
+.ex-user-body { padding: 0 16px 16px; }
+.ex-user-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: -30px; }
+.ex-user-av { position: relative; width: 66px; height: 66px; border-radius: 9999px; padding: 3px; background: var(--ex-card); flex: none; cursor: pointer; }
+.ex-user-av img { width: 100%; height: 100%; border-radius: 9999px; object-fit: cover; }
+.ex-user-av .ex-online { position: absolute; right: 2px; bottom: 2px; width: 15px; height: 15px; border-radius: 9999px; background: #22c55e; border: 3px solid var(--ex-card); }
+.ex-name { font-size: 16.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ex-text) !important; }
+.ex-handle { font-size: 13px; font-weight: 600; color: var(--ex-muted) !important; }
+.ex-bio { margin-top: 8px; font-size: 13.5px; line-height: 1.45; color: var(--ex-text); opacity: .82; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ex-stats { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ex-line); display: flex; gap: 18px; font-size: 12.5px; color: var(--ex-muted); }
+.ex-stats strong { color: var(--ex-text); font-weight: 800; font-size: 14px; margin-right: 4px; }
+.ex-tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 9999px; font-size: 10.5px; font-weight: 800; background: var(--ex-surface); color: var(--ex-muted); }
+.ex-btn { height: 38px; padding: 0 16px; border-radius: 9999px; font-size: 13.5px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ex-btn.ex-primary { background: var(--ex-grad) !important; color: #fff !important; box-shadow: 0 10px 20px -10px rgba(255, 77, 141, .8); border: 0 !important; }
+.ex-btn.ex-quiet { background: var(--ex-surface) !important; color: var(--ex-text) !important; border: 0 !important; }
+.ex-icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 9999px; background: var(--ex-surface) !important; color: var(--ex-text) !important; border: 0 !important; }
+
+/* contacts and states */
+.ex-contact { flex: none; width: 128px; padding: 14px 10px 12px; border-radius: 22px; background: var(--ex-card); border: 1px solid var(--ex-line); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.ex-empty { text-align: center; padding: 44px 20px; border-radius: 26px; background: var(--ex-surface); color: var(--ex-muted); }
+.ex-empty h3 { color: var(--ex-text); font-size: 16px; font-weight: 800; }

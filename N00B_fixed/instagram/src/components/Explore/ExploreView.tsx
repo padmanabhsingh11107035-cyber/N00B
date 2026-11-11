@@ -25,7 +25,8 @@ import {
   ArrowDown,
   Handshake,
   User as UserIcon,
-  Loader2
+  Loader2,
+  Play
 } from 'lucide-react';
 import { Post, Reel, User } from '../../types';
 import { fetchUsersStrict, peekUsersDirectory, subscribeToOnlinePresence, type PresenceEntry } from '../../services/api';
@@ -37,6 +38,8 @@ import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { JoinUsModal } from './JoinUsModal';
 import { LazyVideo } from '../Common/LazyVideo';
 import { buildIndex, searchIndex, popularity } from '../../utils/searchEngine';
+import { coverBackground } from '../Profile/ProfileCover';
+import './explore.css';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -342,7 +345,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   return (
     <div
       id="explore-view-container"
-      className="w-full max-w-4xl mx-auto px-3 sm:px-4 pt-3 pb-24 space-y-4 select-none relative"
+      className="w-full max-w-4xl mx-auto px-3 sm:px-4 pt-3 pb-24 space-y-5 select-none relative"
     >
       {/* "Find friends from your contacts" — ask once, then show any matches right here at the top */}
       {contactsPromptState === 'ask' && (
@@ -390,18 +393,18 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               {contactMatches.map((user) => (
                 <div
                   key={user.id}
-                  className="shrink-0 w-32 bg-zinc-950 border border-zinc-800/80 rounded-2xl p-3 flex flex-col items-center text-center gap-1.5"
+                  className="ex-contact"
                 >
                   <img loading="lazy" decoding="async"
                     onClick={() => onNavigateToUserProfile?.(user)}
                     src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                     alt={user.username}
-                    className="w-12 h-12 rounded-2xl object-cover border border-white/10 cursor-pointer"
+                    className="w-14 h-14 rounded-full object-cover cursor-pointer"
                     referrerPolicy="no-referrer"
                   />
                   <span
                     onClick={() => onNavigateToUserProfile?.(user)}
-                    className="text-xs font-bold text-white truncate w-full cursor-pointer hover:text-noob"
+                    className="ex-name truncate w-full cursor-pointer" style={{ fontSize: 13.5 }}
                   >
                     {user.displayName || user.username}
                   </span>
@@ -409,11 +412,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                     <button
                       onClick={() => handleToggleFollow(user.id)}
                       disabled={followLoadingId === user.id}
-                      className={`w-full py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50 ${
-                        user.isFollowing || user.isFollowRequested
-                          ? 'bg-zinc-900 text-zinc-300 border border-zinc-700'
-                          : 'bg-noob text-black'
-                      }`}
+                      className={`ex-btn w-full justify-center cursor-pointer disabled:opacity-50 ${user.isFollowing || user.isFollowRequested ? 'ex-quiet' : 'ex-primary'}`}
+                      style={{ height: 32, fontSize: 12.5 }}
                     >
                       {user.isFollowing ? 'Noobed' : user.isFollowRequested ? 'Requested' : 'Noob'}
                     </button>
@@ -425,12 +425,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         </div>
       )}
 
-      {/* 1. Explore Search Bar & Shuffle Trigger */}
-      <div className="flex items-center gap-2 w-full pt-2">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-            <Search className="w-4 h-4" />
-          </div>
+      {/* the title and one search field */}
+      <div className="pt-1">
+        <h1 className="ex-title">Explore</h1>
+        <p className="ex-sub">People, pictures and reels, all in one place</p>
+      </div>
+      <div className="flex items-center gap-2 w-full">
+        <div className="ex-search flex-1">
+          <Search className="ex-ico w-[18px] h-[18px]" />
           <input
             type="text"
             value={searchQuery}
@@ -438,13 +440,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             placeholder="Search anything"
             aria-label="Search people, handles, bios, posts and reels"
             enterKeyHint="search"
-            className="w-full bg-zinc-900/90 text-sm text-white pl-10 pr-9 h-[46px] py-0 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-500 shadow-inner"
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-400 hover:text-white cursor-pointer"
-            >
+            <button onClick={() => setSearchQuery('')} className="ex-clear cursor-pointer" aria-label="Clear search">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -454,263 +452,158 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         {joinTeamOpen && (
           <button
             onClick={() => setShowJoinUsModal(true)}
-            className="shrink-0 w-[46px] h-[46px] p-0 flex items-center justify-center rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
+            className="ex-icon-btn shrink-0 cursor-pointer"
+            style={{ width: 50, height: 50, borderRadius: 18 }}
             title="Join the NOOB team"
             aria-label="Join the NOOB team"
           >
-            <Handshake className="w-4 h-4" />
+            <Handshake className="w-[18px] h-[18px]" />
           </button>
         )}
       </div>
 
       {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
 
-      {/* 2. Category & Section Switcher: the three tabs always fit the width of the screen, whatever the text size, and the row never slides sideways under a finger */}
-      <div className="pb-1" data-testid="explore-tabs">
-        <div className="grid grid-cols-[1fr_1.4fr_1fr] items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 w-full">
-          <button
-            onClick={() => {
-              setActiveTab('posts');
-              setVisibleCount(ITEMS_PER_PAGE);
-            }}
-            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'posts'
-                ? 'bg-noob text-black shadow-md shadow-noob/20'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Post</span>
-          </button>
-
-          {/* Every registered account, not an algorithmic subset — "Suggested" just names what this
-              tab is for (finding people), the way the count used to before normal users could read
-              the platform's total member count straight off this label. */}
-          <button
-            onClick={() => {
-              setActiveTab('users');
-              setVisibleCount(ITEMS_PER_PAGE);
-            }}
-            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-noob text-black shadow-md shadow-noob/20'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Suggested</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('reels');
-              setVisibleCount(ITEMS_PER_PAGE);
-            }}
-            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'reels'
-                ? 'bg-noob text-black shadow-md shadow-noob/20'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Film className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Reel</span>
-          </button>
+      {/* the three tabs always fit the width of the screen, whatever the text size, and the row never slides sideways under a finger */}
+      <div data-testid="explore-tabs">
+        <div className="ex-seg w-full" role="tablist">
+          {([
+            { id: 'posts', label: 'Posts', Icon: Layers },
+            { id: 'users', label: 'People', Icon: Users },
+            { id: 'reels', label: 'Reels', Icon: Film }
+          ] as const).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeTab === id}
+              onClick={() => {
+                setActiveTab(id);
+                setVisibleCount(ITEMS_PER_PAGE);
+              }}
+              className={`cursor-pointer ${activeTab === id ? 'ex-on' : ''}`}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ================= TAB 1: REGISTERED USERS DIRECTORY ================= */}
+      {/* ================= TAB 1: PEOPLE ================= */}
       {activeTab === 'users' && (
         <div className="space-y-3">
           {loadingUsers ? (
-            <div className="text-center py-12 text-zinc-400 flex flex-col items-center gap-3">
-              <Loader2 className="w-8 h-8 text-noob animate-spin" />
-              <p className="text-xs">Fetching active members...</p>
+            <div className="ex-empty flex flex-col items-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <p className="text-sm">Finding people...</p>
             </div>
           ) : usersList.length === 0 && usersFailed ? (
-            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-white/5 p-6">
-              <Users className="w-10 h-10 text-zinc-500 mx-auto mb-2 opacity-50" />
-              <h3 className="text-sm font-bold text-white">Could not load people</h3>
-              <p className="text-xs text-zinc-400 mt-1">Check your connection and try again.</p>
-              <button onClick={() => { void loadUsers(searchQuery); }} className="mt-4 px-5 py-2 rounded-full bg-noob text-black text-xs font-bold cursor-pointer">Try again</button>
+            <div className="ex-empty">
+              <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <h3>Could not load people</h3>
+              <p className="text-sm mt-1">Check your connection and try again.</p>
+              <button onClick={() => { void loadUsers(searchQuery); }} className="ex-btn ex-primary mt-4 cursor-pointer">Try again</button>
             </div>
           ) : usersList.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-white/5 p-6">
-              <Users className="w-10 h-10 text-zinc-500 mx-auto mb-2 opacity-50" />
-              <h3 className="text-sm font-bold text-white">No registered people found</h3>
-              <p className="text-xs text-zinc-400 mt-1">Try another search keyword.</p>
+            <div className="ex-empty">
+              <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <h3>No one found</h3>
+              <p className="text-sm mt-1">Try another search word.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {paginatedUsers.map((user) => {
                 const isMe = user.id === currentUser?.id || user.username === currentUser?.username;
                 const isBusiness = user.accountType === 'business' || user.isBusiness;
                 const isPrivate = user.accountType === 'private';
+                const compact = (n?: number) => Intl.NumberFormat('en', { notation: 'compact' }).format(n || 0);
 
                 return (
-                  <div
-                    key={user.id}
-                    className="bg-zinc-950 border border-zinc-800/80 hover:border-noob/40 transition-all rounded-3xl p-4 flex flex-col justify-between gap-3 shadow-md group"
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar (Click to visit profile) */}
-                      <div
-                        onClick={() => onNavigateToUserProfile?.(user)}
-                        className="relative shrink-0 cursor-pointer group/avatar"
-                        title={`View @${user.username}'s profile`}
-                      >
-                        <img loading="lazy" decoding="async"
-                          src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                          alt={user.username}
-                          className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover/avatar:scale-105 transition-transform"
-                          referrerPolicy="no-referrer"
-                        />
-                        {isUserOnline(user.id) && (
-                          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black" />
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4
-                            onClick={() => onNavigateToUserProfile?.(user)}
-                            className="text-sm font-bold text-white truncate cursor-pointer hover:text-noob transition-colors"
-                            title={`View @${user.username}'s profile`}
-                          >
-                            {user.displayName || user.username}
-                          </h4>
-                          {user.isVerified && <VerifiedBadge size="sm" />}
-                          {isMe && (
-                            <span className="px-1.5 py-0.2 rounded bg-zinc-800 text-[9px] font-bold text-zinc-400">
-                              You
-                            </span>
-                          )}
-
-                          {/* Account Type Badge */}
-                          {isBusiness ? (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-0.5">
-                              <Briefcase className="w-2.5 h-2.5" /> Business
-                            </span>
-                          ) : isPrivate ? (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-0.5">
-                              <Lock className="w-2.5 h-2.5" /> Private
-                            </span>
-                          ) : (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30 flex items-center gap-0.5">
-                              <Globe className="w-2.5 h-2.5" /> Public
-                            </span>
-                          )}
+                  <div key={user.id} className="ex-user">
+                    <div className="ex-user-cover" style={coverBackground(user)} onClick={() => onNavigateToUserProfile?.(user)} />
+                    <div className="ex-user-body">
+                      <div className="ex-user-top">
+                        <div onClick={() => onNavigateToUserProfile?.(user)} className="ex-user-av" title={`View @${user.username}'s profile`}>
+                          <img loading="lazy" decoding="async"
+                            src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                            alt={user.username}
+                            referrerPolicy="no-referrer"
+                          />
+                          {isUserOnline(user.id) && <span className="ex-online" />}
                         </div>
 
-                        {/* Username (account ids are internal and never shown) */}
-                        <div className="flex items-center gap-2 flex-wrap mt-1">
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToUserProfile?.(user)}
-                            className="text-xs text-pink-400 hover:text-pink-300 font-mono font-medium hover:underline cursor-pointer"
-                          >
-                            @{user.username}
-                          </button>
-
-                          {user.countryCode && (
-                            <span className="text-[9px] text-zinc-500 font-mono">
-                              {user.countryCode}
-                            </span>
-                          )}
-                        </div>
-
-                        {user.businessCategory && isBusiness && (
-                          <span className="text-[10px] text-noob font-semibold block mt-0.5">
-                            {user.businessCategory}
-                          </span>
-                        )}
-
-                        <p className="text-xs text-zinc-400 line-clamp-2 mt-1 leading-relaxed">
-                          {user.bio || 'Connecting on NOOB!'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Stats & Actions */}
-                    <div className="pt-2.5 border-t border-white/5 flex items-center justify-between gap-2 w-full min-w-0">
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] text-zinc-400 font-medium min-w-0 truncate">
-                        <span className="truncate">
-                          <strong className="text-white font-bold">{Intl.NumberFormat('en', { notation: 'compact' }).format(user.followersCount || 0)}</strong> followers
-                        </span>
-                        <span className="text-zinc-600 shrink-0">•</span>
-                        <span className="truncate">
-                          <strong className="text-white font-bold">{Intl.NumberFormat('en', { notation: 'compact' }).format(user.followingCount || 0)}</strong> following
-                        </span>
-                      </div>
-
-                      {!isMe ? (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Visit Profile Button */}
-                          <button
-                            onClick={() => onNavigateToUserProfile?.(user)}
-                            className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-noob border border-white/10 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                            title={`Visit @${user.username}'s profile`}
-                          >
-                            <UserIcon className="w-3.5 h-3.5" />
-                            <span>Profile</span>
-                          </button>
-
-                          {onStartChat && (
-                            <button
-                              onClick={() => onStartChat(user)}
-                              className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer shrink-0"
-                              title={`Message @${user.username}`}
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-
-                          {/* Noob / Unnoob Button */}
-                          <button
-                            onClick={() => handleToggleFollow(user.id)}
-                            disabled={followLoadingId === user.id}
-                            className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 disabled:opacity-50 whitespace-nowrap group/fbtn ${
-                              user.isFollowing
-                                ? 'bg-zinc-900 hover:bg-red-950/60 text-zinc-200 hover:text-red-400 border border-white/10 hover:border-red-500/40'
-                                : user.isFollowRequested
-                                ? 'bg-purple-950 text-purple-300 border border-purple-500/40'
-                                : 'bg-gradient-to-r from-[#ff4e6a] to-[#ff758c] text-white shadow-md shadow-pink-500/20 hover:opacity-95'
-                            }`}
-                          >
-                            {user.isFollowing ? (
-                              <>
-                                <UserCheck className="w-3.5 h-3.5 text-emerald-400 group-hover/fbtn:hidden" />
-                                <X className="w-3.5 h-3.5 text-red-400 hidden group-hover/fbtn:inline" />
-                                <span className="group-hover/fbtn:hidden">Noobed</span>
-                                <span className="hidden group-hover/fbtn:inline">Unnoob</span>
-                              </>
-                            ) : user.isFollowRequested ? (
-                              <>
-                                <Clock className="w-3.5 h-3.5 text-purple-300" />
-                                <span>Requested</span>
-                              </>
-                            ) : isPrivate ? (
-                              <>
-                                <Lock className="w-3.5 h-3.5" />
-                                <span>Request</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserPlus className="w-3.5 h-3.5" />
-                                <span>Noob</span>
-                              </>
+                        {!isMe ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {onStartChat && (
+                              <button onClick={() => onStartChat(user)} className="ex-icon-btn cursor-pointer" title={`Message @${user.username}`} aria-label={`Message @${user.username}`}>
+                                <MessageSquare className="w-4 h-4" />
+                              </button>
                             )}
+                            <button
+                              onClick={() => handleToggleFollow(user.id)}
+                              disabled={followLoadingId === user.id}
+                              className={`ex-btn cursor-pointer disabled:opacity-50 group/fbtn ${user.isFollowing || user.isFollowRequested ? 'ex-quiet' : 'ex-primary'}`}
+                            >
+                              {user.isFollowing ? (
+                                <>
+                                  <UserCheck className="w-4 h-4 group-hover/fbtn:hidden" />
+                                  <X className="w-4 h-4 hidden group-hover/fbtn:inline text-red-400" />
+                                  <span className="group-hover/fbtn:hidden">Noobed</span>
+                                  <span className="hidden group-hover/fbtn:inline text-red-400">Unnoob</span>
+                                </>
+                              ) : user.isFollowRequested ? (
+                                <>
+                                  <Clock className="w-4 h-4" />
+                                  <span>Requested</span>
+                                </>
+                              ) : isPrivate ? (
+                                <>
+                                  <Lock className="w-4 h-4" />
+                                  <span>Request</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="w-4 h-4" />
+                                  <span>Noob</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => onNavigateToUserProfile?.(user)} className="ex-btn ex-quiet cursor-pointer shrink-0">
+                            <UserIcon className="w-4 h-4" />
+                            <span>My Profile</span>
                           </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => onNavigateToUserProfile?.(user)}
-                          className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-noob border border-white/10 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                        >
-                          <UserIcon className="w-3.5 h-3.5" />
-                          <span>My Profile</span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-1.5 flex-wrap min-w-0">
+                        <h4 onClick={() => onNavigateToUserProfile?.(user)} className="ex-name truncate cursor-pointer" title={`View @${user.username}'s profile`}>
+                          {user.displayName || user.username}
+                        </h4>
+                        {user.isVerified && <VerifiedBadge size="sm" />}
+                        {isMe && <span className="ex-tag">You</span>}
+                        {isBusiness ? (
+                          <span className="ex-tag"><Briefcase className="w-3 h-3" /> Business</span>
+                        ) : isPrivate ? (
+                          <span className="ex-tag"><Lock className="w-3 h-3" /> Private</span>
+                        ) : null}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <button type="button" onClick={() => onNavigateToUserProfile?.(user)} className="ex-handle cursor-pointer hover:underline">
+                          @{user.username}
                         </button>
-                      )}
+                        {user.countryCode && <span className="ex-handle opacity-70 font-mono text-[11px]">{user.countryCode}</span>}
+                        {user.businessCategory && isBusiness && <span className="ex-handle">· {user.businessCategory}</span>}
+                      </div>
+
+                      <p className="ex-bio">{user.bio || 'Connecting on NOOB!'}</p>
+
+                      <div className="ex-stats">
+                        <span><strong>{compact(user.followersCount)}</strong>followers</span>
+                        <span><strong>{compact(user.followingCount)}</strong>following</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -723,7 +616,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       {/* ================= TAB 2: POSTS ================= */}
       {activeTab === 'posts' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <div className="ex-chips">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -731,82 +624,73 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   setSelectedCategory(cat);
                   setVisibleCount(ITEMS_PER_PAGE);
                 }}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  selectedCategory === cat
-                    ? 'bg-noob text-black font-bold shadow-md shadow-noob/20'
-                    : 'bg-zinc-900 text-zinc-400 hover:text-white'
-                }`}
+                className={`ex-chip cursor-pointer ${selectedCategory === cat ? 'ex-on' : ''}`}
               >
                 {cat}
               </button>
             ))}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-            {paginatedPosts.map((post) => (
-              <div
-                key={post.id}
-                onClick={() => onSelectPost(post)}
-                className="group relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
-              >
-                <PostThumbnailMedia
-                  src={post.slides?.[0]?.mediaUrl}
-                  filter={post.slides?.[0]?.filter}
-                  mediaType={post.slides?.[0]?.mediaType}
-                  alt={post.caption}
-                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300`}
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs">
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-4 h-4 fill-white" /> {post.likesCount}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageCircle className="w-4 h-4 fill-white" /> {post.commentsCount}
-                  </span>
+          {paginatedPosts.length === 0 ? (
+            <div className="ex-empty">
+              <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <h3>Nothing here yet</h3>
+              <p className="text-sm mt-1">Try another topic or search word.</p>
+            </div>
+          ) : (
+            <div className="ex-mosaic">
+              {paginatedPosts.map((post, i) => (
+                <div key={post.id} onClick={() => onSelectPost(post)} className="ex-tile" data-big={i % 9 === 0 ? '1' : undefined}>
+                  <PostThumbnailMedia
+                    src={post.slides?.[0]?.mediaUrl}
+                    filter={post.slides?.[0]?.filter}
+                    mediaType={post.slides?.[0]?.mediaType}
+                    alt={post.caption}
+                    className="w-full h-full object-cover"
+                  />
+                  {(post.slides?.length || 0) > 1 ? (
+                    <span className="ex-badge" aria-label="Several pictures"><Layers className="w-3.5 h-3.5" /></span>
+                  ) : post.slides?.[0]?.mediaType === 'video' ? (
+                    <span className="ex-badge" aria-label="Video"><Play className="w-3.5 h-3.5 fill-white" /></span>
+                  ) : null}
+                  <div className="ex-over">
+                    <span className="flex items-center gap-1"><Heart className="w-4 h-4 fill-white" /> {post.likesCount}</span>
+                    <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4 fill-white" /> {post.commentsCount}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* ================= TAB 3: REELS ================= */}
       {activeTab === 'reels' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-          {paginatedReels.map((reel) => (
-            <div
-              key={reel.id}
-              onClick={() => onSelectReel(reel)}
-              className="group relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
-            >
-              {reel.thumbnailUrl ? (
-                <img loading="lazy" decoding="async"
-                  src={reel.thumbnailUrl}
-                  alt={reel.caption}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                // Older reels uploaded before thumbnails were captured on
-                // publish have no thumbnailUrl at all — showing the video's
-                // own first frame here is still the ACTUAL reel, unlike the
-                // generic stock photo this used to fall back to (the same
-                // one for every un-thumbnailed reel, regardless of creator).
-                <LazyVideo
-                  src={reel.videoUrl}
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              )}
-              <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-white text-[11px] font-bold">
-                <span className="truncate">@{reel.username}</span>
-                <span className="flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded-md">
-                  <Film className="w-3 h-3 text-noob" /> {reel.viewsCount}
-                </span>
+        paginatedReels.length === 0 ? (
+          <div className="ex-empty">
+            <Film className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <h3>No reels found</h3>
+            <p className="text-sm mt-1">Try another search word.</p>
+          </div>
+        ) : (
+          <div className="ex-reels">
+            {paginatedReels.map((reel) => (
+              <div key={reel.id} onClick={() => onSelectReel(reel)} className="ex-reel">
+                {reel.thumbnailUrl ? (
+                  <img loading="lazy" decoding="async" src={reel.thumbnailUrl} alt={reel.caption} className="w-full h-full object-cover" />
+                ) : (
+                  // Older reels uploaded before thumbnails were captured on publish have no thumbnailUrl at all: the video's own first frame is still the ACTUAL reel.
+                  <LazyVideo src={reel.videoUrl} muted playsInline className="w-full h-full object-cover" />
+                )}
+                <span className="ex-views"><Play className="w-3 h-3 fill-white" /> {Intl.NumberFormat('en', { notation: 'compact' }).format(reel.viewsCount || 0)}</span>
+                <div className="ex-by">
+                  {reel.userAvatar && <img src={reel.userAvatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />}
+                  <span>@{reel.username}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* Infinite Scroll Load More Sentinel */}

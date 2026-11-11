@@ -1896,3 +1896,7 @@ html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[da
 
 /* Android app (page under the clock): the middle box clips sideways only, so a profile cover can reach the very top of the screen instead of stopping below the clock */
 html.phone-edge[data-page="profile"] body main { overflow-x: clip; overflow-y: visible; }
+
+/* Android app, an open chat: the strip behind the clock is the chat bar's own solid colour and the bar's row sits BELOW it (chat top and chat are two separate things, nothing overlaps the clock) */
+html.phone-android.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 6px) !important; background-color: #18181b !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.phone-android.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background-color: #ffffff !important; }

@@ -47,6 +47,7 @@
       var light = root.getAttribute('data-theme') === 'light';
       if (ios) root.classList.toggle('phone-edge', !light);
       else root.classList.add('phone-edge');
+      if (android) root.classList.add('phone-android');   // the Android app: its status strip is ours to colour, so an open chat keeps it as its own separate bar
       if (android) { try { cap.Plugins.SystemBars.setStyle({ style: light ? 'LIGHT' : 'DARK' }); } catch (e) { /* keeps the style from the app's settings */ } }
     };
     apply();

@@ -20,13 +20,16 @@
 
 /* ---- the top header: no line, no blur; a gradient wordmark, round icon buttons, a gradient pill for the open feed ---- */
 header.hv-top { background: var(--page) !important; border-bottom: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding-top: 10px; padding-bottom: 10px; }
-header.hv-top h1.noob-brand { background: var(--hv-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent !important; font-size: 25px; line-height: 1; letter-spacing: -.045em; padding-right: 3px; }
+header.hv-top h1.noob-brand { background: var(--hv-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent !important; font-size: 22px; line-height: 1; letter-spacing: -.045em; padding-right: 3px; }
 header.hv-top .hv-seg { background: var(--hv-surface) !important; border: 0 !important; padding: 3px !important; }
-header.hv-top .hv-seg button { color: var(--hv-muted) !important; font-size: 12px; padding: 5px 12px !important; }
+header.hv-top .hv-seg { flex-shrink: 1; min-width: 0; }
+header.hv-top .hv-seg button { color: var(--hv-muted) !important; font-size: 11.5px; padding: 5px 9px !important; }
 header.hv-top .hv-seg button.hv-on { background: var(--hv-grad) !important; color: #fff !important; box-shadow: 0 6px 16px -6px rgba(255, 77, 141, .7); }
-header.hv-top #notifications-bar-trigger { background: var(--hv-surface); border-radius: 14px; width: 38px; height: 38px; color: var(--hv-text) !important; }
-header.hv-top [data-testid="feed-music-button"] { background: var(--hv-grad) !important; color: #fff !important; width: 38px; height: 38px; border-radius: 14px; padding: 0; display: grid; place-items: center; }
-header.hv-top [data-testid="noob-menu-button"] { background: var(--hv-surface); border-radius: 12px; width: 36px; height: 36px; padding: 0; margin-left: 0; display: grid; place-items: center; color: var(--hv-text) !important; }
+header.hv-top #notifications-bar-trigger { background: var(--hv-surface); border-radius: 13px; width: 36px; height: 36px; color: var(--hv-text) !important; }
+header.hv-top [data-testid="feed-music-button"] { background: var(--hv-grad) !important; color: #fff !important; width: 36px; height: 36px; border-radius: 13px; padding: 0; display: grid; place-items: center; }
+header.hv-top [data-testid="noob-menu-button"] { background: var(--hv-surface); border-radius: 12px; width: 34px; height: 34px; padding: 0; margin-left: 0; display: grid; place-items: center; color: var(--hv-text) !important; }
+/* a laptop / computer has every page in the long menu on the left: no three lines there */
+@media (min-width: 768px) { header.hv-top [data-testid="noob-menu-button"] { display: none !important; } }
 
 /* ---- the story tray: bigger pictures, a colour line ring for what is new, a quiet ring for what was seen ---- */
 #stories-tray-container.hv-tray { background: transparent !important; border: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 6px 14px 10px; }

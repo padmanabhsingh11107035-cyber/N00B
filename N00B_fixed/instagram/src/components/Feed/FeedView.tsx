@@ -78,6 +78,7 @@ import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 import { startsInsideOverlay } from '../../utils/pullToRefresh';
 import './home.css';
+import { CONTENT_CATEGORIES } from '../../data/mockData';
 
 // The shop and the food stall (with the map and QR code libraries they use) are only fetched when somebody opens them.
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
@@ -549,7 +550,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
     setIsPulling(false);
   };
 
-  const categories = ['All', 'Fun & Humor', 'Gaming', 'Music', 'Vibes', 'Lifestyle', 'Tech'];
+  // every category a person can choose when making a post (data/mockData.ts), so each one can also be picked here
+  const categories = [{ id: 'All', label: '⚡ All Updates' }, ...CONTENT_CATEGORIES];
 
   // The pages of the NOOB menu as one list (components/Navigation/SideMenu.tsx). The three-line menu of a phone draws it, and it is published (utils/menuEntries.ts) for the long
   // strip of a tablet / laptop / computer, so both show the same pages, with the same switches of the administrator. Pressing a row remembers it (markMenuEntry) to come back to.
@@ -646,7 +648,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header ref={headerRef} className="hv-top sticky top-0 z-40 w-full px-3 py-2.5 flex items-center gap-2">
+      <header ref={headerRef} className="hv-top sticky top-0 z-40 w-full px-2.5 py-2.5 flex items-center gap-1.5">
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -865,8 +867,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full px-3 py-1.5 flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto" data-testid="feed-topic-chips">
-        {categories.map((cat) => (
+      <div className="w-full px-3 py-1.5 flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar" data-testid="feed-topic-chips">
+        {categories.map((c) => { const cat = c.id; return (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
@@ -876,9 +878,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-white/5'
             }`}
           >
-            {cat === 'All' ? '⚡ All Updates' : `#${cat}`}
+            {c.label}
           </button>
-        ))}
+        ); })}
       </div>
 
       {/* 4. Feed Posts Stack */}

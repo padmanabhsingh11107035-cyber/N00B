@@ -1875,3 +1875,9 @@ html[data-doodle="off"] body::after, html[data-doodle="off"] body::before, html[
 /* Every link inside text (chats, comments, captions, bios) is blue, so people know it can be tapped. */
 a.noob-link { color: #4da3ff !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 :root[data-theme="light"] a.noob-link { color: #0a60d0 !important; }
+
+/* ---- Phones (html.phone-edge): Messages lists reach the very top (the green header is drawn behind the clock, so there is no band above it); the Settings bar and the Reels bar are see-through ---- */
+html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top: calc(var(--sat) * -1); height: calc(100dvh - var(--nav-h)) !important; }
+html.phone-edge #chat-view-container[data-view="list"] .msg-head { padding-top: calc(var(--sat) + 6px) !important; }
+html.phone-edge .nst-header, html.phone-edge .nst-header.is-stuck { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
+html.phone-edge .nst-root { padding-top: 0; }

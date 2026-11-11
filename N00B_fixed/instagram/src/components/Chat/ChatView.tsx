@@ -1710,6 +1710,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
+    try { window.scrollTo(0, 0); } catch { /* ignore */ }   // a phone can leave the page scrolled after the keyboard of a chat
     setStrip((listRef.current?.scrollTop ?? 0) < 90, true);
     // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)
     const again = [80, 400, 1000, 2200].map((ms) => window.setTimeout(() => {

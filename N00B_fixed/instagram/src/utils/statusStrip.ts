@@ -2,6 +2,7 @@
 // reaches the top of the screen. The colour is read from what is really drawn at the top edge (the header of the open page, or the page itself), and written to the browser's
 // theme colour and to the page's own background (which is what shows behind a translucent status bar). It is read again whenever the page changes, scrolls or is resized.
 // (The Messages page paints its own strip while it is open, see ChatView.)
+const edgeMode = (): boolean => typeof document !== 'undefined' && document.documentElement.classList.contains('phone-edge');   // phones with the page under the clock: nothing is painted behind it
 let last = '';
 let queued = false;
 
@@ -38,6 +39,7 @@ let edge: HTMLElement | null = null;
 let forced: string | null = null;
 /** Messages calls this with the colour while its list is on screen, and with null when it is not. */
 export function forceStripColour(colour: string | null): void {
+  if (edgeMode()) return;
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // only a phone / tablet has a strip behind a clock: on a computer this must never paint the page
   if (forced === colour) { if (colour) applyColour(colour); return; }
   forced = colour;
@@ -82,6 +84,7 @@ const pageColour = (): string => (document.documentElement.getAttribute('data-th
 // `nudge`: a page with a colour of its own (Messages) has just come or gone, so the phone is asked to look at the top of the screen again. NEVER for a colour that was only read from the
 // screen (that can change while a page scrolls, and changing the viewport tag at that moment made the whole page flash white for a moment, most on Explore).
 function applyColour(colour: string, nudge: false | 'light' | 'full' = false): void {
+  if (edgeMode()) { document.getElementById('noob-top-edge')?.remove(); edge = null; return; }
   const root = document.documentElement;
   root.style.setProperty('background-color', colour, 'important');
   let meta = document.querySelector('meta[name="theme-color"]');
@@ -106,6 +109,7 @@ function bouncing(): boolean {
 
 function paint(): void {
   queued = false;
+  if (edgeMode()) return;
   if (document.hidden) return;
   if (forced) { pending = ''; applyColour(forced); return; }
   const own = activeOverride();
@@ -128,6 +132,7 @@ const now = () => { const t = Date.now(); if (t - lastNow < 60) return; lastNow 
 
 /** A page with a colour of its own (null: the page is an ordinary one again: its colour at once, then read from the screen). Applied at once and again a moment later. */
 export function setStripColour(colour: string | null, owner?: () => Element | null, nudge = false): void {
+  if (edgeMode()) return;
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
   const transition = (colour === null) !== (override === null);   // a page with its own colour comes or goes
   override = colour;

@@ -50,7 +50,7 @@ check(/const pageTab: NavTab = pageLayers\.layers\.length > 0 \? 'profile' : act
 check(/onGoBack=\{pageLayers\.back\}/.test(app) && /\{activeTab === 'profile' && renderProfileView\(null\)\}/.test(app), 'the profile page (mine or another\'s) is one piece of code with a "go back" for layers');
 
 section('6. The button');
-check(/onGoBack\?: \(\) => void;/.test(profile) && /onClick=\{onGoBack\}\s*aria-label="Go to previous page"/.test(profile) && /<span>Go to previous page<\/span>/.test(profile), 'the profile banner says "Go to previous page" (not "Back to My Profile")');
+check(/onGoBack\?: \(\) => void;/.test(profile) && /onClick=\{onGoBack\} aria-label="Go to previous page" data-testid="profile-back"/.test(profile), 'the profile has a back arrow on the cover that says "Go to previous page" (not "Back to My Profile")');
 check(!/Back to My Profile/.test(profile), 'the old wording is gone');
 
 console.log(`\n${passed} passed, ${failed} failed`);

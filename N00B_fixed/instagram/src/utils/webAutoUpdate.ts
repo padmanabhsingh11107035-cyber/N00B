@@ -3,14 +3,21 @@
 // uses another main file than the one that is running, the app reloads once, right then, as long as nobody is typing. Nothing happens when the versions are the same.
 import { hardReload } from './reloadApp';
 
-const MAIN_RE = /\/assets\/main-[A-Za-z0-9_-]+\.js/;
+const MAIN_RE = /\/assets\/main-[A-Za-z0-9_-]+\.(?:js|css)/g;
 let checking = false;
 let lastCheck = 0;
 
-function runningMain(): string | null {
-  const s = Array.from(document.scripts).map((x) => x.getAttribute('src') || '').find((src) => MAIN_RE.test(src));
-  const m = s ? s.match(MAIN_RE) : null;
-  return m ? m[0] : null;
+// The version is the pair of main files (the script and the stylesheet): a change of only the look changes only the stylesheet's name.
+function signature(text: string): string {
+  return Array.from(new Set(text.match(MAIN_RE) || [])).sort().join('|');
+}
+
+function runningSignature(): string {
+  const srcs = [
+    ...Array.from(document.scripts).map((x) => x.getAttribute('src') || ''),
+    ...Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map((x) => x.getAttribute('href') || '')
+  ];
+  return signature(srcs.join(' '));
 }
 
 async function check(): Promise<void> {
@@ -20,13 +27,12 @@ async function check(): Promise<void> {
   lastCheck = now;
   checking = true;
   try {
-    const mine = runningMain();
+    const mine = runningSignature();
     if (!mine) return;
     const res = await fetch(`/?_v=${now}`, { cache: 'no-store', credentials: 'omit' });
     if (!res.ok) return;
-    const html = await res.text();
-    const m = html.match(MAIN_RE);
-    if (!m || m[0] === mine) return;
+    const theirs = signature(await res.text());
+    if (!theirs || theirs === mine) return;
     const a = document.activeElement as HTMLElement | null;
     const typing = !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable);
     if (typing) return;   // asked again at the next check

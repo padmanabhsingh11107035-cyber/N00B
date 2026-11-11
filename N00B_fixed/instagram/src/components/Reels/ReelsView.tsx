@@ -1505,7 +1505,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       )}
 
       {showShareSheet && currentReel && (
-        <SharePostSheet type="reel" currentUser={currentUser} itemId={currentReel.id} ownerUsername={currentReel.username} onClose={() => setShowShareSheet(false)} />
+        <SharePostSheet type="reel" currentUser={currentUser} itemId={currentReel.id} ownerUsername={currentReel.username} ownerId={currentReel.userId} onClose={() => setShowShareSheet(false)} />
       )}
       </div>
     </div>

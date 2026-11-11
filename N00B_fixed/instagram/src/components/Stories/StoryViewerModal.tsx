@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
+import { Repeat2, X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
 import { Story, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
-import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
+import { toggleRepost, fetchRepostState, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -134,6 +134,14 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // posted it) is immutable, so the snapshot already showing it instantly is never overwritten.
   const effectiveStory = story && liveById[story.id] ? { ...story, ...liveById[story.id] } : story;
   const isOwnStory = !!story && story.userId === currentUser.id;
+  const [repostedStories, setRepostedStories] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!story || isOwnStory || repostedStories.has(story.id)) return;
+    let alive = true;
+    void fetchRepostState('story', story.id).then((s) => { if (alive && s.isReposted) setRepostedStories((prev) => new Set(prev).add(story.id)); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id]);
   const isLiked = !!story && likedStoryIds.has(story.id);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
@@ -1088,6 +1096,24 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               )}
             </form>
 
+            {!isOwnStory && (
+              <button
+                type="button"
+                data-testid="story-repost"
+                aria-label={repostedStories.has(story.id) ? 'Remove repost' : 'Repost story'}
+                onClick={() => {
+                  if (!story) return;
+                  const id = story.id;
+                  void toggleRepost('story', id).then((res) => {
+                    if (res.error) return;
+                    setRepostedStories((prev) => { const next = new Set(prev); if (res.isReposted) next.add(id); else next.delete(id); return next; });
+                  });
+                }}
+                className={`sv-heart relative rounded-full cursor-pointer ${repostedStories.has(story.id) ? 'text-noob' : 'text-white/80 hover:text-white'}`}
+              >
+                <Repeat2 className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={() => {
                 if (!story) return;

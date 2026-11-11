@@ -285,7 +285,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
       )}
 
       {showShareSheet && (
-        <SharePostSheet type="post" currentUser={currentUser} itemId={activePost.id} ownerUsername={activePost.username} onClose={() => setShowShareSheet(false)} />
+        <SharePostSheet type="post" currentUser={currentUser} itemId={activePost.id} ownerUsername={activePost.username} ownerId={activePost.userId} onClose={() => setShowShareSheet(false)} />
       )}
 
       {showPlaylistSheet && (

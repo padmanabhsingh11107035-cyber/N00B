@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2, Calculator as CalcIcon } from 'lucide-react';
+import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2, Calculator as CalcIcon, Repeat2 } from 'lucide-react';
 import { User } from '../../types';
-import { fetchChats, sendMessage } from '../../services/api';
+import { fetchChats, sendMessage, toggleRepost, fetchRepostState } from '../../services/api';
 import { copyText } from '../../utils/clipboard';
 import { contentUrl } from '../../utils/routes';
 import { sendToCalculator } from '../../utils/calculatorSend';
@@ -22,6 +22,7 @@ export interface SharePostSheetProps {
   itemId: string;
   /** who made it, for the text that goes with the link */
   ownerUsername?: string;
+  ownerId?: string;
   onClose: () => void;
 }
 
@@ -48,7 +49,7 @@ const APP_ORDER: Array<{ id: ShareApp; label: string }> = [
   { id: 'telegram', label: 'Telegram' }, { id: 'messages', label: 'Messages' }, { id: 'email', label: 'Email' }
 ];
 
-export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUser, itemId, ownerUsername, onClose }) => {
+export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUser, itemId, ownerUsername, ownerId, onClose }) => {
   const drag = useSheetDrag(onClose);   // drag the grey bar down to close
   const kbm = useKeyboardMetrics();
   const [typing, setTyping] = useState(false);   // the search box has the keyboard: only then does the sheet make room for it (otherwise the sheet sits still at the bottom)
@@ -61,6 +62,15 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
   const [copied, setCopied] = useState(false);
   const [calcSent, setCalcSent] = useState(false);
   const [note, setNote] = useState('');
+  const [reposted, setReposted] = useState(false);
+  const canRepost = ownerId !== undefined ? ownerId !== currentUser.id : ownerUsername !== currentUser.username;
+  useEffect(() => { let alive = true; void fetchRepostState(type === 'reel' ? 'reel' : 'post', itemId).then((s) => { if (alive) setReposted(s.isReposted); }); return () => { alive = false; }; }, [type, itemId]);
+  const repost = async () => {
+    const res = await toggleRepost(type === 'reel' ? 'reel' : 'post', itemId);
+    if (res.error) { setNote(res.error); return; }
+    setReposted(res.isReposted);
+    setNote(res.isReposted ? `${TYPE_LABEL[type]} reposted to your profile` : 'Repost removed');
+  };
 
   const url = contentUrl(type === 'video' ? 'video' : type, itemId);
   const content = useMemo(() => ({ url, text: shareText(type, ownerUsername) }), [url, type, ownerUsername]);
@@ -189,6 +199,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
             </div>
           ) : (
             <div className="flex flex-nowrap items-start gap-3.5 overflow-x-auto overflow-y-hidden overscroll-x-contain snap-x no-scrollbar px-4 pt-3 pb-6 [-webkit-overflow-scrolling:touch]" style={{ touchAction: 'pan-x' }} data-testid="share-apps">
+              {canRepost && <ShareIcon label={reposted ? 'Reposted' : 'Repost'} look={reposted ? 'bg-noob text-black' : 'bg-zinc-700 text-white'} onClick={() => void repost()} testId="share-repost"><Repeat2 className="w-5 h-5" /></ShareIcon>}
               {APP_ORDER.slice(0, 1).map((a) => (
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}

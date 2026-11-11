@@ -1133,7 +1133,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       )}
 
       {showShareSheet && (
-        <SharePostSheet type="post" currentUser={currentUser} itemId={post.id} ownerUsername={post.username} onClose={() => setShowShareSheet(false)} />
+        <SharePostSheet type="post" currentUser={currentUser} itemId={post.id} ownerUsername={post.username} ownerId={post.userId} onClose={() => setShowShareSheet(false)} />
       )}
     </article>
   );

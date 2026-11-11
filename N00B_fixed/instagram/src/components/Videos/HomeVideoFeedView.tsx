@@ -677,7 +677,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       )}
 
       {showShareSheet && actionVideo && (
-        <SharePostSheet type="video" currentUser={currentUser} itemId={actionVideo.id} ownerUsername={actionVideo.username} onClose={() => setShowShareSheet(false)} />
+        <SharePostSheet type="video" currentUser={currentUser} itemId={actionVideo.id} ownerUsername={actionVideo.username} ownerId={actionVideo.userId} onClose={() => setShowShareSheet(false)} />
       )}
       {showComments && openVideo && (
         <VideoCommentsSheet video={openVideo} currentUser={currentUser} isMasterAdmin={isMasterAdmin} onClose={() => setShowComments(false)} />

@@ -1417,6 +1417,22 @@ export async function fetchPostViewers(postId: string): Promise<{ users: User[];
   }
 }
 
+// Repost: put someone else's post / reel / story on your own profile (the Reposts tab). A pointer, nothing is copied.
+export type RepostKind = 'post' | 'reel' | 'story';
+export async function toggleRepost(kind: RepostKind, id: string): Promise<{ isReposted: boolean; count: number; error?: string }> {
+  try { return await rpc('toggle_repost', { p_kind: kind, p_id: id }); } catch (err) { return { isReposted: false, count: 0, error: errorText(err, 'Could not repost.') }; }
+}
+export async function fetchRepostState(kind: RepostKind, id: string): Promise<{ isReposted: boolean; count: number }> {
+  try { return await rpc('repost_state', { p_kind: kind, p_id: id }); } catch { return { isReposted: false, count: 0 }; }
+}
+export type RepostEntry = { kind: 'post'; at: string; post: Post } | { kind: 'reel'; at: string; reel: Reel } | { kind: 'story'; at: string; story: Story };
+export async function fetchUserReposts(userId: string): Promise<RepostEntry[]> {
+  try {
+    const rows = (await rpc<any[]>('user_reposts', { p_user: userId })) || [];
+    return rows.map((r): RepostEntry => r.kind === 'reel' ? { kind: 'reel', at: r.at, reel: mapReel(r.item) } : r.kind === 'story' ? { kind: 'story', at: r.at, story: mapStory(r.item) } : { kind: 'post', at: r.at, post: mapPost(r.item) });
+  } catch { return []; }
+}
+
 export async function toggleSavePost(postId: string): Promise<{ isSaved: boolean; savesCount: number }> {
   try { return await rpc('toggle_post_save', { p_post: postId }); } catch (err) { return { error: errorText(err, 'Could not update the save.') } as any; }
 }

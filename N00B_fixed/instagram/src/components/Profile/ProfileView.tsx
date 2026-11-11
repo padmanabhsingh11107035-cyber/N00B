@@ -55,6 +55,7 @@ import {
   Link2,
   Menu,
   MoreHorizontal,
+  Repeat2,
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
 import { AVATARS, avatarStoredUrl } from '../../data/avatars';
@@ -80,7 +81,9 @@ import {
   updateFullProfile,
   setMyAvatarChoice,
   fetchAvatarChoice,
-  isAccountSuspended
+  isAccountSuspended,
+  fetchUserReposts,
+  type RepostEntry
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -215,7 +218,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSwitchToAdminPanel,
   onOpenCreate
 }) => {
-  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'feed' | 'saved' | 'liked' | 'archive'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'feed' | 'reposts' | 'saved' | 'liked' | 'archive'>('posts');
   // The "Feed" tab: this person's video posts, one wide card per row. Loaded from the server when the tab is opened (the app itself only
   // holds the latest 200 posts of everyone); until then / if that is unavailable, the video posts already on hand are shown.
   const [feedVideos, setFeedVideos] = useState<{ userId: string; posts: Post[] } | null>(null);
@@ -226,6 +229,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (postActions) setPostViewer({ list, startId: post.id, title });
     else onSelectPost(post);
   };
+  const [reposts, setReposts] = useState<{ userId: string; list: RepostEntry[] } | null>(null);
+  const [repostStory, setRepostStory] = useState<{ mediaUrl: string; mediaType: string } | null>(null);
   const [collections, setCollections] = useState<SavedCollection[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
@@ -430,6 +435,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
     return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
   };
+  useEffect(() => {
+    if (activeTab !== 'reposts') return;
+    let alive = true;
+    fetchUserReposts(targetUser.id).then((list) => { if (alive) setReposts({ userId: targetUser.id, list }); });
+    return () => { alive = false; };
+  }, [activeTab, targetUser.id]);
   useEffect(() => {
     if (activeTab !== 'feed') return;
     let alive = true;
@@ -646,6 +657,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     { id: 'posts', label: 'Posts', title: 'Posts', Icon: Grid },
     { id: 'reels', label: 'Reels', title: 'Reels', Icon: Film },
     { id: 'feed', label: 'Feed', title: 'Videos shared in the Feed', Icon: PlaySquare },
+    { id: 'reposts', label: 'Reposts', title: 'Reposts', Icon: Repeat2 },
     ...(isOwnProfile ? [
       // Saved, Liked and Archive are private: only the profile's own owner sees these tabs at all.
       { id: 'saved' as const, label: 'Saved', title: 'Organized Private Collections', Icon: Bookmark },
@@ -1400,6 +1412,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
 
         {/* B. REELS GRID */}
+        {activeTab === 'reposts' && (() => {
+          const list = reposts && reposts.userId === targetUser.id ? reposts.list : null;
+          const postList = (list || []).flatMap((e) => (e.kind === 'post' ? [e.post] : []));
+          if (!list) return <div className="py-16 text-center text-xs text-zinc-500">Loading…</div>;
+          if (list.length === 0) return (
+            <div className="text-center py-16 bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2" data-testid="reposts-empty">
+              <Repeat2 className="w-10 h-10 text-zinc-600 mx-auto" />
+              <span className="text-sm font-bold text-zinc-300 block">No reposts yet</span>
+              <p className="text-xs text-zinc-500">{isOwnProfile ? 'Tap Share on a post, reel or story and choose Repost.' : 'Posts, reels and stories they repost show up here.'}</p>
+            </div>
+          );
+          return (
+            <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0" data-testid="reposts-grid">
+              {list.map((e) => {
+                const tile = 'relative bg-zinc-900 overflow-hidden group cursor-pointer ';
+                const badge = <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10"><Repeat2 className="w-3.5 h-3.5 text-white" /></div>;
+                if (e.kind === 'post') return (
+                  <div key={`p${e.post.id}`} onClick={() => openPostFrom(e.post, postList, 'Reposts')} className={tile + 'aspect-square'}>
+                    <PostThumbnailMedia src={e.post.slides?.[0]?.mediaUrl} filter={e.post.slides?.[0]?.filter} mediaType={e.post.slides?.[0]?.mediaType} alt={e.post.caption} className="w-full h-full object-cover" />
+                    {badge}
+                  </div>
+                );
+                if (e.kind === 'reel') return (
+                  <div key={`r${e.reel.id}`} onClick={() => onOpenReel?.(e.reel.id)} className={tile + 'aspect-square'}>
+                    {e.reel.thumbnailUrl ? <img loading="lazy" decoding="async" src={e.reel.thumbnailUrl} alt={e.reel.caption} className="w-full h-full object-cover" /> : <LazyVideo src={e.reel.videoUrl} muted playsInline className="w-full h-full object-cover" />}
+                    {badge}
+                    <div className="absolute bottom-2 left-2 text-white"><Film className="w-4 h-4" /></div>
+                  </div>
+                );
+                return (
+                  <div key={`s${e.story.id}`} onClick={() => setRepostStory({ mediaUrl: e.story.mediaUrl, mediaType: e.story.mediaType })} className={tile + 'aspect-square'}>
+                    {e.story.mediaType === 'video' ? <LazyVideo src={e.story.mediaUrl} muted playsInline className="w-full h-full object-cover" /> : <img loading="lazy" decoding="async" src={e.story.mediaUrl} alt="" className="w-full h-full object-cover" />}
+                    {badge}
+                    <div className="absolute bottom-2 left-2 text-[10px] font-bold text-white bg-black/60 rounded px-1.5 py-0.5">Story</div>
+                  </div>
+                );
+              })}
+              {repostStory && (
+                <div className="fixed inset-0 z-[120] bg-black flex items-center justify-center media-dark" onClick={() => setRepostStory(null)} data-noob-sheet="1">
+                  {repostStory.mediaType === 'video' ? <video src={repostStory.mediaUrl} autoPlay controls playsInline className="max-h-full max-w-full" onClick={(ev) => ev.stopPropagation()} /> : <img src={repostStory.mediaUrl} alt="" className="max-h-full max-w-full object-contain" />}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {activeTab === 'reels' && (
           displayedReels.length === 0 ? (
             <div className="text-center py-16 bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2">

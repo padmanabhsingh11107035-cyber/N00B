@@ -1310,13 +1310,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         `calc(100vh-80px)` on a normally-flowing element only avoids the
         floating bottom nav if that element starts at y=0, which it doesn't
         here, so it still overlapped the nav until this switched to `fixed`. */}
-    <div className="edge-own fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-[var(--nav-h)]">
+    <div data-noob-keep="1" className="edge-own fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-[var(--nav-h)]">
       <div
         id="reels-page-container"
         className="relative w-full h-full sm:max-h-[860px] sm:max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden select-none sm:shadow-2xl sm:border border-neutral-800"
       >
       {/* the title bar floats over the top of the video */}
-      <div className="absolute top-0 inset-x-0 z-30" data-testid="reels-topbar" style={{ paddingTop: 'max(0px, calc(var(--sat, env(safe-area-inset-top, 0px)) - 8px))' }}>
+      <div className="absolute top-0 inset-x-0 z-30" data-testid="reels-topbar" style={{ paddingTop: 'max(0px, calc(var(--sat, env(safe-area-inset-top, 0px)) - 23px))' }}>
       <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
       {/* Title bar: Back, "Reels", and the sound button */}

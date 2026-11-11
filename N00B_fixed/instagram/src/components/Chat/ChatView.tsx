@@ -1754,6 +1754,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
+    // phones with the page under the clock: the list must start at the very top edge of the screen; if it was placed lower, it is pulled up by exactly that much
+    const fixTop = () => {
+      const c = document.getElementById('chat-view-container');
+      if (!c || !document.documentElement.classList.contains('phone-edge') || c.getAttribute('data-view') !== 'list') return;
+      c.style.marginTop = '';
+      const top = Math.round(c.getBoundingClientRect().top);
+      if (top > 1) c.style.marginTop = `calc(var(--sat) * -1 - ${top}px)`;
+    };
+    [0, 120, 600].forEach((ms) => window.setTimeout(fixTop, ms));
     try { window.scrollTo(0, 0); } catch { /* ignore */ }   // a phone can leave the page scrolled after the keyboard of a chat
     setStrip((listRef.current?.scrollTop ?? 0) < 90, true);
     // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)

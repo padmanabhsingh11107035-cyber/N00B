@@ -1686,24 +1686,19 @@ html body .chat-bar, html body .nst-header, html body .msg-head, html body .msg-
 html body header[class*="bg-zinc-950/"], html body header[class*="bg-black/"] { background-color: var(--page) !important; }
 html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop-blur"] { background-color: var(--page) !important; }
 
-/* ---- iPhone installed app (html.ios-cover, see public/theme-init.js): the page is drawn under the clock, so the strip behind the clock is the page's own colour (html's background, which the strip logic sets).
-   Everything that used to start below the strip is pushed down by --sat (the height of that strip) again. ---- */
-/* the phone still starts the page below the clock (it is inset by itself), so no extra room is added: --sat stays 0 (it was the height of the strip and doubled the gap) */
-html.ios-cover { --sat: 0px; }
-html.ios-cover body { padding-top: var(--sat); box-sizing: border-box; }
-/* the Messages list is as tall as the screen under the strip */
-html.ios-cover #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
-/* full-screen pages and pop-ups start below the strip (the ones that already keep room for the notch themselves are left alone) */
-html.ios-cover .fixed.inset-0:not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"])) { padding-top: var(--sat); box-sizing: border-box; }
-/* bars that stick or are fixed at the very top sit under the strip, not behind the clock */
-html.ios-cover .sticky.top-0:not(.fixed *) { top: var(--sat) !important; }
-html.ios-cover .fixed.top-0:not(.inset-0):not(.bottom-0) { top: var(--sat) !important; }
-/* the strip behind the clock is one flat colour: the doodle layer starts below it */
-html.ios-cover body::after { top: var(--sat) !important; }
-
-/* the strip behind the clock is one flat bar in the page's strip colour (the colour of html), so nothing that scrolls shows through it; bars that stick at the top stop just below it */
-html.ios-cover::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background-color: inherit; z-index: 2147483000; pointer-events: none; }
-html.ios-cover .sticky.top-0:not(.fixed *) { top: env(safe-area-inset-top, 0px) !important; }
+/* ---- Phones only (html.phone-edge, set in public/theme-init.js): the page is drawn under the clock / camera and nothing of its own sits behind them, so everything that scrolls passes through that area.
+   --sat is the height of that area; everything that used to start below it is pushed down by --sat. ---- */
+html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
+html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
+html.phone-edge .msg-safe-strip { display: none !important; }
+html.phone-edge #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
+/* full-screen pages and pop-ups start below the clock (the ones that already keep room for it themselves are left alone) */
+html.phone-edge .fixed.inset-0:not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { padding-top: var(--sat); box-sizing: border-box; }
+/* bars that stick or are fixed at the very top sit just under the clock, not behind it */
+html.phone-edge .sticky.top-0:not(.fixed *) { top: var(--sat) !important; }
+html.phone-edge .fixed.top-0:not(.inset-0):not(.bottom-0) { top: var(--sat) !important; }
+/* the bars of pages that keep their own room (env()) also work where the app is told the inset by --safe-area-inset-top */
+html.phone-edge [data-noob-page='card'], html.phone-edge [data-noob-page='page'] { padding-top: var(--sat) !important; }
 
 /* ---- Sign-in page, new look (auth-v3): sunny yellow on top with friends holding phones that show NOOB, a black sheet underneath with yellow buttons. Only colours, shapes and movement: the sign-in itself is untouched. ---- */
 @layer base { html body .doodle-wallpaper-login.auth-v2, html body .doodle-wallpaper-login.auth-v2.force-dark { background: #ffd60a !important; background-image: radial-gradient(900px 520px at 85% -10%, rgba(255, 255, 255, .55), transparent 60%), radial-gradient(700px 480px at -10% 30%, rgba(255, 140, 0, .38), transparent 62%), linear-gradient(180deg, #ffe14d 0%, #ffd60a 45%, #ffb800 100%) !important; } }

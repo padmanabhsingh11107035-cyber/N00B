@@ -26,18 +26,31 @@
   }
 })();
 
-// iPhone, installed from the Home Screen: the page is drawn all the way up under the clock (viewport-fit=cover), so the strip behind the clock is drawn by the page itself and always has the page's own colour.
-// (Without this the phone paints that strip by itself and kept it black after a chat.) Everything that belongs to this lives under html.ios-cover in index.css. Off switch: open the app with ?nocover=1, on again with ?cover=1.
+// Phones only (iPhone installed to the Home Screen, and the Android app): the page is drawn all the way up under the clock / camera (viewport-fit=cover), with NO bar of its own behind the clock,
+// so everything that scrolls passes through that area. Top bars stop just below it (html.phone-edge in index.css; --sat is the height of that area).
+// The Android app (Capacitor) sees viewport-fit=cover and stops padding the page itself. Light theme: the clock icons are switched to dark on Android; an iPhone cannot switch them, so there the page keeps the system's black strip in Light theme.
+// Off switch: open the app with ?nocover=1 (back on with ?cover=1).
 (function () {
   try {
-    var q = window.location.search;
-    if (/[?&]nocover=1/.test(q)) localStorage.removeItem('noob_cover');
-    if (/[?&]cover=1/.test(q)) localStorage.setItem('noob_cover', '1');
+    var q = window.location.search, root = document.documentElement;
+    if (/[?&]nocover=1/.test(q)) localStorage.setItem('noob_nocover', '1');
+    if (/[?&]cover=1/.test(q)) localStorage.removeItem('noob_nocover');
+    if (localStorage.getItem('noob_nocover') === '1') return;
+    var cap = window.Capacitor, native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
     var ios = /iPhone|iPod/.test(navigator.userAgent) && navigator.standalone === true;
-    if (!ios || localStorage.getItem('noob_cover') !== '1') return;   // OFF unless switched on with ?cover=1 (it is being reworked)
+    var android = native && /Android/.test(navigator.userAgent);
+    var phone = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) && Math.min(screen.width, screen.height) <= 820;
+    if (!phone || !(ios || android)) return;
     var vp = document.querySelector('meta[name="viewport"]');
     if (vp && !/viewport-fit=cover/.test(vp.getAttribute('content') || '')) vp.setAttribute('content', (vp.getAttribute('content') || '') + ', viewport-fit=cover');
-    document.documentElement.classList.add('ios-cover');
+    var apply = function () {
+      var light = root.getAttribute('data-theme') === 'light';
+      if (ios) root.classList.toggle('phone-edge', !light);
+      else root.classList.add('phone-edge');
+      if (android) { try { cap.Plugins.SystemBars.setStyle({ style: light ? 'LIGHT' : 'DARK' }); } catch (e) { /* keeps the style from the app's settings */ } }
+    };
+    apply();
+    new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   } catch (e) { /* the page just stays as it was */ }
 })();
 

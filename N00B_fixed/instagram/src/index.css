@@ -1893,3 +1893,6 @@ html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[da
 
 /* Settings and activity: the bar holds only the back button (no title in it, also not after scrolling) */
 .nst-header .nst-late, .nst-header .nst-htitle.nst-late { display: none !important; }
+
+/* Android app (page under the clock): the middle box clips sideways only, so a profile cover can reach the very top of the screen instead of stopping below the clock */
+html.phone-edge[data-page="profile"] body main { overflow-x: clip; overflow-y: visible; }

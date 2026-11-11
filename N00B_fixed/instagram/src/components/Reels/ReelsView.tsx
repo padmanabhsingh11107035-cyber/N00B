@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { RepostButton } from '../Common/RepostButton';
 import React, { useState, useRef, useEffect } from 'react';
 import { linkify } from '../Common/Linkified';
 import { useSheetBox } from '../../utils/useVisualViewport';
@@ -1028,6 +1029,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 <span className="rv-count text-[13px] font-semibold leading-none">{reel.commentsCount}</span>
               </button>
             )}
+            <RepostButton kind="reel" id={reel.id} ownerId={reel.userId} currentUserId={currentUser.id} stacked iconClass="w-[29px] h-[29px]" />
             <button
               type="button"
               onClick={(e) => {

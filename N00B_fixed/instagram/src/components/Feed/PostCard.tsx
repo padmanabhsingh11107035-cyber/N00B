@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { RepostButton } from '../Common/RepostButton';
 import { linkify } from '../Common/Linkified';
 import { flushSync } from 'react-dom';
 import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
@@ -980,6 +981,8 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <MessageCircle className="w-6 h-6 stroke-current" />
               </button>
             )}
+
+            <RepostButton kind="post" id={post.id} ownerId={post.userId} currentUserId={currentUser.id} className="hover:text-zinc-300 transition-colors" iconClass="w-6 h-6" />
 
             {/* Share */}
             <button

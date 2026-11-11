@@ -18,6 +18,7 @@ import { installPageFrames } from './utils/pageFrames.ts';
 import { installKeyboardCover } from './utils/keyboardCover.ts';
 import { installKeyboardFill } from './utils/keyboardFill.ts';
 import { initStatusStrip } from './utils/statusStrip';
+import { initWebAutoUpdate } from './utils/webAutoUpdate';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
 import { startTextFit } from './utils/textFit.ts';
@@ -83,6 +84,7 @@ installKeyboardFill();         // the phone's see-through keyboard shows the col
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();
 initStatusStrip();
+initWebAutoUpdate();
 void initLanguage();
 startTextFit();   // a bar that runs out of room (top bar, bottom bar ...) takes back some of the bigger text until it fits
 import { startDoodleReveal } from './utils/doodleReveal';

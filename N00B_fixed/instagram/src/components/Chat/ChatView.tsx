@@ -225,7 +225,32 @@ const SWIPE_REPLY_THRESHOLD = 56;
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
 
-const renderMessageWithLinks = linkify;
+// A message's text: web links are blue links, and @name of a member of this chat is a blue name that opens that person's profile.
+const MENTION_RE = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_.]{1,30})/g;
+function renderMessageWithLinks(text: string, members: User[] = [], onOpen?: (u: User) => void): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  linkify(text).forEach((part, i) => {
+    if (typeof part !== 'string' || !members.length) { out.push(part); return; }
+    let last = 0;
+    let m: RegExpExecArray | null;
+    MENTION_RE.lastIndex = 0;
+    while ((m = MENTION_RE.exec(part)) !== null) {
+      const who = members.find((u) => (u.username || '').toLowerCase() === m![2].toLowerCase().replace(/\.+$/, ''));
+      if (!who) continue;
+      const nameLen = (who.username || '').length;
+      const start = m.index + m[1].length;
+      if (start > last) out.push(part.slice(last, start));
+      out.push(
+        <button key={`m${i}-${start}`} type="button" data-testid="chat-mention" onClick={(e) => { e.stopPropagation(); onOpen?.(who); }}
+          className="noob-link font-bold cursor-pointer bg-transparent border-0 p-0 align-baseline" style={{ textDecoration: 'none' }}>@{who.username}</button>
+      );
+      last = start + 1 + nameLen;
+      MENTION_RE.lastIndex = last;
+    }
+    out.push(last ? part.slice(last) : part);
+  });
+  return out;
+}
 
 // Chat colours saved before the black-and-white look (the old orange) are shown as white now.
 const oldAccent = (c?: string | null): string | undefined => (c && c.toLowerCase() === '#d97757' ? '#ffffff' : c || undefined);
@@ -262,6 +287,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showCloseFriendsPicker, setShowCloseFriendsPicker] = useState(false);
   const [instantsRefreshKey, setInstantsRefreshKey] = useState(0);
   const [inputText, setInputText] = useState('');
+  // @mention: the text after an "@" that is being typed (null when no one is being mentioned), and where that "@" is
+  const [mention, setMention] = useState<{ q: string; at: number } | null>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
   // Why the last message could not be sent (shown above the message box for a few seconds).
   const [sendError, setSendError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -952,8 +980,24 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // and schedules the matching "stopped" ping for ~3s after the last
   // keystroke, mirroring WhatsApp's own timing for when the indicator clears
   // on the other end.
+  const updateMention = (value: string, caret: number | null) => {
+    const upto = value.slice(0, caret ?? value.length);
+    const m = /(^|\s)@([A-Za-z0-9_.]*)$/.exec(upto);
+    setMention(m ? { q: m[2], at: upto.length - m[2].length - 1 } : null);
+  };
+  const pickMention = (u: User) => {
+    if (!mention) return;
+    const el = composerInputRef.current;
+    const caret = el?.selectionStart ?? inputText.length;
+    const next = inputText.slice(0, mention.at) + '@' + u.username + ' ' + inputText.slice(caret);
+    setInputText(next);
+    setMention(null);
+    const pos = mention.at + 1 + (u.username || '').length + 1;
+    window.setTimeout(() => { try { el?.focus(); el?.setSelectionRange(pos, pos); } catch { /* ignore */ } }, 0);
+  };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
+    updateMention(e.target.value, e.target.selectionStart);
     if (!activeChat) return;
 
     if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
@@ -2767,7 +2811,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         </div>
                       </div>
                     ) : m.text ? (
-                      <p translate="no" data-testid="msg-text" className={`leading-relaxed whitespace-pre-wrap break-words ${cs['chat.fontSize'] === 'small' ? 'text-[12px]' : cs['chat.fontSize'] === 'large' ? 'text-[17px]' : ''}`}>{renderMessageWithLinks(m.text)}</p>
+                      <p translate="no" data-testid="msg-text" className={`leading-relaxed whitespace-pre-wrap break-words ${cs['chat.fontSize'] === 'small' ? 'text-[12px]' : cs['chat.fontSize'] === 'large' ? 'text-[17px]' : ''}`}>{renderMessageWithLinks(m.text, activeChat?.participants || [], onNavigateToProfile)}</p>
                     ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile && !m.sharedPost ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
@@ -3294,6 +3338,27 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             ) : (
             <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 relative rounded-full bg-zinc-900/90 border border-white/10 px-1.5 py-1.5" data-testid="chat-composer">
+              {mention && (() => {
+                const q = mention.q.toLowerCase();
+                const list = (activeChat?.participants || [])
+                  .filter((u) => u.id !== currentUser.id && !u.isAi && ((u.username || '').toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q)))
+                  .slice(0, 40);
+                if (!list.length) return null;
+                return (
+                  <div className="absolute left-0 right-0 bottom-full mb-2 max-h-64 overflow-y-auto rounded-2xl bg-[#101314] border border-white/10 shadow-2xl p-1 z-40" data-testid="mention-list" role="listbox" aria-label="Mention someone">
+                    {list.map((u) => (
+                      <button key={u.id} type="button" role="option" data-testid="mention-option" onMouseDown={(e) => e.preventDefault()} onClick={() => pickMention(u)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-white/10 cursor-pointer">
+                        <img src={u.avatar} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                        <span className="min-w-0">
+                          <span className="block text-[14px] font-bold text-white truncate">{u.displayName || u.username}</span>
+                          <span className="block text-[12px] text-zinc-400 truncate">@{u.username}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
               <div className="relative">
                 <button
                   type="button"
@@ -3345,11 +3410,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
               <div className="chat-pill flex-1 min-w-0 flex items-center bg-black/60 border border-white/10 rounded-full pl-4 pr-1 py-1 focus-within:border-white/40 transition-colors">
                 <input
+                  ref={composerInputRef}
                   type="text"
                   placeholder="Aa"
                   aria-label="Message"
                   value={inputText}
                   onChange={handleInputChange}
+                  onKeyUp={(e) => { if (e.key !== 'Enter') updateMention(e.currentTarget.value, e.currentTarget.selectionStart); }}
+                  onClick={(e) => updateMention(e.currentTarget.value, e.currentTarget.selectionStart)}
                   className="w-full min-w-0 bg-transparent text-[15px] text-white placeholder-zinc-500 focus:outline-none py-1.5"
                 />
                 <button

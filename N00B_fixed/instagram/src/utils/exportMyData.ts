@@ -51,7 +51,7 @@ export function buildDataExport(user: ExportUser, posts: ExportUser[] = [], reel
   const links = [...(Array.isArray(user.externalLinks) ? user.externalLinks : []), ...(Array.isArray(user.customLinks) ? user.customLinks : [])]
     .filter((l: any) => l && l.url).map((l: any) => `  - ${l.title ? `${l.title}: ` : ''}${l.url}`);
   const social = user.socialLinks && typeof user.socialLinks === 'object'
-    ? Object.entries(user.socialLinks).filter(([, v]) => !!v).map(([k, v]) => `  - ${k.replace(/^./, (c) => c.toUpperCase())}: ${v}`)
+    ? Object.entries(user.socialLinks).filter(([k, v]) => !!v && k !== 'cover').map(([k, v]) => `  - ${k.replace(/^./, (c) => c.toUpperCase())}: ${v}`)
     : [];
   parts.push(section('ABOUT YOU', [
     line('Interests', user.interests),

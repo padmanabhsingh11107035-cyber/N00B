@@ -200,6 +200,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         businessCategory: accountType === 'business' ? businessCategory : undefined,
         interests,
         socialLinks: {
+          ...(currentUser.socialLinks || {}),
           twitter: socialTwitter.trim(),
           instagram: socialInstagram.trim(),
           discord: socialDiscord.trim(),

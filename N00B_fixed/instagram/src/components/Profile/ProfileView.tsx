@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { linkify } from '../Common/Linkified';
 import { SocialLinkButtons } from './SocialLinkButtons';
+import { ProfileCover } from './ProfileCover';
 import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
 import type { FunLocation } from '../../utils/funRoutes';
 import { isStaff } from '../../adminAccess';
@@ -684,7 +685,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
       <div className="relative mb-4">
-        <div className="flex items-center gap-2 mb-4 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
+        <div className="flex items-center gap-2 mb-3 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
           {isOwnProfile && onOpenCreate && (
             <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
           )}
@@ -909,13 +910,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         </div>
 
-        {/* Who this is: the picture on the left, the name, its badges and what kind of account it is on the right */}
-        <div className="flex items-center gap-4" data-testid="profile-identity">
+        {/* The wide cover: the person's own colours (or a photo they chose) */}
+        <ProfileCover user={targetUser} isOwn={isOwnProfile} onUpdated={handleProfileUpdated} />
+
+        {/* Who this is: the big picture sits on the lower edge of the cover, the name, its badges and what kind of account it is underneath */}
+        <div className="relative z-[1] flex flex-col gap-3 px-1 -mt-[54px]" data-testid="profile-identity">
           {/* The picture: tap for full screen. The note sits above it like a speech bubble; on your own profile a small + adds a story. */}
           <div className={`relative shrink-0 ${targetUser.statusNote ? 'mt-7' : ''}`}>
             <div className="relative cursor-pointer group" onClick={() => setShowFullscreenAvatar(true)} title="View profile picture full screen">
               <div
-                className={`w-[88px] h-[88px] sm:w-28 sm:h-28 rounded-full p-[3px] shadow-2xl transition-transform group-hover:scale-105 ${
+                style={{ boxShadow: '0 0 0 5px var(--page, #000), 0 10px 28px rgba(0,0,0,.35)' }}
+                className={`w-[108px] h-[108px] sm:w-32 sm:h-32 rounded-full p-[3px] transition-transform group-hover:scale-105 ${
                   isBusiness
                     ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(255,255,255,0.3)]'
                     : isPrivate
@@ -944,8 +949,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
 
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0">
               {targetUser.isVerified ? (
                 <VerifiedBadge size="md" />
@@ -1140,19 +1145,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="mt-3 flex items-center gap-2 w-full">
           {isOwnProfile ? (
             <>
+              {onOpenCreate && (
+                <button
+                  onClick={onOpenCreate}
+                  data-testid="profile-add-story"
+                  className="flex-1 min-w-0 py-2.5 px-3 rounded-xl bg-noob hover:brightness-110 text-black text-sm font-extrabold truncate cursor-pointer transition active:scale-[0.98] flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={3} /> Add to story
+                </button>
+              )}
               <button
                 onClick={() => setShowEditProfileModal(true)}
                 data-testid="profile-edit"
-                className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold truncate cursor-pointer transition-colors active:scale-[0.98]"
+                className="flex-1 min-w-0 py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold truncate cursor-pointer transition-colors active:scale-[0.98]"
               >
                 Edit profile
               </button>
               <button
                 onClick={() => setShowProfileQrModal(true)}
-                className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold truncate cursor-pointer transition-colors active:scale-[0.98]"
+                className="shrink-0 py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer transition-colors active:scale-95 flex items-center justify-center"
                 title="Share Profile"
+                aria-label="Share Profile"
               >
-                Share profile
+                <Share2 className="w-4 h-4" />
               </button>
             </>
           ) : isTargetBlocked ? (

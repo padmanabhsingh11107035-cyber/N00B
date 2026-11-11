@@ -44,6 +44,8 @@ export interface User {
     github?: string;
     spotify?: string;
     tiktok?: string;
+    /** the look of the profile cover: "g:<n>" a colour set, "c:#rrggbb" one colour, "i:<file key>" a photo */
+    cover?: string;
   };
   interests?: string[];
   externalLinks?: { title: string; url: string }[];

@@ -78,7 +78,7 @@ export const TextPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
         <>
           <Section title="Words">
             <textarea value={l.text} onChange={(e) => set({ text: e.target.value.slice(0, 600) }, `${l.id}:text`)} rows={3} aria-label="Text" data-testid="studio-text-input" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-2 text-[13px] text-white resize-none" />
-            <Chips options={Object.keys(SYSTEM_FONTS).map((f) => ({ id: f, label: f }))} value={l.font} onChange={(f) => set({ font: f })} />
+            <Chips scroll options={Object.keys(SYSTEM_FONTS).map((f) => ({ id: f, label: f }))} value={l.font} onChange={(f) => set({ font: f })} />
             <div className="flex gap-1.5">
               <Btn aria-pressed={l.bold} className={l.bold ? '!bg-fuchsia-500' : ''} onClick={() => set({ bold: !l.bold })}><b>B</b></Btn>
               <Btn aria-pressed={l.italic} className={l.italic ? '!bg-fuchsia-500' : ''} onClick={() => set({ italic: !l.italic })}><i>I</i></Btn>
@@ -130,7 +130,7 @@ export const StickersPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
         {tab === 'emoji' && (
           <>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search (love, fire, party…)" aria-label="Search emoji" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-[12px] text-white" />
-            {!q && <Chips options={EMOJI_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={cat} onChange={setCat} />}
+            {!q && <Chips scroll options={EMOJI_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))} value={cat} onChange={setCat} />}
             <div className="grid grid-cols-6 gap-1" data-testid="studio-emoji-grid">
               {items.map((i) => <button key={i.e + i.k} onClick={() => ctl.addSticker('emoji', i.e)} aria-label={`Add ${i.k}`} className="aspect-square rounded-lg hover:bg-white/10 text-[22px] flex items-center justify-center">{i.e}</button>)}
               {items.length === 0 && <p className="col-span-6 text-[11px] text-zinc-500">Nothing found.</p>}

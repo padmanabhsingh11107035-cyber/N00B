@@ -53,6 +53,14 @@ const Choice: React.FC<{
   const pct = side === 'a' ? pa : pb;
   const count = res ? (side === 'a' ? res.a : res.b) : 0;
   const lead = !!res && res.total > 0 && count > (side === 'a' ? res.b : res.a);
+  const track = voted && res ? (
+    <span className="fx-track" aria-hidden="true"><i className="transition-[width] duration-500 ease-out" style={{ width: revealed ? `${pct}%` : '0%' }} /></span>
+  ) : null;
+  const pick = mine ? (
+    <span className="fx-pick">
+      <Check className="w-3 h-3" aria-hidden="true" /> Your pick
+    </span>
+  ) : null;
   return (
     <button
       type="button"
@@ -61,21 +69,38 @@ const Choice: React.FC<{
       data-side={side}
       aria-label={voted ? `${label}: ${pct}% (${plural(count, 'vote', 'votes')})${mine ? ', your pick' : ''}` : `Vote ${label}`}
       aria-pressed={mine}
-      className={`fx-choice ${big ? 'is-big min-h-[176px]' : ''} ${voted ? `is-voted ${mine ? 'is-mine' : ''}` : 'hover:-translate-y-0.5 active:scale-[0.96]'} ${!voted && pending === side ? 'is-pending' : ''}`}
+      className={`fx-choice ${big ? 'is-big min-h-[176px]' : 'is-row'} ${voted ? `is-voted ${mine ? 'is-mine' : ''} ${lead ? 'is-lead' : ''}` : 'hover:-translate-y-0.5 active:scale-[0.96]'} ${!voted && pending === side ? 'is-pending' : ''}`}
     >
-      {voted && <span aria-hidden="true" className="fx-fill transition-[height] duration-700 ease-out" style={{ height: revealed ? `${pct}%` : '0%' }} />}
-      {mine && (
-        <span className="fx-pick">
-          <Check className="w-3 h-3" aria-hidden="true" /> Your pick
-        </span>
-      )}
-      <span className={`fx-emo ${big ? 'text-5xl' : 'text-3xl'}`} aria-hidden="true">{emoji || '•'}</span>
-      <span className="fx-lab break-words max-w-full">{label}</span>
-      {voted && res && (
-        <span className="fx-res">
-          <span className={`fx-pct ${lead ? '' : 'is-low'}`}>{pct}%</span>
-          <span className="fx-cnt">{plural(count, 'vote', 'votes')}</span>
-        </span>
+      {big ? (
+        <>
+          <span className="fx-choice-top">
+            <span className="fx-emo" aria-hidden="true">{emoji || ''}</span>
+            {pick}
+          </span>
+          <span className="fx-lab break-words max-w-full">{label}</span>
+          {voted && res && (
+            <span className="fx-res">
+              <span className="fx-pct">{pct}%</span>
+              <span className="fx-cnt">{plural(count, 'vote', 'votes')}</span>
+            </span>
+          )}
+          {track}
+        </>
+      ) : (
+        <>
+          <span className="fx-row-top">
+            <span className="fx-emo" aria-hidden="true">{emoji || ''}</span>
+            <span className="fx-lab break-words min-w-0">{label}</span>
+            {pick}
+            {voted && res && <span className="fx-pct">{pct}%</span>}
+          </span>
+          {voted && res && (
+            <>
+              {track}
+              <span className="fx-cnt">{plural(count, 'vote', 'votes')}</span>
+            </>
+          )}
+        </>
       )}
     </button>
   );
@@ -100,36 +125,34 @@ const QuestionCard: React.FC<{
   }, [has]);
   const mineHere = pending && pending.id === q.id ? pending.choice : null;
   const busy = !!pending && pending.id === q.id;
+  const removeBtn = canManage ? (
+    <button type="button" onClick={() => onRemove(q)} aria-label={armed ? 'Tap again to remove this question' : 'Remove this question'} className={`fx-act ${armed ? 'is-warn' : ''}`}>
+      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> {armed ? 'Tap again' : 'Remove'}
+    </button>
+  ) : null;
   const inner = (
     <>
       <div className="fx-duel-head">
-        <span className={`fx-chip ${big ? 'is-hot' : ''}`}>
-          {big && <Zap className="w-3 h-3" aria-hidden="true" />}
-          {title ?? dayLabel(q.day)}
-        </span>
-        <span className="flex items-center gap-2">
-          {big && <span className="fx-t11 fx-muted">{dayLabel(q.day)}</span>}
-          {canManage && (
-            <button type="button" onClick={() => onRemove(q)} aria-label={armed ? 'Tap again to remove this question' : 'Remove this question'} className={`fx-act ${armed ? 'is-warn' : ''}`} style={{ height: 28, fontSize: 11 }}>
-              <Trash2 className="w-3 h-3" aria-hidden="true" /> {armed ? 'Tap again' : 'Remove'}
-            </button>
-          )}
-        </span>
+        <span className={big ? 'fx-kicker' : 'fx-day'}>{title ?? dayLabel(q.day)}</span>
+        {big && <span className="fx-day">{dayLabel(q.day)}</span>}
       </div>
       <div className={`fx-duel ${has ? 'is-done' : ''}`}>
         <Choice side="a" q={q} big={big} revealed={revealed} pending={mineHere} disabled={busy} onPick={() => onVote(q, 'a')} />
         <Choice side="b" q={q} big={big} revealed={revealed} pending={mineHere} disabled={busy} onPick={() => onVote(q, 'b')} />
-        <span aria-hidden="true" className="fx-vs">OR</span>
+        <span aria-hidden="true" className="fx-vs">or</span>
       </div>
-      <p className="fx-duel-foot" aria-live="polite">
-        {q.results
-          ? `${plural(q.results.total, 'vote', 'votes')} in total`
-          : 'Tap a side to vote and see what everyone chose.'}
-      </p>
+      <div className="fx-duel-foot">
+        <p aria-live="polite">
+          {q.results
+            ? `${plural(q.results.total, 'vote', 'votes')} in total`
+            : big ? 'Tap a side to vote and see what everyone chose.' : 'Tap a side to vote.'}
+        </p>
+        {removeBtn}
+      </div>
     </>
   );
   return big ? (
-    <div aria-label={`${q.optionA} or ${q.optionB}`} className="fx-in">{inner}</div>
+    <div aria-label={`${q.optionA} or ${q.optionB}`} className="fx-hero">{inner}</div>
   ) : (
     <Card ariaLabel={`${q.optionA} or ${q.optionB}`} className="fx-tcard">{inner}</Card>
   );
@@ -278,84 +301,89 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
 
   return (
     <div className="fx-stack">
-      {/* the intro: what this is, plus share */}
-      <div className="fx-note fx-in">
-        <p className="fx-grow fx-t13 fx-muted">One question a day. Pick a side, then see how everyone voted. You can vote once on each question.</p>
-        <button type="button" onClick={() => void share()} aria-label="Share This or That" className="fx-ib" style={{ width: 40 }}>
-          <Share2 className="w-4 h-4" aria-hidden="true" />
-        </button>
-      </div>
-
       {status === 'loading' && <SkeletonCards count={2} label="Loading questions" />}
       {status === 'error' && <ErrorState text={errorText} onRetry={() => void load('initial')} />}
 
       {status === 'ready' && (
         <>
+          <div className="fx-section-head">
+            <p className="fx-intro">One question a day. Pick a side, then see how everyone voted. You can vote once on each question.</p>
+            <button type="button" onClick={() => void share()} aria-label="Share This or That" className="fx-ib is-quiet">
+              <Share2 className="w-[18px] h-[18px]" aria-hidden="true" />
+            </button>
+          </div>
+
           {today ? (
-            <section aria-label="Today's question" className="fx-stack-sm">
+            <section aria-label="Today's question" className="fx-section">
               <QuestionCard q={today} big title={today.isToday ? "Today's question" : 'Latest question'} pending={pending} canManage={canManage} armed={armed === today.id} onVote={vote} onRemove={remove} />
               {!loggedIn && !today.myVote && (
-                <p className="fx-center fx-t13 fx-muted">
-                  <button type="button" onClick={() => onLogin?.()} className="underline underline-offset-[3px] fx-bold" style={{ color: 'var(--fx-ink)' }}>Log in</button> to vote and see the results.
+                <p className="fx-t13 fx-muted">
+                  <button type="button" onClick={() => onLogin?.()} className="fx-link">Log in</button> to vote and see the results.
                 </p>
               )}
             </section>
           ) : (
-            <EmptyState icon={<Zap className="w-8 h-8" aria-hidden="true" />} title="No question yet" hint="A new This or That appears here every day." />
+            <EmptyState icon={<Zap className="w-6 h-6" aria-hidden="true" />} title="No question yet" hint="A new This or That appears here every day." />
           )}
 
-          {canManage && (
-            <section aria-label="Manage questions" className="fx-stack-sm">
-              <button type="button" onClick={() => setShowForm((v) => !v)} aria-expanded={showForm} className="fx-btn-ghost">
-                {showForm ? <X className="w-4 h-4" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
-                {showForm ? 'Close' : 'Add a question'}
-              </button>
-              {showForm && (
-                <Card>
-                  <form onSubmit={create} className="fx-stack-sm">
-                    <div className="grid grid-cols-[3.5rem_1fr] gap-2">
-                      <input aria-label="Emoji for the first choice" value={form.emojiA} onChange={set('emojiA')} maxLength={8} placeholder={'😀'} className={`${inputCls} text-center`} />
-                      <input aria-label="First choice" value={form.optionA} onChange={set('optionA')} maxLength={40} required placeholder="First choice" className={inputCls} />
-                      <input aria-label="Emoji for the second choice" value={form.emojiB} onChange={set('emojiB')} maxLength={8} placeholder={'😎'} className={`${inputCls} text-center`} />
-                      <input aria-label="Second choice" value={form.optionB} onChange={set('optionB')} maxLength={40} required placeholder="Second choice" className={inputCls} />
-                    </div>
-                    <label className="fx-label">
-                      Show it on (leave empty for today)
-                      <input type="date" value={form.day} onChange={set('day')} className={inputCls} style={{ marginTop: 6 }} />
-                    </label>
-                    <button type="submit" disabled={saving || !form.optionA.trim() || !form.optionB.trim()} className="fx-btn">
-                      <BusyLabel busy={saving}>Add question</BusyLabel>
-                    </button>
-                  </form>
-                </Card>
-              )}
-              {upcoming.length > 0 && (
-                <div className="fx-stack-sm" style={{ gap: 8 }}>
-                  <p className="fx-h2"><CalendarClock className="w-3.5 h-3.5" aria-hidden="true" /> Coming up ({upcoming.length})</p>
-                  {upcoming.slice(0, 5).map((q) => (
-                    <div key={q.id} className="fx-upcoming">
-                      <span className="fx-t11 fx-muted shrink-0" style={{ width: 78 }}>{dayLabel(q.day)}</span>
-                      <span className="fx-grow fx-trunc fx-t13 fx-bold">{q.emojiA} {q.optionA} <span className="fx-faint" style={{ fontWeight: 400 }}>or</span> {q.emojiB} {q.optionB}</span>
-                      <button type="button" onClick={() => void remove(q)} aria-label={armed === q.id ? 'Tap again to remove' : `Remove ${q.optionA} or ${q.optionB}`} className={`fx-act shrink-0 ${armed === q.id ? 'is-warn' : ''}`} style={{ height: 28, fontSize: 11 }}>{armed === q.id ? 'Tap again' : 'Remove'}</button>
-                    </div>
-                  ))}
-                  {upcoming.length > 5 && <p className="fx-t11 fx-faint fx-center">and {upcoming.length - 5} more scheduled</p>}
+          {previous.length > 0 && (
+            <section aria-label="Previous questions" className="fx-section">
+              <h2 className="fx-h2">Previous days</h2>
+              <div className="fx-list">
+                {previous.map((q) => (
+                  <QuestionCard key={q.id} q={q} pending={pending} canManage={canManage} armed={armed === q.id} onVote={vote} onRemove={remove} />
+                ))}
+              </div>
+              {hasMore && (
+                <div className="fx-more">
+                  <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto">
+                    <BusyLabel busy={loadingMore}>{loadingMore ? 'Loading' : <><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</>}</BusyLabel>
+                  </button>
                 </div>
               )}
             </section>
           )}
 
-          {previous.length > 0 && (
-            <section aria-label="Previous questions" className="fx-stack-sm" style={{ gap: 14 }}>
-              <h2 className="fx-h2">Previous questions</h2>
-              {previous.map((q) => (
-                <QuestionCard key={q.id} q={q} pending={pending} canManage={canManage} armed={armed === q.id} onVote={vote} onRemove={remove} />
-              ))}
-              {hasMore && (
-                <div className="flex justify-center pt-1">
-                  <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto">
-                    <BusyLabel busy={loadingMore}>{loadingMore ? 'Loading' : <><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</>}</BusyLabel>
+          {canManage && (
+            <section aria-label="Manage questions" className="fx-manage">
+              <div className="fx-manage-head">
+                <h2 className="fx-h2">Manage questions</h2>
+                <span className="fx-tag">Managers only</span>
+              </div>
+              <button type="button" onClick={() => setShowForm((v) => !v)} aria-expanded={showForm} className="fx-btn-ghost">
+                {showForm ? <X className="w-4 h-4" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
+                {showForm ? 'Close' : 'Add a question'}
+              </button>
+              {showForm && (
+                <form onSubmit={create} className="fx-form">
+                  <div className="fx-pair">
+                    <input aria-label="Emoji for the first choice" value={form.emojiA} onChange={set('emojiA')} maxLength={8} placeholder={'😀'} className={`${inputCls} text-center`} />
+                    <input aria-label="First choice" value={form.optionA} onChange={set('optionA')} maxLength={40} required placeholder="First choice" className={inputCls} />
+                    <input aria-label="Emoji for the second choice" value={form.emojiB} onChange={set('emojiB')} maxLength={8} placeholder={'😎'} className={`${inputCls} text-center`} />
+                    <input aria-label="Second choice" value={form.optionB} onChange={set('optionB')} maxLength={40} required placeholder="Second choice" className={inputCls} />
+                  </div>
+                  <label className="fx-label">
+                    Show it on (leave empty for today)
+                    <input type="date" value={form.day} onChange={set('day')} className={inputCls} style={{ marginTop: 8 }} />
+                  </label>
+                  <button type="submit" disabled={saving || !form.optionA.trim() || !form.optionB.trim()} className="fx-btn">
+                    <BusyLabel busy={saving}>Add question</BusyLabel>
                   </button>
+                </form>
+              )}
+              {upcoming.length > 0 && (
+                <div className="fx-upcoming-list">
+                  <p className="fx-sublabel"><CalendarClock className="w-3.5 h-3.5" aria-hidden="true" /> Coming up ({upcoming.length})</p>
+                  {upcoming.slice(0, 5).map((q) => (
+                    <div key={q.id} className="fx-upcoming">
+                      <span className="fx-grow">
+                        <span className="fx-day block">{dayLabel(q.day)}</span>
+                        <span className="block fx-trunc fx-t13 fx-bold">{q.emojiA} {q.optionA} <span className="fx-faint" style={{ fontWeight: 400 }}>or</span> {q.emojiB} {q.optionB}</span>
+                      </span>
+                      <button type="button" onClick={() => void remove(q)} aria-label={armed === q.id ? 'Tap again to remove' : `Remove ${q.optionA} or ${q.optionB}`} className={`fx-act shrink-0 ${armed === q.id ? 'is-warn' : ''}`}>{armed === q.id ? 'Tap again' : 'Remove'}</button>
+                    </div>
+                  ))}
+                  {upcoming.length > 5 && <p className="fx-t11 fx-faint">and {upcoming.length - 5} more scheduled</p>}
                 </div>
               )}
             </section>

@@ -152,43 +152,41 @@ const PollCard: React.FC<{
 
   return (
     <Card ariaLabel={`Poll: ${poll.question}`} className="fx-poll">
-      <div className="fx-row" style={{ gap: 10 }}>
-        <button type="button" onClick={() => onOpenProfile?.(asUser(poll.creator))} className="fx-row fx-grow text-left" style={{ gap: 10 }} aria-label={`Open ${poll.creator.displayName}'s profile`}>
-          {poll.creator.avatar ? <img src={poll.creator.avatar} alt="" referrerPolicy="no-referrer" className="fx-pava" /> : <span className="fx-pava is-blank" aria-hidden="true" />}
-          <span className="fx-grow">
-            <span className="flex items-center gap-1 fx-t13 fx-black fx-trunc">{poll.creator.displayName}{poll.creator.isVerified && <VerifiedBadge size="xs" />}</span>
-            <span className="block fx-t11 fx-muted fx-trunc">@{poll.creator.username} · {timeAgo(poll.createdAt)}</span>
-          </span>
-        </button>
-        <span className={`fx-chip ${active ? 'is-cool' : ''}`}><Clock className="w-3 h-3" aria-hidden="true" />{chip}</span>
-      </div>
+      <button type="button" onClick={() => onOpenProfile?.(asUser(poll.creator))} className="fx-poll-by text-left" aria-label={`Open ${poll.creator.displayName}'s profile`}>
+        {poll.creator.avatar ? <img src={poll.creator.avatar} alt="" referrerPolicy="no-referrer" className="fx-pava" /> : <span className="fx-pava is-blank" aria-hidden="true" />}
+        <span className="fx-grow">
+          <span className="fx-by-name fx-trunc">{poll.creator.displayName}{poll.creator.isVerified && <VerifiedBadge size="xs" />}</span>
+          <span className="block fx-t11 fx-muted fx-trunc">@{poll.creator.username} · {timeAgo(poll.createdAt)}</span>
+        </span>
+      </button>
 
       {onOpen ? (
-        <button type="button" onClick={() => onOpen(poll)} className="fx-pq break-words [overflow-wrap:anywhere]">{poll.question}</button>
+        <button type="button" onClick={() => onOpen(poll)} className="fx-pq text-left break-words [overflow-wrap:anywhere]">{poll.question}</button>
       ) : (
-        <h2 className="fx-pq break-words [overflow-wrap:anywhere]" style={{ fontSize: 22, textTransform: 'none', letterSpacing: '-.02em' }}>{poll.question}</h2>
+        <h2 className="fx-pq break-words [overflow-wrap:anywhere]">{poll.question}</h2>
       )}
 
       <div className="fx-opts" role={interactive ? 'radiogroup' : undefined} aria-label={interactive ? 'Options' : undefined}>
         {poll.options.map((o, i) => {
           const mine = poll.myVote === o.id;
           const on = picked === o.id;
+          const lead = counts[i] === top && top > 0;
           const inner = (
             <>
-              {poll.resultsShown && <span aria-hidden="true" className={`fx-optbar transition-[width] duration-700 ease-out ${counts[i] === top && top > 0 ? 'is-top' : ''}`} style={{ width: revealed ? `${pcts[i]}%` : '0%', transitionDelay: `${Math.min(i, 7) * 60}ms` }} />}
-              <span className="relative z-10 flex items-center gap-2.5 min-w-0">
-                {interactive ? <span className={`fx-radio ${on ? 'is-on' : ''}`} aria-hidden="true">{on && <Check className="w-3 h-3" />}</span> : mine ? <Check className="w-4 h-4 shrink-0" style={{ color: 'var(--fx-c)' }} aria-hidden="true" /> : null}
+              {poll.resultsShown && <span aria-hidden="true" className={`fx-optbar transition-[width] duration-500 ease-out ${lead ? 'is-top' : ''}`} style={{ width: revealed ? `${pcts[i]}%` : '0%', transitionDelay: `${Math.min(i, 7) * 50}ms` }} />}
+              <span className="fx-opt-main">
+                {interactive ? <span className={`fx-radio ${on ? 'is-on' : ''}`} aria-hidden="true">{on && <Check className="w-3 h-3" />}</span> : mine ? <Check className="w-4 h-4 shrink-0 fx-mine-ic" aria-hidden="true" /> : null}
                 <span className="fx-opt-label break-words [overflow-wrap:anywhere] min-w-0">{o.label}</span>
               </span>
               {poll.resultsShown && (
-                <span className="relative z-10 shrink-0 text-right" style={{ lineHeight: 1.15 }}>
-                  <span className="block fx-opt-pct">{pcts[i]}%</span>
-                  <span className="block fx-t11 fx-muted" style={{ fontSize: 10.5, fontVariantNumeric: 'tabular-nums' }}>{plural(counts[i], 'vote', 'votes')}</span>
+                <span className="fx-opt-num">
+                  <span className="fx-opt-pct">{pcts[i]}%</span>
+                  <span className="fx-opt-cnt">{plural(counts[i], 'vote', 'votes')}</span>
                 </span>
               )}
             </>
           );
-          const cls = `fx-opt ${on ? 'is-on' : ''} ${mine ? 'is-mine' : ''}`;
+          const cls = `fx-opt ${on ? 'is-on' : ''} ${mine ? 'is-mine' : ''} ${lead ? 'is-lead' : ''}`;
           return interactive ? (
             <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setPicked(o.id)} className={cls}>{inner}</button>
           ) : (
@@ -198,31 +196,34 @@ const PollCard: React.FC<{
       </div>
 
       {interactive && (
-        <button type="button" onClick={() => void vote()} disabled={!picked || voting} className="fx-btn" style={{ marginTop: 14 }}>
+        <button type="button" onClick={() => void vote()} disabled={!picked || voting} className="fx-btn">
           <BusyLabel busy={voting}>{loggedIn ? 'Vote' : 'Log in to vote'}</BusyLabel>
         </button>
       )}
 
-      <p className="fx-poll-foot" aria-live="polite">
-        {poll.resultsShown && poll.totalVotes !== null ? <><BarChart3 className="w-3 h-3" aria-hidden="true" />{plural(poll.totalVotes, 'vote', 'votes')} in total</> : voted ? <><Lock className="w-3 h-3" aria-hidden="true" />Your vote is in. The results appear when the poll ends.</> : poll.resultsVisibility === 'after_end' ? <><Lock className="w-3 h-3" aria-hidden="true" />The results appear when the poll ends.</> : <><Lock className="w-3 h-3" aria-hidden="true" />The results appear after you vote.</>}
-      </p>
+      <div className="fx-poll-foot">
+        <p aria-live="polite">
+          {poll.resultsShown && poll.totalVotes !== null ? <><BarChart3 className="w-3.5 h-3.5" aria-hidden="true" />{plural(poll.totalVotes, 'vote', 'votes')} in total</> : voted ? <><Lock className="w-3.5 h-3.5" aria-hidden="true" />Your vote is in. The results appear when the poll ends.</> : poll.resultsVisibility === 'after_end' ? <><Lock className="w-3.5 h-3.5" aria-hidden="true" />The results appear when the poll ends.</> : <><Lock className="w-3.5 h-3.5" aria-hidden="true" />The results appear after you vote.</>}
+        </p>
+        <span className={`fx-time ${active ? 'is-live' : ''}`}><Clock className="w-3.5 h-3.5" aria-hidden="true" />{chip}</span>
+      </div>
 
       <div className="fx-acts fx-poll-acts">
-        <button type="button" onClick={() => setShareOpen((v) => !v)} aria-expanded={shareOpen} className={small}><Share2 className="w-3 h-3" aria-hidden="true" />Share</button>
-        {canRemove && <button type="button" onClick={() => void remove()} disabled={busy} className={`${small} ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3 h-3" aria-hidden="true" />{armed ? 'Tap again' : poll.isMine ? 'Remove' : 'Remove (admin)'}</button>}
-        {!poll.isMine && <button type="button" onClick={() => (loggedIn ? setReporting((v) => !v) : onLogin?.())} aria-expanded={reporting} className={small}><Flag className="w-3 h-3" aria-hidden="true" />Report</button>}
+        <button type="button" onClick={() => setShareOpen((v) => !v)} aria-expanded={shareOpen} className={small}><Share2 className="w-3.5 h-3.5" aria-hidden="true" />Share</button>
+        {canRemove && <button type="button" onClick={() => void remove()} disabled={busy} className={`${small} ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed ? 'Tap again' : poll.isMine ? 'Remove' : 'Remove (admin)'}</button>}
+        {!poll.isMine && <button type="button" onClick={() => (loggedIn ? setReporting((v) => !v) : onLogin?.())} aria-expanded={reporting} className={small}><Flag className="w-3.5 h-3.5" aria-hidden="true" />Report</button>}
       </div>
 
       {shareOpen && (
         <div className="fx-subpanel fx-acts" role="group" aria-label="Share this poll">
-          <button type="button" onClick={() => void copy()} className={small}><Link2 className="w-3 h-3" aria-hidden="true" />Copy link</button>
-          <button type="button" onClick={() => void shareLink()} className={small}><Share2 className="w-3 h-3" aria-hidden="true" />Send to friends</button>
-          <button type="button" onClick={() => void toStory()} disabled={busy} className={small}><ImageIcon className="w-3 h-3" aria-hidden="true" />Add to my Story</button>
-          <button type="button" onClick={() => void toPost()} disabled={busy} className={small}><FileImage className="w-3 h-3" aria-hidden="true" />Post on my profile</button>
+          <button type="button" onClick={() => void copy()} className={small}><Link2 className="w-3.5 h-3.5" aria-hidden="true" />Copy link</button>
+          <button type="button" onClick={() => void shareLink()} className={small}><Share2 className="w-3.5 h-3.5" aria-hidden="true" />Send to friends</button>
+          <button type="button" onClick={() => void toStory()} disabled={busy} className={small}><ImageIcon className="w-3.5 h-3.5" aria-hidden="true" />Add to my Story</button>
+          <button type="button" onClick={() => void toPost()} disabled={busy} className={small}><FileImage className="w-3.5 h-3.5" aria-hidden="true" />Post on my profile</button>
         </div>
       )}
       {reporting && (
-        <div className="fx-subpanel fx-stack-sm" style={{ gap: 10 }} role="group" aria-label="Why are you reporting this poll?">
+        <div className="fx-subpanel" role="group" aria-label="Why are you reporting this poll?">
           <p className="fx-t13 fx-muted">Why are you reporting it?</p>
           <div className="fx-acts">{REPORT_REASONS.map((r) => <button key={r} type="button" onClick={() => void report(r)} disabled={busy} className={small}>{r}</button>)}</div>
         </div>
@@ -258,43 +259,49 @@ const CreateForm: React.FC<{ onCreated: (p: Poll) => void; onCancel: () => void;
   };
 
   return (
-    <Card ariaLabel="Create a poll">
-      <form onSubmit={submit} className="fx-stack-sm" style={{ gap: 18 }}>
-        <div className="fx-row" style={{ justifyContent: 'space-between' }}>
-          <h2 className="fx-black" style={{ fontSize: 20, letterSpacing: '-.02em' }}>Create a poll</h2>
-          <button type="button" onClick={onCancel} aria-label="Close" className="fx-ib" style={{ width: 36, height: 36 }}><X className="w-4 h-4" aria-hidden="true" /></button>
-        </div>
-        <div>
-          <label htmlFor="poll-q" className="fx-label">Your question</label>
-          <textarea id="poll-q" value={question} onChange={(e) => { const c = Array.from(e.target.value); setQuestion(c.length > POLL_QUESTION_MAX ? c.slice(0, POLL_QUESTION_MAX).join('') : e.target.value); }} rows={2} placeholder="What do you want to ask?" className="fx-input" style={{ marginTop: 6 }} />
-          <p className="fx-t11 fx-faint" style={{ textAlign: 'right', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{codePoints(question)} / {POLL_QUESTION_MAX}</p>
-        </div>
-        <div className="fx-stack-sm" style={{ gap: 8 }}>
-          <p className="fx-label">Options (2 to {POLL_MAX_OPTIONS})</p>
-          {options.map((o, i) => (
-            <div key={i} className="fx-row" style={{ gap: 8 }}>
-              <input aria-label={`Option ${i + 1}`} value={o} maxLength={POLL_OPTION_MAX} onChange={(e) => setOptions((list) => list.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Option ${i + 1}`} className={inputCls} />
-              {options.length > 2 && <button type="button" onClick={() => setOptions((list) => list.filter((_, j) => j !== i))} aria-label={`Remove option ${i + 1}`} className="fx-ib shrink-0" style={{ width: 48, height: 48, borderRadius: 16 }}><X className="w-4 h-4" aria-hidden="true" /></button>}
+    <div className="fx-sheet-wrap">
+      <div className="fx-scrim" onClick={onCancel} aria-hidden="true" />
+      <div className="fx-sheet" role="dialog" aria-modal="true" aria-label="Create a poll">
+        <div className="fx-sheet-grab" aria-hidden="true" />
+        <form onSubmit={submit} className="fx-sheet-form">
+          <div className="fx-sheet-head">
+            <h2 className="fx-sheet-title">Create a poll</h2>
+            <button type="button" onClick={onCancel} aria-label="Close" className="fx-ib is-quiet"><X className="w-5 h-5" aria-hidden="true" /></button>
+          </div>
+          <div className="fx-field">
+            <label htmlFor="poll-q" className="fx-label">Your question</label>
+            <textarea id="poll-q" value={question} onChange={(e) => { const c = Array.from(e.target.value); setQuestion(c.length > POLL_QUESTION_MAX ? c.slice(0, POLL_QUESTION_MAX).join('') : e.target.value); }} rows={2} placeholder="What do you want to ask?" className="fx-input" />
+            <p className="fx-count">{codePoints(question)} / {POLL_QUESTION_MAX}</p>
+          </div>
+          <div className="fx-field">
+            <p className="fx-label">Options (2 to {POLL_MAX_OPTIONS})</p>
+            {options.map((o, i) => (
+              <div key={i} className="fx-optrow">
+                <input aria-label={`Option ${i + 1}`} value={o} maxLength={POLL_OPTION_MAX} onChange={(e) => setOptions((list) => list.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Option ${i + 1}`} className={inputCls} />
+                {options.length > 2 && <button type="button" onClick={() => setOptions((list) => list.filter((_, j) => j !== i))} aria-label={`Remove option ${i + 1}`} className="fx-ib is-field shrink-0"><X className="w-4 h-4" aria-hidden="true" /></button>}
+              </div>
+            ))}
+            {options.length < POLL_MAX_OPTIONS && <button type="button" onClick={() => setOptions((list) => [...list, ''])} className="fx-textbtn"><Plus className="w-4 h-4" aria-hidden="true" />Add an option</button>}
+          </div>
+          <div className="fx-field">
+            <p className="fx-label" id="poll-dur">How long should it run?</p>
+            <div className="fx-chips" role="radiogroup" aria-labelledby="poll-dur">
+              {DURATIONS.map((d) => <button key={d.minutes} type="button" role="radio" aria-checked={minutes === d.minutes} onClick={() => setMinutes(d.minutes)} className="fx-pill">{d.label}</button>)}
             </div>
-          ))}
-          {options.length < POLL_MAX_OPTIONS && <button type="button" onClick={() => setOptions((list) => [...list, ''])} className="fx-act" style={{ alignSelf: 'flex-start', height: 38, borderStyle: 'dashed' }}><Plus className="w-3.5 h-3.5" aria-hidden="true" />Add an option</button>}
-        </div>
-        <div>
-          <p className="fx-label" id="poll-dur">How long should it run?</p>
-          <div className="fx-fieldset" role="radiogroup" aria-labelledby="poll-dur">
-            {DURATIONS.map((d) => <button key={d.minutes} type="button" role="radio" aria-checked={minutes === d.minutes} onClick={() => setMinutes(d.minutes)} className="fx-pill">{d.label}</button>)}
           </div>
-        </div>
-        <div>
-          <p className="fx-label" id="poll-res">When are the results shown?</p>
-          <div className="fx-fieldset grid grid-cols-3" role="radiogroup" aria-labelledby="poll-res">
-            {RESULT_RULES.map((r) => <button key={r.id} type="button" role="radio" aria-checked={results === r.id} onClick={() => setResults(r.id)} className="fx-rule"><span className="block fx-t13 fx-black">{r.label}</span><small>{r.hint}</small></button>)}
+          <div className="fx-field">
+            <p className="fx-label" id="poll-res">When are the results shown?</p>
+            <div className="fx-rules" role="radiogroup" aria-labelledby="poll-res">
+              {RESULT_RULES.map((r) => <button key={r.id} type="button" role="radio" aria-checked={results === r.id} onClick={() => setResults(r.id)} className="fx-rule"><span className="fx-rule-t">{r.label}</span><small>{r.hint}</small></button>)}
+            </div>
           </div>
-        </div>
-        <button type="submit" disabled={!ready} className="fx-btn"><BusyLabel busy={saving}>Create poll</BusyLabel></button>
-        <p className="fx-t11 fx-faint fx-center">Polls are public. Everyone sees your name on it, but nobody sees who voted for what.</p>
-      </form>
-    </Card>
+          <p className="fx-t11 fx-faint">Polls are public. Everyone sees your name on it, but nobody sees who voted for what.</p>
+          <div className="fx-sheet-foot">
+            <button type="submit" disabled={!ready} className="fx-btn"><BusyLabel busy={saving}>Create poll</BusyLabel></button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 
@@ -377,10 +384,10 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
 
   if (target) {
     return (
-      <div className="fx-stack-sm" style={{ gap: 14 }}>
-        <button type="button" onClick={() => onOpenFeature({ feature: 'polls' })} className="fx-act" style={{ alignSelf: 'flex-start', height: 38 }}><ArrowLeft className="w-4 h-4" aria-hidden="true" />All polls</button>
+      <div className="fx-stack">
+        <button type="button" onClick={() => onOpenFeature({ feature: 'polls' })} className="fx-textbtn"><ArrowLeft className="w-4 h-4" aria-hidden="true" />All polls</button>
         {single === undefined && <SkeletonCards count={1} label="Loading the poll" />}
-        {single === null && <EmptyState icon={<BarChart3 className="w-8 h-8" aria-hidden="true" />} title="This poll is not available" hint="It may have been removed, or the link is not right." />}
+        {single === null && <EmptyState icon={<BarChart3 className="w-6 h-6" aria-hidden="true" />} title="This poll is not available" hint="It may have been removed, or the link is not right." />}
         {single && <PollCard poll={single} {...cardProps} />}
         {toast}
       </div>
@@ -390,47 +397,51 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
   const tabCls = (_on: boolean) => 'fx-seg-btn';
   return (
     <div className="fx-stack">
-      <div className="fx-note fx-in">
-        <p className="fx-grow fx-t13 fx-muted">Ask the community, vote once, and watch the results arrive.</p>
-        <button type="button" onClick={() => (loggedIn ? setCreating((v) => !v) : (say('Log in to create a poll.', 'err'), onLogin?.()))} aria-expanded={creating} className="fx-btn is-sm shrink-0" style={{ height: 42 }}><Plus className="w-4 h-4" aria-hidden="true" />Create poll</button>
-      </div>
-
-      {creating && <CreateForm say={say} onCancel={() => setCreating(false)} onCreated={(p) => { setCreating(false); setTab('mine'); setItems((l) => [p, ...l]); void load('initial'); }} />}
-
       <div className="fx-seg" role="tablist" aria-label="Polls">
         <button type="button" role="tab" aria-selected={tab === 'active'} onClick={() => setTab('active')} className={tabCls(tab === 'active')}>Active</button>
         <button type="button" role="tab" aria-selected={tab === 'ended'} onClick={() => setTab('ended')} className={tabCls(tab === 'ended')}>Ended</button>
         <button type="button" role="tab" aria-selected={tab === 'mine'} onClick={() => (loggedIn ? setTab('mine') : (say('Log in to see your polls.', 'err'), onLogin?.()))} className={tabCls(tab === 'mine')}>My polls</button>
       </div>
+      <p className="fx-intro">Ask the community, vote once, and watch the results arrive.</p>
+
+      {creating && <CreateForm say={say} onCancel={() => setCreating(false)} onCreated={(p) => { setCreating(false); setTab('mine'); setItems((l) => [p, ...l]); void load('initial'); }} />}
 
       {status === 'loading' && <SkeletonCards count={2} label="Loading polls" />}
       {status === 'error' && <ErrorState text={errorText} onRetry={() => void load('initial')} />}
       {status === 'ready' && items.length === 0 && (
         <EmptyState
-          icon={<BarChart3 className="w-8 h-8" aria-hidden="true" />}
+          icon={<BarChart3 className="w-6 h-6" aria-hidden="true" />}
           title={tab === 'active' ? 'No active polls right now' : tab === 'ended' ? 'No finished polls yet' : 'You have not made a poll yet'}
           hint={tab === 'mine' ? 'Ask the community something. It takes a minute.' : 'Be the first: create a poll and share it with friends.'}
-          action={<button type="button" onClick={() => (loggedIn ? setCreating(true) : onLogin?.())} className="fx-btn is-auto">Create poll</button>}
         />
       )}
-      {status === 'ready' && items.map((p) => <PollCard key={p.id} poll={p} {...cardProps} onOpen={openPoll} />)}
+      {status === 'ready' && items.length > 0 && <div className="fx-list">{items.map((p) => <PollCard key={p.id} poll={p} {...cardProps} onOpen={openPoll} />)}</div>}
       {status === 'ready' && hasMore && (
-        <div className="flex justify-center">
+        <div className="fx-more">
           <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto"><BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel></button>
         </div>
       )}
 
       {canManage && reports.length > 0 && (
-        <section aria-label="Reported polls" className="fx-stack-sm" style={{ gap: 14 }}>
-          <h2 className="fx-h2"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported polls ({reports.length})</h2>
+        <section aria-label="Reported polls" className="fx-manage">
+          <div className="fx-manage-head">
+            <h2 className="fx-h2"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported polls ({reports.length})</h2>
+            <span className="fx-tag">Managers only</span>
+          </div>
           {reports.map((r) => (
-            <div key={r.poll.id} className="fx-stack-sm" style={{ gap: 8 }}>
-              <p className="fx-t11 fx-muted" style={{ padding: '0 4px' }}>{plural(r.reportCount, 'report', 'reports')}{r.reasons.length ? `: ${r.reasons.join(' · ')}` : ''}</p>
+            <div key={r.poll.id} className="fx-reported">
+              <p className="fx-t11 fx-muted">{plural(r.reportCount, 'report', 'reports')}{r.reasons.length ? `: ${r.reasons.join(' · ')}` : ''}</p>
               <PollCard poll={r.poll} {...cardProps} />
-              <button type="button" onClick={async () => { try { await dismissPollReports(r.poll.id); setReports((l) => l.filter((x) => x.poll.id !== r.poll.id)); say('Reports cleared. The poll stays.', 'ok'); void load('quiet'); } catch (e) { say(friendly(e, 'That did not work.'), 'err'); } }} className="fx-btn-ghost" style={{ height: 40, fontSize: 12.5 }}>This poll is fine: clear the reports</button>
+              <button type="button" onClick={async () => { try { await dismissPollReports(r.poll.id); setReports((l) => l.filter((x) => x.poll.id !== r.poll.id)); say('Reports cleared. The poll stays.', 'ok'); void load('quiet'); } catch (e) { say(friendly(e, 'That did not work.'), 'err'); } }} className="fx-btn-ghost">This poll is fine: clear the reports</button>
             </div>
           ))}
         </section>
+      )}
+
+      {!creating && (
+        <div className="fx-fab-wrap">
+          <button type="button" onClick={() => (loggedIn ? setCreating(true) : (say('Log in to create a poll.', 'err'), onLogin?.()))} aria-expanded={creating} className="fx-fab"><Plus className="w-5 h-5" aria-hidden="true" />Create poll</button>
+        </div>
       )}
       {toast}
     </div>

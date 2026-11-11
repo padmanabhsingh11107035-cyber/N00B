@@ -175,15 +175,21 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={wrapRef} className="sx-stage-bg flex-1 min-h-0 overflow-auto flex items-center justify-center" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+      <div ref={wrapRef} className="sx-stage-bg flex-1 min-h-0 overflow-auto flex items-center justify-center overscroll-contain" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         <div className="relative shrink-0 m-2" style={{ width: cssW, height: cssH }}>
           <canvas
             ref={canvasRef}
             data-testid="studio-canvas"
             onPointerDown={onDown}
-            className="sx-canvas block rounded-md bg-black touch-none"
+            className="sx-canvas block bg-black touch-none"
             style={{ width: cssW, height: cssH, cursor: ctl.tool === 'draw' ? 'crosshair' : 'default' }}
           />
+          {project.layers.length === 0 && (
+            <div className="sx-stage-empty absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-center" data-testid="studio-empty">
+              <strong>Your canvas is empty</strong>
+              <span>Import a photo or a video to start.</span>
+            </div>
+          )}
           {/* the safe areas of Reels / Stories: where the app's own buttons and caption sit */}
           {guides && (
             <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -193,31 +199,31 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
               <div className="absolute inset-[6%] border border-dashed border-white/25 rounded" />
             </div>
           )}
-          {snapLines.v && <div className="absolute top-0 bottom-0 left-1/2 w-px bg-fuchsia-400 pointer-events-none" />}
-          {snapLines.h && <div className="absolute left-0 right-0 top-1/2 h-px bg-fuchsia-400 pointer-events-none" />}
+          {snapLines.v && <div className="sx-snap absolute top-0 bottom-0 left-1/2 w-px pointer-events-none" />}
+          {snapLines.h && <div className="sx-snap absolute left-0 right-0 top-1/2 h-px pointer-events-none" />}
           {sel && selBox && selBox.w > 0 && (
             <div
-              className="absolute pointer-events-none border-2 border-white/90 rounded-[3px]"
-              style={{ left: (sel.x - selBox.w / 2) * s, top: (sel.y - selBox.h / 2) * s, width: selBox.w * s, height: selBox.h * s, transform: `rotate(${sel.rotation}deg)`, boxShadow: '0 0 0 1px rgba(0,0,0,0.5)' }}
+              className="sx-selbox absolute pointer-events-none"
+              style={{ left: (sel.x - selBox.w / 2) * s, top: (sel.y - selBox.h / 2) * s, width: selBox.w * s, height: selBox.h * s, transform: `rotate(${sel.rotation}deg)`, }}
             >
-              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -right-3 -bottom-3 sx-handle w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
-              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -left-3 -top-3 sx-handle w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
-              <span onPointerDown={(e) => startHandle(e, 'rotate')} className="pointer-events-auto absolute left-1/2 -top-9 -translate-x-1/2 sx-handle sx-handle-rot w-6 h-6 rounded-full bg-fuchsia-500 border-2 border-white touch-none cursor-grab" aria-label="Rotate" />
-              <span className="absolute left-1/2 -top-3 w-px h-3 bg-white/80" />
+              <span onPointerDown={(e) => startHandle(e, 'scale')} className="sx-handle pointer-events-auto absolute -right-3 -bottom-3 touch-none cursor-nwse-resize" aria-label="Resize" />
+              <span onPointerDown={(e) => startHandle(e, 'scale')} className="sx-handle pointer-events-auto absolute -left-3 -top-3 touch-none cursor-nwse-resize" aria-label="Resize" />
+              <span onPointerDown={(e) => startHandle(e, 'rotate')} className="sx-handle sx-handle-rot pointer-events-auto absolute left-1/2 -top-10 -translate-x-1/2 touch-none cursor-grab" aria-label="Rotate" />
+              <span className="sx-stem absolute left-1/2 -top-4 w-px h-4" />
             </div>
           )}
         </div>
       </div>
-      <div className="sx-zoombar absolute right-2 bottom-2 flex items-center gap-1 rounded-xl p-1">
-        <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.2).toFixed(2)))} aria-label="Zoom out" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Minus className="w-4 h-4" /></button>
-        <button onClick={() => setZoom(1)} aria-label="Fit to screen" className="h-8 px-2 rounded-lg hover:bg-white/10 text-[11px] font-bold flex items-center gap-1"><Maximize className="w-3.5 h-3.5" />{Math.round(zoom * 100)}%</button>
-        <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Plus className="w-4 h-4" /></button>
-        <button onClick={() => setGuides((g) => !g)} aria-label="Safe-area guides" aria-pressed={guides} className={`w-8 h-8 rounded-lg flex items-center justify-center ${guides ? 'bg-amber-400/25 text-amber-300' : 'hover:bg-white/10'}`}><Shield className="w-4 h-4" /></button>
+      <div className="sx-zoombar absolute right-2 bottom-2 flex items-center">
+        <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.2).toFixed(2)))} aria-label="Zoom out" className="sx-zb"><Minus className="w-4 h-4" /></button>
+        <button onClick={() => setZoom(1)} aria-label="Fit to screen" className="sx-zb sx-zb-wide"><Maximize className="w-3.5 h-3.5" /><span>{Math.round(zoom * 100)}%</span></button>
+        <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" className="sx-zb"><Plus className="w-4 h-4" /></button>
+        <button onClick={() => setGuides((g) => !g)} aria-label="Safe-area guides" aria-pressed={guides} className={`sx-zb ${guides ? 'is-on' : ''}`}><Shield className="w-4 h-4" /></button>
         <button
           onPointerDown={() => setOriginal(true)} onPointerUp={() => setOriginal(false)} onPointerLeave={() => setOriginal(false)} onPointerCancel={() => setOriginal(false)}
           aria-label="Hold to see the original" data-testid="studio-compare"
-          className={`h-8 px-2 rounded-lg text-[11px] font-bold touch-none ${original ? 'bg-fuchsia-500 text-white' : 'hover:bg-white/10'}`}
-        >Original</button>
+          className={`sx-zb sx-zb-wide touch-none ${original ? 'is-on' : ''}`}
+        ><span>Original</span></button>
       </div>
     </div>
   );

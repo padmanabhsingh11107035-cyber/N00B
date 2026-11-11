@@ -24,7 +24,7 @@ check(/votePoll\(poll\.id, picked\)/.test(page) && /disabled=\{!picked \|\| voti
 check(/if \(!loggedIn\) \{ say\('Log in to vote\.', 'err'\); onLogin\?\.\(\); return; \}/.test(page) && /Log in to vote/.test(page), 'a visitor can look and pick, and is asked to log in to vote');
 check(/onChanged\(await votePoll\(poll\.id, picked\)\)/.test(page), 'the numbers shown are the ones the database sends back with the vote, never worked out here');
 check(/already voted\|ended\|not available/.test(page) && /fetchPoll\(poll\.id\)/.test(page), 'if the database says the vote was already made or the poll ended, the page shows the real state');
-check(/poll\.resultsShown && \(/.test(page) && /transition-\[width\] duration-700 ease-out/.test(page), 'result bars appear only when the database says the results may be shown, and grow smoothly');
+check(/poll\.resultsShown && \(/.test(page) && /transition-\[width\] duration-500 ease-out/.test(page), 'result bars appear only when the database says the results may be shown, and grow smoothly');
 check(/The results appear after you vote\./.test(page) && /The results appear when the poll ends\./.test(page) && /Your vote is in\. The results appear when the poll ends\./.test(page), 'a poll whose results are hidden says when they will appear');
 check(/plural\(poll\.totalVotes, 'vote', 'votes'\)/.test(page) && /plural\(counts\[i\], 'vote', 'votes'\)/.test(page), 'the number of votes for each option and the total are shown');
 check(/timeLeftLabel\(poll\.endsAt, now\)/.test(page) && /setInterval\(\(\) => setNow\(Date\.now\(\)\), 30_000\)/.test(page), 'the time left is shown and counts down');

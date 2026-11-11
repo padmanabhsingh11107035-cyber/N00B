@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>NOOB harness - phone frame</title>
+<style>
+  html, body { margin: 0; background: #444; }
+  body { display: flex; justify-content: center; padding: 8px; }
+  #wrap { position: relative; transform-origin: top center; }
+  iframe { border: 0; border-radius: 28px; background: #000; display: block; }
+</style>
+</head>
+<body>
+<div id="wrap"><iframe id="f" title="harness"></iframe></div>
+<script>
+  // frame.html?page=draw&theme=dark&phone=1&w=390&h=844&scale=0.85  - the same links as index.html, shown inside a phone-sized frame (w x h css px), shrunk by scale to fit the window.
+  var q = new URLSearchParams(location.search);
+  var w = +q.get('w') || 390, h = +q.get('h') || 844, s = +q.get('scale') || Math.min(1, (innerHeight - 16) / h);
+  q.delete('w'); q.delete('h'); q.delete('scale');
+  var f = document.getElementById('f'), wrap = document.getElementById('wrap');
+  f.width = w; f.height = h; wrap.style.transform = 'scale(' + s + ')';
+  document.body.style.height = Math.ceil(h * s + 16) + 'px';
+  f.src = 'index.html?' + q.toString();
+</script>
+</body>
+</html>

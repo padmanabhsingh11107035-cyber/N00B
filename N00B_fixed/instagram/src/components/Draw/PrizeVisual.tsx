@@ -10,7 +10,7 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
   const box: React.CSSProperties = { width: size, height: size };
   if (prize.kind === 'live_avatar' && prize.ref) {
     return (
-      <div style={{ ...box, boxShadow: `0 0 ${size / 3}px ${color}66`, borderColor: color }} className="rounded-full overflow-hidden border-2 bg-black">
+      <div style={{ ...box, borderColor: color }} className="rounded-full overflow-hidden border-2 bg-black">
         <img src={livePictureUrl(prize.ref)} alt="" draggable={false} className="w-full h-full object-cover" />
       </div>
     );
@@ -19,28 +19,28 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
     const src = firstStickerUrl(prize.ref);
     return (
       <div style={box} className="relative flex items-center justify-center">
-        {src ? <img src={src} alt="" draggable={false} className="w-full h-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.45)]" /> : <Sticker className="w-1/2 h-1/2" style={{ color }} />}
+        {src ? <img src={src} alt="" draggable={false} className="w-full h-full object-contain" /> : <Sticker className="w-1/2 h-1/2" style={{ color }} />}
       </div>
     );
   }
   if (prize.kind === 'verified') {
     return (
-      <div style={{ ...box, boxShadow: `0 0 ${size / 2}px rgba(255,255,255,0.55)` }} className="rounded-full bg-gradient-to-br from-sky-300 to-blue-600 flex items-center justify-center border-2 border-white/70">
-        <BadgeCheck className="text-white" style={{ width: size * 0.62, height: size * 0.62 }} strokeWidth={2.4} />
+      <div style={{ ...box, background: '#2b7fff' }} className="rounded-full flex items-center justify-center">
+        <BadgeCheck className="text-white" style={{ width: size * 0.62, height: size * 0.62 }} strokeWidth={2.2} />
       </div>
     );
   }
   if (prize.kind === 'pro') {
     return (
-      <div style={{ ...box, boxShadow: `0 0 ${size / 2.4}px rgba(167,139,250,0.55)` }} className="rounded-2xl rotate-3 bg-gradient-to-br from-violet-300 via-violet-500 to-fuchsia-700 flex items-center justify-center border-2 border-white/60">
-        <Crown className="text-amber-200 drop-shadow" style={{ width: size * 0.56, height: size * 0.56 }} strokeWidth={2.4} />
+      <div style={{ ...box, background: '#6a4bd8', borderRadius: size * 0.28 }} className="flex items-center justify-center">
+        <Crown style={{ width: size * 0.54, height: size * 0.54, color: '#ffe08a' }} strokeWidth={2.2} />
       </div>
     );
   }
   // points
   const short = pointsShort(prize.amount);
   return (
-    <div style={{ ...box, boxShadow: `0 0 ${size / 2.4}px rgba(251,191,36,0.5)` }} className="rounded-full bg-gradient-to-br from-yellow-200 via-amber-400 to-amber-600 flex flex-col items-center justify-center border-2 border-amber-100/80 text-amber-950">
+    <div style={{ ...box, background: '#F2B63B', boxShadow: `inset 0 0 0 ${Math.max(2, size * 0.05)}px #d99a1c` }} className="rounded-full flex flex-col items-center justify-center text-amber-950">
       {short ? <span className="font-black leading-none tracking-tight" style={{ fontSize: size * (short.length > 3 ? 0.27 : 0.33) }}>{short}</span> : <Coins style={{ width: size * 0.5, height: size * 0.5 }} />}
       <span className="font-bold uppercase leading-none opacity-70" style={{ fontSize: Math.max(6, size * 0.12), marginTop: size * 0.04 }}>pts</span>
     </div>
@@ -49,19 +49,19 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
 
 export const CARD_W = 104;
 export const CARD_GAP = 8;
+export const CARD_H = 136;
 
-// One card of the reel (the reel is a dark window in both themes, so the card carries its own dark colours).
+// One card of the reel: a flat tile, the rarity shown by one thin bar along the bottom.
 export const PrizeCard: React.FC<{ prize: DrawPrize }> = React.memo(({ prize }) => {
   const r = RARITY[prize.rarity];
   return (
-    <div className="dr-card" style={{ width: CARD_W, height: 138, ['--rc' as any]: r.color, ['--rs' as any]: r.soft }}>
-      <div className="dr-card-bar" />
-      <div className="dr-card-glow" />
-      <div className="dr-card-pic"><PrizeVisual prize={prize} size={54} /></div>
+    <div className="dr-card" style={{ width: CARD_W, height: CARD_H, ['--rc' as any]: r.color }}>
+      <div className="dr-card-pic"><PrizeVisual prize={prize} size={52} /></div>
       <div className="dr-card-txt">
         <p className="dr-card-t">{prize.label}</p>
         <p className="dr-card-r">{r.label}</p>
       </div>
+      <div className="dr-card-bar" />
     </div>
   );
 });

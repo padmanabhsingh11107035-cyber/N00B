@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Coins, Gift, History, Info, Loader2, Lock, Sparkles, Timer, Volume2, VolumeX, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coins, Info, Loader2, Lock, Timer, Volume2, VolumeX } from 'lucide-react';
 import type { User } from '../../types';
 import { applyLiveAvatar, fetchNoobDraw, spinNoobDraw } from '../../services/api';
 import { showNotice } from '../../utils/likeSync';
 import {
   DrawHistoryItem, DrawPack, DrawPrize, DrawState, DrawWonPrize, RARITY, byRarityDesc, canAfford, formatCountdown, isPackOpen, msUntil, periodWord, pointsNeeded, priceShort, rarityOf
 } from '../../utils/noobDraw';
-import { PackArt, packLook } from './PackArt';
+import { PackArt } from './PackArt';
 import { PrizeVisual } from './PrizeVisual';
 import { DrawReel } from './DrawReel';
 import { DrawResult } from './DrawResult';
@@ -42,50 +42,33 @@ const friendlyError = (msg?: string) => (/function|schema cache|does not exist|c
   : msg || 'Could not spin right now. Please try again.');
 
 // ------------------------------------------------------------------------------------------------ one pack on the main page
-const PackCard: React.FC<{ pack: DrawPack; index: number; wide: boolean; lastWin?: DrawHistoryItem; onOpen: () => void; onRefresh: () => void }> = ({ pack, index, wide, lastWin, onOpen, onRefresh }) => {
-  const look = packLook(pack.id);
+const PackCard: React.FC<{ pack: DrawPack; lastWin?: DrawHistoryItem; onOpen: () => void; onRefresh: () => void }> = ({ pack, lastWin, onOpen, onRefresh }) => {
   const open = isPackOpen(pack);
-  const tilt = ['-3deg', '2.5deg', '-2deg', '3deg', '0deg'][index % 5];
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`dr-pack dr-rise ${wide ? 'dr-pack-wide' : ''} ${open ? 'is-open' : 'is-wait'}`}
-      style={{ animationDelay: `${index * 70}ms`, ['--ac' as any]: look.accent, ['--ac-a' as any]: `${look.accent}30`, ['--ac-b' as any]: `${look.accent}66`, ['--glow' as any]: look.glow }}
-    >
-      <span className="dr-pack-halo" aria-hidden="true" />
-      <div className="dr-pack-art">
-        <div className={open ? 'draw-float' : 'dr-dim'} style={{ ['--tilt' as any]: tilt }}>
-          <PackArt id={pack.id} className="dr-pack-svg" />
-        </div>
-        {!open && <div className="dr-lock"><Lock className="w-4 h-4" /></div>}
-      </div>
+    <button type="button" onClick={onOpen} className={`dr-pack ${open ? 'is-open' : 'is-wait'}`}>
+      <PackArt id={pack.id} className="dr-pack-svg" />
       <div className="dr-pack-body">
         <p className="dr-pack-name">{pack.name}</p>
         <p className="dr-pack-tag">{pack.tagline}</p>
         {open ? (
-          <div className="dr-chip dr-chip-go">
-            <Zap className="w-3.5 h-3.5" /> Spin free
+          <div className="dr-pack-state">
+            <span className="dr-chip dr-chip-go">Spin free</span>
           </div>
         ) : (
-          <div className="dr-pack-wait">
-            <div className="dr-chip dr-chip-wait">
-              <Timer className="w-3.5 h-3.5" /> Free in <Countdown to={pack.availableAt as string} onDone={onRefresh} />
-            </div>
-            <div className="dr-pack-again">
-              <Coins className="w-3 h-3" /> Spin again · {priceShort(pack.price)}
-            </div>
+          <div className="dr-pack-state">
+            <span className="dr-chip dr-chip-wait"><Lock className="w-3 h-3" /> Free in <Countdown to={pack.availableAt as string} onDone={onRefresh} /></span>
+            <span className="dr-pack-again">Spin again · {priceShort(pack.price)}</span>
           </div>
         )}
-        {!open && lastWin && <p className="dr-pack-last">Last win: <span style={{ color: RARITY[rarityOf(lastWin.rarity)].color }}>{lastWin.label}</span></p>}
+        {!open && lastWin && <p className="dr-pack-last">Last win: <span className="dr-rc" style={{ ['--rc' as any]: RARITY[rarityOf(lastWin.rarity)].color }}>{lastWin.label}</span></p>}
       </div>
+      <ChevronRight className="dr-pack-go" aria-hidden="true" />
     </button>
   );
 };
 
 // ------------------------------------------------------------------------------------------------ the spin screen of one pack
 const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | 'month'; onUserUpdated: (u: User) => void; onRefresh: () => Promise<void>; onSpun: () => void }> = ({ pack, balance, period, onUserUpdated, onRefresh, onSpun }) => {
-  const look = packLook(pack.id);
   const [spinKey, setSpinKey] = useState(0);
   const [winner, setWinner] = useState<DrawPrize | null>(null);
   const [spinning, setSpinning] = useState(false);
@@ -144,8 +127,8 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
 
   return (
     <div className="dr-spin">
-      <div className="dr-wrap" style={{ ['--ac' as any]: look.accent, ['--ac-a' as any]: `${look.accent}30`, ['--ac-b' as any]: `${look.accent}66`, ['--glow' as any]: look.glow }}>
-        <div className="dr-spin-head dr-rise">
+      <div className="dr-wrap">
+        <div className="dr-spin-head">
           <PackArt id={pack.id} className="dr-spin-art" />
           <div className="min-w-0 flex-1">
             <h2 className="dr-h2">{pack.name}</h2>
@@ -154,17 +137,14 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
           <span className={`dr-tag ${free ? 'is-free' : ''}`}>{free ? 'Free spin ready' : `${priceShort(pack.price)} / spin`}</span>
         </div>
 
-        <div className="dr-reel-stage dr-rise" style={{ animationDelay: '60ms' }}>
-          <div className="dr-spot" aria-hidden="true" />
-          <div className="relative"><DrawReel prizes={pack.prizes} accent={look.accent} spinKey={spinKey} winner={winner} onLanded={landed} /></div>
-        </div>
+        <DrawReel prizes={pack.prizes} spinKey={spinKey} winner={winner} onLanded={landed} />
 
         {error && <p className="dr-error" role="alert">{error}</p>}
 
-        <div className="dr-wallet dr-rise" style={{ animationDelay: '120ms' }}>
+        <div className="dr-wallet">
           <div className="dr-wallet-cell">
             <span className="dr-wallet-k">Your balance</span>
-            <span className="dr-wallet-v"><Coins className="w-4 h-4" style={{ color: '#ffae42' }} /> {Number(balance).toLocaleString('en-US')}</span>
+            <span className="dr-wallet-v"><Coins className="w-4 h-4 dr-gold" /> {Number(balance).toLocaleString('en-US')}</span>
           </div>
           <div className="dr-wallet-cell">
             <span className="dr-wallet-k">This spin costs</span>
@@ -176,10 +156,10 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
           type="button"
           onClick={() => (free ? void spin(false) : setConfirming(true))}
           disabled={spinning || (!free && !afford)}
-          className={`dr-cta ${spinning ? 'is-busy' : free ? 'is-free draw-glow' : afford ? 'is-paid' : 'is-off'}`}
+          className={`dr-cta ${spinning ? 'is-busy' : free ? 'is-free' : afford ? 'is-paid' : 'is-off'}`}
         >
           {spinning ? <><Loader2 className="w-5 h-5 animate-spin" /> Spinning</>
-            : free ? <><Sparkles className="w-5 h-5" /> Spin now · Free</>
+            : free ? <>Spin now · Free</>
             : afford ? <><Coins className="w-5 h-5" /> Spin again · {priceShort(pack.price)} points</>
             : <><Coins className="w-4.5 h-4.5" /> Need {priceShort(pointsNeeded(balance, pack.price))} more points</>}
         </button>
@@ -195,18 +175,18 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
             <span className="dr-faint">Real odds</span>
           </div>
           <div className="dr-list">
-            {sorted.map((p, i) => {
+            {sorted.map((p) => {
               const r = RARITY[p.rarity];
               return (
-                <div key={p.id} className="dr-row dr-rise" style={{ ['--rc' as any]: r.color, ['--rs' as any]: r.soft, animationDelay: `${180 + Math.min(i, 10) * 40}ms` }}>
+                <div key={p.id} className="dr-row" style={{ ['--rc' as any]: r.color }}>
                   <div className="dr-row-pic"><PrizeVisual prize={p} size={40} /></div>
                   <div className="min-w-0 flex-1">
                     <p className="dr-row-t">{p.label}</p>
                     <p className="dr-row-s">{p.subtitle}</p>
                   </div>
                   <div className="dr-row-r">
-                    <p className="dr-rar">{r.label}</p>
                     <p className="dr-odds">{oddsText(p.odds)}</p>
+                    <p className="dr-rar">{r.label}</p>
                   </div>
                 </div>
               );
@@ -216,9 +196,8 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
       </div>
       {confirming && (
         <div className="dr-sheet-bg edge-own" onClick={() => setConfirming(false)}>
-          <div className="dr-sheet" role="dialog" aria-label="Confirm spin" onClick={(e) => e.stopPropagation()} style={{ ['--ac' as any]: look.accent, ['--glow' as any]: look.glow }}>
+          <div className="dr-sheet" role="dialog" aria-label="Confirm spin" onClick={(e) => e.stopPropagation()}>
             <span className="dr-grab" aria-hidden="true" />
-            <div className="dr-sheet-art"><PackArt id={pack.id} className="dr-sheet-svg" /></div>
             <p className="dr-sheet-t">Spin the {pack.name} again?</p>
             <p className="dr-sheet-p">This takes <b>{Number(pack.price).toLocaleString('en-US')}</b> NOOB Points from your wallet (you have {Number(balance).toLocaleString('en-US')}). The prize is paid out the moment the reel stops.</p>
             <div className="dr-sheet-btns">
@@ -278,21 +257,10 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
   const balanceNow = Number(currentUser.noobPoints || 0);
   return (
     <div className="dr-root fixed inset-0 z-[210] edge-own" role="dialog" aria-label="NOOB Draw">
-      <div className="dr-bg" aria-hidden="true">
-        <span className="dr-orb dr-orb-a" /><span className="dr-orb dr-orb-b" /><span className="dr-orb dr-orb-c" />
-        <span className="draw-twinkle dr-star" style={{ top: '14%', left: '12%' }} />
-        <span className="draw-twinkle dr-star" style={{ top: '26%', right: '9%', animationDelay: '0.9s' }} />
-        <span className="draw-twinkle dr-star" style={{ top: '58%', left: '6%', animationDelay: '1.6s' }} />
-        <span className="draw-twinkle dr-star" style={{ top: '78%', right: '14%', animationDelay: '0.4s' }} />
-      </div>
-
       {/* top bar: it starts above the notch, the buttons sit below it */}
       <header className="dr-head">
         <button type="button" onClick={goBack} className="dr-iconbtn" aria-label={active ? 'Back to all spins' : 'Close'}><ChevronLeft className="w-5 h-5" /></button>
-        <div className="dr-brand">
-          <span className="dr-brand-mark"><Gift className="w-4 h-4" /></span>
-          <span className="dr-brand-name">NOOB DRAW</span>
-        </div>
+        <h1 className="dr-brand-name">NOOB Draw</h1>
         <div className="dr-head-r">
           <button
             type="button"
@@ -303,7 +271,6 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
           >
             {fx ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 dr-faint" />}
           </button>
-          <div className="dr-bal"><Coins className="w-3.5 h-3.5" style={{ color: '#ffae42' }} /> {balanceNow.toLocaleString('en-US')}</div>
         </div>
       </header>
 
@@ -318,8 +285,9 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
               </div>
             ) : (
               <>
-                <div className="dr-skel" style={{ height: 210, borderRadius: 28 }} />
-                <div className="dr-grid">{[0, 1, 2, 3].map((i) => <div key={i} className="dr-skel" style={{ height: 250, borderRadius: 26 }} />)}</div>
+                <div className="dr-skel" style={{ height: 132, borderRadius: 16 }} />
+                <div className="dr-skel" style={{ height: 40, borderRadius: 12 }} />
+                {[0, 1, 2, 3].map((i) => <div key={i} className="dr-skel" style={{ height: 92, borderRadius: 16 }} />)}
               </>
             )}
           </div>
@@ -327,32 +295,28 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
           <SpinScreen key={active.id} pack={active} balance={balanceNow} period={periodWord(state.freePeriod)} onUserUpdated={onUserUpdated} onRefresh={refresh} onSpun={() => { /* the list is refreshed when the result is closed */ }} />
         ) : (
           <div className="dr-wrap">
-            {/* hero */}
-            <section className="dr-hero dr-rise">
-              <p className="dr-kicker">Free spins every {periodWord(state.freePeriod)}</p>
-              <h1 className="dr-title draw-title">NOOB DRAW</h1>
-              <p className="dr-lede">Open every pack once a {periodWord(state.freePeriod)}, for free, or spin again with NOOB Points. Win NOOB Pro, the verified tick, live profile pictures, stickers and millions of points.</p>
+            {/* balance and free-spin status */}
+            <section className="dr-panel">
+              <p className="dr-wallet-k">Your balance</p>
+              <p className="dr-hero-bal"><Coins className="w-6 h-6 dr-gold" /> {balanceNow.toLocaleString('en-US')}</p>
               <div className="dr-status">
                 {ready > 0 ? <><span className="dr-dot" /> {ready} of {state.packs.length} free spins ready</>
-                  : nextOpening ? <><Timer className="w-3.5 h-3.5" /> Next free spin in <Countdown to={nextOpening} onDone={() => void refresh()} /></>
+                  : nextOpening ? <><Timer className="w-4 h-4" /> Next free spin in <Countdown to={nextOpening} onDone={() => void refresh()} /></>
                   : <>All free spins used this {periodWord(state.freePeriod)}</>}
               </div>
-              <div className="dr-hero-wallet">
-                <span className="dr-wallet-k">Your balance</span>
-                <span className="dr-hero-bal"><Coins className="w-5 h-5" style={{ color: '#ffae42' }} /> {balanceNow.toLocaleString('en-US')}</span>
-              </div>
             </section>
+            <p className="dr-lede">Free spins every {periodWord(state.freePeriod)}. Open every pack once a {periodWord(state.freePeriod)}, for free, or spin again with NOOB Points. Win NOOB Pro, the verified tick, live profile pictures, stickers and millions of points.</p>
 
             {/* live big wins */}
             {tickerItems.length > 0 && (
-              <section aria-label="Recent big wins" className="dr-ticker dr-rise" style={{ animationDelay: '60ms' }}>
+              <section aria-label="Recent big wins" className="dr-ticker">
                 <div className="draw-marquee dr-ticker-in">
                   {[...tickerItems, ...tickerItems].map((t, i) => {
                     const c = RARITY[rarityOf(t.rarity)].color;
                     return (
                       <span key={i} className="dr-tick">
-                        <span className="dr-tick-dot" style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
-                        <b>@{t.username}</b> <span className="dr-faint">won</span> <b style={{ color: c }}>{t.label}</b>
+                        <span className="dr-tick-dot" style={{ background: c }} />
+                        <b>@{t.username}</b> <span className="dr-faint">won</span> <b className="dr-rc" style={{ ['--rc' as any]: c }}>{t.label}</b>
                         {t.packName && <span className="dr-faint">in {t.packName}</span>}
                       </span>
                     );
@@ -364,9 +328,9 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
             {/* the five spins */}
             <section className="dr-sec">
               <h3 className="dr-h3">Choose your spin</h3>
-              <div className="dr-grid">
-                {state.packs.map((p, i) => (
-                  <PackCard key={p.id} pack={p} index={i} wide={i === state.packs.length - 1 && state.packs.length % 2 === 1} lastWin={lastWinOf(p.id)} onOpen={() => setActiveId(p.id)} onRefresh={() => void refresh()} />
+              <div className="dr-packs">
+                {state.packs.map((p) => (
+                  <PackCard key={p.id} pack={p} lastWin={lastWinOf(p.id)} onOpen={() => setActiveId(p.id)} onRefresh={() => void refresh()} />
                 ))}
               </div>
               <p className="dr-info"><Info className="w-3.5 h-3.5 shrink-0" /> <span>Every pack gives one free spin each {periodWord(state.freePeriod)}. After that you can spin again for {priceShort(state.packs[0]?.price || 100000000)} points, as often as you like. The prize is picked by NOOB's server, never by your phone, and paid out the moment the reel stops.</span></p>
@@ -392,7 +356,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
 
             {/* my wins */}
             <section className="dr-sec">
-              <h3 className="dr-h3"><History className="w-3.5 h-3.5" /> My wins</h3>
+              <h3 className="dr-h3">My wins</h3>
               {state.history.length === 0 ? (
                 <p className="dr-empty">Nothing yet. Pick a spin above and open your first pack.</p>
               ) : (
@@ -400,7 +364,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
                   {state.history.map((h, i) => {
                     const r = RARITY[rarityOf(h.rarity)];
                     return (
-                      <div key={i} className="dr-row dr-hist" style={{ ['--rc' as any]: r.color, ['--rs' as any]: r.soft }}>
+                      <div key={i} className="dr-row dr-hist" style={{ ['--rc' as any]: r.color }}>
                         <div className="min-w-0 flex-1">
                           <div className="dr-hist-top">
                             <p className="dr-row-t">{h.label}</p>

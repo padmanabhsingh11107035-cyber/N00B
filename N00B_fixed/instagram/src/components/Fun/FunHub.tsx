@@ -68,20 +68,17 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
   }
   const Page = { 'this-or-that': ThisOrThatPage, ask: AskPage, mood: MoodPage, polls: PollsPage }[active.id];
 
-  const EYEBROW: Record<string, string> = { 'this-or-that': 'Daily duel', ask: 'Anonymous inbox', polls: 'Community votes' };
-
   return (
-    <div ref={scrollRef} className="fx-root fixed inset-0 edge-own z-[96] overflow-y-auto overscroll-contain" data-fx={active.id} role="region" aria-label={active.label}>
+    <div ref={scrollRef} className="fx-root fixed inset-0 edge-own z-[96] overflow-y-auto overscroll-contain" data-fx={active.id} data-noob-keep="1" role="region" aria-label={active.label}>
       <div className="fx-bar">
         <div className="fx-wrap">
           <div className="fx-bar-row">
-            <button type="button" onClick={onBack} aria-label="Go back" className="fx-ib has-label">
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              <span>Back</span>
+            <button type="button" onClick={onBack} aria-label="Go back" className="fx-ib">
+              <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </button>
-            <span className="fx-bar-title" aria-hidden="true">NOOB Fun</span>
+            <h1 className="fx-bar-title">{active.label}</h1>
             <button type="button" onClick={onHome} aria-label="Back to the Home page" title="Home" className="fx-ib">
-              <Home className="w-4 h-4" aria-hidden="true" />
+              <Home className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
           <nav className="fx-tabs max-w-2xl mx-auto overflow-x-auto no-scrollbar" role="tablist" aria-label="NOOB Fun pages">
@@ -99,7 +96,7 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
                   onPointerEnter={() => preloadFunPage(f.id)}
                   className="fx-tab transition-all duration-200"
                 >
-                  <Icon className="w-3.5 h-3.5" aria-hidden={true} />
+                  <Icon className="fx-tab-ic" aria-hidden={true} />
                   <span>{f.short}</span>
                 </button>
               );
@@ -109,12 +106,6 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
       </div>
 
       <div className="fx-wrap">
-        <header className="fx-hero" key={`hero:${active.id}`}>
-          <div className="fx-orbs" aria-hidden="true"><i /><i /><i /></div>
-          <span className="fx-eyebrow fx-in" style={{ ['--i' as string]: 0 }}>{EYEBROW[active.id] ?? 'NOOB Fun'}</span>
-          <h1 className="fx-h1 fx-in" style={{ ['--i' as string]: 1 }}><span>{active.label}</span></h1>
-          <p className="fx-sub fx-in" style={{ ['--i' as string]: 2 }}>{active.blurb}</p>
-        </header>
         <div className="fx-body">
           <React.Suspense fallback={<SkeletonCards count={3} label={`Loading ${active.label}`} />}>
             <div key={`${active.id}:${location.target ?? ''}`} className="animate-in fade-in duration-200">

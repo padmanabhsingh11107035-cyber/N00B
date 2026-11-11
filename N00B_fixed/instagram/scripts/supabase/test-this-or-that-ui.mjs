@@ -12,10 +12,10 @@ const api = read('src/services/supabaseApi.ts');
 const apiIndex = read('src/services/api.ts');
 
 section('1. The question card');
-check(/<Choice side="a"/.test(page) && /<Choice side="b"/.test(page) && />OR<\/span>/.test(page), 'two large choices with OR between them');
+check(/<Choice side="a"/.test(page) && /<Choice side="b"/.test(page) && />or<\/span>/.test(page), 'two large choices with OR between them');
 check(/Today's question/.test(page) && /Latest question/.test(page) && /Previous questions/.test(page), 'today\'s question and the previous questions are separate sections');
 check(/min-h-\[176px\]/.test(page) && /active:scale-\[0\.96\]/.test(page) && /hover:-translate-y-0\.5/.test(page), 'the choices are big, and react to a touch and a hover');
-check(/\{emoji \|\| '.'\}/.test(page) && /text-5xl/.test(page), 'each choice shows its emoji large');
+check(/\{emoji \|\| ''\}/.test(page) && /className=\"fx-emo\"/.test(page), 'each choice shows its emoji large');
 
 section('2. Voting and the results');
 check(/disabled=\{disabled \|\| voted\}/.test(page) && /aria-pressed=\{mine\}/.test(page), 'once voted, the choices can not be pressed again, and the picked one is marked');
@@ -24,7 +24,7 @@ check(/if \(!loggedIn\) \{ say\('Log in to vote\.', 'err'\); onLogin\?\.\(\); re
 check(/already voted/.test(page) && /void load\('quiet'\)/.test(page), 'if the database says the vote was already made (another screen), the page shows the real state');
 check(/const split = \(a: number, total: number\): \[number, number\] =>[\s\S]{0,200}return \[pa, 100 - pa\];/.test(page), 'the two percentages always add up to 100');
 check(/plural\(count, 'vote', 'votes'\)/.test(page) && /in total/.test(page), 'the number of votes for each side and the total are shown');
-check(/transition-\[height\] duration-700 ease-out/.test(page) && /setTimeout\(\(\) => setRevealed\(true\), 40\)/.test(page), 'the result bars grow smoothly after voting');
+check(/transition-\[width\] duration-500 ease-out/.test(page) && /setTimeout\(\(\) => setRevealed\(true\), 40\)/.test(page), 'the result bars grow smoothly after voting');
 check(/aria-live="polite"/.test(page) && /aria-label=\{voted \? `\$\{label\}: \$\{pct\}%/.test(page), 'the result is announced to screen readers');
 check(!/setInterval\(\(\) => \{ if \(document\.visibilityState/.test(page) && !/RefreshCw|aria-label="Refresh"/.test(page), 'nothing reloads this page by itself or on request (no timer, no refresh button): only Home refreshes');
 

@@ -61,30 +61,30 @@ export const MediaPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); setOver(false); void ctl.addFiles(Array.from(e.dataTransfer.files)); } }}
     >
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center gap-2">
+      <div className="sx-pool-bar flex items-center gap-2">
         <input ref={input} type="file" multiple accept="image/*,video/*,audio/*" className="hidden" data-testid="studio-file-input" onChange={(e) => { void ctl.addFiles(Array.from(e.target.files || [])); e.target.value = ''; }} />
-        <Btn tone="primary" className="!py-1.5" onClick={() => input.current?.click()} data-testid="studio-import"><Plus className="w-4 h-4" />Import</Btn>
+        <Btn tone="primary" onClick={() => input.current?.click()} data-testid="studio-import"><Plus className="w-4 h-4" />Import</Btn>
         <div className="relative flex-1 min-w-0">
-          <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search media" aria-label="Search media" className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-7 pr-2 py-1.5 text-[12px] text-white" />
+          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search media" aria-label="Search media" className="sx-field-input w-full !pl-8" />
         </div>
       </div>
       {ctl.busy && <div className="px-3 py-1 text-[11px] text-fuchsia-300 animate-pulse">{ctl.busy}</div>}
 
-      <div className="flex-1 min-h-0 flex">
-        <nav className="w-[92px] shrink-0 border-r border-zinc-800 py-1.5" aria-label="Folders">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+        <nav className="sx-bins shrink-0 flex lg:block overflow-x-auto no-scrollbar" aria-label="Folders">
           {BINS.map((b) => {
             const Icon = b.icon;
             return (
-              <button key={b.id} onClick={() => setBin(b.id)} aria-pressed={bin === b.id} data-testid={`bin-${b.id}`} className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-left text-[11px] font-semibold ${bin === b.id ? 'bg-fuchsia-500/20 text-white' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}>
-                <Icon className="w-3.5 h-3.5 shrink-0" /><span className="truncate flex-1">{b.label}</span><span className="text-[9px] text-zinc-500">{counts[b.id]}</span>
+              <button key={b.id} onClick={() => setBin(b.id)} aria-pressed={bin === b.id} data-testid={`bin-${b.id}`} className={`sx-bin ${bin === b.id ? 'is-on' : ''}`}>
+                <Icon className="w-3.5 h-3.5 shrink-0" /><span className="flex-1 text-left">{b.label}</span><span className="text-[9px] text-zinc-500">{counts[b.id]}</span>
               </button>
             );
           })}
         </nav>
         <div className={`flex-1 min-w-0 p-2 ${over ? 'bg-fuchsia-500/10 outline outline-2 -outline-offset-2 outline-fuchsia-400' : ''}`}>
           {ctl.assetList.length === 0 ? (
-            <button onClick={() => input.current?.click()} className="w-full py-8 rounded-xl border-2 border-dashed border-zinc-600 hover:border-zinc-400 flex flex-col items-center gap-1 text-[12px] font-bold">
+            <button onClick={() => input.current?.click()} className="sx-dropzone w-full flex flex-col items-center gap-1">
               <FilePlus2 className="w-7 h-7 text-fuchsia-300" />
               Add photos, videos or sounds
               <span className="text-[10px] font-normal text-zinc-400 px-2 text-center">or drop them here · everything stays on this device</span>
@@ -92,7 +92,7 @@ export const MediaPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
           ) : shown.length === 0 ? (
             <p className="text-[11px] text-zinc-500 p-3">Nothing in this folder.</p>
           ) : (
-            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(104px,1fr))]" data-testid="studio-pool">
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(96px,1fr))]" data-testid="studio-pool">
               {shown.map((a) => (
                 <div
                   key={a.id} data-testid="studio-asset" draggable
@@ -109,12 +109,12 @@ export const MediaPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
                     {used.has(a.id) && <span className="absolute top-0.5 left-0.5 px-1 rounded bg-emerald-500 text-black text-[9px] font-black" title="In the project">✓</span>}
                     <button
                       onClick={(e) => { e.stopPropagation(); addDefault(a); }} aria-label={`Add ${a.name} to the project`} data-testid="asset-add"
-                      className="absolute bottom-0.5 left-0.5 w-6 h-6 rounded-md bg-fuchsia-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
+                      className="sx-asset-add absolute bottom-1 left-1 flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
                     ><Plus className="w-4 h-4" /></button>
                     <button
                       onClick={(e) => { e.stopPropagation(); ctl.removeAsset(a.id); }} aria-label={`Remove ${a.name} from the pool`}
-                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
-                    ><Trash2 className="w-3 h-3" /></button>
+                      className="sx-asset-del absolute top-1 right-1 flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"
+                    ><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   <div className="px-1.5 py-1 text-[10px] font-semibold truncate" title={a.name}>{a.name}</div>
                 </div>
@@ -126,9 +126,9 @@ export const MediaPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
               <div className="text-[11px] font-bold text-white truncate">{sel.name}</div>
               <div>{sel.kind === 'audio' ? 'Sound' : sel.kind === 'video' ? 'Video' : 'Photo'}{sel.kind !== 'audio' ? ` · ${sel.width}×${sel.height}` : ''}{sel.duration ? ` · ${fmtTime(sel.duration, true)}` : ''} · {fmtSize(sel.size)}</div>
               <div className="flex gap-1.5 flex-wrap">
-                {sel.kind !== 'audio' && <Btn className="!py-1 !px-2 !text-[10px]" onClick={() => ctl.placeAsset(sel, video ? 'main' : ctl.project.layers.some((l) => l.type === 'media' && l.track === 'main') ? 'overlay' : 'main')}><Plus className="w-3 h-3" />{video ? 'To timeline' : 'Add'}</Btn>}
-                {sel.kind !== 'audio' && video && <Btn className="!py-1 !px-2 !text-[10px]" onClick={() => ctl.placeAsset(sel, 'overlay')}>Overlay</Btn>}
-                {sel.kind !== 'image' && <Btn className="!py-1 !px-2 !text-[10px]" onClick={() => ctl.placeAsset(sel, 'audio')} title="Use the sound of this file"><Music className="w-3 h-3" />{sel.kind === 'video' ? 'Sound only' : 'As music'}</Btn>}
+                {sel.kind !== 'audio' && <Btn className="sx-btn-sm" onClick={() => ctl.placeAsset(sel, video ? 'main' : ctl.project.layers.some((l) => l.type === 'media' && l.track === 'main') ? 'overlay' : 'main')}><Plus className="w-3 h-3" />{video ? 'To timeline' : 'Add'}</Btn>}
+                {sel.kind !== 'audio' && video && <Btn className="sx-btn-sm" onClick={() => ctl.placeAsset(sel, 'overlay')}>Overlay</Btn>}
+                {sel.kind !== 'image' && <Btn className="sx-btn-sm" onClick={() => ctl.placeAsset(sel, 'audio')} title="Use the sound of this file"><Music className="w-3 h-3" />{sel.kind === 'video' ? 'Sound only' : 'As music'}</Btn>}
               </div>
               <div className="text-zinc-500">Drag a thumbnail onto the timeline, or double-click it.</div>
             </div>

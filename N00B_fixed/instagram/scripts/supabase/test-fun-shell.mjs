@@ -42,7 +42,7 @@ check(/onNavigate=\{setBootFun\}/.test(app) && /leaveFunPublic/.test(app), '... 
 
 section('4. The frame');
 check(/role="tablist" aria-label="NOOB Fun pages"/.test(hub) && /aria-current=\{on \? 'page' : undefined\}/.test(hub) && /aria-selected=\{on\}/.test(hub), 'a strip of the four pages marks the one you are on (for everyone, including screen readers)');
-check(/className="fx-tab transition-all duration-200"/.test(hub) && /aria-selected="true"\] \{ background: var\(--fx-grad\)/.test(fs.readFileSync('src/components/Fun/fun.css', 'utf8')), 'the active page is lit in the app\'s accent, with a light animation');
+check(/className="fx-tab transition-all duration-200"/.test(hub) && /aria-selected="true"\] \{ background: var\(--fx-accent\)/.test(fs.readFileSync('src/components/Fun/fun.css', 'utf8')), 'the active page is lit in the app\'s accent, with a light animation');
 check(/aria-label="Go back"/.test(hub) && /aria-label="Back to the Home page"/.test(hub), 'a Back button and a Home button are always at the top');
 check(/onPointerEnter=\{\(\) => preloadFunPage\(f\.id\)\}/.test(hub) && /React\.lazy\(\(\) => import\('\.\/ThisOrThatPage'\)\)/.test(hub), 'each page is loaded only when it is wanted');
 check(/className="fx-bar"/.test(hub) && /position: sticky; top: 0/.test(fs.readFileSync('src/components/Fun/fun.css', 'utf8')) && /edge-own/.test(hub) && /max-w-2xl mx-auto/.test(hub) && /overflow-x-auto no-scrollbar/.test(hub), 'the frame follows the app\'s look and works from a phone to a desktop (the strip scrolls on a narrow screen)');

@@ -8,8 +8,19 @@ import type { StudioCtl } from './StudioApp';
 
 // The timeline, laid out like a professional editor: the video tracks (V1 is the story, clips one after another; V2 and up float above it) with real frames along each clip, the
 // sound tracks with their waveforms, a ruler, a playhead, snapping, and a media pool you can drag from. Drag a clip to move it, its ends to trim it; click the ruler to jump.
-const LABEL_W = 112;
-const H_RULER = 26, H_OVER = 32, H_MAIN = 62, H_AUDIO = 38, H_CAP = 28;
+const H_CAP = 28;
+
+function useNarrow(): boolean {
+  const q = '(max-width: 639px)';
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(q);
+    const on = () => setM(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return m;
+}
 
 const COLOR: Record<string, string> = { text: 'sx-clip sx-clip-text', sticker: 'sx-clip sx-clip-sticker', draw: 'sx-clip sx-clip-draw', media: 'sx-clip sx-clip-media', audio: 'sx-clip sx-clip-audio', captions: 'sx-clip sx-clip-cc' };
 const TAG: Record<string, string> = { text: 'T', sticker: '★', draw: '✎', media: '▣', audio: '♪', captions: 'CC' };
@@ -52,6 +63,10 @@ const Film: React.FC<{ asset: Asset | undefined; clip: MediaLayer; widthPx: numb
 
 export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const { project, assets, player } = ctl;
+  const narrow = useNarrow();
+  // on a phone the track names give way to a slim header and the clips get taller, so a finger can hit them
+  const LABEL_W = narrow ? 72 : 112;
+  const H_RULER = narrow ? 34 : 28, H_OVER = narrow ? 40 : 32, H_MAIN = narrow ? 64 : 62, H_AUDIO = narrow ? 44 : 38;
   const [pps, setPps] = useState(70);                      // pixels per second
   const [snapOn, setSnapOn] = useState(true);
   const [snapAt, setSnapAt] = useState<number | null>(null);
@@ -193,15 +208,15 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className={`absolute top-0.5 rounded-[7px] overflow-hidden text-[10px] font-bold text-white border touch-none select-none ${COLOR[l.type] || 'bg-zinc-600'} ${sel ? 'sx-clip-sel border-white z-10' : 'border-black/50'} ${l.hidden ? 'opacity-40' : ''} ${l.locked ? 'cursor-not-allowed' : 'cursor-grab'}`}
+        className={`absolute top-0.5 rounded-lg overflow-hidden text-[10px] font-bold text-white border touch-none select-none ${COLOR[l.type] || 'bg-zinc-600'} ${sel ? 'sx-clip-sel z-10' : ''} ${l.hidden ? 'opacity-40' : ''} ${l.locked ? 'cursor-not-allowed' : 'cursor-grab'}`}
         style={{ left: l.start * pps, width: Math.max(16, l.duration * pps), height: h - 4 }}
       >
         {kids}
-        <span className="relative block px-1.5 py-px truncate drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)] bg-gradient-to-b from-black/55 to-transparent">{label}</span>
+        <span className="sx-clip-label relative block px-1.5 py-px truncate">{label}</span>
         {sel && !l.locked && (
           <>
-            <span onPointerDown={(e) => begin(e, 'left', l)} onPointerMove={onMove} onPointerUp={onUp} className="absolute left-0 top-0 bottom-0 w-2.5 bg-white/90 hover:bg-fuchsia-300 cursor-ew-resize touch-none rounded-l-[4px]" aria-label="Trim start" />
-            <span onPointerDown={(e) => begin(e, 'right', l)} onPointerMove={onMove} onPointerUp={onUp} className="absolute right-0 top-0 bottom-0 w-2.5 bg-white/90 hover:bg-fuchsia-300 cursor-ew-resize touch-none rounded-r-[4px]" aria-label="Trim end" />
+            <span onPointerDown={(e) => begin(e, 'left', l)} onPointerMove={onMove} onPointerUp={onUp} className="sx-trim sx-trim-l cursor-ew-resize touch-none" aria-label="Trim start" />
+            <span onPointerDown={(e) => begin(e, 'right', l)} onPointerMove={onMove} onPointerUp={onUp} className="sx-trim sx-trim-r cursor-ew-resize touch-none" aria-label="Trim end" />
           </>
         )}
       </div>
@@ -209,7 +224,7 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   };
 
   const toggle = (on: boolean, Icon: React.ComponentType<{ className?: string }>, IconOff: React.ComponentType<{ className?: string }>, label: string, fn: () => void) => (
-    <button onClick={(e) => { e.stopPropagation(); fn(); }} aria-label={label} aria-pressed={on} title={label} className={`w-[22px] h-[22px] rounded flex items-center justify-center ${on ? 'text-amber-300 bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
+    <button onClick={(e) => { e.stopPropagation(); fn(); }} aria-label={label} aria-pressed={on} title={label} className={`sx-tgl ${on ? 'is-on' : ''}`}>
       {on ? <IconOff className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
     </button>
   );
@@ -217,18 +232,18 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   /** One row: the header (name and switches) that stays in view while scrolling sideways, and the track. */
   const row = (key: string, h: number, head: React.ReactNode, track: React.ReactNode, lane?: 'main' | 'overlay' | 'audio', testid?: string, selected = false) => (
     <div key={key} className="flex" data-testid={testid}>
-      <div className={`shrink-0 sticky left-0 z-20 border-r border-b border-zinc-800 px-1.5 flex flex-col justify-center gap-0.5 ${selected ? 'bg-zinc-800' : 'bg-zinc-950'}`} style={{ width: LABEL_W, height: h }}>{head}</div>
+      <div className={`sx-tl-head shrink-0 sticky left-0 z-20 px-1.5 flex flex-col justify-center gap-0.5 ${selected ? 'is-sel' : ''}`} style={{ width: LABEL_W, height: h }}>{head}</div>
       <div
-        className="relative border-b border-zinc-800/80 bg-[repeating-linear-gradient(90deg,transparent_0,transparent_69px,rgba(255,255,255,0.025)_69px,rgba(255,255,255,0.025)_70px)]"
+        className="sx-tl-track relative"
         style={{ width, height: h }}
         onDragOver={lane ? overDrop : undefined} onDragLeave={() => setDropX(null)} onDrop={lane ? (e) => doDrop(e, lane) : undefined}
       >{track}</div>
     </div>
   );
 
-  const head = (tag: string, name: string, switches: React.ReactNode, color = 'bg-zinc-600') => (
+  const head = (tag: string, name: string, switches: React.ReactNode, color = 'sx-tag-v') => (
     <>
-      <div className="flex items-center gap-1 min-w-0"><span className={`shrink-0 min-w-[22px] px-1 h-4 rounded text-[9px] font-black flex items-center justify-center ${color}`}>{tag}</span><span className="text-[10px] font-semibold text-zinc-300 truncate" title={name}>{name}</span></div>
+      <div className="flex items-center gap-1 min-w-0"><span className={`sx-tag shrink-0 ${color}`}>{tag}</span><span className="sx-tl-name hidden sm:block truncate" title={name}>{name}</span></div>
       <div className="flex items-center gap-0.5">{switches}</div>
     </>
   );
@@ -247,38 +262,41 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   return (
     <div className="studio-timeline sx-tl shrink-0 flex flex-col" data-testid="studio-timeline">
-      <div className="sx-tl-bar flex items-center gap-1 px-2 py-1 overflow-x-auto no-scrollbar">
-        <button onClick={() => player.seek(0)} aria-label="Back to start" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center shrink-0"><SkipBack className="w-4 h-4" /></button>
-        <button onClick={() => (player.playing ? player.pause() : player.play())} aria-label={ctl.playing ? 'Pause' : 'Play'} data-testid="studio-play" className="sx-play w-9 h-9 rounded-full flex items-center justify-center shrink-0">
-          {ctl.playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+      <div className="sx-tl-bar flex items-center gap-1">
+        <button onClick={() => player.seek(0)} aria-label="Back to start" className="sx-iconbtn sx-hit-sm rounded-full hidden sm:flex items-center justify-center shrink-0"><SkipBack className="w-4 h-4" /></button>
+        <button onClick={() => (player.playing ? player.pause() : player.play())} aria-label={ctl.playing ? 'Pause' : 'Play'} data-testid="studio-play" className="sx-play rounded-full flex items-center justify-center shrink-0">
+          {ctl.playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
         </button>
-        <span className="sx-time font-mono text-[12px] shrink-0 text-center whitespace-nowrap px-2 py-1 rounded-lg" data-testid="studio-time">{fmtTime(ctl.time, true)} / {fmtTime(ctl.duration)}</span>
-        <span className="w-px h-5 bg-zinc-800 mx-1 shrink-0" />
-        <button onClick={ctl.split} disabled={!canSplit} aria-label="Split at the playhead" title="Split at the playhead (S)" data-testid="studio-split" className="h-8 px-2 rounded-lg hover:bg-white/10 disabled:opacity-30 flex items-center gap-1 text-[11px] font-bold shrink-0"><Scissors className="w-4 h-4" />Split</button>
-        <button onClick={() => sel && ctl.duplicateLayer(sel.id)} disabled={!sel} aria-label="Duplicate" className="h-8 px-2 rounded-lg hover:bg-white/10 disabled:opacity-30 flex items-center gap-1 text-[11px] font-bold shrink-0"><Copy className="w-4 h-4" />Copy</button>
-        <button onClick={() => sel && ctl.removeLayer(sel.id)} disabled={!sel} aria-label="Delete" data-testid="studio-delete" className="h-8 px-2 rounded-lg hover:bg-white/10 disabled:opacity-30 flex items-center gap-1 text-[11px] font-bold text-rose-300 shrink-0"><Trash2 className="w-4 h-4" />Delete</button>
+        <span className="sx-time font-mono shrink-0 whitespace-nowrap" data-testid="studio-time">{fmtTime(ctl.time, true)} <i>/ {fmtTime(ctl.duration)}</i></span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
-          <button onClick={() => setSnapOn((v) => !v)} aria-pressed={snapOn} aria-label="Snap to the playhead and to other clips" title="Snap to the playhead and to other clips" data-testid="studio-snap" className={`w-8 h-8 rounded-lg flex items-center justify-center ${snapOn ? 'bg-amber-400/20 text-amber-300' : 'hover:bg-white/10 text-zinc-400'}`}><Magnet className="w-4 h-4" /></button>
-          <button onClick={fit} aria-label="Fit the whole video in view" title="Fit the whole video in view" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Maximize2 className="w-4 h-4" /></button>
-          <button onClick={() => setPps((v) => Math.max(14, Math.round(v / 1.35)))} aria-label="Zoom timeline out" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><ZoomOut className="w-4 h-4" /></button>
-          <input type="range" min={0} max={100} value={Math.max(0, Math.min(100, zoomPos))} onChange={(e) => setPps(Math.round(14 * Math.pow(320 / 14, parseInt(e.target.value, 10) / 100)))} aria-label="Timeline zoom" className="w-20 accent-fuchsia-500 hidden sm:block" />
-          <button onClick={() => setPps((v) => Math.min(320, Math.round(v * 1.35)))} aria-label="Zoom timeline in" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><ZoomIn className="w-4 h-4" /></button>
+          <button onClick={ctl.split} disabled={!canSplit} aria-label="Split at the playhead" title="Split at the playhead (S)" data-testid="studio-split" className="sx-tlbtn"><Scissors className="w-[18px] h-[18px]" /><span>Split</span></button>
+          <button onClick={() => sel && ctl.duplicateLayer(sel.id)} disabled={!sel} aria-label="Duplicate" className="sx-tlbtn"><Copy className="w-[18px] h-[18px]" /><span>Copy</span></button>
+          <button onClick={() => sel && ctl.removeLayer(sel.id)} disabled={!sel} aria-label="Delete" data-testid="studio-delete" className="sx-tlbtn is-danger"><Trash2 className="w-[18px] h-[18px]" /><span>Delete</span></button>
+          <span className="sx-tl-sep hidden lg:block" />
+          <div className="hidden lg:flex items-center gap-1">
+            <button onClick={() => setPps((v) => Math.max(14, Math.round(v / 1.35)))} aria-label="Zoom timeline out" className="sx-iconbtn sx-hit-sm rounded-full flex items-center justify-center"><ZoomOut className="w-4 h-4" /></button>
+            <input type="range" min={0} max={100} value={Math.max(0, Math.min(100, zoomPos))} onChange={(e) => setPps(Math.round(14 * Math.pow(320 / 14, parseInt(e.target.value, 10) / 100)))} aria-label="Timeline zoom" className="sx-range sx-range-sm w-20" style={{ ['--sx-fill' as string]: `${Math.max(0, Math.min(100, zoomPos))}%` }} />
+            <button onClick={() => setPps((v) => Math.min(320, Math.round(v * 1.35)))} aria-label="Zoom timeline in" className="sx-iconbtn sx-hit-sm rounded-full flex items-center justify-center"><ZoomIn className="w-4 h-4" /></button>
+          </div>
         </div>
       </div>
-      <div ref={scroller} className="relative overflow-auto max-h-[22vh] lg:max-h-[min(36vh,340px)]" onPointerMove={onMove} onPointerUp={onUp}>
+      <div ref={scroller} className="sx-tl-body relative overflow-auto" onPointerMove={onMove} onPointerUp={onUp}>
         <div className="relative" style={{ width: width + LABEL_W }}>
-          <div className="flex sticky top-0 z-30 bg-zinc-950">
-            <div className="shrink-0 sticky left-0 z-30 bg-zinc-950 border-r border-b border-zinc-800 text-[9px] font-bold text-zinc-500 flex items-center justify-center" style={{ width: LABEL_W, height: H_RULER }}>TRACKS</div>
+          <div className="sx-tl-rulerrow flex sticky top-0 z-30">
+            <div className="sx-tl-corner shrink-0 sticky left-0 z-30 flex items-center justify-center gap-0.5" style={{ width: LABEL_W, height: H_RULER }}>
+              <button onClick={() => setSnapOn((v) => !v)} aria-pressed={snapOn} aria-label="Snap to the playhead and to other clips" title="Snap to the playhead and to other clips" data-testid="studio-snap" className={`sx-tgl ${snapOn ? 'is-on' : ''}`}><Magnet className="w-3.5 h-3.5" /></button>
+              <button onClick={fit} aria-label="Fit the whole video in view" title="Fit the whole video in view" className="sx-tgl"><Maximize2 className="w-3.5 h-3.5" /></button>
+            </div>
             <div
-              className="relative border-b border-zinc-800 cursor-pointer touch-none bg-zinc-900/70"
+              className="sx-tl-ruler relative cursor-pointer touch-none"
               style={{ width, height: H_RULER }}
               onPointerDown={(e) => { drag.current = { kind: 'playhead', id: '', x0: e.clientX, layer: project.layers[0] }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); player.seek(timeAt(e.clientX)); }}
               onPointerMove={onMove} onPointerUp={onUp} data-testid="studio-ruler"
             >
               {ticks.map((t) => (
                 <React.Fragment key={t}>
-                  <span className="absolute top-0 text-[9px] font-mono text-zinc-400 pl-1 border-l border-zinc-600 h-full" style={{ left: t * pps }}>{fmtTime(t)}</span>
-                  {[1, 2, 3, 4].map((m) => <span key={m} className="absolute bottom-0 w-px h-1.5 bg-zinc-700" style={{ left: (t + m * minor) * pps }} />)}
+                  <span className="sx-tick absolute top-0 h-full" style={{ left: t * pps }}>{fmtTime(t)}</span>
+                  {[1, 2, 3, 4].map((m) => <span key={m} className="sx-tick-minor absolute bottom-0 w-px h-1.5" style={{ left: (t + m * minor) * pps }} />)}
                 </React.Fragment>
               ))}
             </div>
@@ -307,7 +325,7 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
               {toggle(mainLocked, LockOpen, Lock, mainLocked ? 'Unlock video' : 'Lock video', () => allMain(() => ({ locked: !mainLocked })))}
               {toggle(mainMuted, Volume2, VolumeX, mainMuted ? 'Sound of the clips on' : 'Mute the clips', () => allMain(() => ({ muted: !mainMuted })))}
             </>
-          ), 'bg-fuchsia-700'), (
+          ), 'sx-tag-v'), (
             <>
               {main.map((c) => {
                 const a = assets.get(c.assetId);
@@ -340,10 +358,10 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
                 {toggle(!!l.locked, LockOpen, Lock, l.locked ? 'Unlock' : 'Lock', () => ctl.updateLayer(l.id, { locked: !l.locked }))}
                 {toggle(!!l.muted, Volume2, VolumeX, l.muted ? 'Sound on' : 'Mute', () => ctl.updateLayer(l.id, { muted: !l.muted }))}
               </>
-            ), 'bg-emerald-700'), block(l, H_AUDIO, (a?.peaks ? <div className="absolute inset-x-0 bottom-0 top-3"><Wave peaks={peaksFor(a, l.trimIn, l.trimIn + l.duration) || []} dim={!!l.muted} /></div> : undefined), `${l.label === 'voice' ? '🎙️' : '♪'} ${l.name}`), 'audio', i === 0 ? 'lane-sound' : undefined, ctl.selectedId === l.id);
+            ), 'sx-tag-a'), block(l, H_AUDIO, (a?.peaks ? <div className="absolute inset-x-0 bottom-0 top-3"><Wave peaks={peaksFor(a, l.trimIn, l.trimIn + l.duration) || []} dim={!!l.muted} /></div> : undefined), `${l.label === 'voice' ? '🎙️' : '♪'} ${l.name}`), 'audio', i === 0 ? 'lane-sound' : undefined, ctl.selectedId === l.id);
           })}
-          {audios.length === 0 && row('empty-audio', 24, head('A1', 'Sound', null, 'bg-emerald-700'), <span className="absolute inset-0 flex items-center pl-3 text-[10px] text-zinc-600">Music and voice-overs appear here: drop a sound, or use the Sound tab</span>, 'audio', 'lane-sound')}
-          {captions.length > 0 && row('captions', H_CAP, head('CC', 'Captions', null, 'bg-teal-600'), <span className="absolute inset-0 flex items-center pl-3 text-[11px] text-teal-300">{(captions[0] as { cues: unknown[] }).cues.length} lines (edit them in Captions)</span>, undefined, 'lane-captions')}
+          {audios.length === 0 && row('empty-audio', 24, head('A1', 'Sound', null, 'sx-tag-a'), <span className="absolute inset-0 flex items-center pl-3 text-[10px] text-zinc-600">Music and voice-overs appear here: drop a sound, or use the Sound tab</span>, 'audio', 'lane-sound')}
+          {captions.length > 0 && row('captions', H_CAP, head('CC', 'Captions', null, 'sx-tag-c'), <span className="absolute inset-0 flex items-center pl-3 text-[11px] text-teal-300">{(captions[0] as { cues: unknown[] }).cues.length} lines (edit them in Captions)</span>, undefined, 'lane-captions')}
 
           {/* where a dragged file would land, a snap guide, and the playhead */}
           {dropX !== null && <div className="absolute top-0 bottom-0 w-0.5 bg-fuchsia-400 z-30 pointer-events-none" style={{ left: LABEL_W + dropX * pps }} />}

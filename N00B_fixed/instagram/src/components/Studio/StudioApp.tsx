@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Captions, Crop, Download, Frame, ImagePlus, Keyboard, Layers, LayoutTemplate, Music, Palette, Pencil, Redo2, SlidersHorizontal, Smile, Sparkles, SquarePen, Type, Undo2, X } from 'lucide-react';
+import { Captions, ChevronDown, Crop, Download, Frame, ImagePlus, Keyboard, Layers, LayoutTemplate, Music, Palette, Pencil, Redo2, SlidersHorizontal, Smile, Sparkles, SquarePen, Type, Undo2, X } from 'lucide-react';
 import {
   ASPECTS, Aspect, Asset, Layer, MediaLayer, Project, Stroke, clipLength, emptyProject, fitLayer, mainClips, newAudioLayer, newMediaLayer, newStickerLayer, newTextLayer, normalizeMain, projectDuration, uid
 } from './types';
@@ -151,6 +151,7 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tool, setToolState] = useState<ToolId>('media');
   const [panelOpen, setPanelOpen] = useState(true);
+  const [sheet, setSheet] = useState<'peek' | 'tall'>('peek');
   const [brush, setBrush] = useState<Brush>({ kind: 'pen', color: '#ff4d6d', size: 14, opacity: 1 });
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -495,32 +496,56 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
       default: return <PropsPanel ctl={ctl} />;
     }
   })();
+  // the dock follows the chosen tool (a tool picked by tapping something on the picture may be off screen)
+  const dockRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = dockRef.current;
+    const el = nav?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!nav || !el || nav.scrollWidth <= nav.clientWidth + 2 || nav.scrollHeight > nav.clientHeight + 40) return;
+    nav.scrollTo({ left: el.offsetLeft - (nav.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' });
+  }, [tool]);
+  const toolLabel = TOOLS.find((t) => t.id === tool)?.label || 'Tools';
+  const sheetState = panelOpen ? sheet : 'closed';
+
+  // the sheet's handle: tap = taller / shorter, drag up = taller, drag down = shorter, then closed
+  const onGrabDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button.sx-sheet-x')) return;
+    const y0 = e.clientY;
+    const done = (ev: PointerEvent) => {
+      window.removeEventListener('pointerup', done);
+      window.removeEventListener('pointercancel', done);
+      const dy = ev.clientY - y0;
+      if (dy < -28) setSheet('tall');
+      else if (dy > 28) { if (sheet === 'tall') setSheet('peek'); else setPanelOpen(false); }
+      else if (Math.abs(dy) < 8) setSheet((s) => (s === 'peek' ? 'tall' : 'peek'));
+    };
+    window.addEventListener('pointerup', done);
+    window.addEventListener('pointercancel', done);
+  };
 
   return (
-    <div className="studio-root sx-root force-dark fixed inset-0 edge-own z-[10000] flex flex-col text-white select-none" data-testid="noob-studio" role="application" aria-label="NOOB Studio">
-      <header className="sx-top shrink-0 flex items-center gap-1.5 px-2">
-        <button onClick={close} aria-label="Close NOOB Studio" data-testid="studio-close" className="sx-iconbtn w-10 h-10 rounded-full flex items-center justify-center"><X className="w-5 h-5" /></button>
-        <div className="min-w-0 flex items-center gap-2">
-          <span className="sx-brand flex items-center gap-1.5" aria-hidden="true"><span className="sx-logo" /><span className="sx-wordmark hidden sm:block">NOOB Studio</span></span>
-          <input
-            value={project.name} maxLength={60} aria-label="Project name"
-            onChange={(e) => update((p) => ({ ...p, name: e.target.value }), 'name')}
-            className="sx-name min-w-0 w-28 sm:w-44 rounded-xl px-2.5 py-1 text-[13px] font-semibold outline-none"
-          />
-        </div>
-        <div className="ml-auto flex items-center gap-1">
-          <button onClick={hist.undo} disabled={!hist.canUndo} aria-label="Undo" data-testid="studio-undo" className="sx-iconbtn w-10 h-10 rounded-full disabled:opacity-30 flex items-center justify-center"><Undo2 className="w-5 h-5" /></button>
-          <button onClick={hist.redo} disabled={!hist.canRedo} aria-label="Redo" data-testid="studio-redo" className="sx-iconbtn w-10 h-10 rounded-full disabled:opacity-30 flex items-center justify-center"><Redo2 className="w-5 h-5" /></button>
-          <button onClick={() => setShowKeys((v) => !v)} aria-label="Keyboard shortcuts" className="sx-iconbtn hidden sm:flex w-10 h-10 rounded-full items-center justify-center"><Keyboard className="w-5 h-5" /></button>
+    <div className="studio-root sx-root force-dark fixed inset-0 edge-own z-[10000] flex flex-col text-white select-none" data-testid="noob-studio" data-sheet={sheetState} data-mode={project.mode} role="application" aria-label="NOOB Studio">
+      <header className="sx-top shrink-0 flex items-center gap-1">
+        <button onClick={close} aria-label="Close NOOB Studio" data-testid="studio-close" className="sx-iconbtn sx-hit rounded-full flex items-center justify-center"><X className="w-5 h-5" /></button>
+        <span className="sx-wordmark hidden lg:block" aria-hidden="true">NOOB Studio</span>
+        <input
+          value={project.name} maxLength={60} aria-label="Project name"
+          onChange={(e) => update((p) => ({ ...p, name: e.target.value }), 'name')}
+          className="sx-name min-w-0 flex-1 lg:flex-none lg:w-56 rounded-lg px-2.5 font-semibold outline-none"
+        />
+        <div className="flex items-center gap-0.5 shrink-0 lg:ml-auto">
+          <button onClick={hist.undo} disabled={!hist.canUndo} aria-label="Undo" data-testid="studio-undo" className="sx-iconbtn sx-hit rounded-full disabled:opacity-30 flex items-center justify-center"><Undo2 className="w-5 h-5" /></button>
+          <button onClick={hist.redo} disabled={!hist.canRedo} aria-label="Redo" data-testid="studio-redo" className="sx-iconbtn sx-hit rounded-full disabled:opacity-30 flex items-center justify-center"><Redo2 className="w-5 h-5" /></button>
+          <button onClick={() => setShowKeys((v) => !v)} aria-label="Keyboard shortcuts" className="sx-iconbtn sx-hit hidden lg:flex rounded-full items-center justify-center"><Keyboard className="w-5 h-5" /></button>
           <button
             onClick={() => setShowExport(true)} disabled={project.layers.filter((l) => l.type === 'media' || l.type === 'text' || l.type === 'sticker').length === 0}
-            data-testid="studio-export-open" className="sx-export h-10 px-4 rounded-full disabled:opacity-40 text-[13px] font-black flex items-center gap-1.5"
+            data-testid="studio-export-open" className="sx-export ml-1 rounded-full disabled:opacity-40 flex items-center justify-center gap-1.5"
           ><Download className="w-4 h-4" />Export</button>
         </div>
       </header>
 
       <div className="studio-grid" style={{ ['--studio-panel-w' as string]: tool === 'media' ? '460px' : '320px' }}>
-        <nav className="studio-nav sx-dock order-4 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto no-scrollbar" aria-label="Tools">
+        <nav ref={dockRef} className="studio-nav sx-dock order-4 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto no-scrollbar" aria-label="Tools">
           {visibleTools.map((t) => {
             const Icon = t.icon;
             const active = tool === t.id;
@@ -528,7 +553,7 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
               <button
                 key={t.id} data-testid={`tool-${t.id}`} aria-pressed={active}
                 onClick={() => (active ? setPanelOpen((o) => !o) : setTool(t.id))}
-                className={`sx-tab shrink-0 flex flex-col items-center justify-center gap-1 px-2 py-2 lg:px-1 lg:py-2.5 min-w-[64px] ${active ? 'is-on' : ''}`}
+                className={`sx-tab shrink-0 flex flex-col items-center justify-center gap-1 ${active && panelOpen ? 'is-on' : active ? 'is-cur' : ''}`}
               >
                 <span className="sx-tab-ico"><Icon className="w-5 h-5" /></span>
                 <span className="sx-tab-label">{t.label}</span>
@@ -537,9 +562,15 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
           })}
         </nav>
 
-        <section className={`studio-panel sx-panel order-3 shrink-0 overflow-y-auto ${panelOpen ? '' : 'hidden lg:block'}`} data-testid="studio-panel" aria-label={`${tool} tools`}>
-          <button type="button" className="sx-grab-btn lg:hidden" onClick={() => setPanelOpen(false)} aria-label="Collapse the tools panel"><span className="sx-grab" aria-hidden="true" /></button>
-          <div key={tool} className="sx-panel-in">{panel}</div>
+        <section className={`studio-panel sx-panel order-3 shrink-0 ${panelOpen ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`} data-testid="studio-panel" data-size={sheet} aria-label={`${tool} tools`}>
+          <div className="sx-sheet-bar shrink-0" onPointerDown={onGrabDown}>
+            <button type="button" className="sx-grab-btn lg:hidden" aria-label={sheet === 'peek' ? 'Make the tools panel taller' : 'Make the tools panel shorter'}><span className="sx-grab" aria-hidden="true" /></button>
+            <div className="sx-sheet-title">
+              <h2>{toolLabel}</h2>
+              <button type="button" className="sx-sheet-x sx-iconbtn lg:hidden" onClick={() => setPanelOpen(false)} aria-label="Collapse the tools panel"><ChevronDown className="w-5 h-5" /></button>
+            </div>
+          </div>
+          <div key={tool} className="sx-panel-body sx-panel-in">{panel}</div>
         </section>
 
         <main className="studio-stage sx-stage order-1 relative min-h-0 min-w-0 flex flex-col flex-1">
@@ -551,22 +582,22 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
 
         {xl && (
           <aside className="studio-props sx-props order-5 w-[290px] overflow-y-auto" aria-label="Properties">
-            <div className="sx-section-title px-3 pt-3">Selected</div>
+            <div className="sx-section-title px-4 pt-4 pb-1">Selected</div>
             <PropsPanel ctl={ctl} />
           </aside>
         )}
       </div>
 
       {toast && (
-        <div className={`sx-toast absolute left-1/2 -translate-x-1/2 bottom-24 lg:bottom-6 max-w-[92vw] px-4 py-2.5 rounded-2xl text-[12px] font-semibold z-30 ${toast.tone === 'error' ? 'is-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'} onClick={() => setToast(null)} data-testid="studio-toast">
+        <div className={`sx-toast absolute left-1/2 -translate-x-1/2 max-w-[92vw] px-4 py-2.5 rounded-xl text-[13px] font-semibold z-30 ${toast.tone === 'error' ? 'is-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'} onClick={() => setToast(null)} data-testid="studio-toast">
           {toast.msg}
         </div>
       )}
       {showKeys && (
         <div className="sx-scrim absolute inset-0 z-40 flex items-center justify-center p-4" onClick={() => setShowKeys(false)}>
-          <div className="sx-sheet sx-pop w-full max-w-sm rounded-3xl p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[14px] font-black mb-2">Keyboard shortcuts</h2>
-            {SHORTCUTS.map(([k, d]) => <div key={k} className="flex justify-between gap-3 py-1 text-[12px] border-b border-zinc-800"><kbd className="sx-kbd font-mono">{k}</kbd><span className="text-zinc-300 text-right">{d}</span></div>)}
+          <div className="sx-sheet sx-pop w-full max-w-sm rounded-2xl p-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-[15px] font-bold mb-2">Keyboard shortcuts</h2>
+            {SHORTCUTS.map(([k, d]) => <div key={k} className="sx-kbd-row flex justify-between gap-3 py-2 text-[13px]"><kbd className="sx-kbd font-mono">{k}</kbd><span className="text-right">{d}</span></div>)}
           </div>
         </div>
       )}

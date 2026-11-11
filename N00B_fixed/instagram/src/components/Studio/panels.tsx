@@ -23,14 +23,14 @@ export const CanvasPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   return (
     <>
       <Section title="Project">
-        <Chips options={[{ id: 'photo', label: '🖼️ Photo' }, { id: 'video', label: '🎬 Video (timeline)' }]} value={p.mode} onChange={(m) => ctl.setMode(m as 'photo' | 'video')} />
+        <Chips options={[{ id: 'photo', label: 'Photo' }, { id: 'video', label: 'Video (timeline)' }]} value={p.mode} onChange={(m) => ctl.setMode(m as 'photo' | 'video')} />
         <p className="text-[11px] text-zinc-500">{p.mode === 'photo' ? 'One picture, with text, stickers and drawings on it. Exports a JPEG, PNG or WebP.' : 'Clips on a timeline with transitions and sound. Exports a video.'}</p>
       </Section>
       <Section title="Shape of the canvas">
         <div className="grid grid-cols-3 gap-1.5">
           {(Object.keys(ASPECTS) as Aspect[]).map((a) => (
-            <button key={a} onClick={() => ctl.setAspect(a)} aria-pressed={p.aspect === a} data-testid={`aspect-${a}`} className={`rounded-xl border px-1 py-2 flex flex-col items-center gap-1 ${p.aspect === a ? 'border-fuchsia-300 bg-fuchsia-500/20' : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'}`}>
-              <span className="border border-zinc-300 rounded-sm bg-zinc-700" style={{ width: 22 * (ASPECTS[a].w / Math.max(ASPECTS[a].w, ASPECTS[a].h)) + 6, height: 22 * (ASPECTS[a].h / Math.max(ASPECTS[a].w, ASPECTS[a].h)) + 6 }} />
+            <button key={a} onClick={() => ctl.setAspect(a)} aria-pressed={p.aspect === a} data-testid={`aspect-${a}`} className={`sx-aspect ${p.aspect === a ? 'is-on' : ''}`}>
+              <span className="sx-aspect-shape" style={{ width: 22 * (ASPECTS[a].w / Math.max(ASPECTS[a].w, ASPECTS[a].h)) + 6, height: 22 * (ASPECTS[a].h / Math.max(ASPECTS[a].w, ASPECTS[a].h)) + 6 }} />
               <span className="text-[11px] font-black">{a}</span>
               <span className="text-[9px] text-zinc-400 text-center leading-tight">{ASPECTS[a].hint}</span>
             </button>
@@ -62,7 +62,7 @@ export const AdjustPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const set = (k: keyof Adjust, v: number) => ctl.updateLayer(t.id, { adjust: { ...t.adjust, [k]: v } }, `${t.id}:adj:${k}`);
   return (
     <>
-      <div className="px-3 pt-2 text-[11px] text-zinc-400">Editing: <b className="text-white">{t.name}</b>. Hold <b>Original</b> under the picture to compare.</div>
+      <div className="sx-hint">Editing: <b className="text-white">{t.name}</b>. Hold <b>Original</b> under the picture to compare.</div>
       {GROUPS.map((g) => (
         <Section key={g.title} title={g.title}>
           {g.items.map(([k, label, min, max]) => <Slider key={k} label={label} value={t.adjust[k]} min={min} max={max} step={k === 'blur' ? 0.5 : 1} onChange={(v) => set(k, v)} reset={0} testId={`adj-${k}`} />)}
@@ -109,9 +109,9 @@ export const FiltersPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
       <Section title="Filters">
         <div className="grid grid-cols-3 gap-2">
           {FILTERS.map((f) => (
-            <button key={f.id} onClick={() => ctl.updateLayer(t.id, { filter: f.id })} aria-pressed={t.filter === f.id} data-testid={`filter-${f.id}`} className={`rounded-xl overflow-hidden border-2 text-center ${t.filter === f.id ? 'border-fuchsia-400' : 'border-zinc-800 hover:border-zinc-600'}`}>
+            <button key={f.id} onClick={() => ctl.updateLayer(t.id, { filter: f.id })} aria-pressed={t.filter === f.id} data-testid={`filter-${f.id}`} className={`sx-filter ${t.filter === f.id ? 'is-on' : ''}`}>
               <div className="aspect-[4/5] bg-zinc-800">{thumbs[f.id] && <img src={thumbs[f.id]} alt="" className="w-full h-full object-cover" />}</div>
-              <div className="text-[10px] font-bold py-1 truncate px-1">{f.name}</div>
+              <div className="sx-filter-name">{f.name}</div>
             </button>
           ))}
         </div>
@@ -185,8 +185,8 @@ export const TemplatesPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
       <p className="text-[11px] text-zinc-400">A template builds a real project you can change layer by layer (undo brings your old one back). Frames are filled with the photos you imported.</p>
       <div className="grid grid-cols-2 gap-2">
         {TEMPLATES.map((t) => (
-          <button key={t.id} onClick={() => { ctl.replaceProject(applyTemplate(t, images)); if (t.needsImages > images.length) ctl.notify(`This template uses ${t.needsImages} photo${t.needsImages > 1 ? 's' : ''}: import them in Media and apply it again.`, 'info'); }} data-testid={`tpl-${t.id}`} className="rounded-xl bg-zinc-900 border border-zinc-800 hover:border-fuchsia-400 p-2 text-left">
-            <div className="text-2xl">{t.emoji}</div>
+          <button key={t.id} onClick={() => { ctl.replaceProject(applyTemplate(t, images)); if (t.needsImages > images.length) ctl.notify(`This template uses ${t.needsImages} photo${t.needsImages > 1 ? 's' : ''}: import them in Media and apply it again.`, 'info'); }} data-testid={`tpl-${t.id}`} className="sx-tpl">
+            <div className="sx-tpl-emoji">{t.emoji}</div>
             <div className="text-[12px] font-black">{t.name}</div>
             <div className="text-[10px] text-zinc-400">{t.hint} · {t.aspect}{t.needsImages ? ` · ${t.needsImages} photo${t.needsImages > 1 ? 's' : ''}` : ''}</div>
           </button>
@@ -206,19 +206,19 @@ export const LayersPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   return (
     <div className="p-2 space-y-1.5" data-testid="studio-layers">
       {list.map((l) => (
-        <div key={l.id} onClick={() => ctl.select(l.id)} className={`rounded-xl border px-2 py-1.5 flex items-center gap-1.5 text-[11px] cursor-pointer ${ctl.selectedId === l.id ? 'border-fuchsia-400 bg-fuchsia-500/10' : 'border-zinc-800 bg-zinc-900 hover:border-zinc-600'}`}>
+        <div key={l.id} onClick={() => ctl.select(l.id)} className={`sx-layer ${ctl.selectedId === l.id ? 'is-on' : ''}`}>
           <span className="w-5 text-center shrink-0 text-zinc-400">{l.type === 'text' ? 'T' : l.type === 'sticker' ? '★' : l.type === 'draw' ? '✎' : l.type === 'audio' ? '♪' : l.type === 'captions' ? 'CC' : '▣'}</span>
           {renaming === l.id ? (
             <input autoFocus defaultValue={l.name} onClick={(e) => e.stopPropagation()} onBlur={(e) => { ctl.updateLayer(l.id, { name: e.target.value.slice(0, 40) || l.name }); setRenaming(null); }} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} className="flex-1 min-w-0 bg-zinc-800 rounded px-1 text-white" />
           ) : (
-            <span className="flex-1 min-w-0 truncate font-semibold" onDoubleClick={() => setRenaming(l.id)} title="Double-click to rename">{l.type === 'text' ? l.text.split('\n')[0] || LAYER_NAMES.text : l.name || LAYER_NAMES[l.type]}</span>
+            <span className="block flex-1 min-w-0 truncate font-semibold" onDoubleClick={() => setRenaming(l.id)} title="Double-click to rename">{l.type === 'text' ? l.text.split('\n')[0] || LAYER_NAMES.text : l.name || LAYER_NAMES[l.type]}</span>
           )}
-          <button aria-label={l.hidden ? 'Show' : 'Hide'} onClick={(e) => { e.stopPropagation(); ctl.updateLayer(l.id, { hidden: !l.hidden }); }} className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white">{l.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
-          <button aria-label={l.locked ? 'Unlock' : 'Lock'} onClick={(e) => { e.stopPropagation(); ctl.updateLayer(l.id, { locked: !l.locked }); }} className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white">{l.locked ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}</button>
-          <button aria-label="Bring forward" onClick={(e) => { e.stopPropagation(); ctl.moveLayer(l.id, 'up'); }} className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white"><ChevronUp className="w-4 h-4" /></button>
-          <button aria-label="Send back" onClick={(e) => { e.stopPropagation(); ctl.moveLayer(l.id, 'down'); }} className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white"><ChevronDown className="w-4 h-4" /></button>
-          <button aria-label="Duplicate" onClick={(e) => { e.stopPropagation(); ctl.duplicateLayer(l.id); }} className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white"><Copy className="w-3.5 h-3.5" /></button>
-          <button aria-label="Delete" onClick={(e) => { e.stopPropagation(); ctl.removeLayer(l.id); }} className="w-6 h-6 flex items-center justify-center text-rose-300 hover:text-rose-200"><Trash2 className="w-3.5 h-3.5" /></button>
+          <button aria-label={l.hidden ? 'Show' : 'Hide'} onClick={(e) => { e.stopPropagation(); ctl.updateLayer(l.id, { hidden: !l.hidden }); }} className="sx-layer-btn">{l.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
+          <button aria-label={l.locked ? 'Unlock' : 'Lock'} onClick={(e) => { e.stopPropagation(); ctl.updateLayer(l.id, { locked: !l.locked }); }} className="sx-layer-btn">{l.locked ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}</button>
+          <button aria-label="Bring forward" onClick={(e) => { e.stopPropagation(); ctl.moveLayer(l.id, 'up'); }} className="sx-layer-btn"><ChevronUp className="w-4 h-4" /></button>
+          <button aria-label="Send back" onClick={(e) => { e.stopPropagation(); ctl.moveLayer(l.id, 'down'); }} className="sx-layer-btn"><ChevronDown className="w-4 h-4" /></button>
+          <button aria-label="Duplicate" onClick={(e) => { e.stopPropagation(); ctl.duplicateLayer(l.id); }} className="sx-layer-btn"><Copy className="w-3.5 h-3.5" /></button>
+          <button aria-label="Delete" onClick={(e) => { e.stopPropagation(); ctl.removeLayer(l.id); }} className="sx-layer-btn is-danger"><Trash2 className="w-3.5 h-3.5" /></button>
         </div>
       ))}
       <div className="flex gap-2 pt-1">

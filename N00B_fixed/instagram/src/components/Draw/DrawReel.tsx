@@ -5,7 +5,7 @@ import { buzz, startSpinSound, stopSpinSound, thumpSound, tickSound } from './dr
 
 interface DrawReelProps {
   prizes: DrawPrize[];
-  accent: string;
+  accent?: string;
   /** a new number starts a spin that lands on `winner` */
   spinKey: number;
   winner: DrawPrize | null;
@@ -18,7 +18,7 @@ const IDLE_INDEX = 4;
 
 // The reel: a strip of prize cards that rushes past a marker and slows down until the won prize sits under it (the same idea as PackDraw's
 // pack opening). The server has already decided the prize; this only shows it. The strip is moved by the browser's own CSS transition.
-export const DrawReel: React.FC<DrawReelProps> = React.memo(({ prizes, accent, spinKey, winner, onLanded }) => {
+export const DrawReel: React.FC<DrawReelProps> = React.memo(({ prizes, spinKey, winner, onLanded }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const job = useRef<{ viewport: number } | null>(null);
@@ -84,14 +84,12 @@ export const DrawReel: React.FC<DrawReelProps> = React.memo(({ prizes, accent, s
   useEffect(() => () => { cancelAnimationFrame(frame.current); window.clearTimeout(doneTimer.current); stopSpinSound(); }, []);
 
   return (
-    <div ref={viewportRef} className="dr-reel" style={{ ['--ac' as any]: accent, boxShadow: `inset 0 0 40px ${accent}22, 0 18px 50px -20px ${accent}88` }}>
+    <div ref={viewportRef} className="dr-reel">
       <div ref={stripRef} className="dr-reel-strip will-change-transform" style={{ gap: CARD_GAP, width: 'max-content' }}>
         {strip.map((p, i) => <PrizeCard key={`${i}-${p.id}`} prize={p} />)}
       </div>
-      {/* the marker */}
+      {/* the one marker line */}
       <div className="dr-reel-line" />
-      <div className="dr-reel-arrow dr-reel-arrow-t" />
-      <div className="dr-reel-arrow dr-reel-arrow-b" />
       {/* the soft fade at both edges */}
       <div className="dr-reel-fade dr-reel-fade-l" />
       <div className="dr-reel-fade dr-reel-fade-r" />

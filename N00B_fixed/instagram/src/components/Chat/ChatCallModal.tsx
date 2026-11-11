@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, PhoneOff, Users, AlertTriangle, Loader2, PhoneIncoming } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import type { User } from '../../types';
 import { useChatCall, type CallParticipant } from './useChatCall';
 import { MAX_CALL_PARTICIPANTS } from '../../services/callSignaling';
@@ -30,44 +30,27 @@ interface ChatCallModalProps {
   isGroup?: boolean;
 }
 
-// One participant's tile — audio-only, so always their avatar, with a mic-off badge when muted.
-// For a remote tile, the connection underneath (see connectionState on CallParticipant) is what
-// actually decides whether their audio can reach this device at all — shown here so a stuck/failed
-// connection is visible instead of just silently never making a sound.
-const Tile: React.FC<{ p: CallParticipant }> = ({ p }) => {
+// One person in the call: a round picture and the name, with a mic-off mark when they are muted.
+// For a remote person, the connection underneath (see connectionState on CallParticipant) is what actually decides whether their audio can reach this device at all,
+// so a stuck / failed connection is written under the name instead of just silently never making a sound.
+const Face: React.FC<{ p: CallParticipant; size: number }> = ({ p, size }) => {
   const notConnected = !p.isLocal && p.connectionState && p.connectionState !== 'connected';
   const failed = !p.isLocal && (p.connectionState === 'failed' || p.connectionState === 'disconnected');
   return (
-    <div className="relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center">
-      <div className={`relative w-16 h-16 rounded-full ${p.hasAudio ? 'ring-2 ring-noob/60' : 'ring-2 ring-zinc-700'}`}>
+    <div className="flex flex-col items-center gap-2 min-w-0">
+      <div className="relative rounded-full" style={{ width: size, height: size }}>
         <img src={p.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-      </div>
-      {/* remote audio has to actually play somewhere */}
-      {!p.isLocal && p.stream && <AudioSink stream={p.stream} />}
-      {notConnected && (
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-center">
-          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-md ${
-            failed ? 'bg-red-500/20 border border-red-500/40 text-red-300' : 'bg-black/60 text-zinc-300'
-          }`}>
-            {failed ? 'Connection issue' : <><Loader2 className="w-3 h-3 animate-spin" /> Connecting audio…</>}
-          </span>
-        </div>
-      )}
-      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg truncate">
-          {p.isLocal ? 'You' : p.displayName || p.username}
-        </span>
         {!p.hasAudio && (
-          <span className="p-1 rounded-full bg-black/60 backdrop-blur-md shrink-0">
-            <MicOff className="w-3 h-3 text-red-400" />
-          </span>
+          <span className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-black border border-white/20"><MicOff className="w-3.5 h-3.5 text-red-400" /></span>
         )}
       </div>
+      <span className="text-sm font-bold text-white truncate max-w-[110px]">{p.isLocal ? 'You' : p.displayName || p.username}</span>
+      {notConnected && <span className={`text-[11px] font-semibold ${failed ? 'text-red-300' : 'text-zinc-400'}`}>{failed ? 'Connection issue' : 'Connecting audio…'}</span>}
     </div>
   );
 };
 
-const AudioSink: React.FC<{ stream: MediaStream }> = ({ stream }) => {
+const AudioSink: React.FC<{ stream: MediaStream; muted?: boolean }> = ({ stream, muted }) => {
   const ref = useRef<HTMLAudioElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -76,7 +59,7 @@ const AudioSink: React.FC<{ stream: MediaStream }> = ({ stream }) => {
     // anyway this makes that an actual, loggable failure instead of silent, unexplained quiet.
     ref.current.play().catch((err) => console.warn('[call] could not autoplay remote audio:', err));
   }, [stream]);
-  return <audio ref={ref} autoPlay />;
+  return <audio ref={ref} autoPlay muted={!!muted} />;
 };
 
 // A real call: direct WebRTC between everyone in it (see useChatCall.ts). Nothing here is ever
@@ -89,6 +72,9 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
   const closedRef = useRef(false);
   const [declinedBy, setDeclinedBy] = useState<string[]>([]);
   const isOutgoing = !!ringMembers && ringMembers.length > 0;
+  // "Speaker": whether the other people can be heard on this device (off = their sound is switched off here, they still hear you)
+  const [speakerOn, setSpeakerOn] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (startAttempted.current) return;
@@ -143,6 +129,13 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
   // when the call was picked up, for the length written on the Calls page
   const joinedAtRef = useRef<number | null>(null);
   if (joined && joinedAtRef.current === null) joinedAtRef.current = Date.now();
+  useEffect(() => {
+    if (!joined) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [joined]);
+  const secs = joinedAtRef.current ? Math.max(0, Math.floor((now - joinedAtRef.current) / 1000)) : 0;
+  const clock = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   const handleClose = () => {
     if (closedRef.current) return;
     closedRef.current = true;
@@ -187,69 +180,67 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ringing, joined, error]);
 
+  const others = participants.filter((p) => !p.isLocal);
+  const isPair = !isGroup && others.length <= 1;
+  const bigPhoto = others[0]?.avatar || ringMembers?.[0]?.avatar || '/noob-logo-circle.png';
+  const status = error ? '' : ringing ? 'Ringing…' : !joined ? 'Connecting…' : clock;
+
   return (
-    <div className="fixed inset-0 z-[130] bg-black/95 media-dark backdrop-blur-md flex flex-col" role="dialog" aria-modal="true" aria-label={`Call in ${chatName}`}>
-      <header className="p-4 flex items-center justify-between border-b border-zinc-900 shrink-0">
-        <div>
-          <h3 className="text-sm font-black text-white">{chatName}</h3>
-          <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-            <Users className="w-3 h-3" />
-            {ringing ? 'Ringing…' : `${participants.length} in the call — direct between devices, nothing saved`}
-          </p>
-          {declinedBy.length > 0 && <p className="text-[11px] text-amber-400 mt-0.5">@{declinedBy.join(', @')} declined</p>}
-        </div>
+    <div
+      data-noob-keep="1"
+      className="edge-own call-page fixed inset-0 z-[130] media-dark chat-wallpaper flex flex-col text-white"
+      style={{ paddingTop: 'calc(var(--sat, env(safe-area-inset-top, 0px)) + 10px)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))' }}
+      role="dialog" aria-modal="true" aria-label={`Call in ${chatName}`}
+    >
+      {/* the other side's sound: one hidden player each, switched by the Speaker button */}
+      {others.map((p) => (p.stream ? <AudioSink key={p.userId} stream={p.stream} muted={!speakerOn} /> : null))}
+
+      <header className="shrink-0 px-5 pt-3 text-center">
+        <h3 className="text-[34px] leading-tight font-extrabold tracking-tight truncate">{chatName}</h3>
+        <p className="mt-1 text-[22px] font-semibold text-zinc-400 tabular-nums" data-testid="call-status">{status}</p>
+        {declinedBy.length > 0 && <p className="text-xs text-amber-400 mt-1">@{declinedBy.join(', @')} declined</p>}
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 flex flex-col items-center justify-center">
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-bold flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-bold flex items-center gap-2 max-w-sm">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
-        {ringing && !error ? (
-          <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-400 py-16">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-noob/20 animate-ping" />
-              <PhoneIncoming className="relative w-10 h-10 text-noob" />
-            </div>
-            <p className="text-xs">Ringing — nothing connects until someone answers…</p>
-          </div>
-        ) : !joined && !error ? (
-          <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-400 py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-noob" />
-            <p className="text-xs">Connecting…</p>
+        {isPair ? (
+          <div className="relative">
+            {!joined && !error && <div className="absolute -inset-3 rounded-full bg-white/10 animate-ping" />}
+            <img src={bigPhoto} alt="" className="relative w-[min(56vw,260px)] h-[min(56vw,260px)] rounded-full object-cover shadow-[0_20px_50px_-20px_rgba(0,0,0,.9)]" referrerPolicy="no-referrer" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {participants.map((p) => (
-              <Tile key={p.userId} p={p} />
-            ))}
+          <div className="grid grid-cols-3 gap-x-5 gap-y-6 w-full max-w-sm justify-items-center">
+            {(joined ? participants : []).map((p) => <Face key={p.userId} p={p} size={76} />)}
           </div>
         )}
-        {joined && !micOn && !error && (
-          <p className="text-[11px] text-zinc-500 text-center mt-4">Tap the mic button below to start talking.</p>
-        )}
+        {joined && !micOn && !error && <p className="text-xs text-zinc-500 text-center mt-5">Your microphone is off. Tap Mute to turn it on.</p>}
         {joined && atCapacity && (
-          <p className="text-[11px] text-amber-300 text-center mt-4">
-            This call is full — a group call holds at most {MAX_CALL_PARTICIPANTS} people at once.
-          </p>
+          <p className="text-xs text-amber-300 text-center mt-4">This call is full: a group call holds at most {MAX_CALL_PARTICIPANTS} people at once.</p>
         )}
       </div>
 
-      <div className="p-5 flex items-center justify-center gap-4 border-t border-zinc-900 shrink-0">
-        <button
-          onClick={toggleMic}
-          disabled={!joined}
-          title={micOn ? 'Mute microphone' : 'Unmute microphone'}
-          className={`p-4 rounded-full transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            micOn ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-red-500/20 text-red-400 border border-red-500/40'
-          }`}
-        >
-          {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+      {/* the buttons: one rounded panel, big round buttons with their names */}
+      <div className="shrink-0 mx-3 rounded-[32px] bg-[#232326] border border-white/5 px-6 py-6 grid grid-cols-3 gap-y-5 justify-items-center" data-testid="call-controls">
+        <button type="button" onClick={() => setSpeakerOn((v) => !v)} className="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform" aria-pressed={speakerOn} aria-label="Speaker">
+          <span className={`w-[72px] h-[72px] rounded-full grid place-items-center ${speakerOn ? 'bg-white text-black' : 'bg-[#0f0f11] text-white'}`}>
+            {speakerOn ? <Volume2 className="w-7 h-7" /> : <VolumeX className="w-7 h-7" />}
+          </span>
+          <span className="text-[17px] font-semibold">Speaker</span>
         </button>
-        <button onClick={handleClose} title={ringing ? 'Cancel' : 'Leave call'} className="p-4 rounded-full bg-red-600 hover:bg-red-500 text-white cursor-pointer">
-          <PhoneOff className="w-5 h-5" />
+        <button type="button" onClick={toggleMic} disabled={!joined} className="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform disabled:opacity-40" aria-pressed={!micOn} aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'}>
+          <span className={`w-[72px] h-[72px] rounded-full grid place-items-center ${micOn ? 'bg-[#0f0f11] text-white' : 'bg-white text-black'}`}>
+            {micOn ? <Mic className="w-7 h-7" /> : <MicOff className="w-7 h-7" />}
+          </span>
+          <span className="text-[17px] font-semibold">{micOn ? 'Mute' : 'Unmute'}</span>
+        </button>
+        <button type="button" onClick={handleClose} className="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform" aria-label={ringing ? 'Cancel' : 'End call'} data-testid="call-end">
+          <span className="w-[72px] h-[72px] rounded-full grid place-items-center bg-[#d4183d] text-white"><PhoneOff className="w-7 h-7" /></span>
+          <span className="text-[17px] font-semibold">{ringing ? 'Cancel' : 'End'}</span>
         </button>
       </div>
     </div>

@@ -1690,7 +1690,9 @@ html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop
    --sat is the height of that area; everything that used to start below it is pushed down by --sat. ---- */
 html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
 html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
-html.phone-edge .msg-safe-strip { display: none !important; }
+html.phone-edge .msg-safe-strip:not(.on) { display: none !important; }
+/* Messages list: the area behind the clock is the green of the header, so the green reaches the very top of the screen */
+html.phone-edge .msg-safe-strip.on { display: block !important; height: var(--sat) !important; background: #0E4B37 !important; }
 html.phone-edge #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
 /* full-screen pages and pop-ups start just below the clock (their top edge moves down; nothing is added inside them). The ones that keep room for it themselves (.edge-own, own env() padding) are left alone. */
 html.phone-edge .fixed.inset-0:not(.edge-own):not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { top: var(--sat) !important; }
@@ -1881,10 +1883,13 @@ html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: 
 
 /* ---- Phones (html.phone-edge): Messages lists reach the very top (the green header is drawn behind the clock, so there is no band above it); the Settings bar and the Reels bar are see-through ---- */
 html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top: calc(var(--sat) * -1); height: calc(100dvh + env(safe-area-inset-bottom, 0px) - var(--nav-h)) !important; }
-html.phone-edge #chat-view-container[data-view="list"] .msg-head { padding-top: calc(var(--sat) - 4px) !important; }
+html.phone-edge #chat-view-container[data-view="list"] .msg-head { padding-top: calc(var(--sat) + 10px) !important; }
 html.phone-edge .nst-header, html.phone-edge .nst-header.is-stuck { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
 html.phone-edge .nst-root { padding-top: 0; }
 
 /* Home and Profile: no doodle at all, not even faintly behind the page: plain black (Dark) or plain white (Light) */
 html[data-page="feed"] body, html[data-page="feed"] .doodle-wallpaper, html[data-page="feed"] .doodle-wallpaper-feed, html[data-page="profile"] body, html[data-page="profile"] .doodle-wallpaper, html[data-page="profile"] .doodle-wallpaper-feed { background-image: none !important; }
 html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[data-page="profile"] body::after, html[data-page="profile"] body::before { display: none !important; background-image: none !important; }
+
+/* Settings and activity: the bar holds only the back button (no title in it, also not after scrolling) */
+.nst-header .nst-late, .nst-header .nst-htitle.nst-late { display: none !important; }

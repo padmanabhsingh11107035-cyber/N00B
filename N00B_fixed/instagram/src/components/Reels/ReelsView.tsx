@@ -1316,7 +1316,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         className="relative w-full h-full sm:max-h-[860px] sm:max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden select-none sm:shadow-2xl sm:border border-neutral-800"
       >
       {/* the title bar floats over the top of the video */}
-      <div className="absolute top-0 inset-x-0 z-30" data-testid="reels-topbar" style={{ paddingTop: 'max(0px, calc(var(--sat, env(safe-area-inset-top, 0px)) - 23px))' }}>
+      <div className="absolute top-0 inset-x-0 z-30" data-testid="reels-topbar" style={{ paddingTop: 'max(0px, calc(var(--sat, env(safe-area-inset-top, 0px)) - 2px))' }}>
       <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
       {/* Title bar: Back, "Reels", and the sound button */}

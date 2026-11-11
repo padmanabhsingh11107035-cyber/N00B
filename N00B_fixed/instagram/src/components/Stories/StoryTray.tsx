@@ -122,40 +122,6 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
       <div className="flex items-start gap-4 overflow-x-auto no-scrollbar py-1">
         {/* Current User Story & Status Note Item */}
         <div className="flex flex-col items-center flex-shrink-0 relative group">
-          {/* Status Note Bubble */}
-          <button
-            id="status-note-bubble"
-            onClick={() => {
-              if (isMyNoteValid && currentUser.statusNote) {
-                setSelectedNoteViewer({
-                  note: currentUser.statusNote,
-                  user: {
-                    id: currentUser.id,
-                    username: currentUser.username,
-                    displayName: currentUser.displayName,
-                    avatar: currentUser.avatar
-                  },
-                  isCurrentUser: true
-                });
-              } else {
-                onOpenStatusNoteModal();
-              }
-            }}
-            className="hv-note mb-1 max-w-[90px] rounded-full px-2.5 py-1 text-[10px] text-noob font-semibold truncate hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
-            title={isMyNoteValid ? "Click to expand note & play song" : "Add Status Note (24-hour lifespan)"}
-          >
-            {isMyNoteValid && currentUser.statusNote ? (
-              <>
-                <span className="truncate">{currentUser.statusNote.text}</span>
-                {currentUser.statusNote.musicTrack && (
-                  <Volume2 className="w-2.5 h-2.5 flex-shrink-0 animate-pulse text-noob" />
-                )}
-              </>
-            ) : (
-              <span className="text-zinc-400 font-medium">+ Note</span>
-            )}
-          </button>
-
           {/* My picture: a ring when I have a story (tap to watch it), a plus to add another */}
           <div className="relative group">
             <button

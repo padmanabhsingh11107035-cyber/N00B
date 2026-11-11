@@ -1879,7 +1879,7 @@ a.noob-link, button.noob-link { color: #4da3ff !important; text-decoration: unde
 :root[data-theme="light"] a.noob-link, :root[data-theme="light"] button.noob-link { color: #0a60d0 !important; }
 /* an open chat on a phone: the page starts at the very top of the screen and the chat's own bar reaches up under the clock (the bar is the chat's colour, the clock sits on it) */
 html.phone-edge #chat-view-container[data-view="chat"] { top: 0 !important; bottom: 0 !important; height: auto !important; margin-top: 0 !important; }
-html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) - 6px) !important; }
+html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) - 24px) !important; }
 
 /* ---- Phones (html.phone-edge): Messages lists reach the very top (the green header is drawn behind the clock, so there is no band above it); the Settings bar and the Reels bar are see-through ---- */
 html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top: calc(var(--sat) * -1); height: calc(100dvh + env(safe-area-inset-bottom, 0px) - var(--nav-h)) !important; }

@@ -53,7 +53,7 @@ export function coverBackground(u: Pick<User, 'id' | 'socialLinks'>, valueOverri
   return { backgroundImage: `${glow}, ${set.css}` };
 }
 
-export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u: User) => void }> = ({ user, isOwn, onUpdated }) => {
+export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u: User) => void; bleed?: boolean }> = ({ user, isOwn, onUpdated, bleed }) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);   // what is shown while the choice is being saved
   const [busy, setBusy] = useState(false);
@@ -87,7 +87,7 @@ export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u:
   };
 
   return (
-    <div className="relative -mx-4 sm:mx-0 sm:rounded-3xl overflow-hidden h-[148px] sm:h-[190px]" style={coverBackground(user, shown)} data-testid="profile-cover">
+    <div className="relative -mx-4 sm:mx-0 sm:rounded-3xl overflow-hidden h-[148px] sm:h-[190px]" style={bleed ? { ...coverBackground(user, shown), marginTop: 'calc(var(--sat, 0px) * -1 - 16px)', height: 'calc(184px + var(--sat, 0px))' } : coverBackground(user, shown)} data-testid="profile-cover">
       {isOwn && (
         <button type="button" onClick={() => setOpen(true)} data-testid="profile-cover-edit" aria-label="Change cover"
           className="absolute right-3 bottom-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold text-white cursor-pointer active:scale-95 transition-transform">

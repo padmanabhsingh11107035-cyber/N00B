@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { linkify } from '../Common/Linkified';
 import { SocialLinkButtons } from './SocialLinkButtons';
 import { ProfileCover } from './ProfileCover';
+import { ProfileSuggestions } from './ProfileSuggestions';
+import './profileExtras.css';
 import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
 import type { FunLocation } from '../../utils/funRoutes';
 import { isStaff } from '../../adminAccess';
@@ -656,41 +658,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   return (
     <div id="profile-view-container" className="w-full max-w-4xl mx-auto px-4 pt-4 pb-28">
-      {/* Top Banner when viewing another user's profile */}
-      {!isOwnProfile && (
-        <div className="mb-4 flex items-center justify-between bg-zinc-900/90 border border-zinc-800 rounded-2xl px-4 py-3 shadow-lg">
-          <button
-            onClick={onGoBack}
-            aria-label="Go to previous page"
-            className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer group shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 text-noob group-hover:-translate-x-0.5 transition-transform" />
-            <span>Go to previous page</span>
-          </button>
-          <div className="flex items-center gap-2 min-w-0 ml-3">
-            <span className="text-xs text-zinc-400 font-medium truncate min-w-0">@{targetUser.username}</span>
-            {isTargetBlocked && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
-                Blocked
-              </span>
-            )}
-            {isHiddenFromTarget && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">
-                Your profile is hidden from them
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
-      <div className="relative mb-4">
-        <div className="flex items-center gap-2 mb-3 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" data-testid="profile-topbar">
+      <div className={`relative mb-4 ${isOwnProfile ? '' : 'flow-root'}`}>
+        <div className={isOwnProfile ? "flex items-center gap-2 mb-3 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" : "pf-float absolute top-0 inset-x-0 z-20 flex items-center gap-2 py-1"} data-testid="profile-topbar">
           {isOwnProfile && onOpenCreate && (
             <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
           )}
+          {!isOwnProfile && (
+            <button type="button" onClick={onGoBack} aria-label="Go to previous page" data-testid="profile-back" className="pf-btn shrink-0 cursor-pointer active:scale-90 transition-transform"><ArrowLeft className="w-5 h-5" /></button>
+          )}
           <div className="flex items-center gap-1 min-w-0 flex-1">
-            <h1 className="text-xl font-extrabold text-white tracking-tight truncate min-w-0" data-testid="profile-username">{targetUser.username}</h1>
+            <h1 className={`text-xl font-extrabold text-white tracking-tight truncate min-w-0 ${isOwnProfile ? '' : 'sr-only'}`} data-testid="profile-username">{targetUser.username}</h1>
             {isOwnProfile && (
               <button
                 type="button"
@@ -911,7 +889,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* The wide cover: the person's own colours (or a photo they chose) */}
-        <ProfileCover user={targetUser} isOwn={isOwnProfile} onUpdated={handleProfileUpdated} />
+        <ProfileCover user={targetUser} isOwn={isOwnProfile} onUpdated={handleProfileUpdated} bleed={!isOwnProfile} />
+        {!isOwnProfile && (isTargetBlocked || isHiddenFromTarget) && (
+          <div className="relative z-[1] flex flex-wrap items-center gap-2 px-1 mt-2">
+            {isTargetBlocked && <span className="pf-chip bg-red-500/20 text-red-400 border border-red-500/30">Blocked</span>}
+            {isHiddenFromTarget && <span className="pf-chip bg-violet-500/20 text-violet-300 border border-violet-500/30">Your profile is hidden from them</span>}
+          </div>
+        )}
 
         {/* Who this is: the big picture sits on the lower edge of the cover, the name, its badges and what kind of account it is underneath */}
         <div className="relative z-[1] flex flex-col gap-3 px-1 -mt-[54px]" data-testid="profile-identity">
@@ -1342,6 +1326,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* The Fun pages' cards: Ask Me Anything (and, on someone's profile, the answers they published) */}
       {!isTargetBlocked && <ProfileAskCard profileUser={targetUser} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
+
+      {/* Someone else's profile: ten people to follow, right under the Ask card */}
+      {!isOwnProfile && !isTargetBlocked && <ProfileSuggestions currentUser={currentUser} targetUser={targetUser} allUsers={allUsers} onToggleFollowUser={onToggleFollowUser} onOpenProfile={onNavigateToUserProfile} />}
 
       {/* 6. Profile Content Navigation Tabs: only icons, spread over the whole width, the open one underlined */}
       <div role="tablist" className="flex items-stretch border-b border-zinc-800 -mx-4 sm:mx-0 mb-0.5" data-testid="profile-tabs">

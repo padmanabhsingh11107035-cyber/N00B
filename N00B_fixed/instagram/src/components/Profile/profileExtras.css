@@ -1,0 +1,30 @@
+/* Someone else's profile: the cover reaches the very top of the screen (under the clock / camera), the back arrow and the three dots float on it, and under the Ask card
+   there is a row of suggested people. */
+.pf-float { pointer-events: none; padding-left: 4px; padding-right: 4px; }
+.pf-float > * { pointer-events: auto; }
+.pf-btn, .pf-float [data-testid="profile-three-dots"] {
+  width: 40px; height: 40px; display: grid; place-items: center; padding: 0 !important; border-radius: 9999px !important;
+  background: rgba(0, 0, 0, .34) !important; color: #ffffff !important;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+:root[data-theme="light"] .pf-btn, :root[data-theme="light"] .pf-float [data-testid="profile-three-dots"] { background: rgba(255, 255, 255, .62) !important; color: #000000 !important; }
+.pf-float [data-testid="profile-three-dots"] svg { color: inherit; }
+.pf-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 9999px; font-size: 11.5px; font-weight: 800; }
+
+/* suggested people */
+.ps-wrap { --ps-card: #141418; --ps-line: rgba(255, 255, 255, .10); --ps-text: #f5f5fa; --ps-muted: #9b9bb0; --ps-grad: linear-gradient(135deg, #7c5cff 0%, #ff4d8d 55%, #ffae42 100%); --ps-quiet: rgba(255, 255, 255, .12); }
+:root[data-theme="light"] .ps-wrap { --ps-card: #ffffff; --ps-line: rgba(20, 20, 40, .10); --ps-text: #15151f; --ps-muted: #6d6d82; --ps-quiet: #ece9f6; }
+.ps-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px; }
+.ps-title { font-size: 16.5px; font-weight: 800; letter-spacing: -.01em; color: var(--ps-text); }
+.ps-row { display: flex; gap: 10px; overflow-x: auto; padding: 10px 2px 6px; margin: 0 -16px; padding-left: 18px; padding-right: 18px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.ps-row::-webkit-scrollbar { display: none; }
+.ps-card { position: relative; flex: none; width: 164px; scroll-snap-align: start; border-radius: 24px; overflow: hidden; background: var(--ps-card); border: 1px solid var(--ps-line); text-align: center; padding-bottom: 14px; }
+.ps-cover { height: 58px; cursor: pointer; }
+.ps-av { width: 68px; height: 68px; margin: -34px auto 0; border-radius: 9999px; padding: 3px; background: var(--ps-card); cursor: pointer; position: relative; }
+.ps-av img { width: 100%; height: 100%; border-radius: 9999px; object-fit: cover; }
+.ps-name { margin-top: 8px; padding: 0 12px; font-size: 14.5px; font-weight: 800; color: var(--ps-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ps-handle { padding: 0 12px; font-size: 12px; color: var(--ps-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-count { margin-top: 2px; font-size: 11.5px; color: var(--ps-muted); }
+.ps-btn { margin: 12px auto 0; width: calc(100% - 28px); height: 36px; border-radius: 9999px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; color: #fff; background: var(--ps-grad); box-shadow: 0 10px 20px -10px rgba(255, 77, 141, .8); }
+.ps-btn.ps-quiet { background: var(--ps-quiet); color: var(--ps-text); box-shadow: none; }
+.ps-x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 9999px; background: rgba(0, 0, 0, .35); color: #fff; z-index: 2; }

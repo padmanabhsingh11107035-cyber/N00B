@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { linkify } from '../Common/Linkified';
 import { flushSync } from 'react-dom';
 import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';

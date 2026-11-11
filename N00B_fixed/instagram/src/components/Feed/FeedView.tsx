@@ -761,7 +761,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
       </header>
 
       {/* Dynamic Notification Bar Banner (Appears when there are unread updates or latest event) */}
-      {unreadNotificationCount > 0 && !isTopBannerDismissed && latestNotification && (
+      {/* Switched off on purpose: unread notifications show only as the red number on the bell, never as a bar under the header. */}
+      {false && unreadNotificationCount > 0 && !isTopBannerDismissed && latestNotification && (
         <div
           onClick={onOpenNotifications}
           className="w-full max-w-[480px] xl:max-w-[640px] px-3 pt-2 cursor-pointer group"

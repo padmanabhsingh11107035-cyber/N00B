@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import React, { useState, useRef, useEffect } from 'react';
+import { linkify } from '../Common/Linkified';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
@@ -1228,7 +1229,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
             {reel.caption && (
               <p translate="no" className="mt-2.5 text-[15px] leading-snug text-white line-clamp-2 pointer-events-auto">
-                {reel.caption}
+                {linkify(reel.caption)}
               </p>
             )}
 

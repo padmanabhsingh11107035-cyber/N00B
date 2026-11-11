@@ -1,6 +1,7 @@
 import { sendLike } from '../../utils/likeSync';
 import { applyLikes } from '../../utils/likeLedger';
 import React, { useState, useEffect } from 'react';
+import { linkify } from '../Common/Linkified';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -177,7 +178,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
               {isReply && c.replyToUsername && c.replyToUsername !== c.username && (
                 <span className="text-noob font-semibold mr-1">@{c.replyToUsername}</span>
               )}
-              {c.text}
+              {linkify(c.text)}
             </p>
             {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
             <button

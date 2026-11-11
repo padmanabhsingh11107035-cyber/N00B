@@ -17,7 +17,7 @@ const iData = html.indexOf('<script src="/opening/opening-data.js?v='), iCode = 
 check(iData > 0 && iCode > iData, 'the shapes come before the animation');
 check(!/<script>\s*\(function/.test(html) && !/<script>[^<]*opening/.test(html), 'no script is written inside the page (the security policy does not allow it)');
 check(/#noob-splash img \{ display: none; \}/.test(html) && /#noob-splash\.logo img \{ display: block;/.test(html), 'the splash has no logo (no glow, nothing before the animation); only an address that asks for it shows one');
-check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=4/.test(html), 'the files are kept for a year, their address carries a version number');
+check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=5/.test(html), 'the files are kept for a year, their address carries a version number');
 
 section('2. The app opens straight out of it');
 check(/__noobOpening\?: unknown/.test(main) && /if \(splash && !\(window as unknown as \{ __noobOpening\?: unknown \}\)\.__noobOpening\)/.test(main), 'src/main.tsx leaves the splash to the animation when it is running (and removes it as before when it is not)');
@@ -100,7 +100,7 @@ section('3b. The sound where the browser refuses it (an iPhone, a phone\'s brows
   vm.runInContext(code, sb);
   await new Promise((r) => setTimeout(r, 0));
   const pill = created.find((c) => c !== canvas2);
-  check(plays.length === 1 && !!pill && /Tap for sound/.test(pill.innerHTML || ''), 'it tries the sound at once; when the browser says no, a small "Tap for sound" shows and the picture goes on');
+  check(plays.length === 1 && !pill, 'it tries the sound at once; when the browser says no, the picture goes on with no notice (the first touch still starts the sound)');
   check(['touchend', 'pointerup', 'click', 'keydown'].every((n) => typeof listeners[n] === 'function'), 'the first touch (finger lifted, click or key) is waited for, anywhere on the screen');
   now2 = 100 + 1500;   // the picture is 1.5 seconds on
   listeners.touchend();   // refused again: it keeps waiting

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { linkify } from '../Common/Linkified';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';

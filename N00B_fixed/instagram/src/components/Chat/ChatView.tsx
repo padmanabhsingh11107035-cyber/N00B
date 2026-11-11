@@ -10,6 +10,7 @@ import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { linkify } from '../Common/Linkified';
 import { createPortal } from 'react-dom';
 import {
   Archive,
@@ -224,34 +225,7 @@ const SWIPE_REPLY_THRESHOLD = 56;
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
 
-// Matches http(s):// links and bare www. links so either form gets turned
-// into a real, clickable, blue link — WhatsApp-style — inside chat bubbles.
-const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s]+)/gi;
-const TRAILING_PUNCTUATION = /[),.!?;:'"]+$/;
-
-function renderMessageWithLinks(text: string): React.ReactNode[] {
-  return text.split(URL_PATTERN).map((part, i) => {
-    if (i % 2 === 0) return part;
-    const trailingMatch = part.match(TRAILING_PUNCTUATION);
-    const trailing = trailingMatch ? trailingMatch[0] : '';
-    const url = trailing ? part.slice(0, -trailing.length) : part;
-    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-    return (
-      <React.Fragment key={i}>
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="text-sky-400 hover:underline break-all"
-        >
-          {url}
-        </a>
-        {trailing}
-      </React.Fragment>
-    );
-  });
-}
+const renderMessageWithLinks = linkify;
 
 // Chat colours saved before the black-and-white look (the old orange) are shown as white now.
 const oldAccent = (c?: string | null): string | undefined => (c && c.toLowerCase() === '#d97757' ? '#ffffff' : c || undefined);

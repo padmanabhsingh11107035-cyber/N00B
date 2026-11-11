@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { linkify } from '../Common/Linkified';
 import { SocialLinkButtons } from './SocialLinkButtons';
 import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
 import type { FunLocation } from '../../utils/funRoutes';
@@ -995,7 +996,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {/* The bio: the words, the link, then the rest of what this person shared, each in its own place */}
         <div className="mt-4 space-y-3">
           <p className="text-sm text-white whitespace-pre-line leading-relaxed max-w-2xl break-words [overflow-wrap:anywhere]">
-            {targetUser.bio || (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
+            {linkify(targetUser.bio) .length ? linkify(targetUser.bio) : (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
           </p>
 
           {safeExternalUrl(targetUser.website) && (

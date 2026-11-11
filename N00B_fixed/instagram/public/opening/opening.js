@@ -346,6 +346,8 @@
     armed = true;
     GESTURES.forEach(function (n) { document.addEventListener(n, unlock, true); });
     try {
+      // no "Tap for sound" text any more: the first touch still switches the sound on, silently
+      return;
       pill = document.createElement('div');
       pill.setAttribute('aria-hidden', 'true');
       pill.style.cssText = 'position:absolute;left:50%;bottom:calc(34px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;'

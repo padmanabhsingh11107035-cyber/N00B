@@ -1826,6 +1826,9 @@ html body .auth-v2[data-stage="form"] .auth-orbs i { background: rgba(255, 255, 
   @layer base { html[data-page="profile"] body main { background-color: var(--page) !important; background-image: none !important; } }
 }
 
+/* The laptop-only empty side of the chat is hidden everywhere by default (it leaked onto phones: its picture and text sat on top of the open chat). The laptop block below shows it. */
+.chat-desk-empty { display: none; }
+
 /* ===== Chat on a laptop / computer (min-width 1024 px with a mouse): a new split screen. NOTHING here reaches a phone or a tablet. ===========================================
    The list of chats stays on the left, the open chat is on the right, the page uses the whole width (the people panel steps aside), bright colours: a violet, pink and orange header,
    a coloured ring around people, the open chat marked in the list, a gradient send button. Off switch: open the app with ?nodeskchat=1 (back on with ?deskchat=1). */
@@ -1874,3 +1877,7 @@ html[data-doodle="off"] body::after, html[data-doodle="off"] body::before, html[
 [data-noob-page='card'], [data-noob-page='page'] { animation: noob-page-in .16s ease-out both !important; }
 @keyframes noob-page-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-noob-page='card'], [data-noob-page='page'] { animation: none !important; } }
+
+/* Every link inside text (chats, comments, captions, bios) is blue, so people know it can be tapped. */
+a.noob-link { color: #4da3ff !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+:root[data-theme="light"] a.noob-link { color: #0a60d0 !important; }

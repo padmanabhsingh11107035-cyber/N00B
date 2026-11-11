@@ -1692,10 +1692,9 @@ html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inse
 html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
 html.phone-edge .msg-safe-strip { display: none !important; }
 html.phone-edge #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
-/* full-screen pages and pop-ups start below the clock (the ones that already keep room for it themselves are left alone) */
-html.phone-edge .fixed.inset-0:not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { padding-top: var(--sat); box-sizing: border-box; }
-/* bars that stick or are fixed at the very top sit just under the clock, not behind it */
-html.phone-edge .sticky.top-0:not(.fixed *) { top: var(--sat) !important; }
+/* full-screen pages and pop-ups start just below the clock (their top edge moves down; nothing is added inside them). The ones that keep room for it themselves (.edge-own, own env() padding) are left alone. */
+html.phone-edge .fixed.inset-0:not(.edge-own):not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { top: var(--sat) !important; }
+/* a bar that is fixed at the very top sits just under the clock. (Sticky bars are NOT moved: they stick inside the page, which already starts under the clock; moving them pushed them down a second time.) */
 html.phone-edge .fixed.top-0:not(.inset-0):not(.bottom-0) { top: var(--sat) !important; }
 /* the bars of pages that keep their own room (env()) also work where the app is told the inset by --safe-area-inset-top */
 html.phone-edge [data-noob-page='card'], html.phone-edge [data-noob-page='page'] { padding-top: var(--sat) !important; }

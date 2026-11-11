@@ -50,20 +50,17 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
 export const CARD_W = 104;
 export const CARD_GAP = 8;
 
-// One card of the reel.
+// One card of the reel (the reel is a dark window in both themes, so the card carries its own dark colours).
 export const PrizeCard: React.FC<{ prize: DrawPrize }> = React.memo(({ prize }) => {
   const r = RARITY[prize.rarity];
   return (
-    <div
-      className="shrink-0 rounded-2xl relative overflow-hidden border"
-      style={{ width: CARD_W, height: 138, borderColor: `${r.color}66`, background: `linear-gradient(180deg, ${r.soft} 0%, rgba(14,14,22,0.96) 72%)` }}
-    >
-      <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: r.color, boxShadow: `0 0 12px ${r.color}` }} />
-      <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(70% 45% at 50% 38%, ${r.color}33, transparent 75%)` }} />
-      <div className="relative h-[84px] flex items-center justify-center pt-2"><PrizeVisual prize={prize} size={54} /></div>
-      <div className="relative px-1.5 text-center">
-        <p className="text-[10px] font-extrabold leading-tight text-white line-clamp-2 min-h-[24px]">{prize.label}</p>
-        <p className="text-[8px] font-black uppercase tracking-[0.14em] mt-0.5" style={{ color: r.color }}>{r.label}</p>
+    <div className="dr-card" style={{ width: CARD_W, height: 138, ['--rc' as any]: r.color, ['--rs' as any]: r.soft }}>
+      <div className="dr-card-bar" />
+      <div className="dr-card-glow" />
+      <div className="dr-card-pic"><PrizeVisual prize={prize} size={54} /></div>
+      <div className="dr-card-txt">
+        <p className="dr-card-t">{prize.label}</p>
+        <p className="dr-card-r">{r.label}</p>
       </div>
     </div>
   );

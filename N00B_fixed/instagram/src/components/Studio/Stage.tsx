@@ -175,13 +175,13 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={wrapRef} className="flex-1 min-h-0 overflow-auto flex items-center justify-center bg-[radial-gradient(circle_at_center,#18181b,#09090b)]" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+      <div ref={wrapRef} className="sx-stage-bg flex-1 min-h-0 overflow-auto flex items-center justify-center" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         <div className="relative shrink-0 m-2" style={{ width: cssW, height: cssH }}>
           <canvas
             ref={canvasRef}
             data-testid="studio-canvas"
             onPointerDown={onDown}
-            className="block rounded-md shadow-[0_8px_40px_rgba(0,0,0,0.6)] bg-black touch-none"
+            className="sx-canvas block rounded-md bg-black touch-none"
             style={{ width: cssW, height: cssH, cursor: ctl.tool === 'draw' ? 'crosshair' : 'default' }}
           />
           {/* the safe areas of Reels / Stories: where the app's own buttons and caption sit */}
@@ -200,15 +200,15 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
               className="absolute pointer-events-none border-2 border-white/90 rounded-[3px]"
               style={{ left: (sel.x - selBox.w / 2) * s, top: (sel.y - selBox.h / 2) * s, width: selBox.w * s, height: selBox.h * s, transform: `rotate(${sel.rotation}deg)`, boxShadow: '0 0 0 1px rgba(0,0,0,0.5)' }}
             >
-              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -right-3 -bottom-3 w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
-              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -left-3 -top-3 w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
-              <span onPointerDown={(e) => startHandle(e, 'rotate')} className="pointer-events-auto absolute left-1/2 -top-9 -translate-x-1/2 w-6 h-6 rounded-full bg-fuchsia-500 border-2 border-white touch-none cursor-grab" aria-label="Rotate" />
+              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -right-3 -bottom-3 sx-handle w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
+              <span onPointerDown={(e) => startHandle(e, 'scale')} className="pointer-events-auto absolute -left-3 -top-3 sx-handle w-6 h-6 rounded-full bg-white border-2 border-fuchsia-500 touch-none cursor-nwse-resize" aria-label="Resize" />
+              <span onPointerDown={(e) => startHandle(e, 'rotate')} className="pointer-events-auto absolute left-1/2 -top-9 -translate-x-1/2 sx-handle sx-handle-rot w-6 h-6 rounded-full bg-fuchsia-500 border-2 border-white touch-none cursor-grab" aria-label="Rotate" />
               <span className="absolute left-1/2 -top-3 w-px h-3 bg-white/80" />
             </div>
           )}
         </div>
       </div>
-      <div className="absolute right-2 bottom-2 flex items-center gap-1 rounded-xl bg-black/70 border border-white/10 p-1">
+      <div className="sx-zoombar absolute right-2 bottom-2 flex items-center gap-1 rounded-xl p-1">
         <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.2).toFixed(2)))} aria-label="Zoom out" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Minus className="w-4 h-4" /></button>
         <button onClick={() => setZoom(1)} aria-label="Fit to screen" className="h-8 px-2 rounded-lg hover:bg-white/10 text-[11px] font-bold flex items-center gap-1"><Maximize className="w-3.5 h-3.5" />{Math.round(zoom * 100)}%</button>
         <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Plus className="w-4 h-4" /></button>

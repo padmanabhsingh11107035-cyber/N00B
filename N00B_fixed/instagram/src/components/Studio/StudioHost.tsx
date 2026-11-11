@@ -8,7 +8,7 @@ const StudioApp = React.lazy(() => import('./StudioApp'));
 export const preloadStudio = (): void => { void import('./StudioApp'); };
 
 const Opening: React.FC = () => (
-  <div className="force-dark fixed inset-0 z-[10000] bg-zinc-950 text-white flex items-center justify-center text-sm font-bold" role="status">Opening NOOB Studio…</div>
+  <div className="force-dark fixed inset-0 edge-own z-[10000] bg-zinc-950 text-white flex items-center justify-center text-sm font-bold" role="status">Opening NOOB Studio…</div>
 );
 
 export const StudioHost: React.FC<{ onUse: (file: File, target: Target) => void }> = ({ onUse }) => {

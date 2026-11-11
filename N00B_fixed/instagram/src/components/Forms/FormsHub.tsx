@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FileText } from 'lucide-react';
 import { getPublicForm, submitPublicForm, type PublicForm } from '../../services/formsApi';
 import type { FunLocation } from '../../utils/funRoutes';
 import type { User } from '../../types';
@@ -6,6 +7,7 @@ import { FormRenderer } from './FormRenderer';
 import { FormsDashboard } from './FormsDashboard';
 import { FormEditor } from './FormEditor';
 import { FormResponses } from './FormResponses';
+import './forms.css';
 
 // NOOB Forms. /forms = my forms, /forms/<id> = the editor, /forms/<id>/responses = the answers, /f/<address> = the form itself, for anybody (no account needed).
 interface Props {
@@ -17,12 +19,12 @@ interface Props {
   onLogin?: () => void;
 }
 
-const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="nf fixed inset-0 z-[96] overflow-y-auto overflow-x-hidden overscroll-contain">{children}</div>;
+const Page: React.FC<{ children: React.ReactNode }> = ({ children }) => <div className="frm-root fixed inset-0 edge-own z-[96] overflow-y-auto overflow-x-hidden overscroll-contain no-doodle">{children}</div>;
 
 export const FormsHub: React.FC<Props> = ({ currentUser, location, onNavigate, onBack, onHome, onLogin }) => {
   if (location.feature === 'form') return <PublicFormPage slug={location.target ?? ''} signedIn={!!currentUser} onHome={onHome} onJoin={onLogin ?? onHome} />;
   if (!currentUser) {
-    return <Page><div className="p-10 text-center space-y-3"><p className="font-semibold">Log in to build forms.</p><button type="button" onClick={onLogin ?? onBack} className="px-5 h-10 rounded-full bg-white text-black font-bold cursor-pointer">Log in</button></div></Page>;
+    return <Page><div className="frm-center"><div className="frm-center-card"><span className="frm-empty-art"><FileText className="w-9 h-9" aria-hidden="true" /></span><p className="t">Log in to build forms.</p><p className="s">Forms are saved to your account, so only you and the people you invite can open them.</p><button type="button" onClick={onLogin ?? onBack} className="frm-btn primary">Log in</button></div></div></Page>;
   }
   if (location.target && location.sub === 'responses') return <Page><FormResponses formId={location.target} onBack={() => onNavigate({ feature: 'forms' })} /></Page>;
   if (location.target) return <Page><FormEditor formId={location.target} onBack={() => onNavigate({ feature: 'forms' })} onResponses={() => onNavigate({ feature: 'forms', target: location.target, sub: 'responses' })} /></Page>;
@@ -45,19 +47,19 @@ const PublicFormPage: React.FC<{ slug: string; signedIn: boolean; onHome: () => 
   };
   const notice = (title: string, text: string, retry?: boolean) => (
     <Page>
-      <div className="min-h-full flex flex-col">
-        <div className="px-4 py-2.5 border-b border-zinc-800"><button type="button" onClick={onHome} aria-label="Open the NOOB app" className="px-3.5 py-1.5 rounded-full bg-white text-black text-sm font-black cursor-pointer">NOOB</button></div>
-        <div className="flex-1 flex items-center justify-center p-6 text-center"><div className="max-w-sm space-y-3"><h1 className="text-xl font-bold">{title}</h1><p className="text-zinc-400">{text}</p>{retry && <button type="button" onClick={load} className="px-5 h-10 rounded-full bg-white text-black font-bold cursor-pointer">Try again</button>}</div></div>
+      <div className="frm-page frm-notice">
+        <div className="frm-bar"><div className="frm-bar-in"><button type="button" onClick={onHome} aria-label="Open the NOOB app" className="frm-noob">NOOB</button><span className="frm-sub flex-1 text-right">Forms by NOOB</span></div></div>
+        <div className="frm-center"><div className="frm-center-card"><span className="frm-empty-art"><FileText className="w-9 h-9" aria-hidden="true" /></span><h1 className="t">{title}</h1><p className="s">{text}</p>{retry && <button type="button" onClick={load} className="frm-btn primary">Try again</button>}</div></div>
       </div>
     </Page>
   );
   if (error) return notice('Could not open this form', error, true);
-  if (!form) return <Page><div className="p-10 text-center text-zinc-400" role="status">Opening the form…</div></Page>;
+  if (!form) return <Page><div className="frm-center"><div className="frm-center-card" role="status"><span className="frm-spinner" aria-hidden="true" /><p className="s">Opening the form…</p></div></div></Page>;
   if (form.state === 'notfound') return notice('Form not found', 'This link does not lead to a form, or the owner has taken it down.');
   if (form.state === 'notopen') return notice(form.title ?? 'Not open yet', 'This form is not open yet. Please come back later.');
   if (form.state === 'closed') return notice(form.title ?? 'Closed', form.settings?.closedMessage || 'This form is not taking answers any more.');
   return (
-    <div className="fixed inset-0 z-[96] overflow-y-auto overscroll-contain" data-testid="public-form">
+    <div className="fixed inset-0 edge-own z-[96] overflow-y-auto overscroll-contain frm-pub" data-testid="public-form">
       <FormRenderer
         form={{ id: form.id, title: form.title ?? '', description: form.description, questions: form.questions ?? [], theme: form.theme, settings: form.settings }}
         onSubmit={(answers) => submitPublicForm(slug, answers, form.settings?.collectCampaign ? utm() : undefined)}

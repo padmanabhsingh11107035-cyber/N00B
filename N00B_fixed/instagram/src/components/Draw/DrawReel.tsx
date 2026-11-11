@@ -84,17 +84,17 @@ export const DrawReel: React.FC<DrawReelProps> = React.memo(({ prizes, accent, s
   useEffect(() => () => { cancelAnimationFrame(frame.current); window.clearTimeout(doneTimer.current); stopSpinSound(); }, []);
 
   return (
-    <div ref={viewportRef} className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-black/40 py-4" style={{ boxShadow: `inset 0 0 40px ${accent}22, 0 18px 50px -20px ${accent}66` }}>
-      <div ref={stripRef} className="flex will-change-transform" style={{ gap: CARD_GAP, width: 'max-content' }}>
+    <div ref={viewportRef} className="dr-reel" style={{ ['--ac' as any]: accent, boxShadow: `inset 0 0 40px ${accent}22, 0 18px 50px -20px ${accent}88` }}>
+      <div ref={stripRef} className="dr-reel-strip will-change-transform" style={{ gap: CARD_GAP, width: 'max-content' }}>
         {strip.map((p, i) => <PrizeCard key={`${i}-${p.id}`} prize={p} />)}
       </div>
       {/* the marker */}
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px]" style={{ background: `linear-gradient(180deg, transparent, ${accent} 12%, ${accent} 88%, transparent)`, boxShadow: `0 0 14px ${accent}, 0 0 34px ${accent}aa` }} />
-      <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 w-0 h-0 border-x-[9px] border-x-transparent border-t-[12px]" style={{ borderTopColor: accent, filter: `drop-shadow(0 0 6px ${accent})` }} />
-      <div className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 w-0 h-0 border-x-[9px] border-x-transparent border-b-[12px]" style={{ borderBottomColor: accent, filter: `drop-shadow(0 0 6px ${accent})` }} />
+      <div className="dr-reel-line" />
+      <div className="dr-reel-arrow dr-reel-arrow-t" />
+      <div className="dr-reel-arrow dr-reel-arrow-b" />
       {/* the soft fade at both edges */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#08080c] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#08080c] to-transparent" />
+      <div className="dr-reel-fade dr-reel-fade-l" />
+      <div className="dr-reel-fade dr-reel-fade-r" />
     </div>
   );
 });

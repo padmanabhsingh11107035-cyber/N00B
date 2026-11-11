@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { uploadFormFile, type UploadedFile } from '../../services/formsApi';
 import { acceptList, answerText, checkAnswer, evalFormula, isAnswerable, isVisible, pagesOf, resolveTheme, visibleQuestions, type FormQuestion, type FormSettings, type FormTheme } from '../../utils/forms';
+import './forms.css';
 
 // The form as the person filling it sees it (and as the owner sees it in "Preview"). It is one component for both, so what the owner previews is what people get.
 // Nobody needs an account: the top bar has a NOOB button that opens the app, and after sending there is a short celebration, a thank-you and a "Join NOOB" button with a cross.
@@ -81,47 +82,52 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
     finally { setSending(false); }
   };
 
-  const progress = pages.length > 1 ? Math.round(((idx + (sending ? 1 : 0)) / pages.length) * 100) : 0;
+  // the bar: pages when there are several, otherwise how much of the form is answered (display only)
+  const askable = useMemo(() => visibleQuestions(form.questions, answers).filter((q) => isAnswerable(q.type) && q.type !== 'hidden' && q.type !== 'calculated'), [form.questions, answers]);
+  const filled = askable.filter((q) => { const v = answers[q.id]; return v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0) && !(typeof v === 'object' && !Array.isArray(v) && v !== null && Object.keys(v as object).length === 0); }).length;
+  const progress = pages.length > 1 ? Math.round(((idx + (sending ? 1 : 0)) / pages.length) * 100) : askable.length ? Math.round((filled / askable.length) * 100) : 0;
+  const showBar = s.showProgress !== false && (pages.length > 1 || askable.length > 0);
   const css = { '--f-bg': t.bg, '--f-card': t.card, '--f-text': t.text, '--f-muted': t.muted, '--f-primary': t.primary, '--f-on': t.onPrimary, '--f-border': t.border, '--f-radius': t.radius + 'px', fontFamily: t.font } as React.CSSProperties;
 
   if (done === 'thanks') {
     return (
-      <Shell css={css} t={t} width={width} onOpenNoob={onOpenNoob}>
-        <div className="rounded-[var(--f-radius)] p-8 text-center space-y-3" style={{ background: 'var(--f-card)', border: '1px solid var(--f-border)' }} data-testid="form-thanks">
-          <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}><Check className="w-7 h-7" /></div>
-          <h2 className="text-xl font-bold">Your response was recorded</h2>
-          <p style={{ color: 'var(--f-muted)' }}>{s.confirmMessage || 'Thank you for your answers.'}</p>
-          {onJoin && <button type="button" onClick={onJoin} className="px-5 py-2.5 rounded-full font-bold cursor-pointer" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>Join NOOB</button>}
+      <Shell css={css} t={t} width={width} onOpenNoob={onOpenNoob} preview={preview}>
+        <div className="frm-r-thanks" data-testid="form-thanks">
+          <div className="frm-r-tick"><Check className="w-9 h-9" strokeWidth={3} /></div>
+          <h2>Your response was recorded</h2>
+          <p>{s.confirmMessage || 'Thank you for your answers.'}</p>
+          {onJoin && <button type="button" onClick={onJoin} className="frm-r-btn primary">Join NOOB</button>}
         </div>
       </Shell>
     );
   }
 
   return (
-    <Shell css={css} t={t} width={width} onOpenNoob={onOpenNoob}>
+    <Shell css={css} t={t} width={width} onOpenNoob={onOpenNoob} preview={preview}>
       <div ref={top} />
-      {preview && <div className="mb-3 text-center text-xs font-semibold px-3 py-2 rounded-full" style={{ background: 'var(--f-card)', border: '1px dashed var(--f-border)', color: 'var(--f-muted)' }} role="status">Preview: nothing you answer here is saved.</div>}
+      {preview && <div className="frm-r-preview" role="status">Preview: nothing you answer here is saved.</div>}
       {idx === 0 && (
-        <header className="rounded-[var(--f-radius)] p-6 mb-3" style={{ background: 'var(--f-card)', border: '1px solid var(--f-border)', borderTop: '8px solid var(--f-primary)' }}>
-          <h1 className="text-2xl font-bold break-words">{form.title}</h1>
-          {form.description && <p className="mt-2 whitespace-pre-wrap break-words" style={{ color: 'var(--f-muted)' }}>{form.description}</p>}
-          {form.questions.some((q) => q.required) && <p className="mt-3 text-xs" style={{ color: 'var(--f-muted)' }}><span style={{ color: '#d93025' }}>*</span> Required</p>}
+        <header className="frm-r-head">
+          <span className="frm-r-head-band" aria-hidden="true" />
+          <h1 className="break-words">{form.title}</h1>
+          {form.description && <p className="frm-r-desc whitespace-pre-wrap break-words">{form.description}</p>}
+          {form.questions.some((q) => q.required) && <p className="frm-r-req"><span>*</span> Required</p>}
         </header>
       )}
-      {s.showProgress !== false && pages.length > 1 && (
-        <div className="mb-3" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Progress">
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--f-border)' }}><div className="h-full rounded-full" style={{ width: `${Math.max(4, progress)}%`, background: 'var(--f-primary)', transition: 'width .35s ease' }} /></div>
-          <p className="text-[11px] mt-1 text-right" style={{ color: 'var(--f-muted)' }}>Page {idx + 1} of {pages.length}</p>
+      {showBar && (
+        <div className="frm-r-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-label="Progress">
+          <div className="frm-r-track"><div className="frm-r-fill" style={{ width: `${Math.max(4, progress)}%` }} /></div>
+          <p>{pages.length > 1 ? `Page ${idx + 1} of ${pages.length}` : `${filled} of ${askable.length} answered`}<b>{progress}%</b></p>
         </div>
       )}
-      <form onSubmit={(e) => { e.preventDefault(); void next(); }} noValidate className="space-y-3">
-        {current.map((q) => (
-          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} formId={form.id} preview={preview} calc={q.type === 'calculated' ? evalFormula(q.formula ?? '', answers, form.questions) : undefined} />
+      <form onSubmit={(e) => { e.preventDefault(); void next(); }} noValidate className="frm-r-form" key={idx}>
+        {current.map((q, qi) => (
+          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} index={qi} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} formId={form.id} preview={preview} calc={q.type === 'calculated' ? evalFormula(q.formula ?? '', answers, form.questions) : undefined} />
         ))}
-        {problem && <p role="alert" className="text-sm font-semibold px-1" style={{ color: '#d93025' }}>{problem}</p>}
-        <div className="flex items-center justify-between gap-3 pt-1">
-          {idx > 0 ? <button type="button" onClick={() => { setPage(idx - 1); scrollTop(); }} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-full font-semibold cursor-pointer" style={{ border: '1px solid var(--f-border)', background: 'var(--f-card)' }}><ChevronLeft className="w-4 h-4" />Back</button> : <span />}
-          <button type="submit" disabled={sending} className="inline-flex items-center gap-1 px-6 py-2.5 rounded-full font-bold cursor-pointer disabled:opacity-60" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>
+        {problem && <p role="alert" className="frm-r-problem">{problem}</p>}
+        <div className="frm-r-nav">
+          {idx > 0 ? <button type="button" onClick={() => { setPage(idx - 1); scrollTop(); }} className="frm-r-btn ghost"><ChevronLeft className="w-4 h-4" />Back</button> : <span />}
+          <button type="submit" disabled={sending} className="frm-r-btn primary">
             {sending ? 'Sending…' : last ? 'Submit' : <>Next<ChevronRight className="w-4 h-4" /></>}
           </button>
         </div>
@@ -131,27 +137,28 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
   );
 };
 
-const Shell: React.FC<{ css: React.CSSProperties; t: ReturnType<typeof resolveTheme>; width?: number; onOpenNoob?: () => void; children: React.ReactNode }> = ({ css, t, width, onOpenNoob, children }) => (
-  <div style={{ ...css, background: t.bg, color: 'var(--f-text)', minHeight: '100%' }} className="w-full">
-    <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2.5 backdrop-blur" style={{ background: 'color-mix(in srgb, var(--f-card) 88%, transparent)', borderBottom: '1px solid var(--f-border)' }}>
-      <button type="button" onClick={onOpenNoob} aria-label="Open the NOOB app" data-testid="form-noob-button" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-black tracking-wide cursor-pointer active:scale-95 transition-transform" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>NOOB</button>
-      <span className="text-[11px]" style={{ color: 'var(--f-muted)' }}>Forms by NOOB</span>
+const Shell: React.FC<{ css: React.CSSProperties; t: ReturnType<typeof resolveTheme>; width?: number; onOpenNoob?: () => void; preview?: boolean; children: React.ReactNode }> = ({ css, t, width, onOpenNoob, preview, children }) => (
+  <div style={{ ...css, color: 'var(--f-text)', minHeight: '100%' }} className={`frm-r w-full ${preview ? 'is-preview' : ''}`}>
+    <div className="frm-r-glow" aria-hidden="true" />
+    <div className="frm-r-bar">
+      <button type="button" onClick={onOpenNoob} aria-label="Open the NOOB app" data-testid="form-noob-button" className="frm-r-noob">NOOB</button>
+      <span>Forms by NOOB</span>
     </div>
-    <div className="mx-auto px-3 sm:px-4 py-5 pb-20" style={{ maxWidth: width ?? 680 }}>
+    <div className="frm-r-wrap" style={{ maxWidth: width ?? 680 }}>
       {children}
-      <p className="mt-8 text-center text-[11px]" style={{ color: 'var(--f-muted)' }}>Your answers go to the owner of this form. NOOB does not sell them. <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="underline">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="underline">Terms</a></p>
-      <div className="mt-4 flex justify-center">
-        <button type="button" onClick={onOpenNoob} data-testid="form-made-with-noob" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer" style={{ color: 'var(--f-muted)', border: '1px solid currentColor', background: 'transparent' }}>Made with <span className="font-black tracking-tight">NOOB</span></button>
+      <p className="frm-r-fine">Your answers go to the owner of this form. NOOB does not sell them. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a></p>
+      <div className="frm-r-made">
+        <button type="button" onClick={onOpenNoob} data-testid="form-made-with-noob">Made with <b>NOOB</b></button>
       </div>
     </div>
   </div>
 );
 
 const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: string; onJoin?: () => void; onClose: () => void; result?: QuizResult | null; questions?: FormQuestion[] }> = ({ t, message, onJoin, onClose, result, questions }) => {
-  const pieces = useMemo(() => Array.from({ length: 28 }, (_, i) => ({ id: i, left: 8 + Math.random() * 84, delay: Math.random() * 0.35, dur: 1.6 + Math.random() * 1.2, rot: Math.round(Math.random() * 360), size: 6 + Math.round(Math.random() * 6), hue: [t.primary, '#fbbf24', '#34d399', '#60a5fa', '#f472b6'][i % 5] })), [t.primary]);
+  const pieces = useMemo(() => Array.from({ length: 46 }, (_, i) => ({ id: i, round: i % 4 === 0, left: 4 + Math.random() * 92, delay: Math.random() * 0.35, dur: 1.6 + Math.random() * 1.2, rot: Math.round(Math.random() * 360), size: 6 + Math.round(Math.random() * 6), hue: [t.primary, '#ffae42', '#1ee6a1', '#7c5cff', '#ff4d8d'][i % 5] })), [t.primary]);
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(8,8,12,.62)', backdropFilter: 'blur(6px)', animation: 'ff-fade .35s ease both' }} role="dialog" aria-modal="true" aria-label="Your response was sent" data-testid="form-success">
+    <div className="fixed inset-0 edge-own z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(8,8,12,.62)', backdropFilter: 'blur(6px)', animation: 'ff-fade .35s ease both' }} role="dialog" aria-modal="true" aria-label="Your response was sent" data-testid="form-success">
       <style>{`
         @keyframes ff-fade{from{opacity:0}to{opacity:1}}
         @keyframes ff-pop{0%{transform:translateY(24px) scale(.92);opacity:0}60%{transform:translateY(-4px) scale(1.02);opacity:1}100%{transform:none;opacity:1}}
@@ -162,7 +169,7 @@ const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: stri
       `}</style>
       <div className="ff-anim relative w-full max-w-sm rounded-[28px] px-6 pt-10 pb-7 text-center overflow-hidden" style={{ background: t.card, color: t.text, boxShadow: '0 30px 80px rgba(0,0,0,.45)', animation: 'ff-pop .55s cubic-bezier(.2,.9,.3,1.2) both' }}>
         <button type="button" onClick={onClose} aria-label="Close" data-testid="form-success-close" className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer" style={{ background: 'color-mix(in srgb, currentColor 10%, transparent)' }}><X className="w-5 h-5" /></button>
-        {pieces.map((p) => <span key={p.id} aria-hidden="true" className="ff-anim absolute top-0 rounded-[2px]" style={{ left: `${p.left}%`, width: p.size, height: p.size * 1.6, background: p.hue, transform: `rotate(${p.rot}deg)`, animation: `ff-fall ${p.dur}s ${p.delay}s ease-in both` }} />)}
+        {pieces.map((p) => <span key={p.id} aria-hidden="true" className="ff-anim absolute top-0" style={{ left: `${p.left}%`, borderRadius: p.round ? '50%' : 2, width: p.size, height: p.round ? p.size : p.size * 1.6, background: p.hue, transform: `rotate(${p.rot}deg)`, animation: `ff-fall ${p.dur}s ${p.delay}s ease-in both` }} />)}
         <div className="ff-anim mx-auto w-24 h-24 rounded-full flex items-center justify-center" style={{ ['--ring' as string]: t.primary + '66', background: t.primary, animation: 'ff-glow 1.8s .5s ease-out 2' }}>
           <svg viewBox="0 0 52 52" className="w-14 h-14" fill="none" stroke={t.onPrimary} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path className="ff-anim" d="M14 27l9 9 17-19" strokeDasharray="44" strokeDashoffset="44" style={{ animation: 'ff-ring .6s .35s ease-out forwards' }} />
@@ -186,17 +193,17 @@ const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: stri
   );
 };
 
-const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; error?: string; onChange: (v: unknown) => void; calc?: number | null; formId?: string; preview?: boolean }> = ({ q, n, value, error, onChange, calc, formId, preview }) => {
+const QuestionView: React.FC<{ q: FormQuestion; n?: number; index?: number; value: unknown; error?: string; onChange: (v: unknown) => void; calc?: number | null; formId?: string; preview?: boolean }> = ({ q, n, index, value, error, onChange, calc, formId, preview }) => {
   const id = 'f-' + q.id;
-  const card = 'rounded-[var(--f-radius)] p-5';
-  const cardStyle: React.CSSProperties = { background: 'var(--f-card)', border: `1px solid ${error ? '#d93025' : 'var(--f-border)'}` };
-  const field = 'w-full px-3 py-2.5 rounded-[calc(var(--f-radius)*0.6)] outline-none focus-visible:ring-2';
-  const fieldStyle: React.CSSProperties = { background: 'transparent', border: '1px solid var(--f-border)', color: 'var(--f-text)', ['--tw-ring-color' as string]: 'var(--f-primary)' };
+  const card = `frm-r-q ${error ? 'has-error' : ''}`;
+  const cardStyle: React.CSSProperties = { ['--qi' as string]: Math.min(index ?? 0, 8) };
+  const field = 'frm-r-field';
+  const fieldStyle: React.CSSProperties = {};
 
-  if (q.type === 'section') return <div className="pt-2 px-1"><h2 className="text-lg font-bold">{q.title}</h2>{q.description && <p className="text-sm mt-1" style={{ color: 'var(--f-muted)' }}>{q.description}</p>}</div>;
+  if (q.type === 'section') return <div className="frm-r-section"><h2>{q.title}</h2>{q.description && <p>{q.description}</p>}</div>;
   if (q.type === 'hidden') return null;
-  if (q.type === 'calculated') return <div className={card} style={cardStyle}><p className="font-semibold">{q.title}</p><p className="text-2xl font-extrabold mt-1" data-testid="form-calculated">{calc == null ? '-' : calc}</p></div>;
-  if (q.type === 'text_block') return <div className={card} style={cardStyle}><p className="font-semibold">{q.title}</p>{q.description && <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: 'var(--f-muted)' }}>{q.description}</p>}</div>;
+  if (q.type === 'calculated') return <div className={card} style={cardStyle}><p className="frm-r-qt">{q.title}</p><p className="frm-r-calc" data-testid="form-calculated">{calc == null ? '-' : calc}</p></div>;
+  if (q.type === 'text_block') return <div className={card} style={cardStyle}><p className="frm-r-qt">{q.title}</p>{q.description && <p className="frm-r-qd whitespace-pre-wrap">{q.description}</p>}</div>;
 
   const str = typeof value === 'string' ? value : '';
   const text = (type: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => <input id={id} type={type} value={str} onChange={(e) => onChange(e.target.value)} className={field} style={fieldStyle} aria-invalid={!!error} aria-describedby={error ? id + '-e' : undefined} placeholder={q.placeholder || 'Your answer'} {...extra} />;
@@ -220,16 +227,16 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
       const toggle = (oid: string) => { if (!multi) { onChange(oid); return; } onChange(sel.includes(oid) ? sel.filter((x) => x !== oid) : [...sel, oid]); };
       const other = sel.find((x) => x.startsWith('other:'));
       input = (
-        <div role={multi ? 'group' : 'radiogroup'} aria-labelledby={id + '-l'} className="space-y-1.5">
+        <div role={multi ? 'group' : 'radiogroup'} aria-labelledby={id + '-l'} className="frm-r-opts">
           {q.options?.map((o) => (
-            <label key={o.id} className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer" style={{ background: sel.includes(o.id) ? 'color-mix(in srgb, var(--f-primary) 12%, transparent)' : 'transparent' }}>
-              <input type={multi ? 'checkbox' : 'radio'} name={id} checked={sel.includes(o.id)} onChange={() => toggle(o.id)} className="w-4 h-4" style={{ accentColor: 'var(--f-primary)' }} /><span className="break-words min-w-0">{o.label}</span>
+            <label key={o.id} className={`frm-r-opt ${sel.includes(o.id) ? 'on' : ''}`}>
+              <input type={multi ? 'checkbox' : 'radio'} name={id} checked={sel.includes(o.id)} onChange={() => toggle(o.id)} className="frm-r-check" /><span className="break-words min-w-0">{o.label}</span>
             </label>))}
           {q.allowOther && (
-            <label className="flex items-center gap-3 px-2 py-2 rounded-lg cursor-pointer">
-              <input type={multi ? 'checkbox' : 'radio'} name={id} checked={other !== undefined} onChange={() => (other !== undefined ? (multi ? onChange(sel.filter((x) => !x.startsWith('other:'))) : onChange('')) : (multi ? onChange([...sel, 'other:']) : onChange('other:')))} className="w-4 h-4" style={{ accentColor: 'var(--f-primary)' }} />
+            <label className={`frm-r-opt ${other !== undefined ? 'on' : ''}`}>
+              <input type={multi ? 'checkbox' : 'radio'} name={id} checked={other !== undefined} onChange={() => (other !== undefined ? (multi ? onChange(sel.filter((x) => !x.startsWith('other:'))) : onChange('')) : (multi ? onChange([...sel, 'other:']) : onChange('other:')))} className="frm-r-check" />
               <span>Other:</span>
-              <input type="text" value={other ? other.slice(6) : ''} maxLength={300} aria-label="Other" onChange={(e) => (multi ? onChange([...sel.filter((x) => !x.startsWith('other:')), 'other:' + e.target.value]) : onChange('other:' + e.target.value))} className="flex-1 min-w-0 bg-transparent outline-none border-b py-1" style={{ borderColor: 'var(--f-border)' }} />
+              <input type="text" value={other ? other.slice(6) : ''} maxLength={300} aria-label="Other" onChange={(e) => (multi ? onChange([...sel.filter((x) => !x.startsWith('other:')), 'other:' + e.target.value]) : onChange('other:' + e.target.value))} className="frm-r-other" />
             </label>)}
         </div>); break;
     }
@@ -238,40 +245,40 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
       const nums = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
       input = (
         <div>
-          <div role="radiogroup" aria-labelledby={id + '-l'} className="flex flex-wrap gap-1.5">
+          <div role="radiogroup" aria-labelledby={id + '-l'} className="frm-r-pills">
             {nums.map((v) => (
-              <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className="min-w-[2.5rem] h-10 px-2 rounded-full font-bold text-sm cursor-pointer transition-colors" style={value === v ? { background: 'var(--f-primary)', color: 'var(--f-on)' } : { border: '1px solid var(--f-border)' }}>{v}</button>))}
+              <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className={`frm-r-pill ${value === v ? 'on' : ''}`}>{v}</button>))}
           </div>
-          {(q.minLabel || q.maxLabel) && <div className="flex justify-between mt-1.5 text-xs" style={{ color: 'var(--f-muted)' }}><span>{q.minLabel}</span><span>{q.maxLabel}</span></div>}
+          {(q.minLabel || q.maxLabel) && <div className="frm-r-ends"><span>{q.minLabel}</span><span>{q.maxLabel}</span></div>}
         </div>); break;
     }
     case 'rating': {
       const hi = q.max ?? 5;
       input = (
-        <div role="radiogroup" aria-labelledby={id + '-l'} className="flex gap-1">
+        <div role="radiogroup" aria-labelledby={id + '-l'} className="frm-r-icons">
           {Array.from({ length: hi }, (_, i) => i + 1).map((v) => (
-            <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className="p-1 cursor-pointer"><Star className="w-8 h-8" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
+            <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className={`frm-r-icon ${typeof value === 'number' && v <= value ? 'on' : ''}`}><Star className="w-9 h-9" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
         </div>); break;
     }
     case 'heart': {
       const hi = q.max ?? 5;
       input = (
-        <div role="radiogroup" aria-labelledby={id + '-l'} className="flex gap-1">
+        <div role="radiogroup" aria-labelledby={id + '-l'} className="frm-r-icons">
           {Array.from({ length: hi }, (_, i) => i + 1).map((v) => (
-            <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className="p-1 cursor-pointer"><Heart className="w-8 h-8" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
+            <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className={`frm-r-icon ${typeof value === 'number' && v <= value ? 'on' : ''}`}><Heart className="w-9 h-9" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
         </div>); break;
     }
     case 'thumbs': input = (
       <div role="radiogroup" aria-labelledby={id + '-l'} className="flex gap-3">
         {(['up', 'down'] as const).map((d) => (
-          <button key={d} type="button" role="radio" aria-checked={value === d} aria-label={d === 'up' ? 'Thumbs up' : 'Thumbs down'} onClick={() => onChange(d)} className="w-14 h-14 rounded-full flex items-center justify-center cursor-pointer" style={value === d ? { background: 'var(--f-primary)', color: 'var(--f-on)' } : { border: '1px solid var(--f-border)' }}>{d === 'up' ? <ThumbsUp className="w-6 h-6" /> : <ThumbsDown className="w-6 h-6" />}</button>))}
+          <button key={d} type="button" role="radio" aria-checked={value === d} aria-label={d === 'up' ? 'Thumbs up' : 'Thumbs down'} onClick={() => onChange(d)} className={`frm-r-thumb ${value === d ? 'on' : ''}`}>{d === 'up' ? <ThumbsUp className="w-6 h-6" /> : <ThumbsDown className="w-6 h-6" />}</button>))}
       </div>); break;
     case 'image_choice': {
       const sel = q.multi ? (Array.isArray(value) ? (value as string[]) : []) : [str];
       input = (
         <div role={q.multi ? 'group' : 'radiogroup'} aria-labelledby={id + '-l'} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {q.options?.map((o) => (
-            <button key={o.id} type="button" role={q.multi ? 'checkbox' : 'radio'} aria-checked={sel.includes(o.id)} onClick={() => onChange(q.multi ? (sel.includes(o.id) ? sel.filter((x) => x !== o.id) : [...sel, o.id]) : o.id)} className="rounded-xl overflow-hidden text-left cursor-pointer" style={{ border: `3px solid ${sel.includes(o.id) ? 'var(--f-primary)' : 'var(--f-border)'}` }}>
+            <button key={o.id} type="button" role={q.multi ? 'checkbox' : 'radio'} aria-checked={sel.includes(o.id)} onClick={() => onChange(q.multi ? (sel.includes(o.id) ? sel.filter((x) => x !== o.id) : [...sel, o.id]) : o.id)} className={`frm-r-img ${sel.includes(o.id) ? 'on' : ''}`}>
               {o.img && /^https?:\/\//i.test(o.img) ? <img src={o.img} alt={o.label} loading="lazy" className="w-full aspect-square object-cover" /> : <span className="block w-full aspect-square" style={{ background: 'var(--f-border)' }} />}
               <span className="block px-2 py-1.5 text-sm font-semibold break-words">{o.label}</span>
             </button>))}
@@ -284,7 +291,7 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
         <div className="space-y-1.5" aria-labelledby={id + '-l'}>
           <p className="text-xs" style={{ color: 'var(--f-muted)' }}>Tap the options in your order of preference. Tap again to remove.</p>
           {order.map((oid, i) => (
-            <div key={oid} className="flex items-center gap-2 px-2 py-2 rounded-lg" style={{ background: 'color-mix(in srgb, var(--f-primary) 12%, transparent)' }}>
+            <div key={oid} className="frm-r-opt on">
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>{i + 1}</span>
               <span className="flex-1 min-w-0 break-words">{q.options?.find((o) => o.id === oid)?.label}</span>
               <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className="p-1 disabled:opacity-30 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
@@ -292,7 +299,7 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
               <button type="button" aria-label="Remove" onClick={() => onChange(order.filter((x) => x !== oid))} className="p-1 cursor-pointer"><X className="w-4 h-4" /></button>
             </div>))}
           {q.options?.filter((o) => !order.includes(o.id)).map((o) => (
-            <button key={o.id} type="button" onClick={() => onChange([...order, o.id])} className="w-full text-left px-3 py-2 rounded-lg cursor-pointer" style={{ border: '1px dashed var(--f-border)' }}>{o.label}</button>))}
+            <button key={o.id} type="button" onClick={() => onChange([...order, o.id])} className="frm-r-opt dashed">{o.label}</button>))}
         </div>); break;
     }
     case 'grid': {
@@ -309,16 +316,16 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
     case 'signature': input = <SignaturePad value={str} onChange={onChange} />; break;
     case 'file_upload': input = <FileInput q={q} value={value} onChange={onChange} formId={formId} preview={preview} />; break;
     case 'consent': input = (
-      <label className="flex items-start gap-3 cursor-pointer"><input id={id} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} className="w-5 h-5 mt-0.5" style={{ accentColor: 'var(--f-primary)' }} /><span className="break-words min-w-0">{q.description || q.title}</span></label>); break;
+      <label className={`frm-r-opt ${value === true ? 'on' : ''}`}><input id={id} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} className="frm-r-check" /><span className="break-words min-w-0">{q.description || q.title}</span></label>); break;
     default: break;
   }
   return (
     <fieldset className={card} style={cardStyle} data-testid="form-question">
       <legend className="sr-only">{q.title}</legend>
-      <label id={id + '-l'} htmlFor={q.type === 'consent' ? undefined : id} className="block font-semibold mb-1 break-words">{n ? `${n}. ` : ''}{q.title}{q.required && <span style={{ color: '#d93025' }} aria-hidden="true"> *</span>}{q.required && <span className="sr-only"> (required)</span>}</label>
-      {q.description && q.type !== 'consent' && <p className="text-sm mb-2 whitespace-pre-wrap break-words" style={{ color: 'var(--f-muted)' }}>{q.description}</p>}
-      <div className="mt-2">{input}</div>
-      {error && <p id={id + '-e'} role="alert" className="mt-2 text-sm font-semibold" style={{ color: '#d93025' }}>{error}</p>}
+      <label id={id + '-l'} htmlFor={q.type === 'consent' ? undefined : id} className="frm-r-label break-words">{n ? <span className="frm-r-num">{n}</span> : null}<span className="min-w-0">{q.title}{q.required && <span className="frm-r-star" aria-hidden="true"> *</span>}{q.required && <span className="sr-only"> (required)</span>}</span></label>
+      {q.description && q.type !== 'consent' && <p className="frm-r-qd whitespace-pre-wrap break-words">{q.description}</p>}
+      <div className="frm-r-input">{input}</div>
+      {error && <p id={id + '-e'} role="alert" className="frm-r-error">{error}</p>}
     </fieldset>
   );
 };

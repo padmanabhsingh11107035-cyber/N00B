@@ -80,11 +80,12 @@ export const ExportDialog: React.FC<{ ctl: StudioCtl; onClose: () => void }> = (
   };
 
   return (
-    <div className="fixed inset-0 z-[10050] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Export" data-testid="studio-export">
-      <div className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-zinc-950 border border-zinc-800 text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 sticky top-0 bg-zinc-950 z-10">
-          <h2 className="text-[15px] font-black">Export</h2>
-          <button onClick={() => { abort.current?.abort(); onClose(); }} aria-label="Close" className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center"><X className="w-5 h-5" /></button>
+    <div className="sx-scrim sx-scrim-export fixed inset-0 edge-own z-[10050] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Export" data-testid="studio-export">
+      <div className="sx-sheet w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl">
+        <div className="sx-sheet-head flex items-center justify-between px-4 py-3 sticky top-0 z-10">
+          <span className="sx-grab" aria-hidden="true" />
+          <h2 className="text-[16px] font-black">Export</h2>
+          <button onClick={() => { abort.current?.abort(); onClose(); }} aria-label="Close" className="sx-iconbtn w-9 h-9 rounded-full flex items-center justify-center"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-4">
           {hasVideo && !working && !result && (
@@ -144,7 +145,7 @@ export const ExportDialog: React.FC<{ ctl: StudioCtl; onClose: () => void }> = (
           {working && (
             <div className="space-y-2" data-testid="studio-export-progress">
               <div className="flex items-center gap-2 text-[12px] font-bold"><Loader2 className="w-4 h-4 animate-spin" />{kind === 'video' ? `Making your video… ${Math.round(progress * 100)}%` : 'Making your picture…'}</div>
-              {kind === 'video' && <div className="h-2 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full bg-fuchsia-500 transition-all" style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
+              {kind === 'video' && <div className="sx-progress h-2.5 rounded-full overflow-hidden"><div className="sx-progress-bar h-full transition-all" style={{ width: `${Math.round(progress * 100)}%` }} /></div>}
               <Btn className="w-full" onClick={() => abort.current?.abort()}>Cancel</Btn>
             </div>
           )}
@@ -155,7 +156,7 @@ export const ExportDialog: React.FC<{ ctl: StudioCtl; onClose: () => void }> = (
 
           {result && (
             <div className="space-y-3" data-testid="studio-export-done">
-              <div className="rounded-2xl bg-black border border-zinc-800 overflow-hidden flex items-center justify-center max-h-[40vh]">
+              <div className="sx-result rounded-2xl bg-black overflow-hidden flex items-center justify-center max-h-[40vh]">
                 {result.kind === 'video' ? <video src={result.url} controls playsInline className="max-h-[40vh] w-full" /> : <img src={result.url} alt="Your finished picture" className="max-h-[40vh] object-contain" />}
               </div>
               <p className="text-[12px] text-emerald-300 font-bold">Done: {result.w} × {result.h}, {fmtSize(result.blob.size)}. Checked: it opens.</p>

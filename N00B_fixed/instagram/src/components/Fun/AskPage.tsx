@@ -42,16 +42,19 @@ const PAGE_SIZE = 15;
 const whenLabel = (iso: string): string => timeAgo(iso);
 
 const PrivacyNote: React.FC<{ name?: string }> = ({ name }) => (
-  <p className="text-[11px] leading-relaxed text-zinc-400">
-    <Lock className="inline w-3 h-3 -mt-0.5 mr-1" aria-hidden="true" />
-    {name ? `${name} will not see your name, username, picture or any account details next to your question.` : 'The person who asks is never shown to you: no name, username, picture or account details.'}{' '}
-    This is anonymity for the person who receives the question. NOOB keeps a private record to prevent abuse and may act on reports, so please be kind.
+  <p className="fx-lock">
+    <Lock className="fx-ic" style={{ marginTop: 2 }} aria-hidden="true" />
+    <span>
+      {name ? `${name} will not see your name, username, picture or any account details next to your question.` : 'The person who asks is never shown to you: no name, username, picture or account details.'}{' '}
+      This is anonymity for the person who receives the question. NOOB keeps a private record to prevent abuse and may act on reports, so please be kind.
+    </span>
   </p>
 );
 
-const Avatar: React.FC<{ src?: string; name: string; size?: string }> = ({ src, name, size = 'w-14 h-14' }) => (
-  src ? <img src={src} alt="" referrerPolicy="no-referrer" className={`${size} rounded-full object-cover border border-zinc-700 shrink-0`} />
-      : <div className={`${size} rounded-full border border-zinc-700 bg-zinc-800 flex items-center justify-center text-lg font-black shrink-0`} aria-hidden="true">{name.slice(0, 1).toUpperCase()}</div>
+const Avatar: React.FC<{ src?: string; name: string; size?: string }> = ({ src, name }) => (
+  <span className="fx-ava">
+    {src ? <img src={src} alt="" referrerPolicy="no-referrer" /> : <span aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>}
+  </span>
 );
 
 const copyOrShare = async (url: string, say: (t: string, k?: 'ok' | 'err') => void, title: string, text: string) => {
@@ -133,53 +136,54 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
   if (error) return <ErrorState text={error} onRetry={() => void load()} />;
   if (profile === undefined) return <SkeletonCards count={2} label="Loading" />;
   if (profile === null) {
-    return <EmptyState icon={<MessageCircleQuestion className="w-8 h-8" aria-hidden="true" />} title="We could not find that person" hint="Check the link, or ask them to send it again." action={<button type="button" onClick={() => onOpenFeature({ feature: 'ask' })} className="px-6 py-3 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer">Open my questions</button>} />;
+    return <EmptyState icon={<MessageCircleQuestion className="w-8 h-8" aria-hidden="true" />} title="We could not find that person" hint="Check the link, or ask them to send it again." action={<button type="button" onClick={() => onOpenFeature({ feature: 'ask' })} className="fx-btn is-auto">Open my questions</button>} />;
   }
 
   const link = funShareUrl({ feature: 'ask', target: profile.username });
   return (
-    <div className="space-y-5">
+    <div className="fx-stack">
       <Card>
-        <div className="flex items-center gap-3">
+        <div className="fx-row" style={{ gap: 14 }}>
           <Avatar src={profile.avatar} name={profile.displayName} />
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-base font-black truncate">{profile.displayName}{profile.isVerified && <VerifiedBadge size="xs" />}</p>
-            <p className="text-xs text-zinc-400 truncate">@{profile.username}</p>
+          <div className="fx-grow">
+            <p className="flex items-center gap-1.5 fx-black fx-trunc" style={{ fontSize: 20, letterSpacing: '-.02em' }}>{profile.displayName}{profile.isVerified && <VerifiedBadge size="xs" />}</p>
+            <p className="fx-t13 fx-muted fx-trunc">@{profile.username}</p>
           </div>
         </div>
 
         {mine ? (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm text-zinc-300">This is your own question page. Share this link with friends so they can ask you anything.</p>
-            <div className="flex gap-2">
-              <input readOnly value={link} aria-label="Your question link" onFocus={(e) => e.currentTarget.select()} className="flex-1 min-w-0 h-11 rounded-xl bg-zinc-950 border border-zinc-700 px-3 text-xs" />
-              <button type="button" onClick={() => void copyOrShare(link, say, 'Ask me anything', 'Ask me anything, anonymously')} className="shrink-0 h-11 px-4 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer">Share</button>
+          <div className="fx-stack-sm" style={{ marginTop: 16 }}>
+            <p className="fx-t15 fx-muted">This is your own question page. Share this link with friends so they can ask you anything.</p>
+            <div className="fx-row" style={{ gap: 8 }}>
+              <input readOnly value={link} aria-label="Your question link" onFocus={(e) => e.currentTarget.select()} className="fx-input" style={{ fontSize: 13, height: 46 }} />
+              <button type="button" onClick={() => void copyOrShare(link, say, 'Ask me anything', 'Ask me anything, anonymously')} className="fx-btn is-auto shrink-0">Share</button>
             </div>
-            <button type="button" onClick={() => onOpenFeature({ feature: 'ask' })} className="w-full h-11 rounded-full border border-zinc-700 hover:border-zinc-50 text-sm font-bold cursor-pointer">Open my questions</button>
+            <button type="button" onClick={() => onOpenFeature({ feature: 'ask' })} className="fx-btn-ghost">Open my questions</button>
           </div>
         ) : !profile.enabled ? (
-          <p className="mt-4 text-sm text-zinc-300 rounded-2xl border border-zinc-700 p-4 text-center">{profile.displayName} is not taking questions right now.</p>
+          <p className="fx-t15 fx-muted fx-center" style={{ marginTop: 16, padding: 16, borderRadius: 20, border: '1px dashed var(--fx-line)' }}>{profile.displayName} is not taking questions right now.</p>
         ) : sentCount > 0 ? (
-          <div className="mt-4 text-center space-y-3" role="status">
-            <div className="w-14 h-14 rounded-full bg-noob text-black mx-auto flex items-center justify-center"><Check className="w-7 h-7" aria-hidden="true" /></div>
-            <p className="text-base font-black">Sent!</p>
-            <p className="text-xs text-zinc-400">{profile.displayName} will see your question without knowing it was you.</p>
-            <button type="button" onClick={() => setSentCount(0)} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer">Ask something else</button>
+          <div className="fx-center fx-stack-sm" style={{ marginTop: 20, alignItems: 'center' }} role="status">
+            <div className="fx-sent"><Check className="w-8 h-8" aria-hidden="true" /></div>
+            <p className="fx-black" style={{ fontSize: 24, letterSpacing: '-.02em' }}>Sent!</p>
+            <p className="fx-t13 fx-muted">{profile.displayName} will see your question without knowing it was you.</p>
+            <button type="button" onClick={() => setSentCount(0)} className="fx-btn-ghost is-auto">Ask something else</button>
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="fx-stack-sm" style={{ marginTop: 16 }}>
             <label htmlFor="ask-text" className="sr-only">Your question for {profile.displayName}</label>
+            <div className="fx-composer">
             <textarea
               id="ask-text"
               value={text}
               onChange={(e) => { const chars = Array.from(e.target.value); setText(chars.length > ASK_MAX_LENGTH ? chars.slice(0, ASK_MAX_LENGTH).join('') : e.target.value); }}
               rows={4}
               placeholder={`Ask ${profile.displayName} anything...`}
-              className="w-full rounded-2xl bg-zinc-950 border border-zinc-700 focus:border-zinc-50 outline-none p-3.5 text-sm leading-relaxed resize-none"
             />
-            <div className="flex items-center justify-between gap-3">
-              <p className={`text-xs font-bold tabular-nums ${count >= ASK_MAX_LENGTH ? 'text-red-300' : 'text-zinc-400'}`} aria-live="polite">{count} / {ASK_MAX_LENGTH}</p>
-              <button type="button" onClick={() => void send()} disabled={!!currentUser && !canSend} className="h-11 px-6 rounded-full bg-noob text-black text-sm font-extrabold flex items-center gap-2 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed">
+            </div>
+            <div className="fx-row" style={{ justifyContent: 'space-between', gap: 12 }}>
+              <p className="fx-t13 fx-bold" style={{ fontVariantNumeric: 'tabular-nums', color: count >= ASK_MAX_LENGTH ? 'var(--fx-bad)' : 'var(--fx-ink2)' }} aria-live="polite">{count} / {ASK_MAX_LENGTH}</p>
+              <button type="button" onClick={() => void send()} disabled={!!currentUser && !canSend} className="fx-btn is-auto">
                 <BusyLabel busy={sending}><Send className="w-4 h-4" aria-hidden="true" />{currentUser ? 'Send Anonymously' : 'Log in to send'}</BusyLabel>
               </button>
             </div>
@@ -188,28 +192,32 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
         )}
       </Card>
 
-      <section aria-label="Answered questions" className="space-y-3">
-        <h2 className="text-sm font-black tracking-tight">Answered questions</h2>
+      <section aria-label="Answered questions" className="fx-stack-sm" style={{ gap: 14 }}>
+        <h2 className="fx-h2">Answered questions</h2>
         {answers.length === 0 ? (
-          <p className="text-xs text-zinc-400 rounded-2xl border border-zinc-800 p-4 text-center">{profile.displayName} has not published any answers yet.</p>
+          <p className="fx-t13 fx-muted fx-center" style={{ padding: 18, borderRadius: 22, border: '1px dashed var(--fx-line)' }}>{profile.displayName} has not published any answers yet.</p>
         ) : (
-          answers.map((a) => (
-            <Card key={a.id}>
-              <p className="text-sm font-black break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{a.question}</p>
-              <p className="mt-2 text-sm text-zinc-200 break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{a.answer}</p>
-              <p className="mt-2 text-[11px] text-zinc-500">{whenLabel(a.answeredAt)}</p>
-            </Card>
+          answers.map((a, i) => (
+            <div key={a.id} className="fx-bubs" style={{ ['--i' as string]: Math.min(i, 6) }}>
+              <div className="fx-bub fx-bub-q">
+                <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{a.question}</p>
+              </div>
+              <div className="fx-bub fx-bub-a" style={{ animationDelay: '90ms' }}>
+                <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{a.answer}</p>
+              </div>
+              <p className="fx-bub-meta" style={{ alignSelf: 'flex-end' }}>{whenLabel(a.answeredAt)}</p>
+            </div>
           ))
         )}
         {hasMore && (
           <div className="flex justify-center">
-            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer disabled:opacity-60">
+            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto">
               <BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel>
             </button>
           </div>
         )}
         {!mine && (
-          <button type="button" onClick={() => { const u = { id: profile.userId, username: profile.username, displayName: profile.displayName, avatar: profile.avatar } as unknown as Parameters<NonNullable<FunPageProps['onOpenProfile']>>[0]; onOpenProfile?.(u); }} className="w-full h-11 rounded-full border border-zinc-700 hover:border-zinc-50 text-sm font-bold cursor-pointer">View {profile.displayName}&apos;s profile</button>
+          <button type="button" onClick={() => { const u = { id: profile.userId, username: profile.username, displayName: profile.displayName, avatar: profile.avatar } as unknown as Parameters<NonNullable<FunPageProps['onOpenProfile']>>[0]; onOpenProfile?.(u); }} className="fx-btn-ghost">View {profile.displayName}&apos;s profile</button>
         )}
       </section>
       {toast}
@@ -276,58 +284,60 @@ const QuestionItem: React.FC<{
     say('Added to your Story.', 'ok');
   }, 'Could not add it to your Story.');
 
-  const small = 'h-8 px-3 rounded-full border text-[11px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors';
+  const small = 'fx-act';
   return (
     <Card ariaLabel="Anonymous question">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center shrink-0 text-zinc-300" aria-hidden="true"><MessageCircleQuestion className="w-[18px] h-[18px]" /></div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-zinc-500">Anonymous · {whenLabel(q.createdAt)}{q.reported ? ' · reported' : ''}</p>
-          <p className="mt-1 text-sm font-bold break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{q.body}</p>
+      <div className="fx-row" style={{ alignItems: 'flex-start', gap: 12 }}>
+        <div className="fx-qav" aria-hidden="true"><MessageCircleQuestion className="w-[18px] h-[18px]" /></div>
+        <div className="fx-grow">
+          <p className="fx-bub-meta">Anonymous · {whenLabel(q.createdAt)}{q.reported ? ' · reported' : ''}</p>
+          <div className="fx-bub fx-bub-q" style={{ marginTop: 6, maxWidth: '100%' }}>
+            <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{q.body}</p>
+          </div>
         </div>
       </div>
 
       {q.answer && !editing && (
-        <div className="mt-3 rounded-2xl bg-zinc-950 border border-zinc-800 p-3.5">
-          <p className="text-sm text-zinc-200 break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{q.answer}</p>
-          <p className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+        <div className="fx-bub fx-bub-a" style={{ marginTop: 10, marginLeft: 'auto' }}>
+          <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{q.answer}</p>
+          <p className="fx-bub-tag">
             {q.answerPublic ? <><Globe className="w-3 h-3" aria-hidden="true" /> On your profile</> : <><EyeOff className="w-3 h-3" aria-hidden="true" /> Only you</>}
           </p>
         </div>
       )}
 
       {editing && (
-        <div className="mt-3 space-y-2.5">
+        <div className="fx-stack-sm" style={{ marginTop: 12, gap: 10 }}>
           <label htmlFor={`ans-${q.id}`} className="sr-only">Your answer</label>
-          <textarea id={`ans-${q.id}`} value={draft} onChange={(e) => { const chars = Array.from(e.target.value); setDraft(chars.length > ASK_ANSWER_MAX_LENGTH ? chars.slice(0, ASK_ANSWER_MAX_LENGTH).join('') : e.target.value); }} rows={3} placeholder="Write your answer..." autoFocus className="w-full rounded-2xl bg-zinc-950 border border-zinc-700 focus:border-zinc-50 outline-none p-3 text-sm leading-relaxed resize-none" />
-          <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
-            <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)} className="w-4 h-4 accent-current" />
-            Publish this answer on my profile (without who asked)
+          <textarea id={`ans-${q.id}`} value={draft} onChange={(e) => { const chars = Array.from(e.target.value); setDraft(chars.length > ASK_ANSWER_MAX_LENGTH ? chars.slice(0, ASK_ANSWER_MAX_LENGTH).join('') : e.target.value); }} rows={3} placeholder="Write your answer..." autoFocus className="fx-input" />
+          <label className="fx-row fx-t13 fx-muted" style={{ cursor: 'pointer', alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={publish} onChange={(e) => setPublish(e.target.checked)} className="w-4 h-4 accent-current" style={{ marginTop: 3, accentColor: 'var(--fx-a)' }} />
+            <span>Publish this answer on my profile (without who asked)</span>
           </label>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void saveAnswer()} disabled={busy || draft.trim().length === 0} className="h-10 px-5 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer disabled:opacity-50"><BusyLabel busy={busy}>{publish ? 'Answer and publish' : 'Save answer'}</BusyLabel></button>
-            <button type="button" onClick={() => { setEditing(false); setDraft(q.answer ?? ''); setPublish(q.answerPublic); }} className="h-10 px-4 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer">Cancel</button>
-            <span className="ml-auto text-[11px] tabular-nums text-zinc-500">{codePoints(draft)} / {ASK_ANSWER_MAX_LENGTH}</span>
+          <div className="fx-row" style={{ flexWrap: 'wrap' }}>
+            <button type="button" onClick={() => void saveAnswer()} disabled={busy || draft.trim().length === 0} className="fx-btn is-sm"><BusyLabel busy={busy}>{publish ? 'Answer and publish' : 'Save answer'}</BusyLabel></button>
+            <button type="button" onClick={() => { setEditing(false); setDraft(q.answer ?? ''); setPublish(q.answerPublic); }} className="fx-btn-ghost is-auto" style={{ height: 40 }}>Cancel</button>
+            <span className="fx-t11 fx-faint" style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{codePoints(draft)} / {ASK_ANSWER_MAX_LENGTH}</span>
           </div>
         </div>
       )}
 
       {!editing && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => { setDraft(q.answer ?? ''); setPublish(q.answerPublic); setEditing(true); }} className={`${small} bg-noob text-black border-zinc-50`}><Pencil className="w-3 h-3" aria-hidden="true" />{q.answer ? 'Edit answer' : 'Answer'}</button>
-          {q.answer && <button type="button" onClick={() => void togglePublic()} disabled={busy} className={`${small} border-zinc-700 text-zinc-200 hover:border-zinc-50`}>{q.answerPublic ? <><EyeOff className="w-3 h-3" aria-hidden="true" />Unpublish</> : <><Globe className="w-3 h-3" aria-hidden="true" />Publish</>}</button>}
-          {q.answer && <button type="button" onClick={() => void story()} disabled={busy} className={`${small} border-zinc-700 text-zinc-200 hover:border-zinc-50`}><ImageIcon className="w-3 h-3" aria-hidden="true" />Share as Story</button>}
-          <button type="button" onClick={del} disabled={busy} className={`${small} ${armed === 'delete' ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`}><Trash2 className="w-3 h-3" aria-hidden="true" />{armed === 'delete' ? 'Tap again' : 'Delete'}</button>
-          {!q.reported && <button type="button" onClick={() => setReporting((v) => !v)} aria-expanded={reporting} className={`${small} border-zinc-700 text-zinc-300 hover:border-zinc-50`}><Flag className="w-3 h-3" aria-hidden="true" />Report</button>}
-          <button type="button" onClick={block} disabled={busy} className={`${small} ${armed === 'block' ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`}><Ban className="w-3 h-3" aria-hidden="true" />{armed === 'block' ? 'Tap again to block' : 'Block sender'}</button>
+        <div className="fx-acts" style={{ marginTop: 12 }}>
+          <button type="button" onClick={() => { setDraft(q.answer ?? ''); setPublish(q.answerPublic); setEditing(true); }} className={`${small} is-primary`}><Pencil className="w-3 h-3" aria-hidden="true" />{q.answer ? 'Edit answer' : 'Answer'}</button>
+          {q.answer && <button type="button" onClick={() => void togglePublic()} disabled={busy} className={small}>{q.answerPublic ? <><EyeOff className="w-3 h-3" aria-hidden="true" />Unpublish</> : <><Globe className="w-3 h-3" aria-hidden="true" />Publish</>}</button>}
+          {q.answer && <button type="button" onClick={() => void story()} disabled={busy} className={small}><ImageIcon className="w-3 h-3" aria-hidden="true" />Share as Story</button>}
+          <button type="button" onClick={del} disabled={busy} className={`${small} ${armed === 'delete' ? 'is-warn' : ''}`}><Trash2 className="w-3 h-3" aria-hidden="true" />{armed === 'delete' ? 'Tap again' : 'Delete'}</button>
+          {!q.reported && <button type="button" onClick={() => setReporting((v) => !v)} aria-expanded={reporting} className={small}><Flag className="w-3 h-3" aria-hidden="true" />Report</button>}
+          <button type="button" onClick={block} disabled={busy} className={`${small} ${armed === 'block' ? 'is-warn' : ''}`}><Ban className="w-3 h-3" aria-hidden="true" />{armed === 'block' ? 'Tap again to block' : 'Block sender'}</button>
         </div>
       )}
 
       {reporting && !editing && (
-        <div className="mt-2.5 rounded-2xl border border-zinc-700 p-3 space-y-2" role="group" aria-label="Why are you reporting this question?">
-          <p className="text-xs text-zinc-300">Why are you reporting it?</p>
-          <div className="flex flex-wrap gap-2">
-            {REPORT_REASONS.map((r) => <button key={r} type="button" onClick={() => void report(r)} disabled={busy} className="h-8 px-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-[11px] font-bold cursor-pointer disabled:opacity-50">{r}</button>)}
+        <div className="fx-subpanel fx-stack-sm" style={{ gap: 10 }} role="group" aria-label="Why are you reporting this question?">
+          <p className="fx-t13 fx-muted">Why are you reporting it?</p>
+          <div className="fx-acts">
+            {REPORT_REASONS.map((r) => <button key={r} type="button" onClick={() => void report(r)} disabled={busy} className={small}>{r}</button>)}
           </div>
         </div>
       )}
@@ -424,36 +434,37 @@ const Dashboard: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
     }
   };
 
-  const tabCls = (on: boolean) => `flex-1 h-10 rounded-full border text-xs font-bold cursor-pointer transition-all ${on ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`;
+  const tabCls = (_on: boolean) => 'fx-seg-btn';
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <p className="text-sm font-black">Your question link</p>
-        <p className="mt-1 text-xs text-zinc-400">Anyone with this link can send you a question without you seeing who it is. Put it in your bio, a Story or a chat.</p>
-        <div className="mt-3 flex gap-2">
-          <input readOnly value={link} aria-label="Your question link" onFocus={(e) => e.currentTarget.select()} className="flex-1 min-w-0 h-11 rounded-xl bg-zinc-950 border border-zinc-700 px-3 text-xs" />
-          <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(link); say('Link copied.', 'ok'); } catch { say('Could not copy. Select the link and copy it.', 'err'); } }} aria-label="Copy link" className="shrink-0 w-11 h-11 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer"><Copy className="w-4 h-4" aria-hidden="true" /></button>
-          <button type="button" onClick={() => void copyOrShare(link, say, 'Ask me anything', 'Ask me anything, anonymously')} aria-label="Share link" className="shrink-0 w-11 h-11 rounded-full bg-noob text-black flex items-center justify-center cursor-pointer"><Share2 className="w-4 h-4" aria-hidden="true" /></button>
+    <div className="fx-stack">
+      <div className="fx-ticket fx-in">
+        <p className="fx-ticket-title">Your question link</p>
+        <p className="fx-ticket-sub">Anyone with this link can send you a question without you seeing who it is. Put it in your bio, a Story or a chat.</p>
+        <div className="fx-row" style={{ marginTop: 14, gap: 8 }}>
+          <input readOnly value={link} aria-label="Your question link" onFocus={(e) => e.currentTarget.select()} className="fx-input" />
+          <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(link); say('Link copied.', 'ok'); } catch { say('Could not copy. Select the link and copy it.', 'err'); } }} aria-label="Copy link" className="fx-round is-light"><Copy className="w-4 h-4" aria-hidden="true" /></button>
+          <button type="button" onClick={() => void copyOrShare(link, say, 'Ask me anything', 'Ask me anything, anonymously')} aria-label="Share link" className="fx-round"><Share2 className="w-4 h-4" aria-hidden="true" /></button>
         </div>
         <button
           type="button"
           onClick={async () => { try { await shareCardAsStory({ eyebrow: 'Ask me anything', title: 'Ask me anything, anonymously', body: 'Send me a question. I will never know who asked.', link: { url: link, label: 'Ask me anything' }, anonymousButton: true }); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } }}
-          className="mt-2.5 w-full h-10 rounded-full border border-zinc-700 hover:border-zinc-50 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+          className="fx-btn-ghost" style={{ marginTop: 10 }}
         ><ImageIcon className="w-3.5 h-3.5" aria-hidden="true" /> Put my link in a Story</button>
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 px-3.5 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-bold">Take anonymous questions</p>
-            <p className="text-[11px] text-zinc-400">{enabled ? 'Your link is on. Switch off to stop new questions.' : 'Your link is off: nobody can send you new questions.'}</p>
-          </div>
-          <button type="button" role="switch" aria-checked={enabled} aria-label="Take anonymous questions" onClick={() => void toggleEnabled()} className={`relative shrink-0 w-12 h-7 rounded-full border transition-colors cursor-pointer ${enabled ? 'bg-noob border-zinc-50' : 'bg-zinc-800 border-zinc-600'}`}>
-            <span className={`absolute top-0.5 w-6 h-6 rounded-full transition-all ${enabled ? 'left-[22px] bg-black' : 'left-0.5 bg-zinc-400'}`} />
-          </button>
-        </div>
-      </Card>
+      </div>
 
-      <section aria-label="Your questions" className="space-y-3">
-        <div className="flex gap-2" role="tablist" aria-label="Questions">
+      <div className="fx-card fx-in" style={{ ['--i' as string]: 1 }}>
+        <div className="fx-row" style={{ justifyContent: 'space-between', gap: 14 }}>
+          <div className="fx-grow">
+            <p className="fx-bold" style={{ fontSize: 15 }}>Take anonymous questions</p>
+            <p className="fx-t11 fx-muted" style={{ marginTop: 2 }}>{enabled ? 'Your link is on. Switch off to stop new questions.' : 'Your link is off: nobody can send you new questions.'}</p>
+          </div>
+          <button type="button" role="switch" aria-checked={enabled} aria-label="Take anonymous questions" onClick={() => void toggleEnabled()} className="fx-switch"><span className="fx-knob" /></button>
+        </div>
+      </div>
+
+      <section aria-label="Your questions" className="fx-stack-sm" style={{ gap: 14 }}>
+        <div className="fx-seg" role="tablist" aria-label="Questions">
           <button type="button" role="tab" aria-selected={filter === 'new'} onClick={() => setFilter('new')} className={tabCls(filter === 'new')}>New ({counts.new})</button>
           <button type="button" role="tab" aria-selected={filter === 'answered'} onClick={() => setFilter('answered')} className={tabCls(filter === 'answered')}>Answered ({counts.answered})</button>
         </div>
@@ -470,24 +481,24 @@ const Dashboard: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
         {status === 'ready' && items.map((q) => <QuestionItem key={q.id} q={q} link={link} onChanged={changed} onRemoved={removed} say={say} />)}
         {status === 'ready' && hasMore && (
           <div className="flex justify-center">
-            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer disabled:opacity-60"><BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel></button>
+            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto"><BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel></button>
           </div>
         )}
       </section>
 
       {canManage && reports.length > 0 && (
-        <section aria-label="Reported questions" className="space-y-3">
-          <h2 className="flex items-center gap-1.5 text-sm font-black"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported questions ({reports.length})</h2>
+        <section aria-label="Reported questions" className="fx-stack-sm" style={{ gap: 14 }}>
+          <h2 className="fx-h2"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported questions ({reports.length})</h2>
           {reports.map((r) => (
             <Card key={r.id}>
-              <p className="text-[11px] text-zinc-500">To @{r.toUsername} · {whenLabel(r.reportedAt)}{r.reason ? ` · ${r.reason}` : ''}</p>
-              <p className="mt-1 text-sm font-bold break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{r.body}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void reportAction(r, 'dismiss')} className="h-8 px-3 rounded-full border border-zinc-600 text-[11px] font-bold cursor-pointer"><Check className="inline w-3 h-3 mr-1" aria-hidden="true" />Keep</button>
-                <button type="button" onClick={() => void reportAction(r, 'remove')} className="h-8 px-3 rounded-full bg-noob text-black text-[11px] font-bold cursor-pointer"><X className="inline w-3 h-3 mr-1" aria-hidden="true" />Remove</button>
-                <button type="button" onClick={() => void reportAction(r, 'ban')} className={`h-8 px-3 rounded-full border text-[11px] font-bold cursor-pointer ${armedReport === r.id ? 'border-red-400 text-red-300' : 'border-zinc-600 text-zinc-300'}`}>{armedReport === r.id ? 'Tap again: remove and stop the sender' : 'Remove and stop the sender'}</button>
+              <p className="fx-bub-meta">To @{r.toUsername} · {whenLabel(r.reportedAt)}{r.reason ? ` · ${r.reason}` : ''}</p>
+              <div className="fx-bub fx-bub-q" style={{ marginTop: 6, maxWidth: '100%' }}><p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{r.body}</p></div>
+              <div className="fx-acts" style={{ marginTop: 12 }}>
+                <button type="button" onClick={() => void reportAction(r, 'dismiss')} className="fx-act"><Check className="inline w-3 h-3 mr-1" aria-hidden="true" />Keep</button>
+                <button type="button" onClick={() => void reportAction(r, 'remove')} className="fx-act is-primary"><X className="inline w-3 h-3 mr-1" aria-hidden="true" />Remove</button>
+                <button type="button" onClick={() => void reportAction(r, 'ban')} className={`fx-act ${armedReport === r.id ? 'is-warn' : ''}`}>{armedReport === r.id ? 'Tap again: remove and stop the sender' : 'Remove and stop the sender'}</button>
               </div>
-              <p className="mt-2 text-[10px] text-zinc-500">You see the question and the reason, never who sent it.</p>
+              <p className="fx-t11 fx-faint" style={{ marginTop: 8 }}>You see the question and the reason, never who sent it.</p>
             </Card>
           ))}
         </section>

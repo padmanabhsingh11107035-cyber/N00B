@@ -13,6 +13,7 @@ import {
   type AnonMessage,
   type AnonAdminMessage
 } from '../../services/api';
+import './anon.css';
 
 // Anonymous Messages: a public feed of plain-text messages that show no author - an anonymous icon, the word "Anonymous", the date and time, and the text.
 //
@@ -43,6 +44,8 @@ const whenLabel = (iso: string): string => {
 };
 const newestFirst = (a: Item, b: Item): number => (a.createdAt === b.createdAt ? (a.id < b.id ? 1 : -1) : a.createdAt < b.createdAt ? 1 : -1);
 const dedupe = (list: Item[]): Item[] => { const seen = new Set<string>(); return list.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true))); };
+// a calm colour for each message, taken from its id (only decoration: nothing about the author)
+const hueOf = (id: string): number => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360; return [262, 292, 330, 24, 190, 150][h % 6]; };
 const friendly = (e: unknown, fallback: string): string => (e instanceof Error && e.message && !/^(TypeError|NetworkError|Failed to fetch)/i.test(e.message) ? e.message : fallback);
 
 export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, onLogin }) => {
@@ -226,106 +229,113 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
   const mask = (cls = 'w-5 h-5') => <VenetianMask className={cls} aria-hidden="true" />;
 
   return (
-    <div ref={scrollRef} className="fixed inset-0 z-[96] overflow-y-auto overscroll-contain bg-page doodle-wallpaper-feed text-white" role="region" aria-label="Anonymous Messages">
-      {/* header */}
-      <div className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-noob text-black flex items-center justify-center shrink-0">{mask('w-[18px] h-[18px]')}</div>
+    <div ref={scrollRef} className="anon-root fixed inset-0 edge-own z-[96] overflow-y-auto overscroll-contain" role="region" aria-label="Anonymous Messages">
+      <div className="anon-orbs" aria-hidden="true"><i className="anon-orb o1" /><i className="anon-orb o2" /><i className="anon-orb o3" /></div>
+
+      {/* header: painted all the way up under the clock and the camera */}
+      <div className="anon-head">
+        <div className="anon-head-in">
+          <div className="anon-logo">{mask('w-[22px] h-[22px]')}</div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-base leading-tight truncate">Anonymous Messages</h1>
-            <p className="text-[11px] text-zinc-400 truncate">Your words, without your name.</p>
+            <h1 className="anon-title">Anonymous Messages</h1>
+            <p className="anon-sub">Your words, without your name.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close Anonymous Messages" className="w-8 h-8 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer">
-            <X className="w-4 h-4" />
+          <button type="button" onClick={onClose} aria-label="Close Anonymous Messages" className="anon-icon-btn">
+            <X className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pt-5 pb-28">
+      <div className="anon-main">
         {/* share */}
-        <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-5 mb-5">
-          <button type="button" onClick={openComposer} className="w-full py-3.5 rounded-full bg-noob text-black font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform">
-            {mask('w-4.5 h-4.5')}
+        <section className="anon-hero" aria-label="Share a message">
+          <div className="anon-ghost">{mask('w-10 h-10')}</div>
+          <h2>Say it. <span>Stay unseen.</span></h2>
+          <p className="lead">Drop a thought for everyone to read. Nobody will know it was you.</p>
+          <button type="button" onClick={openComposer} className="anon-cta">
+            {mask('w-5 h-5')}
             <span>{loggedIn ? 'Share Anonymously' : 'Log in to share anonymously'}</span>
           </button>
-          <p className="mt-3 text-[11px] leading-relaxed text-zinc-400 text-center">
+          <p className="anon-note">
             Messages are public. Others never see your name, username or picture next to what you share.
           </p>
-        </div>
+        </section>
 
         {isAdmin && (
-          <div className="mb-4 flex items-center gap-2" role="group" aria-label="Moderation filter">
-            <ShieldCheck className="w-4 h-4 text-zinc-300" aria-hidden="true" />
-            <button type="button" onClick={() => setOnlyReported(false)} aria-pressed={!onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${!onlyReported ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>All messages</button>
-            <button type="button" onClick={() => setOnlyReported(true)} aria-pressed={onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${onlyReported ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>Reported only</button>
+          <div className="anon-filter" role="group" aria-label="Moderation filter">
+            <ShieldCheck className="w-4 h-4" aria-hidden="true" style={{ color: 'var(--a-amber)' }} />
+            <button type="button" onClick={() => setOnlyReported(false)} aria-pressed={!onlyReported} className="anon-chip">All messages</button>
+            <button type="button" onClick={() => setOnlyReported(true)} aria-pressed={onlyReported} className="anon-chip">Reported only</button>
           </div>
         )}
 
+        {status === 'ready' && items.length > 0 && <div className="anon-section-title">Whispers</div>}
+
         {/* the feed */}
         {status === 'loading' && (
-          <div className="space-y-3" role="status" aria-label="Loading messages">
+          <div className="anon-list" role="status" aria-label="Loading messages">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="no-doodle rounded-3xl bg-zinc-900 border border-zinc-800 p-4 animate-pulse">
-                <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-zinc-800" /><div className="space-y-2"><div className="h-3 w-24 rounded bg-zinc-800" /><div className="h-2.5 w-32 rounded bg-zinc-800" /></div></div>
-                <div className="mt-4 space-y-2"><div className="h-3 w-full rounded bg-zinc-800" /><div className="h-3 w-4/5 rounded bg-zinc-800" /></div>
+              <div key={i} className="anon-skel no-doodle animate-pulse" style={{ ['--i' as string]: i } as React.CSSProperties}>
+                <div className="flex items-center gap-3"><i style={{ width: 40, height: 40, borderRadius: 14 }} /><div className="space-y-2"><i style={{ height: 12, width: 96 }} /><i style={{ height: 10, width: 128 }} /></div></div>
+                <div className="mt-4 space-y-2"><i style={{ height: 12, width: '100%' }} /><i style={{ height: 12, width: '78%' }} /></div>
               </div>
             ))}
           </div>
         )}
 
         {status === 'error' && (
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 text-center" role="alert">
-            <AlertCircle className="w-8 h-8 mx-auto text-red-400" aria-hidden="true" />
-            <p className="mt-3 text-sm text-zinc-300">{errorText}</p>
-            <button type="button" onClick={() => void loadFirst('initial')} className="mt-4 px-5 py-2.5 rounded-full bg-noob text-black text-sm font-bold cursor-pointer">Try again</button>
+          <div className="anon-card" role="alert">
+            <AlertCircle className="w-9 h-9 mx-auto" style={{ color: 'var(--a-danger)' }} aria-hidden="true" />
+            <p className="s" style={{ marginTop: 12 }}>{errorText}</p>
+            <button type="button" onClick={() => void loadFirst('initial')} className="anon-cta">Try again</button>
           </div>
         )}
 
         {status === 'ready' && items.length === 0 && (
-          <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
-            <div className="w-16 h-16 rounded-full border border-zinc-700 mx-auto flex items-center justify-center text-zinc-300">{mask('w-8 h-8')}</div>
-            <p className="mt-4 text-base font-bold">{onlyReported ? 'No reported messages.' : 'No anonymous messages yet. Be the first to share!'}</p>
+          <div className="anon-card">
+            <div className="big">{mask('w-9 h-9')}</div>
+            <p className="t">{onlyReported ? 'No reported messages.' : 'No anonymous messages yet. Be the first to share!'}</p>
             {!onlyReported && (
-              <button type="button" onClick={openComposer} className="mt-5 px-6 py-3 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer">{loggedIn ? 'Share Anonymously' : 'Log in to share'}</button>
+              <button type="button" onClick={openComposer} className="anon-cta">{loggedIn ? 'Share Anonymously' : 'Log in to share'}</button>
             )}
           </div>
         )}
 
         {status === 'ready' && items.length > 0 && (
-          <ul className="space-y-3">
-            {items.map((m) => (
-              <li key={m.id}>
-                <article className="no-doodle rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-5" aria-label="Anonymous message">
-                  <header className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full border border-zinc-600 text-zinc-100 flex items-center justify-center shrink-0">{mask('w-5 h-5')}</div>
+          <ul className="anon-list">
+            {items.map((m, idx) => (
+              <li key={m.id} style={{ ['--i' as string]: idx } as React.CSSProperties}>
+                <article className="anon-msg no-doodle" style={{ ['--h' as string]: hueOf(m.id) } as React.CSSProperties} aria-label="Anonymous message">
+                  <header className="anon-msg-top">
+                    <div className="anon-face">{mask('w-5 h-5')}</div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-extrabold leading-tight">Anonymous</p>
-                      <time dateTime={m.createdAt} className="text-[11px] text-zinc-400">{whenLabel(m.createdAt)}</time>
+                      <p className="anon-who">Anonymous</p>
+                      <time dateTime={m.createdAt} className="anon-when">{whenLabel(m.createdAt)}</time>
                     </div>
                     {!isAdmin && (
                       reported.has(m.id)
-                        ? <span className="text-[11px] font-bold text-zinc-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" aria-hidden="true" />Reported</span>
-                        : <button type="button" onClick={() => startReport(m)} aria-label="Report this message" className="w-9 h-9 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"><Flag className="w-4 h-4" /></button>
+                        ? <span className="anon-reported"><Check className="w-3.5 h-3.5" aria-hidden="true" />Reported</span>
+                        : <button type="button" onClick={() => startReport(m)} aria-label="Report this message" className="anon-flag"><Flag className="w-4 h-4" /></button>
                     )}
                   </header>
                   {/* the text is drawn as plain text: nothing in it can run as HTML or script */}
-                  <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>
+                  <p className="anon-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>
 
                   {isAdmin && (
-                    <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
-                      <div className="flex items-center gap-2 text-[11px] text-zinc-300 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-full border ${m.reportCount ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-400'}`}>{m.reportCount || 0} report{m.reportCount === 1 ? '' : 's'}</span>
-                        {m.hidden && <span className="px-2 py-0.5 rounded-full border border-amber-400 text-amber-300 flex items-center gap-1"><Ban className="w-3 h-3" aria-hidden="true" />hidden from everyone until you decide</span>}
-                        {(m.reasons || []).map((r, i) => <span key={i} className="text-zinc-400">“{r}”</span>)}
+                    <div className="anon-admin">
+                      <div className="anon-tags">
+                        <span className={`anon-tag ${m.reportCount ? 'bad' : ''}`}>{m.reportCount || 0} report{m.reportCount === 1 ? '' : 's'}</span>
+                        {m.hidden && <span className="anon-tag warn"><Ban className="w-3 h-3" aria-hidden="true" />hidden from everyone until you decide</span>}
+                        {(m.reasons || []).map((r, i) => <span key={i}>“{r}”</span>)}
                       </div>
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="anon-btnrow">
                         {(m.reportCount || 0) > 0 && (
-                          <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'keep')} className="px-3 py-1.5 rounded-full border border-zinc-600 text-xs font-bold cursor-pointer disabled:opacity-50">Keep (clear reports)</button>
+                          <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'keep')} className="anon-btn">Keep (clear reports)</button>
                         )}
-                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} className="px-3 py-1.5 rounded-full bg-noob text-black text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} className="anon-btn solid">
                           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed === `${m.id}:remove` ? 'Tap again to remove' : 'Remove'}
                         </button>
-                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'block')} className="px-3 py-1.5 rounded-full border border-red-400 text-red-300 text-xs font-bold cursor-pointer disabled:opacity-50">
+                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'block')} className="anon-btn danger">
                           {armed === `${m.id}:block` ? 'Tap again: remove and block author' : 'Remove and block author'}
                         </button>
                       </div>
@@ -338,29 +348,30 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
         )}
 
         {status === 'ready' && hasMore && (
-          <div className="mt-5 flex justify-center">
-            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer disabled:opacity-60 flex items-center gap-2">
+          <div className="anon-more">
+            <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="anon-btn" style={{ minHeight: 48, padding: '0 28px', fontSize: 14 }}>
               {loadingMore && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
               {loadingMore ? 'Loading…' : 'Load more'}
             </button>
           </div>
         )}
-        {status === 'ready' && items.length > 0 && !hasMore && <p className="mt-6 text-center text-[11px] text-zinc-500">That is everything for now.</p>}
+        {status === 'ready' && items.length > 0 && !hasMore && <p className="anon-end">That is everything for now.</p>}
       </div>
 
       {/* the composer */}
       {composerOpen && (
-        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75" onClick={() => { if (!posting) setComposerOpen(false); }} role="dialog" aria-modal="true" aria-label="Share anonymously">
-          <div className="w-full sm:max-w-lg max-h-[94vh] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-noob text-black flex items-center justify-center shrink-0">{mask('w-5 h-5')}</div>
-              <h2 className="text-lg flex-1">Share Anonymously</h2>
-              <button type="button" onClick={() => { if (!posting) setComposerOpen(false); }} aria-label="Close" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
+        <div className="anon-scrim" onClick={() => { if (!posting) setComposerOpen(false); }} role="dialog" aria-modal="true" aria-label="Share anonymously">
+          <div className="anon-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="anon-grab" aria-hidden="true" />
+            <div className="anon-sheet-head">
+              <div className="anon-logo" style={{ width: 40, height: 40, borderRadius: 14 }}>{mask('w-5 h-5')}</div>
+              <h2>Share Anonymously</h2>
+              <button type="button" onClick={() => { if (!posting) setComposerOpen(false); }} aria-label="Close" className="anon-icon-btn"><X className="w-4 h-4" /></button>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-zinc-700 p-3 text-[12px] leading-relaxed text-zinc-300">
-              <p><strong className="text-white">This message will be public.</strong> Everyone can read it, and it is shown with the word “Anonymous” — never your name, username or picture.</p>
-              <p className="mt-1.5 text-zinc-400">Anonymous means what other people can see. NOOB still knows that a message came from an account, so that the community can be kept safe.</p>
+            <div className="anon-callout">
+              <p><strong>This message will be public.</strong> Everyone can read it, and it is shown with the word “Anonymous” — never your name, username or picture.</p>
+              <p>Anonymous means what other people can see. NOOB still knows that a message came from an account, so that the community can be kept safe.</p>
             </div>
 
             <label htmlFor="anon-text" className="sr-only">Your anonymous message</label>
@@ -371,17 +382,18 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
               placeholder="Say what is on your mind…"
               rows={6}
               autoFocus
-              className="mt-4 w-full bg-zinc-950 border border-zinc-700 focus:border-zinc-50 rounded-2xl px-4 py-3 text-[15px] leading-relaxed outline-none resize-y min-h-[140px]"
+              className="anon-field"
               aria-describedby="anon-count anon-error"
             />
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p id="anon-error" role="alert" className="text-xs text-red-300 min-h-[1rem]">{composerError}</p>
-              <p id="anon-count" aria-live="polite" className={`text-xs font-bold tabular-nums shrink-0 ${count >= ANON_MAX_LENGTH ? 'text-red-300' : count > ANON_MAX_LENGTH * 0.9 ? 'text-amber-300' : 'text-zinc-400'}`}>{count} / {ANON_MAX_LENGTH}</p>
+            <div className={`anon-meter ${count >= ANON_MAX_LENGTH ? 'full' : count > ANON_MAX_LENGTH * 0.9 ? 'warn' : ''}`} aria-hidden="true"><i style={{ width: `${Math.min(100, (count / ANON_MAX_LENGTH) * 100)}%` }} /></div>
+            <div className="anon-count-row">
+              <p id="anon-error" role="alert" className="anon-err">{composerError}</p>
+              <p id="anon-count" aria-live="polite" className={`anon-count ${count >= ANON_MAX_LENGTH ? 'full' : count > ANON_MAX_LENGTH * 0.9 ? 'warn' : ''}`}>{count} / {ANON_MAX_LENGTH}</p>
             </div>
 
-            <div className="mt-4 flex gap-3">
-              <button type="button" onClick={() => setComposerOpen(false)} disabled={posting} className="px-5 py-3 rounded-full border border-zinc-600 text-sm font-bold cursor-pointer disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={() => void publish()} disabled={!canPublish} className="flex-1 py-3 rounded-full bg-noob text-black text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed">
+            <div className="anon-sheet-actions">
+              <button type="button" onClick={() => setComposerOpen(false)} disabled={posting} className="anon-btn">Cancel</button>
+              <button type="button" onClick={() => void publish()} disabled={!canPublish} className="anon-btn solid">
                 {posting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}
                 {posting ? 'Publishing…' : 'Publish Anonymously'}
               </button>
@@ -392,21 +404,22 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
 
       {/* report a message */}
       {reporting && (
-        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75" onClick={() => { if (!sendingReport) setReporting(null); }} role="dialog" aria-modal="true" aria-label="Report this message">
-          <div className="w-full sm:max-w-sm bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg">Report this message</h2>
-            <p className="mt-1 text-xs text-zinc-400">Why is it a problem? Messages that several people report are hidden until an administrator has looked at them.</p>
-            <div className="mt-4 space-y-2" role="radiogroup" aria-label="Reason">
+        <div className="anon-scrim" onClick={() => { if (!sendingReport) setReporting(null); }} role="dialog" aria-modal="true" aria-label="Report this message">
+          <div className="anon-sheet is-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="anon-grab" aria-hidden="true" />
+            <h2 style={{ fontSize: 20, fontWeight: 800 }}>Report this message</h2>
+            <p className="anon-small">Why is it a problem? Messages that several people report are hidden until an administrator has looked at them.</p>
+            <div className="anon-reasons" role="radiogroup" aria-label="Reason">
               {REASONS.map((r) => (
-                <label key={r} className={`flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer text-sm ${reason === r ? 'border-zinc-50 bg-zinc-800' : 'border-zinc-700'}`}>
-                  <input type="radio" name="anon-reason" checked={reason === r} onChange={() => setReason(r)} className="accent-white" />
+                <label key={r} className={`anon-reason ${reason === r ? 'on' : ''}`}>
+                  <input type="radio" name="anon-reason" checked={reason === r} onChange={() => setReason(r)} />
                   {r}
                 </label>
               ))}
             </div>
-            <div className="mt-5 flex gap-3">
-              <button type="button" onClick={() => setReporting(null)} disabled={sendingReport} className="px-5 py-3 rounded-full border border-zinc-600 text-sm font-bold cursor-pointer disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={() => void sendReport()} disabled={sendingReport} className="flex-1 py-3 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2">
+            <div className="anon-sheet-actions">
+              <button type="button" onClick={() => setReporting(null)} disabled={sendingReport} className="anon-btn">Cancel</button>
+              <button type="button" onClick={() => void sendReport()} disabled={sendingReport} className="anon-btn solid">
                 {sendingReport && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}Send report
               </button>
             </div>
@@ -416,7 +429,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
 
       {/* a short message at the bottom: success or error */}
       {toast && (
-        <div role="status" aria-live="polite" className={`fixed left-1/2 -translate-x-1/2 bottom-8 z-[120] max-w-[92vw] px-4 py-2.5 rounded-full text-xs font-bold shadow-xl border ${toast.kind === 'ok' ? 'bg-noob text-black border-zinc-50' : 'bg-zinc-900 text-red-300 border-red-400'}`}>
+        <div role="status" aria-live="polite" className={`anon-toast ${toast.kind === 'ok' ? '' : 'err'}`}>
           {toast.text}
         </div>
       )}

@@ -148,47 +148,47 @@ const PollCard: React.FC<{
   const toPost = async () => { if (!loggedIn) { onLogin?.(); return; } setBusy(true); try { await shareCardAsPost(spec, `${poll.question}\n\nVote: ${link}`); say('Posted on your profile.', 'ok'); } catch (e) { say(friendly(e, 'Could not post it.'), 'err'); } finally { setBusy(false); } };
 
   const chip = poll.status === 'hidden' ? 'Hidden for review' : active ? timeLeftLabel(poll.endsAt, now) : poll.status === 'completed' ? `Completed · ${timeAgo(poll.endsAt)}` : `Expired · no votes`;
-  const small = 'h-8 px-3 rounded-full border text-[11px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors';
+  const small = 'fx-act';
 
   return (
-    <Card ariaLabel={`Poll: ${poll.question}`}>
-      <div className="flex items-center gap-2.5">
-        <button type="button" onClick={() => onOpenProfile?.(asUser(poll.creator))} className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer" aria-label={`Open ${poll.creator.displayName}'s profile`}>
-          {poll.creator.avatar ? <img src={poll.creator.avatar} alt="" referrerPolicy="no-referrer" className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" /> : <div className="w-9 h-9 rounded-full border border-zinc-700 bg-zinc-800 shrink-0" aria-hidden="true" />}
-          <span className="min-w-0">
-            <span className="flex items-center gap-1 text-xs font-black truncate">{poll.creator.displayName}{poll.creator.isVerified && <VerifiedBadge size="xs" />}</span>
-            <span className="block text-[10px] text-zinc-500 truncate">@{poll.creator.username} · {timeAgo(poll.createdAt)}</span>
+    <Card ariaLabel={`Poll: ${poll.question}`} className="fx-poll">
+      <div className="fx-row" style={{ gap: 10 }}>
+        <button type="button" onClick={() => onOpenProfile?.(asUser(poll.creator))} className="fx-row fx-grow text-left" style={{ gap: 10 }} aria-label={`Open ${poll.creator.displayName}'s profile`}>
+          {poll.creator.avatar ? <img src={poll.creator.avatar} alt="" referrerPolicy="no-referrer" className="fx-pava" /> : <span className="fx-pava is-blank" aria-hidden="true" />}
+          <span className="fx-grow">
+            <span className="flex items-center gap-1 fx-t13 fx-black fx-trunc">{poll.creator.displayName}{poll.creator.isVerified && <VerifiedBadge size="xs" />}</span>
+            <span className="block fx-t11 fx-muted fx-trunc">@{poll.creator.username} · {timeAgo(poll.createdAt)}</span>
           </span>
         </button>
-        <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide rounded-full border px-2.5 py-1 ${active ? 'border-zinc-50 text-zinc-50' : 'border-zinc-700 text-zinc-400'}`}><Clock className="w-3 h-3" aria-hidden="true" />{chip}</span>
+        <span className={`fx-chip ${active ? 'is-cool' : ''}`}><Clock className="w-3 h-3" aria-hidden="true" />{chip}</span>
       </div>
 
       {onOpen ? (
-        <button type="button" onClick={() => onOpen(poll)} className="mt-3 block w-full text-left text-base font-black leading-snug break-words [overflow-wrap:anywhere] cursor-pointer hover:underline underline-offset-[3px]">{poll.question}</button>
+        <button type="button" onClick={() => onOpen(poll)} className="fx-pq break-words [overflow-wrap:anywhere]">{poll.question}</button>
       ) : (
-        <h2 className="mt-3 text-lg font-black leading-snug break-words [overflow-wrap:anywhere]">{poll.question}</h2>
+        <h2 className="fx-pq break-words [overflow-wrap:anywhere]" style={{ fontSize: 22, textTransform: 'none', letterSpacing: '-.02em' }}>{poll.question}</h2>
       )}
 
-      <div className="mt-3 space-y-2" role={interactive ? 'radiogroup' : undefined} aria-label={interactive ? 'Options' : undefined}>
+      <div className="fx-opts" role={interactive ? 'radiogroup' : undefined} aria-label={interactive ? 'Options' : undefined}>
         {poll.options.map((o, i) => {
           const mine = poll.myVote === o.id;
           const on = picked === o.id;
           const inner = (
             <>
-              {poll.resultsShown && <span aria-hidden="true" className={`absolute inset-y-0 left-0 transition-[width] duration-700 ease-out ${counts[i] === top && top > 0 ? 'bg-noob/25' : 'bg-noob/10'}`} style={{ width: revealed ? `${pcts[i]}%` : '0%' }} />}
-              <span className="relative z-10 flex items-center gap-2 min-w-0">
-                {interactive ? <span className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center ${on ? 'bg-noob border-zinc-50 text-black' : 'border-zinc-500'}`} aria-hidden="true">{on && <Check className="w-3 h-3" />}</span> : mine ? <Check className="w-4 h-4 shrink-0" aria-hidden="true" /> : null}
-                <span className="text-sm font-bold break-words [overflow-wrap:anywhere] min-w-0">{o.label}</span>
+              {poll.resultsShown && <span aria-hidden="true" className={`fx-optbar transition-[width] duration-700 ease-out ${counts[i] === top && top > 0 ? 'is-top' : ''}`} style={{ width: revealed ? `${pcts[i]}%` : '0%', transitionDelay: `${Math.min(i, 7) * 60}ms` }} />}
+              <span className="relative z-10 flex items-center gap-2.5 min-w-0">
+                {interactive ? <span className={`fx-radio ${on ? 'is-on' : ''}`} aria-hidden="true">{on && <Check className="w-3 h-3" />}</span> : mine ? <Check className="w-4 h-4 shrink-0" style={{ color: 'var(--fx-c)' }} aria-hidden="true" /> : null}
+                <span className="fx-opt-label break-words [overflow-wrap:anywhere] min-w-0">{o.label}</span>
               </span>
               {poll.resultsShown && (
-                <span className="relative z-10 shrink-0 text-right leading-tight">
-                  <span className="block text-sm font-black tabular-nums">{pcts[i]}%</span>
-                  <span className="block text-[10px] text-zinc-400 tabular-nums">{plural(counts[i], 'vote', 'votes')}</span>
+                <span className="relative z-10 shrink-0 text-right" style={{ lineHeight: 1.15 }}>
+                  <span className="block fx-opt-pct">{pcts[i]}%</span>
+                  <span className="block fx-t11 fx-muted" style={{ fontSize: 10.5, fontVariantNumeric: 'tabular-nums' }}>{plural(counts[i], 'vote', 'votes')}</span>
                 </span>
               )}
             </>
           );
-          const cls = `relative overflow-hidden w-full rounded-2xl border px-3.5 py-3 flex items-center justify-between gap-3 text-left transition-colors ${mine ? 'border-zinc-50' : on ? 'border-zinc-50' : 'border-zinc-700'} ${interactive ? 'cursor-pointer hover:border-zinc-50 active:scale-[0.99]' : ''}`;
+          const cls = `fx-opt ${on ? 'is-on' : ''} ${mine ? 'is-mine' : ''}`;
           return interactive ? (
             <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setPicked(o.id)} className={cls}>{inner}</button>
           ) : (
@@ -198,33 +198,33 @@ const PollCard: React.FC<{
       </div>
 
       {interactive && (
-        <button type="button" onClick={() => void vote()} disabled={!picked || voting} className="mt-3 w-full h-11 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed">
+        <button type="button" onClick={() => void vote()} disabled={!picked || voting} className="fx-btn" style={{ marginTop: 14 }}>
           <BusyLabel busy={voting}>{loggedIn ? 'Vote' : 'Log in to vote'}</BusyLabel>
         </button>
       )}
 
-      <p className="mt-2.5 text-[11px] text-zinc-400 flex items-center gap-1.5" aria-live="polite">
+      <p className="fx-poll-foot" aria-live="polite">
         {poll.resultsShown && poll.totalVotes !== null ? <><BarChart3 className="w-3 h-3" aria-hidden="true" />{plural(poll.totalVotes, 'vote', 'votes')} in total</> : voted ? <><Lock className="w-3 h-3" aria-hidden="true" />Your vote is in. The results appear when the poll ends.</> : poll.resultsVisibility === 'after_end' ? <><Lock className="w-3 h-3" aria-hidden="true" />The results appear when the poll ends.</> : <><Lock className="w-3 h-3" aria-hidden="true" />The results appear after you vote.</>}
       </p>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setShareOpen((v) => !v)} aria-expanded={shareOpen} className={`${small} border-zinc-700 text-zinc-200 hover:border-zinc-50`}><Share2 className="w-3 h-3" aria-hidden="true" />Share</button>
-        {canRemove && <button type="button" onClick={() => void remove()} disabled={busy} className={`${small} ${armed ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`}><Trash2 className="w-3 h-3" aria-hidden="true" />{armed ? 'Tap again' : poll.isMine ? 'Remove' : 'Remove (admin)'}</button>}
-        {!poll.isMine && <button type="button" onClick={() => (loggedIn ? setReporting((v) => !v) : onLogin?.())} aria-expanded={reporting} className={`${small} border-zinc-700 text-zinc-300 hover:border-zinc-50`}><Flag className="w-3 h-3" aria-hidden="true" />Report</button>}
+      <div className="fx-acts fx-poll-acts">
+        <button type="button" onClick={() => setShareOpen((v) => !v)} aria-expanded={shareOpen} className={small}><Share2 className="w-3 h-3" aria-hidden="true" />Share</button>
+        {canRemove && <button type="button" onClick={() => void remove()} disabled={busy} className={`${small} ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3 h-3" aria-hidden="true" />{armed ? 'Tap again' : poll.isMine ? 'Remove' : 'Remove (admin)'}</button>}
+        {!poll.isMine && <button type="button" onClick={() => (loggedIn ? setReporting((v) => !v) : onLogin?.())} aria-expanded={reporting} className={small}><Flag className="w-3 h-3" aria-hidden="true" />Report</button>}
       </div>
 
       {shareOpen && (
-        <div className="mt-2.5 flex flex-wrap gap-2 rounded-2xl border border-zinc-800 p-2.5" role="group" aria-label="Share this poll">
-          <button type="button" onClick={() => void copy()} className={`${small} border-zinc-600 hover:border-zinc-50`}><Link2 className="w-3 h-3" aria-hidden="true" />Copy link</button>
-          <button type="button" onClick={() => void shareLink()} className={`${small} border-zinc-600 hover:border-zinc-50`}><Share2 className="w-3 h-3" aria-hidden="true" />Send to friends</button>
-          <button type="button" onClick={() => void toStory()} disabled={busy} className={`${small} border-zinc-600 hover:border-zinc-50`}><ImageIcon className="w-3 h-3" aria-hidden="true" />Add to my Story</button>
-          <button type="button" onClick={() => void toPost()} disabled={busy} className={`${small} border-zinc-600 hover:border-zinc-50`}><FileImage className="w-3 h-3" aria-hidden="true" />Post on my profile</button>
+        <div className="fx-subpanel fx-acts" role="group" aria-label="Share this poll">
+          <button type="button" onClick={() => void copy()} className={small}><Link2 className="w-3 h-3" aria-hidden="true" />Copy link</button>
+          <button type="button" onClick={() => void shareLink()} className={small}><Share2 className="w-3 h-3" aria-hidden="true" />Send to friends</button>
+          <button type="button" onClick={() => void toStory()} disabled={busy} className={small}><ImageIcon className="w-3 h-3" aria-hidden="true" />Add to my Story</button>
+          <button type="button" onClick={() => void toPost()} disabled={busy} className={small}><FileImage className="w-3 h-3" aria-hidden="true" />Post on my profile</button>
         </div>
       )}
       {reporting && (
-        <div className="mt-2.5 rounded-2xl border border-zinc-700 p-3 space-y-2" role="group" aria-label="Why are you reporting this poll?">
-          <p className="text-xs text-zinc-300">Why are you reporting it?</p>
-          <div className="flex flex-wrap gap-2">{REPORT_REASONS.map((r) => <button key={r} type="button" onClick={() => void report(r)} disabled={busy} className="h-8 px-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-[11px] font-bold cursor-pointer disabled:opacity-50">{r}</button>)}</div>
+        <div className="fx-subpanel fx-stack-sm" style={{ gap: 10 }} role="group" aria-label="Why are you reporting this poll?">
+          <p className="fx-t13 fx-muted">Why are you reporting it?</p>
+          <div className="fx-acts">{REPORT_REASONS.map((r) => <button key={r} type="button" onClick={() => void report(r)} disabled={busy} className={small}>{r}</button>)}</div>
         </div>
       )}
     </Card>
@@ -238,7 +238,7 @@ const CreateForm: React.FC<{ onCreated: (p: Poll) => void; onCancel: () => void;
   const [minutes, setMinutes] = useState(1440);
   const [results, setResults] = useState<PollResultsRule>('after_vote');
   const [saving, setSaving] = useState(false);
-  const inputCls = 'w-full h-11 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-zinc-50 outline-none px-3 text-sm';
+  const inputCls = 'fx-input';
   const filled = options.map((o) => o.trim()).filter(Boolean);
   const ready = question.trim().length >= 5 && filled.length >= 2 && !saving;
 
@@ -259,40 +259,40 @@ const CreateForm: React.FC<{ onCreated: (p: Poll) => void; onCancel: () => void;
 
   return (
     <Card ariaLabel="Create a poll">
-      <form onSubmit={submit} className="space-y-3.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-black">Create a poll</h2>
-          <button type="button" onClick={onCancel} aria-label="Close" className="w-8 h-8 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" aria-hidden="true" /></button>
+      <form onSubmit={submit} className="fx-stack-sm" style={{ gap: 18 }}>
+        <div className="fx-row" style={{ justifyContent: 'space-between' }}>
+          <h2 className="fx-black" style={{ fontSize: 20, letterSpacing: '-.02em' }}>Create a poll</h2>
+          <button type="button" onClick={onCancel} aria-label="Close" className="fx-ib" style={{ width: 36, height: 36 }}><X className="w-4 h-4" aria-hidden="true" /></button>
         </div>
         <div>
-          <label htmlFor="poll-q" className="text-xs font-bold text-zinc-300">Your question</label>
-          <textarea id="poll-q" value={question} onChange={(e) => { const c = Array.from(e.target.value); setQuestion(c.length > POLL_QUESTION_MAX ? c.slice(0, POLL_QUESTION_MAX).join('') : e.target.value); }} rows={2} placeholder="What do you want to ask?" className="mt-1.5 w-full rounded-xl bg-zinc-950 border border-zinc-700 focus:border-zinc-50 outline-none p-3 text-sm resize-none" />
-          <p className="text-right text-[11px] tabular-nums text-zinc-500">{codePoints(question)} / {POLL_QUESTION_MAX}</p>
+          <label htmlFor="poll-q" className="fx-label">Your question</label>
+          <textarea id="poll-q" value={question} onChange={(e) => { const c = Array.from(e.target.value); setQuestion(c.length > POLL_QUESTION_MAX ? c.slice(0, POLL_QUESTION_MAX).join('') : e.target.value); }} rows={2} placeholder="What do you want to ask?" className="fx-input" style={{ marginTop: 6 }} />
+          <p className="fx-t11 fx-faint" style={{ textAlign: 'right', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{codePoints(question)} / {POLL_QUESTION_MAX}</p>
         </div>
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-zinc-300">Options (2 to {POLL_MAX_OPTIONS})</p>
+        <div className="fx-stack-sm" style={{ gap: 8 }}>
+          <p className="fx-label">Options (2 to {POLL_MAX_OPTIONS})</p>
           {options.map((o, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="fx-row" style={{ gap: 8 }}>
               <input aria-label={`Option ${i + 1}`} value={o} maxLength={POLL_OPTION_MAX} onChange={(e) => setOptions((list) => list.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Option ${i + 1}`} className={inputCls} />
-              {options.length > 2 && <button type="button" onClick={() => setOptions((list) => list.filter((_, j) => j !== i))} aria-label={`Remove option ${i + 1}`} className="shrink-0 w-11 h-11 rounded-xl border border-zinc-700 hover:border-red-400 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" aria-hidden="true" /></button>}
+              {options.length > 2 && <button type="button" onClick={() => setOptions((list) => list.filter((_, j) => j !== i))} aria-label={`Remove option ${i + 1}`} className="fx-ib shrink-0" style={{ width: 48, height: 48, borderRadius: 16 }}><X className="w-4 h-4" aria-hidden="true" /></button>}
             </div>
           ))}
-          {options.length < POLL_MAX_OPTIONS && <button type="button" onClick={() => setOptions((list) => [...list, ''])} className="h-10 px-4 rounded-full border border-dashed border-zinc-600 hover:border-zinc-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Plus className="w-3.5 h-3.5" aria-hidden="true" />Add an option</button>}
+          {options.length < POLL_MAX_OPTIONS && <button type="button" onClick={() => setOptions((list) => [...list, ''])} className="fx-act" style={{ alignSelf: 'flex-start', height: 38, borderStyle: 'dashed' }}><Plus className="w-3.5 h-3.5" aria-hidden="true" />Add an option</button>}
         </div>
         <div>
-          <p className="text-xs font-bold text-zinc-300" id="poll-dur">How long should it run?</p>
-          <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-labelledby="poll-dur">
-            {DURATIONS.map((d) => <button key={d.minutes} type="button" role="radio" aria-checked={minutes === d.minutes} onClick={() => setMinutes(d.minutes)} className={`h-9 px-3.5 rounded-full border text-xs font-bold cursor-pointer transition-colors ${minutes === d.minutes ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`}>{d.label}</button>)}
+          <p className="fx-label" id="poll-dur">How long should it run?</p>
+          <div className="fx-fieldset" role="radiogroup" aria-labelledby="poll-dur">
+            {DURATIONS.map((d) => <button key={d.minutes} type="button" role="radio" aria-checked={minutes === d.minutes} onClick={() => setMinutes(d.minutes)} className="fx-pill">{d.label}</button>)}
           </div>
         </div>
         <div>
-          <p className="text-xs font-bold text-zinc-300" id="poll-res">When are the results shown?</p>
-          <div className="mt-1.5 grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="poll-res">
-            {RESULT_RULES.map((r) => <button key={r.id} type="button" role="radio" aria-checked={results === r.id} onClick={() => setResults(r.id)} className={`rounded-2xl border p-2.5 text-center cursor-pointer transition-colors ${results === r.id ? 'bg-noob text-black border-zinc-50' : 'bg-zinc-950 border-zinc-700 hover:border-zinc-50'}`}><span className="block text-xs font-black">{r.label}</span><span className={`block text-[10px] leading-tight mt-0.5 ${results === r.id ? 'text-black/70' : 'text-zinc-500'}`}>{r.hint}</span></button>)}
+          <p className="fx-label" id="poll-res">When are the results shown?</p>
+          <div className="fx-fieldset grid grid-cols-3" role="radiogroup" aria-labelledby="poll-res">
+            {RESULT_RULES.map((r) => <button key={r.id} type="button" role="radio" aria-checked={results === r.id} onClick={() => setResults(r.id)} className="fx-rule"><span className="block fx-t13 fx-black">{r.label}</span><small>{r.hint}</small></button>)}
           </div>
         </div>
-        <button type="submit" disabled={!ready} className="w-full h-12 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"><BusyLabel busy={saving}>Create poll</BusyLabel></button>
-        <p className="text-[11px] text-zinc-500 text-center">Polls are public. Everyone sees your name on it, but nobody sees who voted for what.</p>
+        <button type="submit" disabled={!ready} className="fx-btn"><BusyLabel busy={saving}>Create poll</BusyLabel></button>
+        <p className="fx-t11 fx-faint fx-center">Polls are public. Everyone sees your name on it, but nobody sees who voted for what.</p>
       </form>
     </Card>
   );
@@ -377,8 +377,8 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
 
   if (target) {
     return (
-      <div className="space-y-4">
-        <button type="button" onClick={() => onOpenFeature({ feature: 'polls' })} className="h-9 pl-2.5 pr-4 rounded-full border border-zinc-700 hover:border-zinc-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><ArrowLeft className="w-4 h-4" aria-hidden="true" />All polls</button>
+      <div className="fx-stack-sm" style={{ gap: 14 }}>
+        <button type="button" onClick={() => onOpenFeature({ feature: 'polls' })} className="fx-act" style={{ alignSelf: 'flex-start', height: 38 }}><ArrowLeft className="w-4 h-4" aria-hidden="true" />All polls</button>
         {single === undefined && <SkeletonCards count={1} label="Loading the poll" />}
         {single === null && <EmptyState icon={<BarChart3 className="w-8 h-8" aria-hidden="true" />} title="This poll is not available" hint="It may have been removed, or the link is not right." />}
         {single && <PollCard poll={single} {...cardProps} />}
@@ -387,17 +387,17 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
     );
   }
 
-  const tabCls = (on: boolean) => `flex-1 h-10 rounded-full border text-xs font-bold cursor-pointer transition-all ${on ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300 hover:border-zinc-50'}`;
+  const tabCls = (_on: boolean) => 'fx-seg-btn';
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <p className="flex-1 text-xs text-zinc-400 leading-relaxed">Ask the community, vote once, and watch the results arrive.</p>
-        <button type="button" onClick={() => (loggedIn ? setCreating((v) => !v) : (say('Log in to create a poll.', 'err'), onLogin?.()))} aria-expanded={creating} className="shrink-0 h-10 px-4 rounded-full bg-noob text-black text-xs font-extrabold flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"><Plus className="w-4 h-4" aria-hidden="true" />Create poll</button>
+    <div className="fx-stack">
+      <div className="fx-note fx-in">
+        <p className="fx-grow fx-t13 fx-muted">Ask the community, vote once, and watch the results arrive.</p>
+        <button type="button" onClick={() => (loggedIn ? setCreating((v) => !v) : (say('Log in to create a poll.', 'err'), onLogin?.()))} aria-expanded={creating} className="fx-btn is-sm shrink-0" style={{ height: 42 }}><Plus className="w-4 h-4" aria-hidden="true" />Create poll</button>
       </div>
 
       {creating && <CreateForm say={say} onCancel={() => setCreating(false)} onCreated={(p) => { setCreating(false); setTab('mine'); setItems((l) => [p, ...l]); void load('initial'); }} />}
 
-      <div className="flex gap-2" role="tablist" aria-label="Polls">
+      <div className="fx-seg" role="tablist" aria-label="Polls">
         <button type="button" role="tab" aria-selected={tab === 'active'} onClick={() => setTab('active')} className={tabCls(tab === 'active')}>Active</button>
         <button type="button" role="tab" aria-selected={tab === 'ended'} onClick={() => setTab('ended')} className={tabCls(tab === 'ended')}>Ended</button>
         <button type="button" role="tab" aria-selected={tab === 'mine'} onClick={() => (loggedIn ? setTab('mine') : (say('Log in to see your polls.', 'err'), onLogin?.()))} className={tabCls(tab === 'mine')}>My polls</button>
@@ -410,24 +410,24 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
           icon={<BarChart3 className="w-8 h-8" aria-hidden="true" />}
           title={tab === 'active' ? 'No active polls right now' : tab === 'ended' ? 'No finished polls yet' : 'You have not made a poll yet'}
           hint={tab === 'mine' ? 'Ask the community something. It takes a minute.' : 'Be the first: create a poll and share it with friends.'}
-          action={<button type="button" onClick={() => (loggedIn ? setCreating(true) : onLogin?.())} className="px-6 py-3 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer">Create poll</button>}
+          action={<button type="button" onClick={() => (loggedIn ? setCreating(true) : onLogin?.())} className="fx-btn is-auto">Create poll</button>}
         />
       )}
       {status === 'ready' && items.map((p) => <PollCard key={p.id} poll={p} {...cardProps} onOpen={openPoll} />)}
       {status === 'ready' && hasMore && (
         <div className="flex justify-center">
-          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer disabled:opacity-60"><BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel></button>
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto"><BusyLabel busy={loadingMore}><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</BusyLabel></button>
         </div>
       )}
 
       {canManage && reports.length > 0 && (
-        <section aria-label="Reported polls" className="space-y-3">
-          <h2 className="flex items-center gap-1.5 text-sm font-black"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported polls ({reports.length})</h2>
+        <section aria-label="Reported polls" className="fx-stack-sm" style={{ gap: 14 }}>
+          <h2 className="fx-h2"><ShieldCheck className="w-4 h-4" aria-hidden="true" /> Reported polls ({reports.length})</h2>
           {reports.map((r) => (
-            <div key={r.poll.id} className="space-y-1.5">
-              <p className="text-[11px] text-zinc-400 px-1">{plural(r.reportCount, 'report', 'reports')}{r.reasons.length ? `: ${r.reasons.join(' · ')}` : ''}</p>
+            <div key={r.poll.id} className="fx-stack-sm" style={{ gap: 8 }}>
+              <p className="fx-t11 fx-muted" style={{ padding: '0 4px' }}>{plural(r.reportCount, 'report', 'reports')}{r.reasons.length ? `: ${r.reasons.join(' · ')}` : ''}</p>
               <PollCard poll={r.poll} {...cardProps} />
-              <button type="button" onClick={async () => { try { await dismissPollReports(r.poll.id); setReports((l) => l.filter((x) => x.poll.id !== r.poll.id)); say('Reports cleared. The poll stays.', 'ok'); void load('quiet'); } catch (e) { say(friendly(e, 'That did not work.'), 'err'); } }} className="w-full h-9 rounded-full border border-zinc-600 hover:border-zinc-50 text-xs font-bold cursor-pointer">This poll is fine: clear the reports</button>
+              <button type="button" onClick={async () => { try { await dismissPollReports(r.poll.id); setReports((l) => l.filter((x) => x.poll.id !== r.poll.id)); say('Reports cleared. The poll stays.', 'ok'); void load('quiet'); } catch (e) { say(friendly(e, 'That did not work.'), 'err'); } }} className="fx-btn-ghost" style={{ height: 40, fontSize: 12.5 }}>This poll is fine: clear the reports</button>
             </div>
           ))}
         </section>

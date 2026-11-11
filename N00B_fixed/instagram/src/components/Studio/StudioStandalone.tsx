@@ -7,7 +7,7 @@ const StudioApp = React.lazy(() => import('./StudioApp'));
 export const StudioStandalone: React.FC = () => {
   useEffect(() => { document.title = 'NOOB Studio - free photo and video editor'; }, []);
   return (
-    <React.Suspense fallback={<div className="fixed inset-0 bg-zinc-950 text-white flex items-center justify-center text-sm font-bold" role="status">Opening NOOB Studio…</div>}>
+    <React.Suspense fallback={<div className="fixed inset-0 edge-own bg-zinc-950 text-white flex items-center justify-center text-sm font-bold" role="status">Opening NOOB Studio…</div>}>
       <StudioApp onClose={() => { window.location.href = MAIN_SITE; }} />
     </React.Suspense>
   );

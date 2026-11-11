@@ -11,7 +11,7 @@ import type { StudioCtl } from './StudioApp';
 const LABEL_W = 112;
 const H_RULER = 26, H_OVER = 32, H_MAIN = 62, H_AUDIO = 38, H_CAP = 28;
 
-const COLOR: Record<string, string> = { text: 'bg-sky-600/90', sticker: 'bg-amber-600/90', draw: 'bg-rose-600/90', media: 'bg-fuchsia-700/90', audio: 'bg-emerald-700/90', captions: 'bg-teal-600/90' };
+const COLOR: Record<string, string> = { text: 'sx-clip sx-clip-text', sticker: 'sx-clip sx-clip-sticker', draw: 'sx-clip sx-clip-draw', media: 'sx-clip sx-clip-media', audio: 'sx-clip sx-clip-audio', captions: 'sx-clip sx-clip-cc' };
 const TAG: Record<string, string> = { text: 'T', sticker: '★', draw: '✎', media: '▣', audio: '♪', captions: 'CC' };
 
 function Wave({ peaks, color = '#6ee7b7', dim = false }: { peaks: number[]; color?: string; dim?: boolean }) {
@@ -193,7 +193,7 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className={`absolute top-0.5 rounded-[5px] overflow-hidden text-[10px] font-bold text-white border touch-none select-none ${COLOR[l.type] || 'bg-zinc-600'} ${sel ? 'border-white ring-2 ring-white/70 z-10' : 'border-black/50'} ${l.hidden ? 'opacity-40' : ''} ${l.locked ? 'cursor-not-allowed' : 'cursor-grab'}`}
+        className={`absolute top-0.5 rounded-[7px] overflow-hidden text-[10px] font-bold text-white border touch-none select-none ${COLOR[l.type] || 'bg-zinc-600'} ${sel ? 'sx-clip-sel border-white z-10' : 'border-black/50'} ${l.hidden ? 'opacity-40' : ''} ${l.locked ? 'cursor-not-allowed' : 'cursor-grab'}`}
         style={{ left: l.start * pps, width: Math.max(16, l.duration * pps), height: h - 4 }}
       >
         {kids}
@@ -246,13 +246,13 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const overRows = [...overlays].reverse();
 
   return (
-    <div className="studio-timeline shrink-0 bg-zinc-950 border-t border-zinc-800 flex flex-col" data-testid="studio-timeline">
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-zinc-800 overflow-x-auto no-scrollbar">
+    <div className="studio-timeline sx-tl shrink-0 flex flex-col" data-testid="studio-timeline">
+      <div className="sx-tl-bar flex items-center gap-1 px-2 py-1 overflow-x-auto no-scrollbar">
         <button onClick={() => player.seek(0)} aria-label="Back to start" className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center shrink-0"><SkipBack className="w-4 h-4" /></button>
-        <button onClick={() => (player.playing ? player.pause() : player.play())} aria-label={ctl.playing ? 'Pause' : 'Play'} data-testid="studio-play" className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shrink-0">
+        <button onClick={() => (player.playing ? player.pause() : player.play())} aria-label={ctl.playing ? 'Pause' : 'Play'} data-testid="studio-play" className="sx-play w-9 h-9 rounded-full flex items-center justify-center shrink-0">
           {ctl.playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </button>
-        <span className="font-mono text-[12px] text-fuchsia-200 shrink-0 text-center whitespace-nowrap px-2 py-1 rounded bg-black/50 border border-zinc-800" data-testid="studio-time">{fmtTime(ctl.time, true)} / {fmtTime(ctl.duration)}</span>
+        <span className="sx-time font-mono text-[12px] shrink-0 text-center whitespace-nowrap px-2 py-1 rounded-lg" data-testid="studio-time">{fmtTime(ctl.time, true)} / {fmtTime(ctl.duration)}</span>
         <span className="w-px h-5 bg-zinc-800 mx-1 shrink-0" />
         <button onClick={ctl.split} disabled={!canSplit} aria-label="Split at the playhead" title="Split at the playhead (S)" data-testid="studio-split" className="h-8 px-2 rounded-lg hover:bg-white/10 disabled:opacity-30 flex items-center gap-1 text-[11px] font-bold shrink-0"><Scissors className="w-4 h-4" />Split</button>
         <button onClick={() => sel && ctl.duplicateLayer(sel.id)} disabled={!sel} aria-label="Duplicate" className="h-8 px-2 rounded-lg hover:bg-white/10 disabled:opacity-30 flex items-center gap-1 text-[11px] font-bold shrink-0"><Copy className="w-4 h-4" />Copy</button>
@@ -348,8 +348,8 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
           {/* where a dragged file would land, a snap guide, and the playhead */}
           {dropX !== null && <div className="absolute top-0 bottom-0 w-0.5 bg-fuchsia-400 z-30 pointer-events-none" style={{ left: LABEL_W + dropX * pps }} />}
           {snapAt !== null && <div className="absolute top-0 bottom-0 w-px bg-amber-300 z-30 pointer-events-none" style={{ left: LABEL_W + snapAt * pps }} />}
-          <div className="absolute top-0 bottom-0 w-px bg-rose-500 z-40 pointer-events-none" style={{ left: LABEL_W + ctl.time * pps }}>
-            <span className="absolute top-0 -left-[7px] w-3.5 h-3.5 bg-rose-500 [clip-path:polygon(0_0,100%_0,100%_55%,50%_100%,0_55%)]" />
+          <div className="sx-playhead absolute top-0 bottom-0 w-px z-40 pointer-events-none" style={{ left: LABEL_W + ctl.time * pps }}>
+            <span className="sx-playhead-cap absolute top-0 -left-[7px] w-3.5 h-3.5 [clip-path:polygon(0_0,100%_0,100%_55%,50%_100%,0_55%)]" />
           </div>
         </div>
       </div>

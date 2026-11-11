@@ -58,26 +58,23 @@ const Choice: React.FC<{
       type="button"
       onClick={onPick}
       disabled={disabled || voted}
+      data-side={side}
       aria-label={voted ? `${label}: ${pct}% (${plural(count, 'vote', 'votes')})${mine ? ', your pick' : ''}` : `Vote ${label}`}
       aria-pressed={mine}
-      className={`relative overflow-hidden rounded-2xl border flex flex-col items-center justify-center gap-1.5 text-center transition-all duration-200 ${big ? 'min-h-[176px] p-4' : 'min-h-[124px] p-3'} ${voted ? 'pt-9' : ''} ${
-        voted
-          ? `bg-zinc-950 cursor-default ${mine ? 'border-zinc-50 ring-2 ring-zinc-50' : 'border-zinc-700'}`
-          : `bg-zinc-950 border-zinc-700 hover:border-zinc-50 hover:-translate-y-0.5 active:scale-[0.96] cursor-pointer ${pending === side ? 'scale-[0.97] border-zinc-50' : ''} disabled:opacity-70`
-      }`}
+      className={`fx-choice ${big ? 'is-big min-h-[176px]' : ''} ${voted ? `is-voted ${mine ? 'is-mine' : ''}` : 'hover:-translate-y-0.5 active:scale-[0.96]'} ${!voted && pending === side ? 'is-pending' : ''}`}
     >
-      {voted && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 bg-noob/20 transition-[height] duration-700 ease-out" style={{ height: revealed ? `${pct}%` : '0%' }} />}
+      {voted && <span aria-hidden="true" className="fx-fill transition-[height] duration-700 ease-out" style={{ height: revealed ? `${pct}%` : '0%' }} />}
       {mine && (
-        <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-noob text-black text-[10px] font-black px-2 py-0.5">
+        <span className="fx-pick">
           <Check className="w-3 h-3" aria-hidden="true" /> Your pick
         </span>
       )}
-      <span className={`relative z-10 leading-none ${big ? 'text-5xl' : 'text-3xl'}`} aria-hidden="true">{emoji || '•'}</span>
-      <span className={`relative z-10 font-black break-words max-w-full ${big ? 'text-lg' : 'text-sm'}`}>{label}</span>
+      <span className={`fx-emo ${big ? 'text-5xl' : 'text-3xl'}`} aria-hidden="true">{emoji || '•'}</span>
+      <span className="fx-lab break-words max-w-full">{label}</span>
       {voted && res && (
-        <span className="relative z-10 flex flex-col items-center">
-          <span className={`font-black tabular-nums ${big ? 'text-3xl' : 'text-xl'} ${lead ? '' : 'text-zinc-300'}`}>{pct}%</span>
-          <span className="text-[11px] text-zinc-400 tabular-nums">{plural(count, 'vote', 'votes')}</span>
+        <span className="fx-res">
+          <span className={`fx-pct ${lead ? '' : 'is-low'}`}>{pct}%</span>
+          <span className="fx-cnt">{plural(count, 'vote', 'votes')}</span>
         </span>
       )}
     </button>
@@ -103,33 +100,38 @@ const QuestionCard: React.FC<{
   }, [has]);
   const mineHere = pending && pending.id === q.id ? pending.choice : null;
   const busy = !!pending && pending.id === q.id;
-  return (
-    <Card ariaLabel={`${q.optionA} or ${q.optionB}`}>
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-200">
+  const inner = (
+    <>
+      <div className="fx-duel-head">
+        <span className={`fx-chip ${big ? 'is-hot' : ''}`}>
           {big && <Zap className="w-3 h-3" aria-hidden="true" />}
           {title ?? dayLabel(q.day)}
         </span>
         <span className="flex items-center gap-2">
-          {big && <span className="text-[11px] text-zinc-400">{dayLabel(q.day)}</span>}
+          {big && <span className="fx-t11 fx-muted">{dayLabel(q.day)}</span>}
           {canManage && (
-            <button type="button" onClick={() => onRemove(q)} aria-label={armed ? 'Tap again to remove this question' : 'Remove this question'} className={`h-7 px-2.5 rounded-full border text-[10px] font-bold flex items-center gap-1 cursor-pointer ${armed ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-400 hover:text-white'}`}>
+            <button type="button" onClick={() => onRemove(q)} aria-label={armed ? 'Tap again to remove this question' : 'Remove this question'} className={`fx-act ${armed ? 'is-warn' : ''}`} style={{ height: 28, fontSize: 11 }}>
               <Trash2 className="w-3 h-3" aria-hidden="true" /> {armed ? 'Tap again' : 'Remove'}
             </button>
           )}
         </span>
       </div>
-      <div className="relative grid grid-cols-2 gap-3">
+      <div className={`fx-duel ${has ? 'is-done' : ''}`}>
         <Choice side="a" q={q} big={big} revealed={revealed} pending={mineHere} disabled={busy} onPick={() => onVote(q, 'a')} />
         <Choice side="b" q={q} big={big} revealed={revealed} pending={mineHere} disabled={busy} onPick={() => onVote(q, 'b')} />
-        <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-zinc-950 border border-zinc-600 flex items-center justify-center text-[10px] font-black">OR</span>
+        <span aria-hidden="true" className="fx-vs">OR</span>
       </div>
-      <p className="mt-3 text-center text-[11px] text-zinc-400" aria-live="polite">
+      <p className="fx-duel-foot" aria-live="polite">
         {q.results
           ? `${plural(q.results.total, 'vote', 'votes')} in total`
           : 'Tap a side to vote and see what everyone chose.'}
       </p>
-    </Card>
+    </>
+  );
+  return big ? (
+    <div aria-label={`${q.optionA} or ${q.optionB}`} className="fx-in">{inner}</div>
+  ) : (
+    <Card ariaLabel={`${q.optionA} or ${q.optionB}`} className="fx-tcard">{inner}</Card>
   );
 };
 
@@ -272,14 +274,14 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
   };
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const inputCls = 'w-full h-11 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-zinc-50 outline-none px-3 text-sm';
+  const inputCls = 'fx-input';
 
   return (
-    <div className="space-y-5">
+    <div className="fx-stack">
       {/* the intro: what this is, plus share */}
-      <div className="flex items-center gap-2">
-        <p className="flex-1 text-xs text-zinc-400 leading-relaxed">One question a day. Pick a side, then see how everyone voted. You can vote once on each question.</p>
-        <button type="button" onClick={() => void share()} aria-label="Share This or That" className="shrink-0 w-9 h-9 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer">
+      <div className="fx-note fx-in">
+        <p className="fx-grow fx-t13 fx-muted">One question a day. Pick a side, then see how everyone voted. You can vote once on each question.</p>
+        <button type="button" onClick={() => void share()} aria-label="Share This or That" className="fx-ib" style={{ width: 40 }}>
           <Share2 className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
@@ -290,11 +292,11 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
       {status === 'ready' && (
         <>
           {today ? (
-            <section aria-label="Today's question" className="space-y-2">
+            <section aria-label="Today's question" className="fx-stack-sm">
               <QuestionCard q={today} big title={today.isToday ? "Today's question" : 'Latest question'} pending={pending} canManage={canManage} armed={armed === today.id} onVote={vote} onRemove={remove} />
               {!loggedIn && !today.myVote && (
-                <p className="text-center text-xs text-zinc-400">
-                  <button type="button" onClick={() => onLogin?.()} className="underline underline-offset-[3px] font-bold text-zinc-200 cursor-pointer">Log in</button> to vote and see the results.
+                <p className="fx-center fx-t13 fx-muted">
+                  <button type="button" onClick={() => onLogin?.()} className="underline underline-offset-[3px] fx-bold" style={{ color: 'var(--fx-ink)' }}>Log in</button> to vote and see the results.
                 </p>
               )}
             </section>
@@ -303,55 +305,55 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
           )}
 
           {canManage && (
-            <section aria-label="Manage questions" className="space-y-3">
-              <button type="button" onClick={() => setShowForm((v) => !v)} aria-expanded={showForm} className="w-full h-11 rounded-full border border-zinc-700 hover:border-zinc-50 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer">
+            <section aria-label="Manage questions" className="fx-stack-sm">
+              <button type="button" onClick={() => setShowForm((v) => !v)} aria-expanded={showForm} className="fx-btn-ghost">
                 {showForm ? <X className="w-4 h-4" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
                 {showForm ? 'Close' : 'Add a question'}
               </button>
               {showForm && (
                 <Card>
-                  <form onSubmit={create} className="space-y-3">
-                    <div className="grid grid-cols-[3.25rem_1fr] gap-2">
+                  <form onSubmit={create} className="fx-stack-sm">
+                    <div className="grid grid-cols-[3.5rem_1fr] gap-2">
                       <input aria-label="Emoji for the first choice" value={form.emojiA} onChange={set('emojiA')} maxLength={8} placeholder={'😀'} className={`${inputCls} text-center`} />
                       <input aria-label="First choice" value={form.optionA} onChange={set('optionA')} maxLength={40} required placeholder="First choice" className={inputCls} />
                       <input aria-label="Emoji for the second choice" value={form.emojiB} onChange={set('emojiB')} maxLength={8} placeholder={'😎'} className={`${inputCls} text-center`} />
                       <input aria-label="Second choice" value={form.optionB} onChange={set('optionB')} maxLength={40} required placeholder="Second choice" className={inputCls} />
                     </div>
-                    <label className="block text-xs text-zinc-400">
+                    <label className="fx-label">
                       Show it on (leave empty for today)
-                      <input type="date" value={form.day} onChange={set('day')} className={`${inputCls} mt-1`} />
+                      <input type="date" value={form.day} onChange={set('day')} className={inputCls} style={{ marginTop: 6 }} />
                     </label>
-                    <button type="submit" disabled={saving || !form.optionA.trim() || !form.optionB.trim()} className="w-full h-11 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" disabled={saving || !form.optionA.trim() || !form.optionB.trim()} className="fx-btn">
                       <BusyLabel busy={saving}>Add question</BusyLabel>
                     </button>
                   </form>
                 </Card>
               )}
               {upcoming.length > 0 && (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-400"><CalendarClock className="w-3.5 h-3.5" aria-hidden="true" /> Coming up ({upcoming.length})</p>
+                <div className="fx-stack-sm" style={{ gap: 8 }}>
+                  <p className="fx-h2"><CalendarClock className="w-3.5 h-3.5" aria-hidden="true" /> Coming up ({upcoming.length})</p>
                   {upcoming.slice(0, 5).map((q) => (
-                    <div key={q.id} className="no-doodle rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 flex items-center gap-3">
-                      <span className="text-[11px] text-zinc-400 shrink-0 w-20">{dayLabel(q.day)}</span>
-                      <span className="flex-1 min-w-0 truncate text-sm font-bold">{q.emojiA} {q.optionA} <span className="text-zinc-500 font-normal">or</span> {q.emojiB} {q.optionB}</span>
-                      <button type="button" onClick={() => void remove(q)} aria-label={armed === q.id ? 'Tap again to remove' : `Remove ${q.optionA} or ${q.optionB}`} className={`shrink-0 h-7 px-2.5 rounded-full border text-[10px] font-bold cursor-pointer ${armed === q.id ? 'border-red-400 text-red-300' : 'border-zinc-700 text-zinc-400 hover:text-white'}`}>{armed === q.id ? 'Tap again' : 'Remove'}</button>
+                    <div key={q.id} className="fx-upcoming">
+                      <span className="fx-t11 fx-muted shrink-0" style={{ width: 78 }}>{dayLabel(q.day)}</span>
+                      <span className="fx-grow fx-trunc fx-t13 fx-bold">{q.emojiA} {q.optionA} <span className="fx-faint" style={{ fontWeight: 400 }}>or</span> {q.emojiB} {q.optionB}</span>
+                      <button type="button" onClick={() => void remove(q)} aria-label={armed === q.id ? 'Tap again to remove' : `Remove ${q.optionA} or ${q.optionB}`} className={`fx-act shrink-0 ${armed === q.id ? 'is-warn' : ''}`} style={{ height: 28, fontSize: 11 }}>{armed === q.id ? 'Tap again' : 'Remove'}</button>
                     </div>
                   ))}
-                  {upcoming.length > 5 && <p className="text-[11px] text-zinc-500 text-center">and {upcoming.length - 5} more scheduled</p>}
+                  {upcoming.length > 5 && <p className="fx-t11 fx-faint fx-center">and {upcoming.length - 5} more scheduled</p>}
                 </div>
               )}
             </section>
           )}
 
           {previous.length > 0 && (
-            <section aria-label="Previous questions" className="space-y-3">
-              <h2 className="text-sm font-black tracking-tight">Previous questions</h2>
+            <section aria-label="Previous questions" className="fx-stack-sm" style={{ gap: 14 }}>
+              <h2 className="fx-h2">Previous questions</h2>
               {previous.map((q) => (
                 <QuestionCard key={q.id} q={q} pending={pending} canManage={canManage} armed={armed === q.id} onVote={vote} onRemove={remove} />
               ))}
               {hasMore && (
                 <div className="flex justify-center pt-1">
-                  <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="px-6 py-3 rounded-full border border-zinc-600 hover:border-zinc-50 text-sm font-bold cursor-pointer disabled:opacity-60 flex items-center gap-2">
+                  <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="fx-btn-ghost is-auto">
                     <BusyLabel busy={loadingMore}>{loadingMore ? 'Loading' : <><ChevronDown className="w-4 h-4" aria-hidden="true" /> Load more</>}</BusyLabel>
                   </button>
                 </div>

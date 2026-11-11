@@ -15,6 +15,7 @@ import { AdjustPanel, CanvasPanel, CropPanel, FiltersPanel, LayersPanel, Templat
 import { MediaPanel } from './MediaPool';
 import { ColorPanel } from './ColorPanel';
 import { waveform } from './assets';
+import './studio.css';
 import { AudioPanel, CaptionsPanel, DrawPanel, PropsPanel, StickersPanel, TextPanel } from './panels2';
 
 // NOOB Studio: the shell. It owns the project (with undo / redo), the imported files and the player, and gives every panel one controller object (StudioCtl) to work through.
@@ -496,30 +497,30 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
   })();
 
   return (
-    <div className="studio-root force-dark fixed inset-0 z-[10000] flex flex-col bg-zinc-950 text-white select-none" data-testid="noob-studio" role="application" aria-label="NOOB Studio">
-      <header className="shrink-0 flex items-center gap-1.5 px-2 py-2 border-b border-zinc-800 bg-zinc-950">
-        <button onClick={close} aria-label="Close NOOB Studio" data-testid="studio-close" className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center"><X className="w-5 h-5" /></button>
+    <div className="studio-root sx-root force-dark fixed inset-0 edge-own z-[10000] flex flex-col text-white select-none" data-testid="noob-studio" role="application" aria-label="NOOB Studio">
+      <header className="sx-top shrink-0 flex items-center gap-1.5 px-2">
+        <button onClick={close} aria-label="Close NOOB Studio" data-testid="studio-close" className="sx-iconbtn w-10 h-10 rounded-full flex items-center justify-center"><X className="w-5 h-5" /></button>
         <div className="min-w-0 flex items-center gap-2">
-          <span className="hidden sm:block text-[13px] font-black tracking-tight bg-gradient-to-r from-fuchsia-400 to-sky-300 bg-clip-text text-transparent">NOOB Studio</span>
+          <span className="sx-brand flex items-center gap-1.5" aria-hidden="true"><span className="sx-logo" /><span className="sx-wordmark hidden sm:block">NOOB Studio</span></span>
           <input
             value={project.name} maxLength={60} aria-label="Project name"
             onChange={(e) => update((p) => ({ ...p, name: e.target.value }), 'name')}
-            className="min-w-0 w-28 sm:w-44 bg-transparent border border-transparent hover:border-zinc-700 focus:border-fuchsia-400 rounded-lg px-2 py-1 text-[13px] font-semibold text-white outline-none"
+            className="sx-name min-w-0 w-28 sm:w-44 rounded-xl px-2.5 py-1 text-[13px] font-semibold outline-none"
           />
         </div>
         <div className="ml-auto flex items-center gap-1">
-          <button onClick={hist.undo} disabled={!hist.canUndo} aria-label="Undo" data-testid="studio-undo" className="w-10 h-10 rounded-xl hover:bg-white/10 disabled:opacity-30 flex items-center justify-center"><Undo2 className="w-5 h-5" /></button>
-          <button onClick={hist.redo} disabled={!hist.canRedo} aria-label="Redo" data-testid="studio-redo" className="w-10 h-10 rounded-xl hover:bg-white/10 disabled:opacity-30 flex items-center justify-center"><Redo2 className="w-5 h-5" /></button>
-          <button onClick={() => setShowKeys((v) => !v)} aria-label="Keyboard shortcuts" className="hidden sm:flex w-10 h-10 rounded-xl hover:bg-white/10 items-center justify-center"><Keyboard className="w-5 h-5" /></button>
+          <button onClick={hist.undo} disabled={!hist.canUndo} aria-label="Undo" data-testid="studio-undo" className="sx-iconbtn w-10 h-10 rounded-full disabled:opacity-30 flex items-center justify-center"><Undo2 className="w-5 h-5" /></button>
+          <button onClick={hist.redo} disabled={!hist.canRedo} aria-label="Redo" data-testid="studio-redo" className="sx-iconbtn w-10 h-10 rounded-full disabled:opacity-30 flex items-center justify-center"><Redo2 className="w-5 h-5" /></button>
+          <button onClick={() => setShowKeys((v) => !v)} aria-label="Keyboard shortcuts" className="sx-iconbtn hidden sm:flex w-10 h-10 rounded-full items-center justify-center"><Keyboard className="w-5 h-5" /></button>
           <button
             onClick={() => setShowExport(true)} disabled={project.layers.filter((l) => l.type === 'media' || l.type === 'text' || l.type === 'sticker').length === 0}
-            data-testid="studio-export-open" className="h-10 px-3 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-40 text-[13px] font-black flex items-center gap-1.5"
+            data-testid="studio-export-open" className="sx-export h-10 px-4 rounded-full disabled:opacity-40 text-[13px] font-black flex items-center gap-1.5"
           ><Download className="w-4 h-4" />Export</button>
         </div>
       </header>
 
       <div className="studio-grid" style={{ ['--studio-panel-w' as string]: tool === 'media' ? '460px' : '320px' }}>
-        <nav className="studio-nav order-4 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950" aria-label="Tools">
+        <nav className="studio-nav sx-dock order-4 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto no-scrollbar" aria-label="Tools">
           {visibleTools.map((t) => {
             const Icon = t.icon;
             const active = tool === t.id;
@@ -527,44 +528,45 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
               <button
                 key={t.id} data-testid={`tool-${t.id}`} aria-pressed={active}
                 onClick={() => (active ? setPanelOpen((o) => !o) : setTool(t.id))}
-                className={`shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 lg:px-1 lg:py-2.5 min-w-[62px] ${active ? 'text-fuchsia-300 bg-fuchsia-500/10' : 'text-zinc-400 hover:text-white'}`}
+                className={`sx-tab shrink-0 flex flex-col items-center justify-center gap-1 px-2 py-2 lg:px-1 lg:py-2.5 min-w-[64px] ${active ? 'is-on' : ''}`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-bold leading-none">{t.label}</span>
+                <span className="sx-tab-ico"><Icon className="w-5 h-5" /></span>
+                <span className="sx-tab-label">{t.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <section className={`studio-panel order-3 shrink-0 h-[28vh] lg:h-auto overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950 ${panelOpen ? '' : 'hidden lg:block'}`} data-testid="studio-panel" aria-label={`${tool} tools`}>
-          {panel}
+        <section className={`studio-panel sx-panel order-3 shrink-0 overflow-y-auto ${panelOpen ? '' : 'hidden lg:block'}`} data-testid="studio-panel" aria-label={`${tool} tools`}>
+          <button type="button" className="sx-grab-btn lg:hidden" onClick={() => setPanelOpen(false)} aria-label="Collapse the tools panel"><span className="sx-grab" aria-hidden="true" /></button>
+          <div key={tool} className="sx-panel-in">{panel}</div>
         </section>
 
-        <main className="studio-stage order-1 relative min-h-0 min-w-0 flex flex-col flex-1">
+        <main className="studio-stage sx-stage order-1 relative min-h-0 min-w-0 flex flex-col flex-1">
           <Stage ctl={ctl} />
-          {busy && <div className="absolute left-1/2 -translate-x-1/2 top-3 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[12px] font-bold z-20" role="status">{busy}</div>}
+          {busy && <div className="sx-busy absolute left-1/2 -translate-x-1/2 top-3 px-3 py-1.5 rounded-full text-[12px] font-bold z-20" role="status">{busy}</div>}
         </main>
 
         {project.mode === 'video' && <div className="studio-tl order-2 min-w-0"><Timeline ctl={ctl} /></div>}
 
         {xl && (
-          <aside className="studio-props order-5 w-[290px] overflow-y-auto border-l border-zinc-800 bg-zinc-950" aria-label="Properties">
-            <div className="px-3 pt-3 text-[11px] font-black uppercase tracking-wider text-zinc-500">Selected</div>
+          <aside className="studio-props sx-props order-5 w-[290px] overflow-y-auto" aria-label="Properties">
+            <div className="sx-section-title px-3 pt-3">Selected</div>
             <PropsPanel ctl={ctl} />
           </aside>
         )}
       </div>
 
       {toast && (
-        <div className={`absolute left-1/2 -translate-x-1/2 bottom-24 lg:bottom-6 max-w-[92vw] px-4 py-2.5 rounded-2xl text-[12px] font-semibold shadow-xl z-30 ${toast.tone === 'error' ? 'bg-rose-600 text-white' : 'bg-zinc-800 border border-zinc-600 text-white'}`} role={toast.tone === 'error' ? 'alert' : 'status'} onClick={() => setToast(null)} data-testid="studio-toast">
+        <div className={`sx-toast absolute left-1/2 -translate-x-1/2 bottom-24 lg:bottom-6 max-w-[92vw] px-4 py-2.5 rounded-2xl text-[12px] font-semibold z-30 ${toast.tone === 'error' ? 'is-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'} onClick={() => setToast(null)} data-testid="studio-toast">
           {toast.msg}
         </div>
       )}
       {showKeys && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowKeys(false)}>
-          <div className="w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-700 p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="sx-scrim absolute inset-0 z-40 flex items-center justify-center p-4" onClick={() => setShowKeys(false)}>
+          <div className="sx-sheet sx-pop w-full max-w-sm rounded-3xl p-4" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-[14px] font-black mb-2">Keyboard shortcuts</h2>
-            {SHORTCUTS.map(([k, d]) => <div key={k} className="flex justify-between gap-3 py-1 text-[12px] border-b border-zinc-800"><kbd className="font-mono text-fuchsia-300">{k}</kbd><span className="text-zinc-300 text-right">{d}</span></div>)}
+            {SHORTCUTS.map(([k, d]) => <div key={k} className="flex justify-between gap-3 py-1 text-[12px] border-b border-zinc-800"><kbd className="sx-kbd font-mono">{k}</kbd><span className="text-zinc-300 text-right">{d}</span></div>)}
           </div>
         </div>
       )}

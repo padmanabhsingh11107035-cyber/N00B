@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Trash2, X } from 'lucide-react';
 import { aiCall, allResponses, clearResponses, fileLink, myRole, type FormRole, deleteResponse, getForm, listResponses, type FormRow } from '../../services/formsApi';
 import { answerText, countChoices, evalFormula, gridCounts, hasOptions, isAnswerable, npsOf, numericStats, perDay, rankingAverages, toCsv, toExcelXml, toJson, wordFrequency, type FormQuestion, type ResponseRow } from '../../utils/forms';
+import './forms.css';
 
 // The answers of a form: totals and charts made from the real stored answers (nothing is invented; a chart only appears when its question has answers), every answer one by one
 // (25 at a time from the database), and the export. Only the owner can open this (the database refuses everybody else).
@@ -32,8 +33,8 @@ export const FormResponses: React.FC<{ formId: string; onBack: () => void }> = (
   const qs = useMemo<FormQuestion[]>(() => (form?.published?.questions ?? form?.draft.questions ?? []), [form]);
   const filtered = useMemo(() => (rows ?? []).filter((r) => !range || Date.now() - new Date(r.created_at).getTime() <= range * 86400000), [rows, range]);
 
-  if (error) return <div className="p-8 text-center"><p role="alert" className="text-red-400 mb-3">{error}</p><button type="button" onClick={() => void load()} className="px-4 py-2 rounded-full bg-white text-black font-bold cursor-pointer mr-2">Try again</button><button type="button" onClick={onBack} className="px-4 py-2 rounded-full bg-zinc-800 cursor-pointer">Back</button></div>;
-  if (!form || !rows) return <div className="p-10 text-center text-zinc-400" role="status">Loading the answers…</div>;
+  if (error) return <div className="frm-center"><div className="frm-center-card"><p role="alert" className="s" style={{ color: 'var(--f-danger)' }}>{error}</p><div className="frm-btnrow"><button type="button" onClick={() => void load()} className="frm-btn primary">Try again</button><button type="button" onClick={onBack} className="frm-btn ghost">Back</button></div></div></div>;
+  if (!form || !rows) return <div className="frm-center"><div className="frm-center-card" role="status"><span className="frm-spinner" aria-hidden="true" /><p className="s">Loading the answers…</p></div></div>;
 
   const quiz = !!(form.published ?? form.draft).settings?.quiz?.enabled;
   const exportAs = (kind: 'csv' | 'json' | 'xls') => {
@@ -48,23 +49,23 @@ export const FormResponses: React.FC<{ formId: string; onBack: () => void }> = (
   };
 
   return (
-    <div className="min-h-full text-white" data-testid="form-responses">
-      <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur border-b border-zinc-800">
-        <div className="max-w-3xl mx-auto px-3 pt-2.5 pb-2 flex items-center gap-2">
-          <button type="button" onClick={onBack} aria-label="Back" className="w-9 h-9 shrink-0 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
-          <div className="min-w-0 flex-1"><h1 className="font-bold truncate">{form.title}</h1><p className="text-[11px] text-zinc-400">{form.response_count} {form.response_count === 1 ? 'response' : 'responses'}</p></div>
-          <button type="button" onClick={() => exportAs('csv')} disabled={!rows.length} className="px-3 h-9 rounded-full border border-zinc-700 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-40 cursor-pointer" data-testid="export-csv"><Download className="w-3.5 h-3.5" />CSV</button>
-          <button type="button" onClick={() => exportAs('xls')} disabled={!rows.length} className="px-3 h-9 rounded-full border border-zinc-700 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-40 cursor-pointer" data-testid="export-xls"><Download className="w-3.5 h-3.5" />Excel</button>
-          <button type="button" onClick={() => exportAs('json')} disabled={!rows.length} className="px-3 h-9 rounded-full border border-zinc-700 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"><Download className="w-3.5 h-3.5" />JSON</button>
-          <button type="button" onClick={() => window.print()} disabled={!rows.length} className="px-3 h-9 rounded-full border border-zinc-700 text-xs font-bold disabled:opacity-40 cursor-pointer">Print / PDF</button>
+    <div className="frm-page" data-testid="form-responses">
+      <div className="frm-bar">
+        <div className="frm-bar-in">
+          <button type="button" onClick={onBack} aria-label="Back" className="frm-round"><ArrowLeft className="w-5 h-5" /></button>
+          <div className="min-w-0 flex-1"><h1 className="frm-h1 truncate">{form.title}</h1><p className="frm-sub">{form.response_count} {form.response_count === 1 ? 'response' : 'responses'}</p></div>
+          <button type="button" onClick={() => exportAs('csv')} disabled={!rows.length} className="frm-btn ghost sm frm-export" data-testid="export-csv"><Download className="w-3.5 h-3.5" />CSV</button>
+          <button type="button" onClick={() => exportAs('xls')} disabled={!rows.length} className="frm-btn ghost sm frm-export" data-testid="export-xls"><Download className="w-3.5 h-3.5" />Excel</button>
+          <button type="button" onClick={() => exportAs('json')} disabled={!rows.length} className="frm-btn ghost sm frm-export"><Download className="w-3.5 h-3.5" />JSON</button>
+          <button type="button" onClick={() => window.print()} disabled={!rows.length} className="frm-btn ghost sm frm-export hidden sm:inline-flex">Print / PDF</button>
         </div>
-        <div className="max-w-3xl mx-auto px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar" role="tablist">
-          {(['summary', 'questions', 'responses'] as Tab[]).map((id) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-8 px-3.5 rounded-full text-xs font-bold capitalize whitespace-nowrap cursor-pointer ${tab === id ? 'bg-white text-black' : 'border border-zinc-700 text-zinc-300'}`}>{id === 'responses' ? 'Individual' : id}</button>)}
-          {tab !== 'responses' && <select aria-label="Date range" value={range} onChange={(e) => setRange(Number(e.target.value))} className="h-8 rounded-full bg-zinc-800 border border-zinc-700 text-xs px-3 ml-auto">{RANGES.map(([l, d]) => <option key={l} value={d}>{l}</option>)}</select>}
+        <div className="frm-bar-in frm-bar-tabs no-scrollbar" role="tablist" style={{ overflowX: 'auto' }}>
+          {(['summary', 'questions', 'responses'] as Tab[]).map((id) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`frm-chip capitalize ${tab === id ? 'on' : ''}`}>{id === 'responses' ? 'Individual' : id}</button>)}
+          {tab !== 'responses' && <select aria-label="Date range" value={range} onChange={(e) => setRange(Number(e.target.value))} className="frm-select ml-auto">{RANGES.map(([l, d]) => <option key={l} value={d}>{l}</option>)}</select>}
         </div>
       </div>
-      <div className="max-w-3xl mx-auto px-3 py-4 pb-24 space-y-3">
-        {msg && <p role="status" className="p-3 rounded-xl bg-zinc-800 text-sm">{msg}</p>}
+      <div className="frm-wrap frm-stack-y">
+        {msg && <p role="status" className="frm-banner ok">{msg}</p>}
         {tab === 'summary' && <Summary rows={filtered} all={rows} qs={qs} />}
         {tab === 'questions' && <Questions rows={filtered} qs={qs} />}
         {tab === 'responses' && <Individual formId={formId} qs={qs} total={form.response_count} onChanged={load} canDelete={role === 'owner'} />}
@@ -74,9 +75,9 @@ export const FormResponses: React.FC<{ formId: string; onBack: () => void }> = (
   );
 };
 
-const Card: React.FC<{ title?: string; children: React.ReactNode }> = ({ title, children }) => <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4">{title && <h2 className="font-bold mb-2 break-words">{title}</h2>}{children}</section>;
+const Card: React.FC<{ title?: string; children: React.ReactNode }> = ({ title, children }) => <section className="frm-card frm-rcard">{title && <h2 className="frm-rcard-title break-words">{title}</h2>}{children}</section>;
 const Bar: React.FC<{ label: string; count: number; pct: number; max: number }> = ({ label, count, pct, max }) => (
-  <div className="mb-2"><div className="flex justify-between gap-2 text-sm"><span className="break-words min-w-0">{label}</span><span className="text-zinc-300 shrink-0">{count} · {pct}%</span></div><div className="h-2.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full bg-emerald-400" style={{ width: `${max ? (count / max) * 100 : 0}%` }} /></div></div>
+  <div className="mb-2"><div className="flex justify-between gap-2 text-sm"><span className="break-words min-w-0">{label}</span><span className="text-zinc-300 shrink-0">{count} · {pct}%</span></div><div className="frm-bar-track"><div className="frm-bar-fill" style={{ width: `${max ? (count / max) * 100 : 0}%` }} /></div></div>
 );
 
 const QuizStats: React.FC<{ rows: ResponseRow[] }> = ({ rows }) => {
@@ -98,12 +99,12 @@ const Summary: React.FC<{ rows: ResponseRow[]; all: ResponseRow[]; qs: FormQuest
   const days = 14, series = perDay(all, days), top = Math.max(1, ...series.map((d) => d.count));
   const today = all.filter((r) => r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
   const week = all.filter((r) => Date.now() - new Date(r.created_at).getTime() <= 7 * 86400000).length;
-  const stat = (label: string, v: string | number) => <div className="rounded-xl bg-zinc-800/60 p-3"><p className="text-[11px] text-zinc-400">{label}</p><p className="text-2xl font-extrabold">{v}</p></div>;
+  const stat = (label: string, v: string | number) => <div className="frm-stat"><p>{label}</p><b>{v}</b></div>;
   const nps = qs.filter((q) => q.type === 'nps').map((q) => ({ q, r: npsOf(q, rows) })).filter((x) => x.r);
   if (!all.length) return <Card><p className="text-center text-zinc-400 py-6">No answers yet. Share the link and they will appear here.</p></Card>;
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{stat('Responses', rows.length)}{stat('Today', today)}{stat('Last 7 days', week)}{stat('Last answer', all[0] ? new Date(all[0].created_at).toLocaleDateString() : '-')}</div>
+      <div className="frm-stat-grid">{stat('Responses', rows.length)}{stat('Today', today)}{stat('Last 7 days', week)}{stat('Last answer', all[0] ? new Date(all[0].created_at).toLocaleDateString() : '-')}</div>
       <Card title="Answers per day (last 14 days)">
         <div className="flex items-end gap-1 h-32" role="img" aria-label={`Answers per day: ${series.map((d) => `${d.day} ${d.count}`).join(', ')}`}>
           {series.map((d) => <div key={d.day} className="flex-1 flex flex-col items-center justify-end h-full"><span className="text-[10px] text-zinc-400">{d.count || ''}</span><div className="w-full rounded-t bg-emerald-400" style={{ height: `${(d.count / top) * 85}%`, minHeight: d.count ? 4 : 1, opacity: d.count ? 1 : 0.25 }} /></div>)}
@@ -208,12 +209,13 @@ const Individual: React.FC<{ formId: string; qs: FormQuestion[]; total: number; 
   return (
     <>
       <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search this page of answers" aria-label="Search this page" className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm" />
-      <div className="rounded-2xl border border-zinc-800 overflow-x-auto"><table className="w-full text-sm"><thead className="bg-zinc-900 text-zinc-400 text-xs"><tr><th className="text-left p-2.5 font-semibold">When</th>{cols.map((c) => <th key={c.id} className="text-left p-2.5 font-semibold max-w-[10rem] truncate">{c.title}</th>)}</tr></thead>
+      <div className="frm-card frm-table-wrap"><table className="w-full text-sm"><thead className="frm-thead text-xs"><tr><th className="text-left p-2.5 font-semibold">When</th>{cols.map((c) => <th key={c.id} className="text-left p-2.5 font-semibold max-w-[10rem] truncate">{c.title}</th>)}</tr></thead>
         <tbody>{rows.map((r) => <tr key={r.id} onClick={() => setOpen(data.rows.indexOf(r))} onKeyDown={(e) => { if (e.key === 'Enter') setOpen(data.rows.indexOf(r)); }} tabIndex={0} className="border-t border-zinc-800 hover:bg-zinc-900 cursor-pointer"><td className="p-2.5 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>{cols.map((c) => <td key={c.id} className="p-2.5 max-w-[10rem] truncate">{answerText(c, r.answers[c.id])}</td>)}</tr>)}</tbody></table></div>
       <div className="flex items-center justify-between text-sm"><span className="text-zinc-400">{page * PAGE + 1}-{Math.min(data.total, page * PAGE + PAGE)} of {data.total}</span><span className="flex gap-2"><button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} className="px-3 h-8 rounded-full border border-zinc-700 disabled:opacity-40 cursor-pointer">Previous</button><button type="button" disabled={(page + 1) * PAGE >= data.total} onClick={() => setPage(page + 1)} className="px-3 h-8 rounded-full border border-zinc-700 disabled:opacity-40 cursor-pointer">Next</button></span></div>
       {cur && (
-        <div className="fixed inset-0 z-[130] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="One response">
-          <div className="w-full sm:max-w-lg max-h-[90vh] overflow-auto rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-5 space-y-3 text-white">
+        <div className="frm-scrim z130" role="dialog" aria-modal="true" aria-label="One response">
+          <div className="frm-sheet is-resp no-doodle space-y-3">
+            <div className="frm-grab" aria-hidden="true" />
             <div className="flex items-center justify-between"><p className="text-xs text-zinc-400">{new Date(cur.created_at).toLocaleString()} · {cur.id.slice(0, 8)}</p><button type="button" onClick={() => setOpen(null)} aria-label="Close" className="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button></div>
             {qs.filter((q) => isAnswerable(q.type)).map((q) => <div key={q.id}><p className="text-xs text-zinc-400">{q.title}</p>{q.type === 'file_upload' && Array.isArray(cur.answers[q.id]) ? <FileLinks files={cur.answers[q.id] as Array<{ path: string; name: string }>} /> : q.type === 'signature' && typeof cur.answers[q.id] === 'string' ? <img src={cur.answers[q.id] as string} alt="Signature" className="bg-white rounded-lg max-w-full h-auto" /> : <p className="break-words whitespace-pre-wrap">{answerText(q, cur.answers[q.id]) || <span className="text-zinc-600">No answer</span>}</p>}</div>)}
             <div className="flex items-center justify-between pt-2"><span className="flex gap-2"><button type="button" disabled={open === 0} onClick={() => setOpen((open ?? 1) - 1)} aria-label="Previous response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronLeft className="w-4 h-4" /></button><button type="button" disabled={open === data.rows.length - 1} onClick={() => setOpen((open ?? 0) + 1)} aria-label="Next response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronRight className="w-4 h-4" /></button></span><span className="flex gap-2"><button type="button" onClick={() => window.print()} className="px-3 h-9 rounded-full border border-zinc-700 text-sm cursor-pointer">Print</button>{canDelete && <button type="button" onClick={() => void remove(cur.id, cur.answers)} className="px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm inline-flex items-center gap-1.5 cursor-pointer"><Trash2 className="w-4 h-4" />Delete</button>}</span></div>

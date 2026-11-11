@@ -35,7 +35,7 @@ export function useToast() {
   }, []);
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const node = toast ? (
-    <div role="status" aria-live="polite" className={`fixed left-1/2 -translate-x-1/2 bottom-8 z-[120] max-w-[92vw] px-4 py-2.5 rounded-full text-xs font-bold shadow-2xl border ${toast.kind === 'ok' ? 'bg-noob text-black border-zinc-50' : 'bg-red-950 text-red-100 border-red-500/60'}`}>
+    <div role="status" aria-live="polite" className={`fx-toast ${toast.kind === 'ok' ? 'is-ok' : 'is-err'}`}>
       {toast.text}
     </div>
   ) : null;
@@ -43,35 +43,35 @@ export function useToast() {
 }
 
 export const Card: React.FC<{ children?: React.ReactNode; className?: string; ariaLabel?: string }> = ({ children, className = '', ariaLabel }) => (
-  <div aria-label={ariaLabel} className={`no-doodle rounded-3xl bg-zinc-900 border border-zinc-800 p-4 sm:p-5 ${className}`}>{children}</div>
+  <div aria-label={ariaLabel} className={`fx-card fx-in ${className}`}>{children}</div>
 );
 
 export const SkeletonCards: React.FC<{ count?: number; label?: string }> = ({ count = 3, label = 'Loading' }) => (
-  <div className="space-y-3" role="status" aria-label={label}>
+  <div className="fx-stack-sm" role="status" aria-label={label}>
     {Array.from({ length: count }, (_, i) => (
-      <div key={i} className="no-doodle rounded-3xl bg-zinc-900 border border-zinc-800 p-4 animate-pulse">
-        <div className="h-3 w-2/5 rounded bg-zinc-800" />
-        <div className="mt-4 h-14 w-full rounded-2xl bg-zinc-800" />
-        <div className="mt-2 h-14 w-full rounded-2xl bg-zinc-800" />
+      <div key={i} className="fx-skel animate-pulse">
+        <i style={{ height: 12, width: '40%' }} />
+        <i style={{ height: 56, marginTop: 16 }} />
+        <i style={{ height: 56, marginTop: 8 }} />
       </div>
     ))}
   </div>
 );
 
 export const ErrorState: React.FC<{ text: string; onRetry?: () => void }> = ({ text, onRetry }) => (
-  <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 text-center" role="alert">
-    <AlertCircle className="w-8 h-8 mx-auto text-red-400" aria-hidden="true" />
-    <p className="mt-3 text-sm text-zinc-300">{text}</p>
-    {onRetry && <button type="button" onClick={onRetry} className="mt-4 px-5 py-2.5 rounded-full bg-noob text-black text-sm font-bold cursor-pointer">Try again</button>}
+  <div className="fx-state" role="alert">
+    <div className="fx-state-ic is-bad"><AlertCircle className="w-8 h-8" aria-hidden="true" /></div>
+    <p className="fx-state-hint" style={{ fontSize: 14 }}>{text}</p>
+    {onRetry && <button type="button" onClick={onRetry} className="fx-btn is-auto" style={{ marginTop: 18 }}>Try again</button>}
   </div>
 );
 
 export const EmptyState: React.FC<{ icon: React.ReactNode; title: string; hint?: string; action?: React.ReactNode }> = ({ icon, title, hint, action }) => (
-  <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-8 text-center">
-    <div className="w-16 h-16 rounded-full border border-zinc-700 mx-auto flex items-center justify-center text-zinc-300">{icon}</div>
-    <p className="mt-4 text-base font-bold">{title}</p>
-    {hint && <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed">{hint}</p>}
-    {action && <div className="mt-5">{action}</div>}
+  <div className="fx-state">
+    <div className="fx-state-ic">{icon}</div>
+    <p className="fx-state-title">{title}</p>
+    {hint && <p className="fx-state-hint">{hint}</p>}
+    {action && <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>{action}</div>}
   </div>
 );
 
@@ -82,8 +82,8 @@ export const BusyLabel: React.FC<{ busy: boolean; children?: React.ReactNode }> 
 
 /** A page that needs an account: asks nicely. */
 export const LoginPrompt: React.FC<{ what: string; onLogin?: () => void }> = ({ what, onLogin }) => (
-  <div className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 text-center">
-    <p className="text-sm text-zinc-300">Log in to {what}.</p>
-    {onLogin && <button type="button" onClick={onLogin} className="mt-4 px-6 py-3 rounded-full bg-noob text-black text-sm font-extrabold cursor-pointer">Log in</button>}
+  <div className="fx-state">
+    <p className="fx-state-title" style={{ marginTop: 0 }}>Log in to {what}.</p>
+    {onLogin && <button type="button" onClick={onLogin} className="fx-btn is-auto" style={{ marginTop: 18 }}>Log in</button>}
   </div>
 );

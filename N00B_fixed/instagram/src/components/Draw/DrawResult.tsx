@@ -34,31 +34,34 @@ export const DrawResult: React.FC<DrawResultProps> = ({ prize, packName, onClose
   }, [prize.id, prize.rarity, r.color, r.rank]);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-5 draw-rise overflow-y-auto" style={{ background: `radial-gradient(60% 50% at 50% 38%, ${r.color}38, transparent 72%), #05050a` }}>
-      <div className="relative w-full max-w-sm text-center">
-        {/* the light rays behind the prize */}
-        <div className="absolute left-1/2 top-[7.5rem] -translate-x-1/2 -translate-y-1/2 w-[26rem] h-[26rem] pointer-events-none draw-rays opacity-60"
-          style={{ background: `repeating-conic-gradient(from 0deg, ${r.color}55 0deg 7deg, transparent 7deg 24deg)`, WebkitMaskImage: 'radial-gradient(circle, #000 8%, transparent 62%)', maskImage: 'radial-gradient(circle, #000 8%, transparent 62%)' }} />
-        <div className="relative">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border" style={{ color: r.color, borderColor: `${r.color}77`, background: `${r.color}1f` }}>
+    <div className="dr-result edge-own" role="dialog" aria-label="Your prize" style={{ ['--rc' as any]: r.color, ['--rs' as any]: r.soft }}>
+      <div className="dr-result-glow" aria-hidden="true" />
+      <div className="dr-result-scroll">
+        <div className="dr-result-body">
+          <div className="dr-badge dr-rise">
             <PartyPopper className="w-3 h-3" /> {r.label} prize
           </div>
-          <div className="draw-pop flex justify-center mt-6"><PrizeVisual prize={prize} size={132} /></div>
-          <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.3em] text-zinc-400">You won</p>
-          <h2 className="draw-sans mt-1 text-[26px] leading-tight text-white" style={{ textShadow: `0 0 28px ${r.color}88` }}>{prize.label}</h2>
-          {prize.subtitle && <p className="text-xs font-semibold mt-1" style={{ color: r.color }}>{prize.subtitle}</p>}
-          <p className="text-[13px] text-zinc-300 leading-relaxed mt-4 px-2">{prize.message}</p>
+          <div className="dr-prize-stage">
+            {/* the light rays behind the prize */}
+            <div className="draw-rays dr-rays" aria-hidden="true" />
+            <div className="dr-ring" aria-hidden="true" />
+            <div className="draw-pop dr-prize"><PrizeVisual prize={prize} size={132} /></div>
+          </div>
+          <p className="dr-won dr-rise" style={{ animationDelay: '420ms' }}>You won</p>
+          <h2 className="dr-won-t dr-rise" style={{ animationDelay: '500ms' }}>{prize.label}</h2>
+          {prize.subtitle && <p className="dr-won-s dr-rise" style={{ animationDelay: '560ms' }}>{prize.subtitle}</p>}
+          <p className="dr-won-m dr-rise" style={{ animationDelay: '620ms' }}>{prize.message}</p>
           {(prize.kind === 'pro' || prize.kind === 'verified') && prize.applied === 'ok' && (
-            <p data-draw-mail-hint className="text-[11px] text-zinc-400 leading-relaxed mt-3 px-3">We also email you the details. Not in your inbox? Check Spam and tap “Not spam”.</p>
+            <p data-draw-mail-hint className="dr-won-h">We also email you the details. Not in your inbox? Check Spam and tap “Not spam”.</p>
           )}
-          <p className="text-[10px] text-zinc-500 mt-1">{packName}</p>
-          <div className="mt-7 space-y-2.5">
+          <p className="dr-won-p">{packName}</p>
+          <div className="dr-result-btns dr-rise" style={{ animationDelay: '700ms' }}>
             {onWear && prize.applied === 'ok' && (
-              <button onClick={onWear} disabled={wearing} className="w-full py-3.5 rounded-2xl font-extrabold text-sm text-white border border-white/20 bg-white/10 hover:bg-white/15 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2">
+              <button type="button" onClick={onWear} disabled={wearing} className="dr-btn-ghost dr-btn-wide">
                 {wearing ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Wear it now
               </button>
             )}
-            <button onClick={onClose} className="w-full py-3.5 rounded-2xl font-black text-sm text-black cursor-pointer active:scale-[0.98] transition-transform" style={{ background: `linear-gradient(90deg, ${r.color}, #fff)`, boxShadow: `0 12px 34px -10px ${r.color}` }}>
+            <button type="button" onClick={onClose} className="dr-btn-solid dr-btn-wide dr-btn-prize">
               Awesome
             </button>
           </div>

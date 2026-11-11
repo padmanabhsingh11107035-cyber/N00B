@@ -6,6 +6,7 @@ import {
   type FormDraft, type FormQuestion, type FormSettings, type FormTheme, type Presentation, type QType
 } from '../../utils/forms';
 import { FormRenderer } from './FormRenderer';
+import './forms.css';
 
 // The form editor: questions (add, edit, reorder with the mouse or with the arrow buttons, copy, delete, show-if rules), design (20 themes and your own colours), settings,
 // sharing, and Publish. Every change is kept in a history (Undo / Redo) and saved by itself a moment after you stop typing. The saved copy is never overwritten by an old screen.
@@ -118,9 +119,9 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
     catch (e) { setNote(e instanceof Error ? e.message : 'Could not change the form.'); } finally { setBusy(false); }
   };
 
-  if (loadError) return <div className="p-8 text-center"><p className="text-red-400 mb-3" role="alert">{loadError}</p><button type="button" onClick={onBack} className="px-4 py-2 rounded-full bg-zinc-800 cursor-pointer">Back to my forms</button></div>;
-  if (!state || !row) return <div className="p-10 text-center text-zinc-400" role="status">Opening the form…</div>;
-  if (role === 'viewer') return <div className="p-10 text-center space-y-3"><p className="font-semibold">You can see the answers of this form, not change it.</p><button type="button" onClick={onResponses} className="px-5 h-10 rounded-full bg-white text-black font-bold cursor-pointer">Open the answers</button> <button type="button" onClick={onBack} className="px-5 h-10 rounded-full border border-zinc-700 cursor-pointer">Back</button></div>;
+  if (loadError) return <div className="frm-center"><div className="frm-center-card"><p className="s" role="alert" style={{ color: 'var(--f-danger)' }}>{loadError}</p><button type="button" onClick={onBack} className="frm-btn ghost">Back to my forms</button></div></div>;
+  if (!state || !row) return <div className="frm-center"><div className="frm-center-card" role="status"><span className="frm-spinner" aria-hidden="true" /><p className="s">Opening the form…</p></div></div>;
+  if (role === 'viewer') return <div className="frm-center"><div className="frm-center-card"><p className="t">You can see the answers of this form, not change it.</p><div className="frm-btnrow"><button type="button" onClick={onResponses} className="frm-btn primary">Open the answers</button> <button type="button" onClick={onBack} className="frm-btn ghost">Back</button></div></div></div>;
 
   const { draft } = state;
   const qs = draft.questions;
@@ -134,41 +135,43 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
   const setTheme = (p: Partial<FormTheme>) => change((s) => ({ ...s, draft: { ...s.draft, theme: { ...s.draft.theme, ...p } } }), true);
   const unpublished = row.published ? JSON.stringify(row.published) !== JSON.stringify(draft) : true;
   const live = row.status === 'published' || row.status === 'closed';
+  const accent = resolveTheme(draft.theme);
+  const accentVars = { '--f-accent': accent.primary, '--f-accent-fill': accent.primary, '--f-on-accent': accent.onPrimary } as React.CSSProperties;
   const saveText = { saved: 'Saved', saving: 'Saving…', offline: 'Offline: will save when you are back', failed: 'Not saved: trying again', conflict: 'Changed in another window' }[save];
 
   return (
-    <div className="min-h-full text-white" data-testid="form-editor">
-      <div className="sticky top-0 z-30 bg-zinc-900/95 backdrop-blur border-b border-zinc-800">
-        <div className="max-w-3xl mx-auto px-3 pt-2.5 pb-2 flex items-center gap-2">
-          <button type="button" onClick={() => void leave(onBack)} aria-label="Back to my forms" className="w-9 h-9 shrink-0 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
-          <input value={state.title} onChange={(e) => change((s) => ({ ...s, title: e.target.value }), true)} maxLength={200} aria-label="Form title" className="flex-1 min-w-0 bg-transparent text-base font-bold outline-none focus-visible:ring-2 ring-white/40 rounded px-1" />
-          <span className={`hidden sm:inline text-[11px] ${save === 'saved' ? 'text-zinc-400' : save === 'saving' ? 'text-zinc-300' : 'text-amber-300'}`} role="status" data-testid="form-save-state">{saveText}</span>
-          <button type="button" onClick={() => void publish()} disabled={busy} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold cursor-pointer disabled:opacity-60" data-testid="form-publish">{live && !unpublished ? 'Published' : live ? 'Publish changes' : 'Publish'}</button>
+    <div className="frm-page" data-testid="form-editor" style={accentVars}>
+      <div className="frm-bar">
+        <div className="frm-bar-in">
+          <button type="button" onClick={() => void leave(onBack)} aria-label="Back to my forms" className="frm-round"><ArrowLeft className="w-5 h-5" /></button>
+          <input value={state.title} onChange={(e) => change((s) => ({ ...s, title: e.target.value }), true)} maxLength={200} aria-label="Form title" className="frm-titlebox" />
+          <span className={`frm-save ${save}`} role="status" data-testid="form-save-state"><i aria-hidden="true" />{saveText}</span>
+          <button type="button" onClick={() => void publish()} disabled={busy} className="frm-btn primary sm" data-testid="form-publish">{live && !unpublished ? 'Published' : live ? 'Publish changes' : 'Publish'}</button>
         </div>
-        <div className="max-w-3xl mx-auto px-3 pb-2 flex items-center gap-1.5"><div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0" role="tablist">
+        <div className="frm-bar-in frm-bar-tabs"><div className="frm-chips no-scrollbar flex-1 min-w-0" role="tablist">
           {([['questions', 'Questions', null], ['design', 'Design', Palette], ['settings', 'Settings', Cog], ['share', 'Share', Share2]] as const).map(([id, label, Icon]) => (
-            <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`h-8 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${tab === id ? 'bg-white text-black' : 'border border-zinc-700 text-zinc-300'}`}>{Icon && <Icon className="w-3.5 h-3.5" />}{label}</button>))}
-          {row.response_count > 0 || live ? <button type="button" onClick={() => void leave(onResponses)} className="h-8 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap border border-zinc-700 text-zinc-300 cursor-pointer"><BarChart3 className="w-3.5 h-3.5" />Responses ({row.response_count})</button> : null}
+            <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`frm-chip ${tab === id ? 'on' : ''}`}>{Icon && <Icon className="w-3.5 h-3.5" />}{label}</button>))}
+          {row.response_count > 0 || live ? <button type="button" onClick={() => void leave(onResponses)} className="frm-chip"><BarChart3 className="w-3.5 h-3.5" />Responses ({row.response_count})</button> : null}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-35 cursor-pointer"><Undo2 className="w-4 h-4" /></button>
-          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-35 cursor-pointer"><Redo2 className="w-4 h-4" /></button>
-          <button type="button" onClick={() => { const u = URL.createObjectURL(new Blob([exportDefinition(state.title, state.description, draft)], { type: 'application/json' })); const a = document.createElement('a'); a.href = u; a.download = `${state.title.replace(/[^\w-]+/g, '-').slice(0, 40) || 'form'}.noobform.json`; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(u), 1000); }} aria-label="Save the form as a file" title="Save the form as a file" className="hidden sm:flex w-9 h-9 rounded-full border border-zinc-700 items-center justify-center cursor-pointer"><Download className="w-4 h-4" /></button>
-          <button type="button" onClick={() => setPreview(true)} aria-label="Preview" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><Eye className="w-4 h-4" /></button>
+          <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" className="frm-round sm"><Undo2 className="w-4 h-4" /></button>
+          <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" className="frm-round sm"><Redo2 className="w-4 h-4" /></button>
+          <button type="button" onClick={() => { const u = URL.createObjectURL(new Blob([exportDefinition(state.title, state.description, draft)], { type: 'application/json' })); const a = document.createElement('a'); a.href = u; a.download = `${state.title.replace(/[^\w-]+/g, '-').slice(0, 40) || 'form'}.noobform.json`; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(u), 1000); }} aria-label="Save the form as a file" title="Save the form as a file" className="frm-round sm hidden sm:flex"><Download className="w-4 h-4" /></button>
+          <button type="button" onClick={() => setPreview(true)} aria-label="Preview" className="frm-round sm"><Eye className="w-4 h-4" /></button>
         </div>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-3 py-4 pb-28 space-y-3">
-        {save === 'conflict' && <div role="alert" className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-200 text-sm">This form was changed in another window, so this screen stopped saving to protect it. <button type="button" className="underline font-bold cursor-pointer" onClick={() => window.location.reload()}>Reload</button> to get the newest version.</div>}
-        {note && <div role="status" className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-sm flex justify-between gap-2"><span>{note}</span><button type="button" aria-label="Dismiss" onClick={() => setNote('')} className="cursor-pointer"><X className="w-4 h-4" /></button></div>}
-        {problems.length > 0 && <div role="alert" className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-red-200 text-sm"><p className="font-bold mb-1">Fix these before publishing:</p><ul className="list-disc pl-5">{problems.map((p, i) => <li key={i}>{p}</li>)}</ul></div>}
+      <div className="frm-wrap frm-stack-y">
+        {save === 'conflict' && <div role="alert" className="frm-banner warn">This form was changed in another window, so this screen stopped saving to protect it. <button type="button" className="underline font-bold cursor-pointer" onClick={() => window.location.reload()}>Reload</button> to get the newest version.</div>}
+        {note && <div role="status" className="frm-banner ok"><span>{note}</span><button type="button" aria-label="Dismiss" onClick={() => setNote('')} className="cursor-pointer"><X className="w-4 h-4" /></button></div>}
+        {problems.length > 0 && <div role="alert" className="frm-banner bad"><p className="font-bold mb-1">Fix these before publishing:</p><ul className="list-disc pl-5">{problems.map((p, i) => <li key={i}>{p}</li>)}</ul></div>}
 
         {tab === 'questions' && (
           <>
-            <div className="nf-card nf-surface rounded-lg border border-zinc-800 p-5 space-y-2" style={{ borderTop: `6px solid ${resolveTheme(draft.theme).primary}` }}>
-              <input value={state.title} onChange={(e) => change((s) => ({ ...s, title: e.target.value }), true)} maxLength={200} aria-label="Title" className="w-full bg-transparent text-2xl font-bold outline-none border-b border-transparent focus:border-zinc-600" />
-              <textarea value={state.description} onChange={(e) => change((s) => ({ ...s, description: e.target.value }), true)} maxLength={2000} rows={2} placeholder="Form description" aria-label="Form description" className="w-full bg-transparent text-sm text-zinc-300 outline-none resize-y border-b border-transparent focus:border-zinc-600" />
+            <div className="frm-card frm-titlecard space-y-2">
+              <input value={state.title} onChange={(e) => change((s) => ({ ...s, title: e.target.value }), true)} maxLength={200} aria-label="Title" className="frm-bigtitle" />
+              <textarea value={state.description} onChange={(e) => change((s) => ({ ...s, description: e.target.value }), true)} maxLength={2000} rows={2} placeholder="Form description" aria-label="Form description" className="frm-bigdesc" />
             </div>
             {qs.map((q, i) => (
               <QuestionCard key={q.id} q={q} i={i} all={qs} count={qs.length} quiz={!!draft.settings.quiz?.enabled} open={open === q.id} onOpen={() => setOpen(open === q.id ? null : q.id)}
@@ -186,13 +189,13 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
       </div>
 
       {preview && (
-        <div className="fixed inset-0 z-[120] bg-black/80 flex flex-col" role="dialog" aria-modal="true" aria-label="Preview">
-          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-900">
-            <div className="flex gap-1.5">{(['desktop', 'tablet', 'mobile'] as const).map((d) => <button key={d} type="button" onClick={() => setDevice(d)} className={`px-3 h-8 rounded-full text-xs font-bold capitalize cursor-pointer ${device === d ? 'bg-white text-black' : 'border border-zinc-700'}`}>{d}</button>)}</div>
-            <button type="button" onClick={() => setPreview(false)} aria-label="Close preview" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
+        <div className="frm-preview fixed inset-0 edge-own z-[120] flex flex-col" role="dialog" aria-modal="true" aria-label="Preview">
+          <div className="frm-preview-bar">
+            <div className="frm-chips">{(['desktop', 'tablet', 'mobile'] as const).map((d) => <button key={d} type="button" onClick={() => setDevice(d)} className={`frm-chip capitalize ${device === d ? 'on' : ''}`}>{d}</button>)}</div>
+            <button type="button" onClick={() => setPreview(false)} aria-label="Close preview" className="frm-round sm"><X className="w-4 h-4" /></button>
           </div>
-          <div className="flex-1 overflow-auto flex justify-center p-3">
-            <div className="w-full overflow-auto rounded-xl" style={{ maxWidth: device === 'mobile' ? 390 : device === 'tablet' ? 768 : 1000 }}>
+          <div className="frm-preview-stage">
+            <div className="frm-preview-device" style={{ maxWidth: device === 'mobile' ? 390 : device === 'tablet' ? 768 : 1000 }}>
               <FormRenderer key={JSON.stringify(draft).length} form={{ title: state.title, description: state.description, questions: qs, theme: draft.theme, settings: draft.settings }} preview onSubmit={async () => ({ ok: true })} />
             </div>
           </div>
@@ -212,21 +215,21 @@ export const AddBar: React.FC<{ onAdd: (t: QType) => void }> = ({ onAdd }) => {
   const [open, setOpen] = useState(false);
   const groups = [...new Set(QTYPES.map((t) => t.group))];
   return (
-    <div className="sticky bottom-4 z-20 flex justify-end pointer-events-none">
+    <div className="frm-addbar">
       <div className="pointer-events-auto relative">
         {open && (
-          <div className="absolute bottom-14 right-0 w-[min(92vw,24rem)] max-h-[60vh] overflow-auto nf-surface nf-card rounded-xl border border-zinc-700 p-2 space-y-2" role="menu">
-            {groups.map((g) => <div key={g}><p className="px-2 pt-1 text-[11px] font-medium text-zinc-500">{g}</p>{QTYPES.filter((t) => t.group === g).map((t) => <button key={t.type} type="button" role="menuitem" onClick={() => { onAdd(t.type); setOpen(false); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-800 cursor-pointer"><span className="block text-sm font-medium">{t.label}</span><span className="block text-[11px] text-zinc-500">{t.hint}</span></button>)}</div>)}
+          <div className="frm-menu" role="menu">
+            {groups.map((g) => <div key={g}><p className="px-2 pt-1 text-[11px] font-medium text-zinc-500">{g}</p>{QTYPES.filter((t) => t.group === g).map((t) => <button key={t.type} type="button" role="menuitem" onClick={() => { onAdd(t.type); setOpen(false); }} className="frm-menu-item"><span className="block text-sm font-semibold">{t.label}</span><span className="block text-[11px] text-zinc-500">{t.hint}</span></button>)}</div>)}
           </div>)}
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} data-testid="form-add-question" className="h-12 pl-4 pr-5 rounded-full bg-white text-black shadow-lg inline-flex items-center gap-2 font-medium cursor-pointer active:scale-95 transition-transform"><Plus className="w-5 h-5" />Add question</button>
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} data-testid="form-add-question" className="frm-fab"><Plus className="w-5 h-5" />Add question</button>
       </div>
     </div>
   );
 };
 
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string }> = ({ on, onChange, label }) => (
-  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`relative w-9 h-5 rounded-full shrink-0 cursor-pointer transition-colors ${on ? 'bg-zinc-600' : 'bg-zinc-700'}`} style={{ background: on ? '#3c4043' : '#bdc1c6' }}>
-    <span className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: on ? 18 : 2, background: '#fff' }} />
+  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`frm-toggle ${on ? 'on' : ''}`}>
+    <span className="frm-knob" />
   </button>
 );
 
@@ -244,8 +247,8 @@ export const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, 
   // closed: the question as the person will see it
   if (!open) {
     return (
-      <div className="nf-card nf-surface rounded-lg border border-zinc-800" draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const f = Number(e.dataTransfer.getData('text/plain')); if (Number.isInteger(f)) onDrop(f); }} data-testid="form-question-card">
-        <button type="button" onClick={onOpen} aria-expanded={false} className="w-full text-left px-5 py-4 cursor-pointer">
+      <div className="frm-card frm-qcard" draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { const f = Number(e.dataTransfer.getData('text/plain')); if (Number.isInteger(f)) onDrop(f); }} data-testid="form-question-card">
+        <button type="button" onClick={onOpen} aria-expanded={false} className="frm-qsummary">
           <span className="block text-[15px] font-medium">{q.title || 'Untitled question'}{q.required && <span className="text-red-400"> *</span>}</span>
           {q.description && <span className="block text-xs text-zinc-500 mt-0.5">{q.description}</span>}
           {hasOptions(q.type) ? <span className="block mt-2 space-y-1">{(q.options ?? []).slice(0, 4).map((o, k) => <span key={o.id} className="flex items-center gap-3 text-sm text-zinc-300">{mark(k)}<span className="truncate">{o.label}</span></span>)}{(q.options?.length ?? 0) > 4 && <span className="block text-xs text-zinc-500 pl-7">+ {(q.options?.length ?? 0) - 4} more</span>}</span>
@@ -257,13 +260,13 @@ export const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, 
 
   const answerable = isAnswerable(q.type) && q.type !== 'hidden';
   return (
-    <div className="nf-card nf-surface relative rounded-lg border border-zinc-600 overflow-hidden" data-testid="form-question-card">
-      <span className="absolute left-0 top-0 bottom-0 w-1 bg-zinc-600" aria-hidden="true" />
+    <div className="frm-card frm-qcard is-open relative overflow-hidden" data-testid="form-question-card">
+      <span className="frm-qbar" aria-hidden="true" />
       <div className="flex justify-center pt-1.5 text-zinc-400"><GripVertical className="w-4 h-4 rotate-90" aria-hidden="true" /></div>
       <div className="px-5 pb-3 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <input value={q.title} onChange={(e) => onPatch({ title: e.target.value })} maxLength={300} placeholder={q.type === 'section' ? 'Page title' : 'Question'} aria-label={q.type === 'section' ? 'Page title' : 'Question'} className="flex-1 min-w-0 bg-zinc-800 border-b-2 border-zinc-600 px-3 py-3 text-base outline-none focus:border-zinc-700" data-testid="q-title" />
-          <select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} aria-label="Question type" className="sm:w-56 h-12 rounded-md border border-zinc-700 nf-surface px-3 text-sm">{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>
+          <select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} aria-label="Question type" className="sm:w-56 h-12 rounded-md border border-zinc-700 frm-surface px-3 text-sm">{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>
         </div>
         <input value={q.description ?? ''} onChange={(e) => onPatch({ description: e.target.value })} maxLength={600} placeholder="Description (optional)" aria-label="Description" className={lineInput + ' text-zinc-400'} />
 
@@ -327,7 +330,7 @@ export const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, 
       </div>
 
       {/* the card's own toolbar: copy, delete, required, move, more */}
-      <div className="flex items-center justify-end gap-1 px-3 py-2 border-t border-zinc-800">
+      <div className="frm-qtools">
         <button type="button" onClick={onUp} disabled={i === 0} aria-label="Move up" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center disabled:opacity-25 cursor-pointer"><ChevronUp className="w-5 h-5" /></button>
         <button type="button" onClick={onDown} disabled={i === count - 1} aria-label="Move down" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center disabled:opacity-25 cursor-pointer"><ChevronDown className="w-5 h-5" /></button>
         <button type="button" onClick={onDup} aria-label="Duplicate" title="Duplicate" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer"><Copy className="w-[18px] h-[18px]" /></button>

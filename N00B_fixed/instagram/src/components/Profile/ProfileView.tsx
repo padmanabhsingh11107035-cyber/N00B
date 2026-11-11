@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { linkify } from '../Common/Linkified';
 import { SocialLinkButtons } from './SocialLinkButtons';
-import { ProfileCover } from './ProfileCover';
+import { ProfileCover, coverTopColour, coverValue } from './ProfileCover';
+import { forceStripColour } from '../../utils/statusStrip';
+import { usePageHidden } from '../../utils/pageLayers';
 import { ProfileSuggestions } from './ProfileSuggestions';
 import './profileExtras.css';
 import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
@@ -586,6 +588,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       close: closeSettingsHub
     }
   }), [currentUser, allUsers, posts, reels, onUserUpdated, onLogout, onDeleteMyAccount, onOpenProfessionalDashboard, closeSettingsHub]);
+
+  // Someone else's profile: the strip behind the clock / camera takes the colour of their cover (and goes back to normal when this page is left or hidden)
+  const profileHidden = usePageHidden();
+  const topColour = !isOwnProfile ? coverTopColour(targetUser) : null;
+  useEffect(() => {
+    if (!topColour || profileHidden) return;
+    forceStripColour(topColour);
+    return () => forceStripColour(null);
+  }, [topColour, profileHidden, coverValue(targetUser)]);
 
   const handleProfileUpdated = (updatedUser: User) => {
     if (onUserUpdated) {

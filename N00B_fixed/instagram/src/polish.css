@@ -5,8 +5,8 @@ button, a, [role="button"], [role="tab"], summary, label, select, input[type="ch
 button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
 
 /* small round / icon-only buttons get a bigger invisible tap area (about 44 px) without changing the layout */
-button:has(> svg:only-child):not(.absolute):not(.fixed):not(.sticky):not([data-no-hit]) { position: relative; }
-button:has(> svg:only-child):not(.absolute):not(.fixed):not(.sticky):not([data-no-hit])::after { content: ""; position: absolute; inset: -8px; }
+:where(button:has(> svg:only-child):not(.absolute):not(.fixed):not(.sticky):not([data-no-hit])) { position: relative; }
+:where(button:has(> svg:only-child):not(.absolute):not(.fixed):not(.sticky):not([data-no-hit]))::after { content: ""; position: absolute; inset: -8px; }
 
 /* pressing a pill-shaped button gives a small, quick squeeze */
 button:not(:disabled):active:is(.rounded-full, .rounded-xl, .rounded-2xl, .rounded-3xl) { transform: scale(.97); }

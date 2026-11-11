@@ -37,6 +37,16 @@ export function coverValue(u?: Pick<User, 'socialLinks'> | null): string {
   return typeof v === 'string' ? v : '';
 }
 
+/** The colour at the top-left of a person's cover (a photo cover gives a dark neutral), used to colour the strip behind the clock */
+export function coverTopColour(u: Pick<User, 'id' | 'socialLinks'>): string {
+  const v = coverValue(u);
+  if (v.startsWith('i:')) return '#16161d';
+  if (v.startsWith('c:') && /^#[0-9a-fA-F]{6}$/.test(v.slice(2))) return v.slice(2);
+  const n = v.startsWith('g:') ? parseInt(v.slice(2), 10) : NaN;
+  const set = COVER_SETS[Number.isFinite(n) && n >= 0 && n < COVER_SETS.length ? n : hash(u.id || '') % COVER_SETS.length];
+  return /#[0-9a-fA-F]{6}/.exec(set.css)?.[0] || '#16161d';
+}
+
 /** The CSS background of a person's cover */
 export function coverBackground(u: Pick<User, 'id' | 'socialLinks'>, valueOverride?: string): React.CSSProperties {
   const v = valueOverride ?? coverValue(u);

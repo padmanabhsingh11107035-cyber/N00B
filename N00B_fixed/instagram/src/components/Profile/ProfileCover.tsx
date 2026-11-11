@@ -3,7 +3,7 @@ import { Camera, Check, ImagePlus, RotateCcw, X } from 'lucide-react';
 import type { User } from '../../types';
 import { resolveMedia } from '../../services/supabase';
 import { updateFullProfile, uploadMediaFile } from '../../services/api';
-import { compressImage } from '../../utils/mediaCompressor';
+import { CoverAdjustEditor } from '../Common/CoverAdjustEditor';
 
 // The wide picture behind a profile photo. Everyone starts with a colour of their own (picked from their id, so it never changes by itself);
 // the owner can choose another colour set, one flat colour, or a photo. The choice is kept inside the profile's `socialLinks.cover` text:
@@ -70,6 +70,7 @@ export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u:
   const [error, setError] = useState('');
   const [custom, setCustom] = useState('#7c3aed');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [adjustFile, setAdjustFile] = useState<File | null>(null);   // the picked photo, while it is being moved and scaled
   const shown = draft ?? coverValue(user);
 
   const save = async (value: string) => {
@@ -85,12 +86,17 @@ export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u:
     } finally { setBusy(false); }
   };
 
-  const pickPhoto = async (file: File | undefined) => {
+  // a photo is first picked, then moved and scaled (like the profile picture), then the finished crop is uploaded and saved
+  const pickPhoto = (file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return;
+    setError('');
+    setAdjustFile(file);
+  };
+  const uploadCropped = async (blob: Blob) => {
+    setAdjustFile(null);
     setBusy(true); setError('');
     try {
-      const small = await compressImage(file, 1400, 700, 0.82);
-      const res = await uploadMediaFile(small, 'avatars', { skipCompress: true });
+      const res = await uploadMediaFile(new File([blob], `cover-${Date.now()}.jpg`, { type: 'image/jpeg' }), 'avatars', { skipCompress: true });
       if (!res.objectKey) throw new Error('no key');
       await save(`i:${res.objectKey}`);
     } catch { setError('The photo could not be uploaded.'); setBusy(false); }
@@ -137,7 +143,8 @@ export const ProfileCover: React.FC<{ user: User; isOwn: boolean; onUpdated: (u:
               <button type="button" disabled={busy} onClick={() => save('')}
                 className="flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 py-3 text-sm font-bold cursor-pointer active:scale-[0.98]"><RotateCcw className="w-4 h-4" /> My own colour</button>
             </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+            {adjustFile && <CoverAdjustEditor file={adjustFile} onCancel={() => setAdjustFile(null)} onDone={(b) => { void uploadCropped(b); }} />}
             {busy && <p className="mt-3 text-center text-xs text-zinc-400">Saving…</p>}
             {error && <p className="mt-3 text-center text-xs text-rose-400" role="alert">{error}</p>}
           </div>

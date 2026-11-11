@@ -1070,11 +1070,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             </button>
           </div>
         ) : (
-          <div className="absolute bottom-3 inset-x-3 z-30 flex items-center gap-2">
-            <form onSubmit={handleSendComment} className="flex-1 flex items-center bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 focus-within:border-noob">
+          <div className="absolute bottom-4 inset-x-3 z-30 flex items-center gap-2.5" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <form onSubmit={handleSendComment} className="sv-reply flex-1 flex items-center rounded-full focus-within:border-noob">
               <input
                 type="text"
-                placeholder={`Reply to ${story.username}...`}
+                placeholder="Send message"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onFocus={() => setIsCommentFocused(true)}
@@ -1114,8 +1114,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   () => setLikedStoryIds((prev) => { const next = new Set(prev); if (wasLiked) next.add(id); else next.delete(id); return next; })
                 );
               }}
-              className={`relative p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
-                isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'
+              className={`sv-heart relative rounded-full cursor-pointer transition-transform ${
+                isLiked ? 'sv-liked text-red-500 scale-110' : 'text-white/80 hover:text-white'
               }`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />

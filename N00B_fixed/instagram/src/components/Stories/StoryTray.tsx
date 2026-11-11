@@ -24,15 +24,15 @@ interface StoryTrayProps {
 
 // The ring around a picture: rainbow = a story you have not seen, grey = seen, nothing = no story.
 const RING_BG: Record<TrayRing, string> = {
-  unseen: 'bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 via-sky-500 to-purple-600 shadow-[0_0_10px_rgba(236,72,153,0.3)]',
-  seen: 'bg-zinc-600',
-  none: 'bg-transparent'
+  unseen: 'hv-unseen',
+  seen: 'hv-seen',
+  none: 'hv-none'
 };
-const RING_BG_CLOSE_FRIENDS = 'bg-gradient-to-tr from-noob via-noob-strong to-noob shadow-[0_0_10px_rgba(255,255,255,0.3)]';
+const RING_BG_CLOSE_FRIENDS = 'hv-close';
 
 const RingedAvatar: React.FC<{ ring: TrayRing; closeFriends?: boolean; src?: string; alt: string }> = ({ ring, closeFriends, src, alt }) => (
-  <div className={`w-16 h-16 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-105 ${ring === 'unseen' && closeFriends ? RING_BG_CLOSE_FRIENDS : RING_BG[ring]}`}>
-    <div className="w-full h-full rounded-full bg-black p-[2px]">
+  <div className={`hv-avatar transition-transform duration-200 group-hover:scale-105 ${ring === 'unseen' && closeFriends ? RING_BG_CLOSE_FRIENDS : RING_BG[ring]}`}>
+    <div className="w-full h-full rounded-full">
       <img src={src || '/noob-logo.svg.jpeg'} alt={alt} className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
     </div>
   </div>
@@ -47,7 +47,7 @@ const FollowBadge: React.FC<{ username: string; state: 'none' | 'following' | 'r
     disabled={state !== 'none' || busy || disabled}
     title={state === 'following' ? 'Noobed' : state === 'requested' ? 'Requested' : `Noob ${username}`}
     aria-label={state === 'following' ? `Noobed ${username}` : state === 'requested' ? `Noob requested for ${username}` : `Noob ${username}`}
-    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
+    className={`${state === 'none' ? 'hv-badge ' : ''}absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
       state === 'following' ? 'bg-emerald-500' : state === 'requested' ? 'bg-zinc-600' : 'bg-sky-500 hover:bg-sky-400 cursor-pointer'
     } ${busy ? 'opacity-60' : ''}`}
   >
@@ -117,9 +117,9 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
   const own = model.own;
 
   return (
-    <div id="stories-tray-container" className="w-full border-b border-white/5 bg-zinc-950/40 backdrop-blur-md py-1.5 px-3">
+    <div id="stories-tray-container" className="hv-tray w-full py-1.5 px-3">
       {/* Horizontal scrolling stories tray (kept close: only the room the pictures and names need above and below them) */}
-      <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-0.5">
+      <div className="flex items-start gap-4 overflow-x-auto no-scrollbar py-1">
         {/* Current User Story & Status Note Item */}
         <div className="flex flex-col items-center flex-shrink-0 relative group">
           {/* Status Note Bubble */}
@@ -141,7 +141,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 onOpenStatusNoteModal();
               }
             }}
-            className="mb-0.5 max-w-[86px] bg-zinc-900/95 border border-noob/50 rounded-full px-2 py-0.5 text-[9px] text-noob font-semibold truncate shadow-md hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
+            className="hv-note mb-1 max-w-[90px] rounded-full px-2.5 py-1 text-[10px] text-noob font-semibold truncate hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
             title={isMyNoteValid ? "Click to expand note & play song" : "Add Status Note (24-hour lifespan)"}
           >
             {isMyNoteValid && currentUser.statusNote ? (
@@ -168,8 +168,8 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
               {own.hasStory ? (
                 <RingedAvatar ring={own.ring} src={currentUser.avatar} alt="My Story" />
               ) : (
-                <div className="w-16 h-16 rounded-full p-[2px] bg-zinc-800 hover:bg-zinc-700 transition-colors">
-                  <div className="w-full h-full rounded-full p-[2px] bg-black">
+                <div className="hv-avatar hv-none transition-colors">
+                  <div className="w-full h-full rounded-full">
                     <img src={currentUser.avatar || '/noob-logo.svg.jpeg'} alt="My Story" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                 </div>
@@ -181,17 +181,17 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 onClick={onOpenCreateStory}
                 title="Add to Story"
                 aria-label="Add to your story"
-                className="absolute bottom-0 right-0 w-5 h-5 bg-noob text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm cursor-pointer"
+                className="hv-badge absolute bottom-0 right-0 w-5 h-5 bg-noob text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm cursor-pointer"
               >
                 <Plus className="w-3 h-3 stroke-[3]" />
               </button>
             ) : (
-              <div className="absolute bottom-0 right-0 w-4 h-4 bg-noob text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm pointer-events-none">
+              <div className="hv-badge absolute bottom-0 right-0 w-4 h-4 bg-noob text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm pointer-events-none">
                 <Plus className="w-3 h-3 stroke-[3]" />
               </div>
             )}
           </div>
-          <span className="text-[10px] text-zinc-400 mt-0.5 font-medium tracking-tight">Your story</span>
+          <span className="hv-name hv-dim mt-1">Your story</span>
         </div>
 
         {/* Everyone else: people with a story (rainbow ring = new, grey ring = seen) and suggested accounts (plus badge) */}
@@ -227,8 +227,8 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                     <FollowBadge username={item.username} state={state} busy={busy.has(item.userId)} disabled={!onToggleFollowUser} onFollow={() => followSuggestion(item)} />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 mt-1 max-w-[68px]">
-                  <span className={`text-[10px] truncate font-normal tracking-tight ${item.ring === 'seen' ? 'text-zinc-500 group-hover:text-zinc-300' : 'text-zinc-300 group-hover:text-white'}`}>
+                <div className="flex items-center justify-center gap-0.5 mt-1 max-w-[78px]">
+                  <span className={`hv-name truncate ${item.ring === 'seen' ? 'hv-dim' : ''}`}>
                     {item.username}
                   </span>
                   {item.closeFriends && (
@@ -252,7 +252,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 </button>
                 <FollowBadge username={item.username} state={state} busy={busy.has(item.userId)} disabled={!onToggleFollowUser} onFollow={() => followSuggestion(item)} />
               </div>
-              <span className="text-[10px] text-zinc-300 group-hover:text-white truncate font-normal tracking-tight mt-1 max-w-[68px]">{item.username}</span>
+              <span className="hv-name truncate mt-1">{item.username}</span>
             </div>
           );
         })}

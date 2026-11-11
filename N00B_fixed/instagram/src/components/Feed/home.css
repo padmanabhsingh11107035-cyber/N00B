@@ -1,0 +1,74 @@
+/* The Home page, "Aurora": one violet - pink - amber colour line runs through the rings, the active pills and the heart; everything else is quiet.
+   Dark = ink black with soft grey cards; Light = warm white. Only looks: nothing here changes what a button does. */
+:root {
+  --hv-grad: linear-gradient(135deg, #7c5cff 0%, #ff4d8d 55%, #ffae42 100%);
+  --hv-surface: rgba(255, 255, 255, .07);
+  --hv-surface-2: rgba(255, 255, 255, .12);
+  --hv-line: rgba(255, 255, 255, .10);
+  --hv-text: #f5f5fa;
+  --hv-muted: #9b9bb0;
+  --hv-ring-gap: #0a0a0a;
+}
+:root[data-theme="light"] {
+  --hv-surface: #f1eff8;
+  --hv-surface-2: #e7e3f3;
+  --hv-line: rgba(20, 20, 40, .10);
+  --hv-text: #15151f;
+  --hv-muted: #6d6d82;
+  --hv-ring-gap: #ffffff;
+}
+
+/* ---- the top header: no line, no blur; a gradient wordmark, round icon buttons, a gradient pill for the open feed ---- */
+header.hv-top { background: var(--page) !important; border-bottom: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding-top: 10px; padding-bottom: 10px; }
+header.hv-top h1.noob-brand { background: var(--hv-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent !important; font-size: 25px; line-height: 1; letter-spacing: -.045em; padding-right: 3px; }
+header.hv-top .hv-seg { background: var(--hv-surface) !important; border: 0 !important; padding: 3px !important; }
+header.hv-top .hv-seg button { color: var(--hv-muted) !important; font-size: 12px; padding: 5px 12px !important; }
+header.hv-top .hv-seg button.hv-on { background: var(--hv-grad) !important; color: #fff !important; box-shadow: 0 6px 16px -6px rgba(255, 77, 141, .7); }
+header.hv-top #notifications-bar-trigger { background: var(--hv-surface); border-radius: 14px; width: 38px; height: 38px; color: var(--hv-text) !important; }
+header.hv-top [data-testid="feed-music-button"] { background: var(--hv-grad) !important; color: #fff !important; width: 38px; height: 38px; border-radius: 14px; padding: 0; display: grid; place-items: center; }
+header.hv-top [data-testid="noob-menu-button"] { background: var(--hv-surface); border-radius: 12px; width: 36px; height: 36px; padding: 0; margin-left: 0; display: grid; place-items: center; color: var(--hv-text) !important; }
+
+/* ---- the story tray: bigger pictures, a colour line ring for what is new, a quiet ring for what was seen ---- */
+#stories-tray-container.hv-tray { background: transparent !important; border: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 6px 14px 10px; }
+.hv-tray .hv-avatar { width: 78px; height: 78px; border-radius: 9999px; padding: 3px; transition: transform .2s; }
+.hv-tray .hv-avatar > div { width: 100%; height: 100%; border-radius: 9999px; padding: 3px; background: var(--hv-ring-gap) !important; }
+.hv-tray .hv-unseen { background: conic-gradient(from 210deg, #7c5cff, #ff4d8d, #ffae42, #7c5cff) !important; box-shadow: 0 8px 22px -10px rgba(255, 77, 141, .8); }
+.hv-tray .hv-seen { background: var(--hv-line) !important; }
+.hv-tray .hv-none { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--hv-line); }
+.hv-tray .hv-close { background: conic-gradient(from 210deg, #14b86a, #7be4a6, #14b86a) !important; }
+.hv-tray .hv-name { font-size: 11.5px; font-weight: 600; color: var(--hv-text) !important; max-width: 78px; text-align: center; letter-spacing: 0; }
+.hv-tray .hv-name.hv-dim { color: var(--hv-muted) !important; }
+.hv-tray .hv-badge { background: var(--hv-grad) !important; color: #fff !important; width: 24px; height: 24px; border: 3px solid var(--hv-ring-gap) !important; }
+.hv-tray .hv-badge svg { width: 12px; height: 12px; }
+.hv-tray .hv-note { background: var(--hv-surface) !important; border: 0 !important; color: var(--hv-text) !important; }
+
+/* ---- topic pills ---- */
+.hv-chip { background: var(--hv-surface) !important; color: var(--hv-muted) !important; border: 0 !important; box-shadow: none !important; font-size: 12.5px !important; padding: 7px 14px !important; }
+.hv-chip.hv-on { background: var(--hv-grad) !important; color: #fff !important; box-shadow: 0 8px 18px -8px rgba(255, 77, 141, .7) !important; }
+
+/* ---- a post: no box. The name row, a big rounded picture, a row of round buttons, then the words ---- */
+article.hv-card { background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; margin-bottom: 26px !important; }
+.hv-card .hv-head { border: 0 !important; padding: 6px 14px 10px !important; }
+.hv-card .hv-ring { width: 42px; height: 42px; padding: 2.5px; background: conic-gradient(from 210deg, #7c5cff, #ff4d8d, #ffae42, #7c5cff) !important; border-radius: 9999px; }
+.hv-card .hv-ring img, .hv-card .hv-ring video { border: 2px solid var(--hv-ring-gap); }
+.hv-card .hv-who { font-size: 14.5px !important; font-weight: 800 !important; text-decoration: none !important; color: var(--hv-text) !important; letter-spacing: -.01em; }
+.hv-card .hv-sub { font-size: 11.5px !important; color: var(--hv-muted) !important; }
+.hv-card .hv-media { margin: 0 10px; width: calc(100% - 20px) !important; border-radius: 28px; box-shadow: 0 22px 40px -26px rgba(0, 0, 0, .8); }
+:root[data-theme="light"] .hv-card .hv-media { box-shadow: 0 22px 40px -28px rgba(60, 40, 120, .55); }
+.hv-card .hv-body { padding: 12px 18px 0 !important; }
+.hv-card .hv-actions > div:first-child { gap: 8px !important; }
+.hv-card .hv-actions button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 9999px; background: var(--hv-surface); color: var(--hv-text) !important; transition: transform .15s, background .15s; }
+.hv-card .hv-actions button:active { transform: scale(.9); }
+.hv-card .hv-actions button.hv-liked { background: var(--hv-grad); color: #fff !important; box-shadow: 0 8px 18px -8px rgba(255, 77, 141, .8); }
+.hv-card .hv-actions button.hv-liked svg { fill: #fff; stroke: #fff; }
+.hv-card .hv-actions button.hv-saved { background: var(--hv-surface-2); }
+.hv-card .hv-likes { font-size: 13.5px !important; font-weight: 800 !important; color: var(--hv-text) !important; margin-top: 10px !important; }
+.hv-card .hv-caption { font-size: 14px !important; line-height: 1.45; color: var(--hv-text) !important; }
+.hv-card .hv-meta { color: var(--hv-muted) !important; }
+
+/* ---- the story viewer's bottom bar: a roomy glass pill and a round heart ---- */
+.sv-reply { height: 50px; padding: 0 18px !important; background: rgba(255, 255, 255, .14) !important; border: 1px solid rgba(255, 255, 255, .28) !important; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.sv-reply input { font-size: 14.5px !important; font-weight: 600; }
+.sv-reply:focus-within { border-color: #ff4d8d !important; }
+.sv-heart { width: 50px; height: 50px; display: grid; place-items: center; padding: 0 !important; background: rgba(255, 255, 255, .14) !important; border: 1px solid rgba(255, 255, 255, .28) !important; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.sv-heart.sv-liked { background: var(--hv-grad) !important; border-color: transparent !important; color: #fff !important; }

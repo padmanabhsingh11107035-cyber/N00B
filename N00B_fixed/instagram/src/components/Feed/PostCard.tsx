@@ -551,16 +551,16 @@ export const PostCard: React.FC<PostCardProps> = ({
       ref={articleRef}
       data-post-card=""
       id={`post-card-${post.id}`}
-      className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"
+      className="hv-card w-full mb-4 transition-all"
     >
       {/* 1. Post Header (Dual Overlapping Avatars for Tagged / Collab Posts - Instagram Style) */}
-      <header className="flex items-center justify-between px-3.5 py-3 border-b border-white/5">
+      <header className="hv-head flex items-center justify-between px-3.5 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Dual Overlapping Avatars Container */}
           <div className="relative flex items-center shrink-0">
             <div
               onClick={() => setShowFullscreenAvatar(true)}
-              className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-tr from-green-500 via-blue-500 to-purple-500 cursor-pointer hover:scale-105 transition-transform"
+              className="hv-ring w-9 h-9 rounded-full p-[1.5px] cursor-pointer hover:scale-105 transition-transform"
               title="View full-size avatar"
             >
               <AvatarMedia
@@ -592,7 +592,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
                 onClick={() => goToProfile(post.userId)}
-                className="min-w-0 text-xs font-bold text-white tracking-tight underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer break-words [overflow-wrap:anywhere]"
+                className="hv-who min-w-0 text-xs font-bold text-white tracking-tight cursor-pointer break-words [overflow-wrap:anywhere]"
               >
                 {post.displayName || post.username}
               </span>
@@ -611,7 +611,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
             {/* the @username is shown once, in front of the caption under the picture - here only the place and the category (if any) go under the name */}
             {(post.location || post.category) && (
-              <div className="flex items-center gap-2 text-[10px] text-zinc-400">
+              <div className="hv-sub flex items-center gap-2 text-[10px] text-zinc-400">
                 {post.location && (
                   <div className="flex items-center gap-1">
                     <MapPin className="w-2.5 h-2.5 text-noob" />
@@ -735,7 +735,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       {hasSlides && currentSlide ? (
         <div
           ref={boxRef}
-          className="relative w-full bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
+          className="hv-media relative w-full bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
           style={{ aspectRatio: boxAspect, containerType: 'inline-size', touchAction: 'pan-y' }}
           onDoubleClick={handleDoubleTap}
           onTouchStart={post.slides && post.slides.length > 1 ? handleCarouselTouchStart : undefined}
@@ -950,8 +950,8 @@ export const PostCard: React.FC<PostCardProps> = ({
       )}
 
       {/* 3. Action Buttons & Carousel Dots */}
-      <div className="px-3.5 pt-3 pb-1">
-        <div className="flex items-center justify-between">
+      <div className="hv-body px-3.5 pt-3 pb-1">
+        <div className="hv-actions flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             {/* Like */}
             <button
@@ -961,7 +961,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 onToggleLike(post.id);
               }}
               className={`relative transition-transform active:scale-125 cursor-pointer ${
-                post.isLiked ? 'text-red-500' : 'text-white hover:text-zinc-300'
+                post.isLiked ? 'hv-liked text-red-500' : 'text-white hover:text-zinc-300'
               }`}
               title={post.isLiked ? 'Unlike' : 'Like'}
             >
@@ -1011,7 +1011,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             id={`save-btn-${post.id}`}
             onClick={() => onToggleSave(post.id)}
             className={`transition-transform active:scale-125 cursor-pointer ${
-              post.isSaved ? 'text-noob' : 'text-white hover:text-zinc-300'
+              post.isSaved ? 'hv-saved text-noob' : 'text-white hover:text-zinc-300'
             }`}
             title={post.isSaved ? 'Remove from Saved' : 'Save to Collection'}
           >
@@ -1024,14 +1024,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           <button
             onClick={() => setShowLikesSheet(true)}
             disabled={post.likesCount === 0}
-            className="mt-2 text-xs font-bold text-white tracking-tight hover:underline disabled:hover:no-underline cursor-pointer disabled:cursor-default text-left"
+            className="hv-likes mt-2 text-xs font-bold text-white tracking-tight hover:underline disabled:hover:no-underline cursor-pointer disabled:cursor-default text-left"
           >
             {post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}
           </button>
         )}
 
         {/* Captions with Formatted Line Breaks */}
-        <div className="mt-1.5 text-xs text-zinc-200">
+        <div className="hv-caption mt-1.5 text-xs text-zinc-200">
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
             {post.caption || ''}
           </span>
@@ -1098,7 +1098,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {!post.isCommentsDisabled && post.commentsCount > 0 && (
           <button
             onClick={() => onOpenComments(post)}
-            className="mt-2 text-xs text-zinc-400 hover:text-zinc-200 block text-left cursor-pointer"
+            className="hv-meta mt-2 text-xs text-zinc-400 hover:text-zinc-200 block text-left cursor-pointer"
           >
             {`View all ${post.commentsCount} ${post.commentsCount === 1 ? 'comment' : 'comments'}`}
           </button>

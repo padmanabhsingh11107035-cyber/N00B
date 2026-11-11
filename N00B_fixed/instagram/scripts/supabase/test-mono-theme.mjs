@@ -50,7 +50,7 @@ check(/\[class~="bg-zinc-900\/40"\][\s\S]*?background-color: color-mix\(in srgb,
 check(/\.liquid-glass,\s*:root\[data-theme="light"\] \.liquid-glass \{\s*background: var\(--color-zinc-900\);\s*backdrop-filter: none;/.test(css) && /\.liquid-glass::before \{ display: none; \}/.test(css), 'the bottom bar is a black card with a white edge, not frosted glass');
 check(/#floating-bottom-nav \.nav-item\.is-active \{ color: var\(--color-noob\); \}/.test(css) && /#floating-bottom-nav\[data-tab="reels"\] \{\s*--color-noob: #ffffff;/.test(css), 'the open page in the bar is in the accent colour (white in the dark modes, black in Light); on Reels the bar is near-black with white icons in both');
 const post = read('src/components/Feed/PostCard.tsx');
-check(/className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"/.test(post), 'a post is a solid black card with a bright edge');
+check(/className="hv-card w-full mb-4 transition-all"/.test(post), 'a post is the Aurora card (no box; a big rounded picture, round buttons; see Feed/home.css)');
 
 section('5b. The sign-in page has the same small doodles as Home, more of them');
 check((css.match(/--doodle-login: url\(/g) || []).length === 3 && /\.doodle-wallpaper-login \{\s*background-color: var\(--page\);\s*background-image: var\(--doodle-login\);\s*background-size: 120px 120px;/.test(css), 'a 120-px tile of the same doodles (Home uses 160 px): about 1.8 times as many, at the same size');
@@ -61,7 +61,7 @@ check(/className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full 
 
 section('6. Names on a post can be seen to be tappable, and open a profile at once');
 const UL = 'underline decoration-1 underline-offset-[3px] decoration-zinc-50/70';
-check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length >= 2, 'the name and the username under the picture are always underlined (the @handle is shown once, under the picture)');
+check(/className="hv-who min-w-0 [^"]*cursor-pointer/.test(post), 'the name on a post is a bold, tappable name (opens the profile)');
 check(/const known = allUsers\.find\(\(u\) => u\.id === userId\);\s*if \(known\) \{\s*onNavigateToProfile\(known\);/.test(post), 'tapping a name opens the profile AT ONCE with what the app already knows');
 check(/fetchUserById\(userId\)\.then\(\(fresh\) => \{ if \(fresh\) onNavigateToProfile\(fresh, true\); \}\)/.test(post), 'and the newest details are fetched quietly and swapped in');
 const app2 = read('src/App.tsx');

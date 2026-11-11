@@ -77,6 +77,7 @@ import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 import { startsInsideOverlay } from '../../utils/pullToRefresh';
+import './home.css';
 
 // The shop and the food stall (with the map and QR code libraries they use) are only fetched when somebody opens them.
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
@@ -645,7 +646,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header ref={headerRef} className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-2.5 py-2.5 flex items-center gap-1 shadow-sm">
+      <header ref={headerRef} className="hv-top sticky top-0 z-40 w-full px-3 py-2.5 flex items-center gap-2">
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -676,12 +677,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <Handshake className="w-4 h-4" />
             </button>
           )}
-          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] min-w-0 max-w-full">
+          <div className="hv-seg flex items-center rounded-full p-0.5 text-[11px] min-w-0 max-w-full">
             <button
               onClick={() => setActiveFeedFilter('foryou')}
               className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                 activeFeedFilter === 'foryou'
-                  ? 'bg-rose-600 text-white shadow-sm font-bold'
+                  ? 'hv-on bg-rose-600 text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -691,7 +692,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               onClick={() => setActiveFeedFilter('following')}
               className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                 activeFeedFilter === 'following'
-                  ? 'bg-rose-600 text-white shadow-sm font-bold'
+                  ? 'hv-on bg-rose-600 text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -703,7 +704,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 data-testid="feed-favourites"
                 className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                   activeFeedFilter === 'favourites'
-                    ? 'bg-rose-600 text-white shadow-sm font-bold'
+                    ? 'hv-on bg-rose-600 text-white shadow-sm font-bold'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -869,9 +870,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            className={`hv-chip shrink-0 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === cat
-                ? 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.35)] font-bold'
+                ? 'hv-on bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.35)] font-bold'
                 : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-white/5'
             }`}
           >

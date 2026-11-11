@@ -9,6 +9,7 @@ import { AppUpdateGate } from './components/Common/AppUpdateGate.tsx';
 import '@fontsource/dejavu-sans/latin-400.css';
 import '@fontsource/dejavu-sans/latin-700.css';
 import './index.css';
+import './polish.css';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';
 import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';

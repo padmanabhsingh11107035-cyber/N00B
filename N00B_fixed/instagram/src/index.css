@@ -1884,3 +1884,7 @@ html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top:
 html.phone-edge #chat-view-container[data-view="list"] .msg-head { padding-top: calc(var(--sat) - 4px) !important; }
 html.phone-edge .nst-header, html.phone-edge .nst-header.is-stuck { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
 html.phone-edge .nst-root { padding-top: 0; }
+
+/* Home and Profile: no doodle at all, not even faintly behind the page: plain black (Dark) or plain white (Light) */
+html[data-page="feed"] body, html[data-page="feed"] .doodle-wallpaper, html[data-page="feed"] .doodle-wallpaper-feed, html[data-page="profile"] body, html[data-page="profile"] .doodle-wallpaper, html[data-page="profile"] .doodle-wallpaper-feed { background-image: none !important; }
+html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[data-page="profile"] body::after, html[data-page="profile"] body::before { display: none !important; background-image: none !important; }

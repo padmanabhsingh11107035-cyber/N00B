@@ -44,7 +44,7 @@ check(/data-testid="reel-actions"/.test(view) && /absolute right-3 bottom-\[26px
 check(/text-\[16px\] font-bold text-white truncate/.test(view) && /w-\[36px\] h-\[36px\] rounded-full/.test(view) && /absolute left-4 right-\[72px\] bottom-\[26px\]/.test(view), 'round picture and bold name over the bottom left of the video');
 check(/No likes yet/.test(view) && /'like' : 'likes'/.test(view) && /reel\.likesCount\.toLocaleString\(\)/.test(view), 'the like count sits under the heart');
 check(/data-testid=\{isCur \? 'reel-progress' : undefined\}/.test(view) && /absolute inset-x-0 bottom-0 z-20/.test(view) && /progressRef\.current\.style\.width/.test(view), 'a thin progress line on the bottom edge fills as the video plays');
-check(/bg-white text-black/.test(view) && /data-testid=\{isCur \? 'reel-sound-bar' : undefined\}/.test(view) && /Original audio/.test(view), 'the sound name and artist, and a white Noob button next to the name');
+check(/border border-white\/80/.test(view) && /data-testid=\{isCur \? 'reel-sound-bar' : undefined\}/.test(view) && /Original audio/.test(view), 'the sound name and artist, and an outlined Noob button next to the name');
 check(/likeCountHiddenFor\(reel\.isLikeCountHidden/.test(view), 'hidden like counts stay hidden');
 check(/Copy link/.test(view) && /MoreVertical/.test(view), 'the three dots on the card open the reel menu (copy link for everyone, more for the owner / admin)');
 

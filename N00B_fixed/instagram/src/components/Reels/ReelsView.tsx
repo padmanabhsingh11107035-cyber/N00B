@@ -340,12 +340,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       lastTime = t;
     };
     video.addEventListener('timeupdate', onTime);
-    // a video whose shape (about 9:16) fits the page fills it; any other shape is shown whole in the middle (never cropped)
+    // every upright or square video fills the whole page, from the top of the screen to the bottom bar (the sides or the top are trimmed a little when its shape differs); only a wide (landscape) video is shown whole in the middle
     const fit = () => {
       const h = playerHostRef.current;
       if (!h || !(video.videoWidth > 0) || !(video.videoHeight > 0) || !(h.clientHeight > 0)) return;
-      const ratio = (video.videoWidth / video.videoHeight) / (h.clientWidth / h.clientHeight);
-      const near = ratio > 0.78 && ratio < 1.28;
+      const near = video.videoWidth / video.videoHeight < 1.1;
       video.style.objectFit = near ? 'cover' : 'contain';
       video.style.objectPosition = 'center';
       setCoverFit(near);
@@ -1219,7 +1218,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     handleToggleFollowCreator();
                   }}
                   className={`shrink-0 h-8 px-4 rounded-full text-[14px] font-semibold cursor-pointer active:scale-95 transition-transform ${
-                    following || requestedIds.has(reel.userId) ? 'bg-white/25 text-white' : 'bg-white text-black'
+                    following || requestedIds.has(reel.userId) ? 'bg-white/20 text-white border border-transparent' : 'bg-transparent text-white border border-white/80'
                   }`}
                 >
                   {following ? 'Noobed' : requestedIds.has(reel.userId) ? 'Requested' : 'Noob'}

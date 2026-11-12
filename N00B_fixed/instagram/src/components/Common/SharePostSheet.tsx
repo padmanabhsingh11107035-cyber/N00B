@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2, Calculator as CalcIcon, Repeat2 } from 'lucide-react';
 import { User } from '../../types';
-import { fetchChats, sendMessage, toggleRepost, fetchRepostState } from '../../services/api';
+import { fetchChats, sendMessage, toggleRepost } from '../../services/api';
+import { repostStates } from '../../utils/repostState';
 import { copyText } from '../../utils/clipboard';
 import { contentUrl } from '../../utils/routes';
 import { sendToCalculator } from '../../utils/calculatorSend';
@@ -64,11 +65,12 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
   const [note, setNote] = useState('');
   const [reposted, setReposted] = useState(false);
   const canRepost = ownerId !== undefined ? ownerId !== currentUser.id : ownerUsername !== currentUser.username;
-  useEffect(() => { let alive = true; void fetchRepostState(type === 'reel' ? 'reel' : 'post', itemId).then((s) => { if (alive) setReposted(s.isReposted); }); return () => { alive = false; }; }, [type, itemId]);
+  useEffect(() => { let alive = true; void repostStates.get(type === 'reel' ? 'reel' : 'post', itemId).then((s) => { if (alive) setReposted(s.isReposted); }); return () => { alive = false; }; }, [type, itemId]);
   const repost = async () => {
     const res = await toggleRepost(type === 'reel' ? 'reel' : 'post', itemId);
     if (res.error) { setNote(res.error); return; }
     setReposted(res.isReposted);
+    repostStates.set(type === 'reel' ? 'reel' : 'post', itemId, { isReposted: res.isReposted, count: res.count });
     setNote(res.isReposted ? `${TYPE_LABEL[type]} reposted to your profile` : 'Repost removed');
   };
 

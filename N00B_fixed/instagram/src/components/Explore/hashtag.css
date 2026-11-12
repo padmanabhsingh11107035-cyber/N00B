@@ -1,4 +1,4 @@
-/* The hashtag page in the Blinkit language: yellow header band with black text, white / #121212 page, green buttons. Own variables so the app-wide grey remap cannot flatten it. */
+/* The hashtag page in the bright yellow-and-green look: yellow header band with black text, white / #121212 page, green buttons. Own variables so the app-wide grey remap cannot flatten it. */
 .ht-root {
   --h-bg: #121212; --h-soft: #1e1e1e; --h-ink: #f5f5f5; --h-ink-soft: #b5b5b5;
   --h-yellow: #f8cb46; --h-on-yellow: #1c1c1c; --h-chip: rgba(28, 28, 28, .12); --h-chip-on: #1c1c1c; --h-chip-on-ink: #f8cb46;

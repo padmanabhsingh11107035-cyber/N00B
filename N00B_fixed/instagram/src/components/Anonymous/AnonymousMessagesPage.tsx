@@ -301,6 +301,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
                       <span aria-hidden="true">·</span>
                       <time dateTime={m.createdAt} className="anon-when">{whenLabel(m.createdAt)}</time>
                     </p>
+                    {isAdmin && <span className={`anon-tag ${m.reportCount ? 'bad' : ''}`}>{m.reportCount || 0} report{m.reportCount === 1 ? '' : 's'}</span>}
                     {!isAdmin && (
                       reported.has(m.id)
                         ? <span className="anon-reported"><Check className="w-3.5 h-3.5" aria-hidden="true" />Reported</span>
@@ -310,20 +311,19 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
 
                   {isAdmin && (
                     <div className="anon-admin">
-                      <div className="anon-tags">
-                        <span className={`anon-tag ${m.reportCount ? 'bad' : ''}`}>{m.reportCount || 0} report{m.reportCount === 1 ? '' : 's'}</span>
+                      {(m.hidden || (m.reasons || []).length > 0) && <div className="anon-tags">
                         {m.hidden && <span className="anon-tag warn"><Ban className="w-3 h-3" aria-hidden="true" />hidden from everyone until you decide</span>}
                         {(m.reasons || []).map((r, i) => <span key={i} className="anon-reason-tag">“{r}”</span>)}
-                      </div>
+                      </div>}
                       <div className="anon-btnrow">
                         {(m.reportCount || 0) > 0 && (
-                          <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'keep')} className="anon-btn">Keep (clear reports)</button>
+                          <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'keep')} aria-label="Keep the message and clear its reports" className="anon-btn">Keep</button>
                         )}
-                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} className="anon-btn solid">
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed === `${m.id}:remove` ? 'Tap again to remove' : 'Remove'}
+                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} aria-label={armed === `${m.id}:remove` ? 'Tap again to remove this message' : 'Remove this message'} className="anon-btn solid">
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />{armed === `${m.id}:remove` ? 'Tap again' : 'Remove'}
                         </button>
-                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'block')} className="anon-btn danger">
-                          {armed === `${m.id}:block` ? 'Tap again: remove and block author' : 'Remove and block author'}
+                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'block')} aria-label={armed === `${m.id}:block` ? 'Tap again to remove the message and block its author' : 'Remove the message and block its author'} className="anon-btn danger">
+                          <Ban className="w-4 h-4" aria-hidden="true" />{armed === `${m.id}:block` ? 'Tap again' : 'Block author'}
                         </button>
                       </div>
                     </div>

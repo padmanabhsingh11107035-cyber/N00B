@@ -69,7 +69,7 @@ const fn = read('supabase/functions/dynamic-handler/index.ts');
 check(/Deno\.env\.get\('GROQ_API_KEY'\)/.test(fn), 'the AI still answers through the Groq key kept on the server');
 check(/askAiSupportAssistant\(messageForAssistant, history\)/.test(modal) && /askAiSupportAssistant\(cleanQuery, history, 'call'\)/.test(modal), 'the chat and the call ask the same assistant function, with the same history');
 check(!/gsk_[A-Za-z0-9]{10,}/.test([modal, hub, chat, rating, pages, icons].join('\n')), 'no key in the screens');
-check(!fs.readdirSync('supabase/migrations').some((f) => /^2026102[4-9]/.test(f) && /support/i.test(f)), 'no new table or change in the database for it');
+check(!fs.readdirSync('supabase/migrations').some((f) => /^2026102[4-9]/.test(f) && /support/i.test(f) && !/guest_support/.test(f)), 'no new table or change in the database for it (the guest login-page help of 20261029 is a separate feature)');
 
 section('6. Looks the same in the dark and the light theme, and is its own');
 check(!/zinc-|text-white|bg-black|bg-zinc/.test([hub, chat, rating, pages].join('\n')), 'the new screens use no theme colours (those flip in light mode)');

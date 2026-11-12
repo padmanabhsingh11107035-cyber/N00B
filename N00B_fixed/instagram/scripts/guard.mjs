@@ -35,6 +35,8 @@ const CHECKS = [
   ['Lenses', ['node', 'scripts/supabase/test-lenses.mjs']],
   ['Family map', ['node', 'scripts/supabase/test-family.mjs']],
   ['Hashtags and editing a caption', ['node', '--liftoff-only', 'scripts/supabase/test-hashtags-edit.mjs']],
+  ['Reposts: batching, count, feed', ['node', '--liftoff-only', 'scripts/supabase/test-repost-feed.mjs']],
+  ['Tappable @mentions and timed chat mute', ['node', '--liftoff-only', 'scripts/supabase/test-mentions.mjs']],
   // the free protection of the data
   ['Supabase usage alert (80% line)', ['node', 'scripts/supabase/test-usage-alert.mjs']],
 ];

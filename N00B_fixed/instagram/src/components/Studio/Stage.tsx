@@ -18,6 +18,11 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const [guides, setGuides] = useState(false);
   const [snapLines, setSnapLines] = useState<{ v: boolean; h: boolean }>({ v: false, h: false });
   const [original, setOriginal] = useState(false);
+  // view-level zoom gestures (the preview only: the project size and the export are never touched)
+  const ptrs = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinch = useRef<null | { d0: number; z0: number; cx: number; cy: number; fx: number; fy: number }>(null);
+  const tap = useRef<{ t: number; x: number; y: number; moved: boolean; downX: number; downY: number }>({ t: 0, x: 0, y: 0, moved: false, downX: 0, downY: 0 });
+  const anchor = useRef<null | { fx: number; fy: number; cx: number; cy: number }>(null);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -35,6 +40,22 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const pixelW = Math.min(1080, Math.max(240, Math.round(cssW * dpr)));
   const k = pixelW / size.w;
+  const MAX_ZOOM = 8;
+  const z100 = Math.min(MAX_ZOOM, Math.max(1.25, 1 / fit));          // 1 design pixel = 1 screen pixel
+  const z200 = Math.min(MAX_ZOOM, z100 * 2);
+  const near = (a: number, b: number) => Math.abs(a - b) / b < 0.04;
+  const cycleZoom = () => setZoom((z) => (near(z, 1) || z < 1 ? z100 : near(z, z100) ? z200 : 1));
+  const toggleFit = () => setZoom((z) => (near(z, 1) ? z100 : 1));
+  const zoomLabel = near(zoom, 1) ? '1x' : near(zoom, z100) ? '100%' : near(zoom, z200) ? '200%' : `${+zoom.toFixed(1)}x`;
+
+  // keep the point under the fingers where it was while the preview grows or shrinks
+  useLayoutEffect(() => {
+    const a = anchor.current, c = canvasRef.current, w = wrapRef.current;
+    if (!a || !c || !w) return;
+    const r = c.getBoundingClientRect();
+    w.scrollLeft += r.left + a.fx * r.width - a.cx;
+    w.scrollTop += r.top + a.fy * r.height - a.cy;
+  }, [cssW, cssH]);
 
   const draw = useCallback((t: number) => {
     const c = canvasRef.current;
@@ -86,8 +107,33 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   const drag = useRef<null | { mode: 'move' | 'scale' | 'rotate' | 'draw' | 'pan'; id: string; sx: number; sy: number; lx: number; ly: number; scale0: number; dist0: number; rot0: number; ang0: number; stroke?: Stroke }>(null);
 
+  const centroid = () => {
+    const [a, b] = [...ptrs.current.values()];
+    return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
+  };
+  const onPtrDownCapture = (e: React.PointerEvent) => {
+    ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tap.current.moved = false; tap.current.downX = e.clientX; tap.current.downY = e.clientY;
+    if (ptrs.current.size === 2) {
+      drag.current = null; tap.current.moved = true; tap.current.t = 0; setSnapLines({ v: false, h: false });
+      const c = centroid(); const r = canvasRef.current!.getBoundingClientRect();
+      pinch.current = { d0: c.d, z0: zoom, cx: c.cx, cy: c.cy, fx: (c.cx - r.left) / r.width, fy: (c.cy - r.top) / r.height };
+    }
+  };
+  const onPtrEnd = (e: React.PointerEvent) => {
+    const wasOne = ptrs.current.size === 1 && !pinch.current;
+    ptrs.current.delete(e.pointerId);
+    if (ptrs.current.size < 2) { pinch.current = null; anchor.current = null; }
+    if (wasOne && e.type === 'pointerup' && !tap.current.moved && ctl.tool !== 'draw' && (e.target as HTMLElement).tagName === 'CANVAS') {
+      const now = Date.now(), tp = tap.current;
+      if (now - tp.t < 320 && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 32) { toggleFit(); tp.t = 0; }
+      else { tp.t = now; tp.x = e.clientX; tp.y = e.clientY; }
+    }
+  };
+
   const onDown = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (ptrs.current.size >= 2) return;                 // the second finger: pinch, not a new touch
     const p = toDesign(e);
     if (ctl.tool === 'draw') {
       let layer = ctl.selected?.type === 'draw' ? ctl.selected : (project.layers.find((l) => l.type === 'draw' && !l.locked) as typeof ctl.selected);
@@ -124,6 +170,22 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   };
 
   const onMove = (e: React.PointerEvent) => {
+    if (ptrs.current.has(e.pointerId)) {
+      ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (!tap.current.moved && Math.hypot(e.clientX - tap.current.downX, e.clientY - tap.current.downY) > 10) tap.current.moved = true;
+    }
+    const pz = pinch.current;
+    if (pz && ptrs.current.size >= 2) {
+      const c = centroid(); const w = wrapRef.current, cv = canvasRef.current;
+      if (w && cv) {
+        w.scrollLeft -= c.cx - pz.cx; w.scrollTop -= c.cy - pz.cy;          // two fingers also pan the zoomed preview
+        const r = cv.getBoundingClientRect();
+        anchor.current = { fx: (c.cx - r.left) / r.width, fy: (c.cy - r.top) / r.height, cx: c.cx, cy: c.cy };
+        pz.cx = c.cx; pz.cy = c.cy;
+        setZoom(Math.max(0.4, Math.min(MAX_ZOOM, +(pz.z0 * (c.d / pz.d0)).toFixed(3))));
+      }
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const p = toDesign(e);
@@ -156,7 +218,7 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
       ctl.updateLayer(d.id, { rotation: r }, `${d.id}:rotate`);
     }
   };
-  const onUp = () => { drag.current = null; setSnapLines({ v: false, h: false }); };
+  const onUp = (e: React.PointerEvent) => { onPtrEnd(e); drag.current = null; setSnapLines({ v: false, h: false }); };
 
   const startHandle = (e: React.PointerEvent, mode: 'scale' | 'rotate') => {
     e.stopPropagation();
@@ -175,8 +237,8 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
-      <div ref={wrapRef} className="sx-stage-bg flex-1 min-h-0 overflow-auto flex items-center justify-center overscroll-contain" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-        <div className="relative shrink-0 m-2" style={{ width: cssW, height: cssH }}>
+      <div ref={wrapRef} className="sx-stage-bg flex-1 min-h-0 overflow-auto flex p-2 overscroll-contain" onPointerDownCapture={onPtrDownCapture} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+        <div className="relative shrink-0 m-auto" style={{ width: cssW, height: cssH }}>
           <canvas
             ref={canvasRef}
             data-testid="studio-canvas"
@@ -217,7 +279,8 @@ export const Stage: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
       <div className="sx-zoombar absolute right-2 bottom-2 flex items-center">
         <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.2).toFixed(2)))} aria-label="Zoom out" className="sx-zb"><Minus className="w-4 h-4" /></button>
         <button onClick={() => setZoom(1)} aria-label="Fit to screen" className="sx-zb sx-zb-wide"><Maximize className="w-3.5 h-3.5" /><span>{Math.round(zoom * 100)}%</span></button>
-        <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" className="sx-zb"><Plus className="w-4 h-4" /></button>
+        <button onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.2).toFixed(2)))} aria-label="Zoom in" className="sx-zb"><Plus className="w-4 h-4" /></button>
+        <button onClick={cycleZoom} aria-label={`Zoom ${zoomLabel}: tap to switch between fit, 100% and 200%`} title="Fit / 100% / 200%" data-testid="studio-zoom-chip" className="sx-zb sx-zb-chip"><span>{zoomLabel}</span></button>
         <button onClick={() => setGuides((g) => !g)} aria-label="Safe-area guides" aria-pressed={guides} className={`sx-zb ${guides ? 'is-on' : ''}`}><Shield className="w-4 h-4" /></button>
         <button
           onPointerDown={() => setOriginal(true)} onPointerUp={() => setOriginal(false)} onPointerLeave={() => setOriginal(false)} onPointerCancel={() => setOriginal(false)}

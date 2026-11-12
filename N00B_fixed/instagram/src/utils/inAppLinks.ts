@@ -27,3 +27,17 @@ export function openHashtag(tag: unknown): boolean {
   if (typeof tag !== 'string' || !tag || !tagHandler) return false;
   try { tagHandler(tag); return true; } catch { return false; }
 }
+
+// A tapped @username (caption, comment, bio) opens that profile inside the app; the app registers the opener once (App.tsx), which looks the name up and says "No such user" when there is none.
+type MentionHandler = (username: string) => void;
+let mentionHandler: MentionHandler | null = null;
+
+export function setMentionHandler(next: MentionHandler | null): void {
+  mentionHandler = next;
+}
+
+/** Opens the profile of `username` ("@sam" or "sam"). Returns false when the app has not registered an opener. */
+export function openMention(username: unknown): boolean {
+  if (typeof username !== 'string' || !username || !mentionHandler) return false;
+  try { mentionHandler(username.replace(/^@+/, '')); return true; } catch { return false; }
+}

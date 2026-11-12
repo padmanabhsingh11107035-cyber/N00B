@@ -45,7 +45,7 @@ check(renderToStaticMarkup(React.createElement('p', null, linkify('plain text 10
 
 section('3. The screens are wired');
 const lk = read('src/components/Common/Linkified.tsx');
-check(/openHashtag\(h\.tag\)/.test(lk) && /stopPropagation/.test(lk) && /noob-link/.test(lk), 'Linkified: the tag button opens the hashtag page, stops the tap from also opening the post, uses noob-link');
+check(/openHashtag\(h\.(?:tag|value)\)/.test(lk) && /stopPropagation/.test(lk) && /noob-link/.test(lk), 'Linkified: the tag button opens the hashtag page, stops the tap from also opening the post, uses noob-link');
 const inapp = read('src/utils/inAppLinks.ts');
 check(/export function openHashtag/.test(inapp) && /export function setHashtagHandler/.test(inapp), 'inAppLinks: a global opener for hashtags');
 const app = read('src/App.tsx');

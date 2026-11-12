@@ -149,7 +149,8 @@ const g = (await rpc(a, 'create_chat', [b, c], true, '  Squad  ', null, 'our gro
 check(g.isGroup && g.name === 'Squad' && g.avatar === '/noob-logo-circle.png' && g.description === 'our group' && g.creatorId === a && g.participants.length === 3, 'a group is created (default photo, trimmed name)');
 check(g.adminIds.includes(a) && g.adminIds.includes(admin) && !g.adminIds.includes(b), 'the creator and the official NOOB admin are its admins');
 const gm = (await rpc(b, 'send_message', g.id, { text: 'hi group' })).message;
-check((await n(`select count(*)::int n from notifications where chat_id = $1`, [g.id])) === 0, 'group messages do not send a notification per member');
+// since migration 20261105000001 a group message rings every OTHER member's phone (one alert row each, removed once pushed); the sender gets none
+check((await n(`select count(*)::int n from notifications where chat_id = $1 and type = 'new_message'`, [g.id])) === 2 && (await n(`select count(*)::int n from notifications where chat_id = $1 and target_user_id = $2`, [g.id, b])) === 0, 'a group message alerts each other member once and never the sender');
 check((await rpc(c, 'my_chats')).find((x) => x.id === g.id).unreadCount === 1, 'members still get an unread badge');
 check((await rpc(b, 'update_group_details', g.id, 'x', null, null).catch((e) => ({ err: e.message }))).err?.includes('Only group admins'), 'a normal member can not edit group details');
 check((await rpc(a, 'update_group_details', g.id, 'Renamed', 'avatars/g.png', 'new')).chat.name === 'Renamed', 'the admin can edit it');

@@ -4,7 +4,8 @@ import { can } from '../../adminAccess';
 import { Repeat2, X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
 import { Story, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
-import { toggleRepost, fetchRepostState, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
+import { toggleRepost, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
+import { repostStates } from '../../utils/repostState';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -138,7 +139,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   useEffect(() => {
     if (!story || isOwnStory || repostedStories.has(story.id)) return;
     let alive = true;
-    void fetchRepostState('story', story.id).then((s) => { if (alive && s.isReposted) setRepostedStories((prev) => new Set(prev).add(story.id)); });
+    void repostStates.get('story', story.id).then((s) => { if (alive && s.isReposted) setRepostedStories((prev) => new Set(prev).add(story.id)); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
@@ -1106,6 +1107,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   const id = story.id;
                   void toggleRepost('story', id).then((res) => {
                     if (res.error) return;
+                    repostStates.set('story', id, { isReposted: res.isReposted, count: res.count });
                     setRepostedStories((prev) => { const next = new Set(prev); if (res.isReposted) next.add(id); else next.delete(id); return next; });
                   });
                 }}

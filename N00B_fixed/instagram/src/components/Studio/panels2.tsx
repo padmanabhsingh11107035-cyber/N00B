@@ -80,10 +80,10 @@ export const TextPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
             <textarea value={l.text} onChange={(e) => set({ text: e.target.value.slice(0, 600) }, `${l.id}:text`)} rows={3} aria-label="Text" data-testid="studio-text-input" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-2 text-[13px] text-white resize-none" />
             <Chips scroll options={Object.keys(SYSTEM_FONTS).map((f) => ({ id: f, label: f }))} value={l.font} onChange={(f) => set({ font: f })} />
             <div className="flex gap-1.5">
-              <Btn aria-pressed={l.bold} className={l.bold ? '!bg-fuchsia-500' : ''} onClick={() => set({ bold: !l.bold })}><b>B</b></Btn>
-              <Btn aria-pressed={l.italic} className={l.italic ? '!bg-fuchsia-500' : ''} onClick={() => set({ italic: !l.italic })}><i>I</i></Btn>
-              <Btn aria-pressed={l.underline} className={l.underline ? '!bg-fuchsia-500' : ''} onClick={() => set({ underline: !l.underline })}><u>U</u></Btn>
-              {(['left', 'center', 'right'] as const).map((a) => <Btn key={a} className={`flex-1 ${l.align === a ? '!bg-fuchsia-500' : ''}`} onClick={() => set({ align: a })}>{a === 'left' ? '⇤' : a === 'center' ? '↔' : '⇥'}</Btn>)}
+              <Btn aria-pressed={!!l.bold} aria-label="Bold" onClick={() => set({ bold: !l.bold })}><b>B</b></Btn>
+              <Btn aria-pressed={!!l.italic} aria-label="Italic" onClick={() => set({ italic: !l.italic })}><i>I</i></Btn>
+              <Btn aria-pressed={!!l.underline} aria-label="Underline" onClick={() => set({ underline: !l.underline })}><u>U</u></Btn>
+              {(['left', 'center', 'right'] as const).map((a) => <Btn key={a} aria-pressed={l.align === a} aria-label={`Align ${a}`} className="flex-1" onClick={() => set({ align: a })}>{a === 'left' ? '⇤' : a === 'center' ? '↔' : '⇥'}</Btn>)}
             </div>
             <Slider label="Size" value={Math.round(l.size)} min={16} max={400} onChange={(v) => set({ size: v })} reset={96} />
             <ColorInput label="Colour" value={l.color} onChange={(c) => set({ color: c }, `${l.id}:color`)} />

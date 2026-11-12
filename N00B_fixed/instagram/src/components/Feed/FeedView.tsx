@@ -39,7 +39,11 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Repeat2 } from 'lucide-react';
+import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
+import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
+import { sendLike } from '../../utils/likeSync';
+import { applyLike, useLikeLedgerVersion } from '../../utils/likeLedger';
 import { useLensOpen } from '../Lenses/lensStore';
 import { VenetianMask } from 'lucide-react';
 import { FileText } from 'lucide-react';
@@ -203,6 +207,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [hiddenAdIds, setHiddenAdIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // what the people you follow reposted (loaded when the Following tab is open, again after a pull-to-refresh)
+  const [feedReposts, setFeedReposts] = useState<FeedRepost[]>([]);
+  const [extraPatch, setExtraPatch] = useState<Record<string, Partial<Post>>>({});
+  useEffect(() => {
+    if (activeFeedFilter !== 'following' || isRefreshing) return;
+    let alive = true;
+    void fetchFeedReposts(20).then((list) => { if (alive) setFeedReposts(list); });
+    return () => { alive = false; };
+  }, [activeFeedFilter, isRefreshing, currentUser.id]);
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
@@ -384,6 +397,24 @@ export const FeedView: React.FC<FeedViewProps> = ({
   useEffect(() => { if (activeFeedFilter === 'favourites' && favouriteCount() === 0) setActiveFeedFilter('foryou'); }, [listsVersion, activeFeedFilter]);
   filteredPosts = filteredPosts.filter((p) => p.userId === currentUser.id || !isPostMuted(p.userId));
 
+  // Reposts of the people you follow (Following tab only): the original is shown as an ordinary card with a "Reposted by" line (see utils/repostFeed.ts).
+  const likeLedgerVersion = useLikeLedgerVersion();   // redraw when a heart is pressed on a repost-only card
+  const repostedBy: Record<string, Reposter> = {};
+  const repostOnlyIds = new Set<string>();
+  if (activeFeedFilter === 'following' && feedReposts.length > 0) {
+    const wantedCategory = activeCategory.toLowerCase();
+    const merged = mergeFeedReposts<Post>(filteredPosts, feedReposts as Array<FeedRepost & { item: Post }>, {
+      ownUserId: currentUser.id,
+      isHidden: (item, rp) =>
+        hiddenAdIds.includes(item.id) || isPostMuted(item.userId) || isPostMuted(rp.id) || item.userId === currentUser.id ||
+        (activeCategory !== 'All' && !(item.category?.toLowerCase() === wantedCategory || (item.hashtags || []).some((h) => h.toLowerCase().includes(wantedCategory)))),
+    });
+    Object.assign(repostedBy, merged.repostedBy);
+    merged.added.forEach((id) => repostOnlyIds.add(id));
+    filteredPosts = merged.posts.map((p) => (repostOnlyIds.has(p.id) ? applyLike({ ...p, ...(extraPatch[p.id] || {}) }, 'post') : p));
+  }
+  void likeLedgerVersion;
+
   // Favourites: only posts from the accounts you marked as favourites.
   if (activeFeedFilter === 'favourites') filteredPosts = filteredPosts.filter((p) => isFavourite(p.userId));
 
@@ -401,13 +432,44 @@ export const FeedView: React.FC<FeedViewProps> = ({
   if (pinnedPostIds.size > 0) filteredPosts = filteredPosts.filter((p) => !pinnedPostIds.has(p.id));
   useEffect(() => { void refreshPinnedFeed(true); }, [currentUser.id]);
 
-  const renderPostCard = (post: Post) => (
+  // A card that only exists here because somebody reposted it is not in the app's list of posts, so the heart and the bookmark are handled here.
+  const likeRepostOnly = (postId: string) => {
+    const before = filteredPosts.find((p) => p.id === postId);
+    if (!before) return;
+    const want = !before.isLiked;
+    const show = (isLiked: boolean, likesCount: number) => setExtraPatch((prev) => ({ ...prev, [postId]: { ...prev[postId], isLiked, likesCount } }));
+    show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
+    sendLike(`post:${postId}`, want, () => toggleLikePost(postId), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
+  };
+  const saveRepostOnly = async (postId: string) => {
+    try { const res = await toggleSavePost(postId); setExtraPatch((prev) => ({ ...prev, [postId]: { ...prev[postId], isSaved: res.isSaved } })); } catch { /* the bookmark stays as it was */ }
+  };
+  const openReposter = (rp: Reposter) => {
+    const known = allUsers.find((u) => u.id === rp.id);
+    onNavigateToProfile?.(known ?? ({ id: rp.id, username: rp.username, displayName: rp.displayName, avatar: rp.avatar } as User));
+  };
+  const renderPostCard = (post: Post) => {
+    const card = renderPostCardBody(post);
+    const by = repostedBy[post.id];
+    if (!by) return card;
+    return (
+      <div key={post.id} data-testid="reposted-by-card">
+        <div className="flex items-center gap-1.5 min-w-0 px-2 pb-1.5 text-[12px] font-semibold text-zinc-400">
+          <Repeat2 className="w-3.5 h-3.5 shrink-0" />
+          <span className="shrink-0">Reposted by</span>
+          <button type="button" data-testid="reposted-by-name" onClick={() => openReposter(by)} className="min-w-0 truncate text-white font-bold cursor-pointer">{by.displayName || by.username}</button>
+        </div>
+        {card}
+      </div>
+    );
+  };
+  const renderPostCardBody = (post: Post) => (
     <PostCard
       key={post.id}
       post={post}
       currentUser={currentUser}
-      onToggleLike={onToggleLike}
-      onToggleSave={onToggleSave}
+      onToggleLike={(id) => (repostOnlyIds.has(id) ? likeRepostOnly(id) : onToggleLike(id))}
+      onToggleSave={(id) => (repostOnlyIds.has(id) ? void saveRepostOnly(id) : onToggleSave(id))}
       onOpenComments={(p) => setSelectedPostForComments(p)}
       onToggleArchive={onToggleArchive}
       onToggleComments={onToggleComments}

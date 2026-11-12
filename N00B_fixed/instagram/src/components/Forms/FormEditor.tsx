@@ -251,7 +251,7 @@ export const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, 
         <button type="button" onClick={onOpen} aria-expanded={false} className="frm-qsummary">
           <span className="block text-[15px] font-medium">{q.title || 'Untitled question'}{q.required && <span className="text-red-400"> *</span>}</span>
           {q.description && <span className="block text-xs text-zinc-500 mt-0.5">{q.description}</span>}
-          {hasOptions(q.type) ? <span className="block mt-2 space-y-1">{(q.options ?? []).slice(0, 4).map((o, k) => <span key={o.id} className="flex items-center gap-3 text-sm text-zinc-300">{mark(k)}<span className="truncate">{o.label}</span></span>)}{(q.options?.length ?? 0) > 4 && <span className="block text-xs text-zinc-500 pl-7">+ {(q.options?.length ?? 0) - 4} more</span>}</span>
+          {hasOptions(q.type) ? <span className="block mt-2 space-y-1">{(q.options ?? []).slice(0, 4).map((o, k) => <span key={o.id} className="flex items-center gap-3 max-w-full text-sm text-zinc-300">{mark(k)}<span className="block min-w-0 truncate">{o.label}</span></span>)}{(q.options?.length ?? 0) > 4 && <span className="block text-xs text-zinc-500 pl-7">+ {(q.options?.length ?? 0) - 4} more</span>}</span>
             : <span className="block text-[11px] text-zinc-500 mt-1">{label}{q.showIf ? ' · shown only if…' : ''}</span>}
         </button>
       </div>

@@ -393,7 +393,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               {contactMatches.map((user) => (
                 <div
                   key={user.id}
-                  className="ex-contact"
+                  className="ex-contact min-w-0"
                 >
                   <img loading="lazy" decoding="async"
                     onClick={() => onNavigateToUserProfile?.(user)}
@@ -404,7 +404,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   />
                   <span
                     onClick={() => onNavigateToUserProfile?.(user)}
-                    className="ex-name truncate w-full cursor-pointer" style={{ fontSize: 13.5 }}
+                    className="ex-name block truncate w-full cursor-pointer" style={{ fontSize: 13.5 }}
                   >
                     {user.displayName || user.username}
                   </span>
@@ -483,7 +483,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               className={`cursor-pointer ${activeTab === id ? 'ex-on' : ''}`}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span className="truncate">{label}</span>
+              <span className="block truncate">{label}</span>
             </button>
           ))}
         </div>

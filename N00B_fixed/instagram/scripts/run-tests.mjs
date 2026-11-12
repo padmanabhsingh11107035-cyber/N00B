@@ -18,8 +18,8 @@ for (const [i, step] of steps.entries()) {
   const out = `${res.stdout || ''}${res.stderr || ''}`;
   const summary = out.split('\n').filter((l) => /\d+ passed|\d+ checks? |\bFAIL\b/i.test(l)).slice(-3).join(' | ');
   const ok = res.status === 0;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} [${i + 1}/${steps.length}] ${args[args.length - 1]} (${Math.round((Date.now() - t0) / 1000)}s) ${summary.slice(0, 160)}`);
-  if (!ok) { failed.push(args[args.length - 1]); console.log(out.split('\n').filter((l) => /FAIL|Error|error/.test(l)).slice(0, 8).join('\n')); }
+  console.log(`${ok ? 'ok  ' : 'FAIL'} [${i + 1}/${steps.length}] ${(args.find((a) => !a.startsWith("-")) || args[0])} (${Math.round((Date.now() - t0) / 1000)}s) ${summary.slice(0, 160)}`);
+  if (!ok) { failed.push((args.find((a) => !a.startsWith("-")) || args[0])); console.log(out.split('\n').filter((l) => /FAIL|Error|error/.test(l)).slice(0, 8).join('\n')); }
 }
 console.log(`\n${steps.length - failed.length}/${steps.length} test files passed in ${Math.round((Date.now() - started) / 60000)} min${failed.length ? `\nFAILED: ${failed.join(', ')}` : ''}`);
 process.exit(failed.length ? 1 : 0);

@@ -17,7 +17,7 @@ const line = /<button\s+onClick=\{\(\) => setShowMutualFollowersSheet\(true\)\}\
 check(!!line, 'the line is found');
 check(/max-w-full/.test(line?.[1] || '') && /min-w-0/.test(line?.[1] || ''), 'its button can not grow wider than the card (max-w-full min-w-0)', line?.[1]);
 check(/min-w-0/.test(line?.[2] || '') && /break-words/.test(line?.[2] || '') && !/truncate/.test(line?.[2] || ''), 'the text wraps onto a second line instead of running off the screen', line?.[2]);
-check(/<span className="text-xs text-zinc-400 font-medium truncate min-w-0">@\{targetUser\.username\}<\/span>/.test(pv), 'the @username in the bar above a profile shrinks instead of pushing the bar wider');
+check(/<div className="flex items-center gap-1 min-w-0 flex-1">\s*<h1 className=\{`[^`]*truncate min-w-0[^`]*`\} data-testid="profile-username">\{targetUser\.username\}<\/h1>/.test(pv), 'the @username in the bar above a profile shrinks instead of pushing the bar wider');
 check(/<h2 className="[^"]*min-w-0 break-words \[overflow-wrap:anywhere\]">\{targetUser\.displayName \|\| targetUser\.username\}<\/h2>/.test(pv), 'a long display name beside the picture wraps');
 
 section('2. The Ask card, the post header, the story header');
@@ -33,7 +33,7 @@ section('3. Lists with a button on the right');
 const chat = read('src/components/Chat/ChatView.tsx');
 check(/<span className="truncate">\{u\.displayName \|\| u\.username\}<\/span>/.test(chat) && /className="shrink-0 ml-2 px-3\.5 py-1\.5 bg-noob\/15/.test(chat), 'new chat list: the name shrinks, the Chat button stays');
 const games = read('src/components/Games/GamesView.tsx');
-check(/text-xs font-bold text-white truncate">\s*\{player\.displayName \|\| player\.username\}/.test(games) && /text-right shrink-0 ml-2/.test(games), 'leaderboard: the name shrinks, the points stay');
+check(/text-(?:xs|sm) font-bold text-white truncate">\s*\{player\.displayName \|\| player\.username\}/.test(games) && /text-right shrink-0 ml-2/.test(games), 'leaderboard: the name shrinks, the points stay');
 const supCss = read('src/components/Support/supportDesk.css');
 check(/\.sd-title \{ min-width: 0; flex: 1;/.test(supCss) && /\.sd-title strong \{[^}]*overflow: hidden; text-overflow: ellipsis/.test(supCss) && /\.sd-row-tx \{ min-width: 0; flex: 1; \}/.test(supCss) && /\.sd-txn-tx \{ min-width: 0; flex: 1; \}/.test(supCss), 'support: the title of the bar, the topic rows and the payment rows shrink (...) and the buttons beside them stay');
 

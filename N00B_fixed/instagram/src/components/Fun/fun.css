@@ -1,5 +1,5 @@
 /* NOOB Fun pages: This or That, Ask Me Anything, Public Polls (inside FunHub).
-   Blinkit design language, ONE shared palette for all three pages: yellow header band from above the notch, white (light) / #121212 (dark) page,
+   bright yellow-and-green design language, ONE shared palette for all three pages: yellow header band from above the notch, white (light) / #121212 (dark) page,
    green primary buttons, yellow chips, green result bars, hairline-bordered cards. Everything is scoped under .fx-root.
    Solid fills only (no gradients, blur or glow), radii 8 / 12 / 16 / 20, 4/8 spacing, 16px page margin.
    The page paints its own colour up under the notch (it carries .edge-own, see index.css). */

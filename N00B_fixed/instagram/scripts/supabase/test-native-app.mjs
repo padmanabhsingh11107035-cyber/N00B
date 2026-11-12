@@ -31,7 +31,7 @@ check((api.match(/redirectTo: oauthRedirectTo\(\)/g) || []).length === 2 && (api
 
 section('3. The sign-in and sign-up pages');
 const auth = read('src/components/Auth/AuthView.tsx');
-check((auth.match(/variant="row"/g) || []).length === 1 && /auth-social-top/.test(auth) && /Or sign up with/.test(auth) && /Or log in with/.test(auth), 'round social buttons at the top of both pages');
+check((auth.match(/variant="row"/g) || []).length === 1 && /auth-social-top/.test(auth) && /Or sign up with/.test(auth) && /or continue with/.test(auth), 'round social buttons at the top of both pages');
 const soc = read('src/components/Auth/SocialLoginButtons.tsx');
 check(/id: 'apple', supabaseId: 'apple'/.test(soc) && /social-row/.test(soc), 'Apple, Google, Facebook and the other enabled ones are in the round row');
 check(/\.auth-v2 form button\[type="submit"\] \{ background: linear-gradient/.test(read('src/index.css')), 'the gradient pill button and glass inputs are in the style sheet');

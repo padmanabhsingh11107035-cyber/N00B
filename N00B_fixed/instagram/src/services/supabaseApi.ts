@@ -1229,6 +1229,14 @@ export async function fetchUsers(search?: string): Promise<User[]> {
   }
 }
 
+/** The profile of exactly this username (case does not matter), or null when there is no such person (or the lookup failed). Used by tapped @mentions. */
+export async function fetchUserByUsername(username: string): Promise<User | null> {
+  const name = String(username || '').trim().replace(/^@+/, '').toLowerCase();
+  if (!/^[a-z0-9_.]{1,30}$/.test(name)) return null;
+  const list = await fetchUsers(name);
+  return list.find((u) => (u.username || '').toLowerCase() === name) || null;
+}
+
 export async function toggleFollowUser(userId: string): Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean; followersCount: number; message?: string }> {
   try {
     return await rpc('toggle_follow', { p_target: userId });
@@ -1424,6 +1432,17 @@ export async function toggleRepost(kind: RepostKind, id: string): Promise<{ isRe
 }
 export async function fetchRepostState(kind: RepostKind, id: string): Promise<{ isReposted: boolean; count: number }> {
   try { return await rpc('repost_state', { p_kind: kind, p_id: id }); } catch { return { isReposted: false, count: 0 }; }
+}
+export async function fetchRepostStates(kind: RepostKind, ids: string[]): Promise<Record<string, { isReposted: boolean; count: number }>> {
+  try { return (await rpc('repost_states', { p_kind: kind, p_ids: ids })) || {}; } catch { return {}; }
+}
+export interface FeedRepost { kind: 'post' | 'reel'; repostedAt: string; reposter: { id: string; username: string; displayName: string; avatar: string }; item: Post | Reel }
+// The latest reposts (posts and reels) of the people you follow, for the Home feed. Empty when the function is not installed yet.
+export async function fetchFeedReposts(limit = 20): Promise<FeedRepost[]> {
+  try {
+    const rows = (await rpc<any[]>('feed_reposts', { p_limit: limit })) || [];
+    return rows.map((r): FeedRepost => ({ kind: r.kind === 'reel' ? 'reel' : 'post', repostedAt: r.repostedAt, reposter: { ...r.reposter, avatar: resolveMedia(r.reposter?.avatar) }, item: r.kind === 'reel' ? mapReel(r.item) : mapPost(r.item) }));
+  } catch { return []; }
 }
 export type RepostEntry = { kind: 'post'; at: string; post: Post } | { kind: 'reel'; at: string; reel: Reel } | { kind: 'story'; at: string; story: Story };
 export async function fetchUserReposts(userId: string): Promise<RepostEntry[]> {

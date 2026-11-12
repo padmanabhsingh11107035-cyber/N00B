@@ -66,7 +66,8 @@ const REVIEWED = new Set([
   'Draw/NoobDrawPage.tsx|setConfirming|setSpinning(true)', 'Feed/CommentMediaComposer.tsx|setPanel|setIsUploading(true)', 'Fun/PollsPage.tsx|setArmed|setBusy(true)',
   'Games/minigames/CyberSnakeGame.tsx|setResumable|setIsPlaying(true)', 'Games/minigames/RockPaperScissorsGame.tsx|setRoundResult|setAwaitingPlayer2(true)',
   'LiveStream/LiveLoungeRoomView.tsx|setNeedRegister|setBusy(true)', 'Modals/AdminTeamPanel.tsx|setError|setUploading(true)', 'NoobRooms/GuessTheSongView.tsx|setPlaying|setOptionsRevealed(true)',
-  'Profile/LiveProfilePictureModal.tsx|setPickedFile|setIsUploading(true)', 'Profile/ShareToChatModal.tsx|setSending|setDone(true)', 'Reels/ReelsView.tsx|setIsVideoBuffering|setVideoFailed(true)',
+  'Profile/LiveProfilePictureModal.tsx|setPickedFile|setIsUploading(true)', 'Profile/ProfileCover.tsx|setAdjustFile|setBusy(true)', // cover: "Done" in the move-and-scale editor closes the editor itself, then the upload flag (a busy state of the same box) is set; no page beneath closes
+'Profile/ShareToChatModal.tsx|setSending|setDone(true)', 'Reels/ReelsView.tsx|setIsVideoBuffering|setVideoFailed(true)',
   'Team/TeamJoinPage.tsx|setError|setUploading(true)', 'Videos/VideoPlayer.tsx|setPlaying|setShowControls(true)', 'Videos/VideoPlayer.tsx|setFailed|setBuffering(true)',
   'src/context/MusicPlayerContext.tsx|setPlaybackError|setIsPlaying(true)', 'Games/GamePlayModal.tsx|setGameResult|setRematchRequested(true)',
   'Family/FamilyMap.tsx|setProblem|setShare(true)', 'Support/GuestSupport.tsx|setConfirmEnd|setBusy(true)', // Family Map: the message about the location is cleared and sharing is on again; Guest support: the end-chat question is answered and the call is sent

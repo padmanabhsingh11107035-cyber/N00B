@@ -73,7 +73,7 @@ check(/installOverlayScrollLock\(\);/.test(read('src/main.tsx')), 'it is started
 
 section('4. Found in the same sweep');
 const html = read('index.html');
-check(!/<script>/.test(html) && /<script src="\/coaching-init\.js"><\/script>/.test(html) && fs.existsSync('public/coaching-init.js'), 'no script is written inside index.html (the security policy blocked it, so the coaching address never got its own look)');
+check(!/<script>/.test(html) && /<script src="\/editor-init\.js"><\/script>/.test(html) && fs.existsSync('public/editor-init.js'), 'no script is written inside index.html (the security policy blocks it; the editor address gets its own look from a file instead; the coaching/Study address went with NOOB Study)');
 check(/\/assets\/\*\s+Cache-Control: public, max-age=31536000, immutable/.test(read('public/_headers')) && /\/index\.html\s+Cache-Control: no-cache/.test(read('public/_headers')), 'files with a fingerprint in their name are kept for a year (no asking the server on every visit); the page, the version file and the service worker are never kept');
 check(fs.statSync('public/noob-logo-circle.png').size < 40 * 1024, 'the logo that opens every page is small (it was 242 KB)');
 const mig = read('supabase/migrations/20261017000003_lock_visitor_functions.sql');

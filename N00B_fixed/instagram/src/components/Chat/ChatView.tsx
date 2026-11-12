@@ -1,7 +1,7 @@
 import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
-import { setChatMuted } from '../../services/chatMuteApi';
+import { setChatMutedFor, fetchChatMuteUntil, muteExpired, muteUntilLabel } from '../../services/chatMuteApi';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
 import { ChatThemeModal } from './ChatThemeModal';
@@ -232,7 +232,7 @@ type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
 const MENTION_RE = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_.]{1,30})/g;
 function renderMessageWithLinks(text: string, members: User[] = [], onOpen?: (u: User) => void): React.ReactNode[] {
   const out: React.ReactNode[] = [];
-  linkify(text).forEach((part, i) => {
+  linkify(text, { mentions: false }).forEach((part, i) => {
     if (typeof part !== 'string' || !members.length) { out.push(part); return; }
     let last = 0;
     let m: RegExpExecArray | null;
@@ -719,6 +719,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
     setConversations(realChats);
     safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+    // timed mutes: remember the end times, and show a mute whose time has passed as not muted (the server switches it off too)
+    void fetchChatMuteUntil().then((m) => {
+      setMuteUntil(m);
+      if (realChats.some((c: any) => c.isMuted && muteExpired(m[c.id]))) {
+        setConversations((list) => list.map((c) => (c.isMuted && muteExpired(m[c.id]) ? { ...c, isMuted: false } : c)));
+      }
+    });
     if (realChats.length > 0 && !activeChatIdRef.current) {
       setActiveChatId(realChats[0].id);
     }
@@ -945,18 +952,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const [muteToast, setMuteToast] = useState<string | null>(null);
-  const handleToggleMute = async (chatId: string) => {
+  const [muteUntil, setMuteUntil] = useState<Record<string, string>>({});
+  const [muteSheetFor, setMuteSheetFor] = useState<string | null>(null);
+  // hours: 8, 168 (a week), null = always, -1 = unmute
+  const handleSetMute = async (chatId: string, hours: number | null) => {
     const wasMuted = !!conversations.find((c) => c.id === chatId)?.isMuted;
+    const wasUntil = muteUntil[chatId];
     const setMuted = (v: boolean) => setConversations((list) => list.map((c) => (c.id === chatId ? { ...c, isMuted: v } : c)));
-    setMuted(!wasMuted);
-    const r = await setChatMuted(chatId, !wasMuted);
-    if (r.success) setMuted(!!r.isMuted);
+    const setUntil = (u: string | null | undefined) => setMuteUntil((m) => { const n = { ...m }; if (u) n[chatId] = u; else delete n[chatId]; return n; });
+    setMuted(hours !== -1);
+    if (hours === null || hours === -1) setUntil(null);
+    else setUntil(new Date(Date.now() + hours * 3600_000).toISOString());
+    const r = await setChatMutedFor(chatId, hours);
+    if (r.success) { setMuted(!!r.isMuted); setUntil(r.until); }
     else {
       setMuted(wasMuted);
+      setUntil(wasUntil);
       setMuteToast(r.error || 'Could not change the mute setting.');
       window.setTimeout(() => setMuteToast(null), 3500);
     }
   };
+  // a mute whose end time passes while the chat is open switches off on screen (the server does it too)
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const now = Date.now();
+      setConversations((list) => (list.some((c) => c.isMuted && muteExpired(muteUntil[c.id], now)) ? list.map((c) => (c.isMuted && muteExpired(muteUntil[c.id], now) ? { ...c, isMuted: false } : c)) : list));
+    }, 30000);
+    return () => window.clearInterval(t);
+  }, [muteUntil]);
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
   const activeTheme = (activeChat && chatThemes[activeChat.id]) || globalChatTheme;
@@ -2318,6 +2341,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <VerifiedBadge size="xs" />
                       )}
                     {activeChat?.isMuted && <BellOff className="w-[14px] h-[14px] shrink-0 text-zinc-400" data-testid="chat-header-muted-icon" aria-label="Notifications muted" />}
+                    {muteSheetFor && typeof document !== 'undefined' && createPortal(
+                      <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/50" data-testid="chat-mute-sheet" onClick={() => setMuteSheetFor(null)}>
+                        <div role="dialog" aria-label="Mute notifications" className="w-full max-w-md rounded-t-2xl bg-zinc-950 border border-white/10 p-3 pb-6" onClick={(e) => e.stopPropagation()}>
+                          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-zinc-700" />
+                          <p className="px-2 pb-2 text-sm font-bold text-white">Mute notifications</p>
+                          {([['8 hours', 8], ['1 week', 168], ['Always', null]] as [string, number | null][]).map(([label, hours]) => (
+                            <button key={label} type="button" data-testid={`chat-mute-${hours === null ? 'always' : hours}`} onClick={() => { const id = muteSheetFor; setMuteSheetFor(null); void handleSetMute(id, hours); }}
+                              className="w-full px-3 py-3 rounded-xl hover:bg-zinc-900 text-left text-sm font-semibold text-zinc-100 cursor-pointer">{label}</button>
+                          ))}
+                          {conversations.find((c) => c.id === muteSheetFor)?.isMuted && (
+                            <button type="button" data-testid="chat-mute-off" onClick={() => { const id = muteSheetFor; setMuteSheetFor(null); void handleSetMute(id, -1); }}
+                              className="w-full px-3 py-3 rounded-xl hover:bg-zinc-900 text-left text-sm font-semibold text-emerald-400 cursor-pointer">Unmute</button>
+                          )}
+                          <button type="button" onClick={() => setMuteSheetFor(null)} className="w-full mt-1 px-3 py-3 rounded-xl text-left text-sm font-semibold text-zinc-400 cursor-pointer">Cancel</button>
+                        </div>
+                      </div>, document.body)}
                     {muteToast && (
                       <div role="status" data-testid="chat-mute-toast" className="fixed left-1/2 -translate-x-1/2 top-16 z-[80] max-w-[90vw] px-3 py-2 rounded-xl bg-zinc-900 text-white text-xs font-semibold border border-white/10 shadow-xl">{muteToast}</div>
                     )}
@@ -2436,12 +2475,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       aria-label={activeChat?.isMuted ? 'Unmute notifications' : 'Mute notifications'}
                       onClick={() => {
                         setShowChatActionsMenu(false);
-                        if (activeChat) handleToggleMute(activeChat.id);
+                        if (activeChat) setMuteSheetFor(activeChat.id);
                       }}
                       className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
                     >
                       {activeChat?.isMuted ? <Bell className="w-4 h-4 text-zinc-400" /> : <BellOff className="w-4 h-4 text-zinc-400" />}
-                      {activeChat?.isMuted ? 'Unmute' : 'Mute notifications'}
+                      {activeChat?.isMuted ? (activeChat && muteUntil[activeChat.id] ? muteUntilLabel(muteUntil[activeChat.id]) : 'Muted') : 'Mute notifications'}
                     </button>
 
                     {/* Option: Theme & Nickname */}

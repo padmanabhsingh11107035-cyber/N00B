@@ -36,6 +36,7 @@ import {
   fetchReels,
   fetchReelById,
   fetchUsers,
+  fetchUserByUsername,
   pokeMediaCleanup,
   toggleFollowUser,
   endLiveStream,
@@ -139,7 +140,7 @@ import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery,
 import { afterHistoryIdle } from './utils/historyGate';
 import { showTabAddress, tabFromHistoryEntry } from './utils/addressBar';
 import { useAnyFullPage } from './utils/fullPage';
-import { setInAppLinkHandler, setHashtagHandler } from './utils/inAppLinks';
+import { setInAppLinkHandler, setHashtagHandler, setMentionHandler } from './utils/inAppLinks';
 import { normalizeTag, isValidTag } from './utils/hashtags';
 import { onCaptionEdited } from './utils/captionEvents';
 import { isOwnHost } from './utils/siteUrl';
@@ -299,6 +300,8 @@ export default function App() {
   }, [activeTab]);
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // The icon on the phone's home screen follows the NOOB Pro plan: the Pro icon while a plan that chose it runs, the normal one when it ends (utils/appIcon.ts; only the Android app can change it)
+  useEffect(() => { if (currentUser) void applyAppIcon(currentUser.proTier); }, [currentUser?.proTier]);
   // Refresh / reopened app while on the Games page: go straight back to it (with the game that was open, see utils/pageResume.ts).
   // Decided once, as soon as the account is known and before the home screen is ever drawn.
   const restoredTabRef = useRef(false);
@@ -1110,6 +1113,13 @@ export default function App() {
     pageLayers.push({ id, kind: 'hashtag', tag });
   };
   useEffect(() => { setHashtagHandler(openHashtagPage); return () => setHashtagHandler(null); });
+  // A tapped @username (caption, comment, bio) opens that profile like tapping the name in a comment; an unknown name says so.
+  const openMentionProfile = async (name: string) => {
+    const user = await fetchUserByUsername(name);
+    if (user) handleNavigateToUserProfile(user);
+    else window.dispatchEvent(new CustomEvent('noob-toast', { detail: 'No such user' }));
+  };
+  useEffect(() => { setMentionHandler(openMentionProfile); return () => setMentionHandler(null); });
   // The owner changed a caption: the copies in the app's lists show the new text and tags straight away.
   useEffect(() => onCaptionEdited((d) => {
     if (d.kind === 'post') setPosts((prev) => prev.map((p) => (p.id === d.id ? { ...p, caption: d.caption, hashtags: d.hashtags } : p)));
@@ -1873,7 +1883,7 @@ export default function App() {
         <div className={`nmenu nmenu-panel ${sideExtended ? 'is-open' : ''}`} data-testid="desktop-side-menu-panel">
           <div className="nmenu-head">
             <LogoLightbox className="nmenu-logo cursor-pointer" />
-            {sideExtended && <span className="nmenu-wordmark text-lg flex-1 min-w-0 truncate">NOOB</span>}
+            {sideExtended && <span className="nmenu-wordmark text-lg block flex-1 min-w-0 truncate">NOOB</span>}
             <button
               type="button"
               className="nmenu-iconbtn"

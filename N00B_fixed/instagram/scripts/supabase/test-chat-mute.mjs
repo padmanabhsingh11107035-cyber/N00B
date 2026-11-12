@@ -14,7 +14,7 @@ check(/grant execute on function public\.set_chat_muted\(uuid, boolean\) to auth
 check(!/alter table|drop |delete from/i.test(sql), 'SQL: additive only');
 check(/rpc\('set_chat_muted', \{ p_chat: chatId, p_muted: muted \}\)/.test(api) && /rpc\('my_muted_chats'\)/.test(api), 'client calls both rpc names');
 check(/data-testid="chat-mute-toggle"/.test(view) && /Mute notifications/.test(view) && /BellOff/.test(view), 'ChatView: menu item with testid and bell-off icon');
-check(/handleToggleMute/.test(view) && /setMuted\(wasMuted\)/.test(view) && /chat-mute-toast/.test(view), 'ChatView: optimistic update, rollback, inline toast');
+check(/handleSetMute/.test(view) && /setMuted\(wasMuted\)/.test(view) && /chat-mute-toast/.test(view), 'ChatView: optimistic update, rollback, inline toast');
 check(/chat-row-muted-icon/.test(view) && /chat-header-muted-icon/.test(view), 'ChatView: muted icon in list and header');
 check(/if \(!chatIsMuted\) \{ if \(cs\['chat\.sounds'\]\) playChatTone\('in'\)/.test(view), 'ChatView: no in-app sound for a muted chat');
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -1,4 +1,4 @@
-/* Anonymous Messages in the Blinkit language: yellow header band, white / #121212 page, green primary action, 12 px cards with a hairline border.
+/* Anonymous Messages in the bright yellow-and-green look: yellow header band, white / #121212 page, green primary action, 12 px cards with a hairline border.
    Scoped to .anon-root with its own variables so the app-wide theme overrides cannot flatten it. */
 
 .anon-root {
@@ -67,6 +67,8 @@
   color-scheme: light;
 }
 html.phone-edge .anon-root { padding-top: 0 !important; }
+/* the app paints every full-screen layer flat black with !important inside @layer base; the page keeps its own surface colour (same layer, one more class) */
+@layer base { .anon-root.fixed.edge-own { background-color: var(--a-bg) !important; } }
 .anon-root *, .anon-root *::before, .anon-root *::after { box-sizing: border-box; }
 .anon-root h1, .anon-root h2, .anon-root p, .anon-root ul { margin: 0; padding: 0; }
 .anon-root ul { list-style: none; }
@@ -77,10 +79,10 @@ html.phone-edge .anon-root { padding-top: 0 !important; }
 /* header: the yellow band starts behind the clock and the camera */
 .anon-root .anon-head {
   position: sticky; top: 0; z-index: 20;
-  padding: calc(var(--sat, 0px) + 12px) 16px 28px;
+  padding: calc(var(--sat, 0px) + 8px) 16px 24px;
   background: var(--a-yellow); color: var(--a-on-yellow);
 }
-.anon-root .anon-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 17px; background: var(--a-bg); border-radius: 16px 16px 0 0; }
+.anon-root .anon-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 13px; background: var(--a-bg); border-radius: 16px 16px 0 0; }
 .anon-root .anon-head-in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
 .anon-root .anon-title { font-size: 20px; line-height: 26px; font-weight: 800; letter-spacing: -.01em; color: var(--a-on-yellow); }
 .anon-root .anon-sub { font-size: 13px; line-height: 18px; font-weight: 500; color: #3d3d3d; }
@@ -153,14 +155,15 @@ html.phone-edge .anon-root { padding-top: 0 !important; }
 .anon-root .anon-reported { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--a-green-text); }
 
 /* admin controls on a card */
-.anon-root .anon-admin { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--a-line); display: flex; flex-direction: column; gap: 12px; }
+.anon-root .anon-admin { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--a-line); display: flex; flex-direction: column; gap: 12px; }
+.anon-root .anon-admin .anon-tags { min-height: 26px; }
 .anon-root .anon-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .anon-root .anon-tag { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; font-weight: 700; background: var(--a-chip); color: var(--a-chip-ink); }
 .anon-root .anon-tag.bad { background: var(--a-danger-soft); color: var(--a-danger-ink); }
 .anon-root .anon-tag.warn { background: var(--a-chip); color: var(--a-chip-ink); }
-.anon-root .anon-reason-tag { font-size: 12px; line-height: 16px; color: var(--a-ink-soft); }
-.anon-root .anon-btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.anon-root .anon-btnrow .anon-btn { flex: 1 1 auto; min-height: 44px; }
+.anon-root .anon-reason-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--a-line-2); font-size: 12px; line-height: 16px; font-weight: 600; color: var(--a-ink-soft); }
+.anon-root .anon-btnrow { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.anon-root .anon-btnrow .anon-btn { min-height: 44px; padding: 0 8px; gap: 6px; font-size: 14px; white-space: nowrap; }
 .anon-root .anon-btnrow .anon-btn.solid { background: var(--a-ink-btn); border-color: var(--a-ink-btn); color: var(--a-on-ink-btn); }
 
 /* buttons: outline green by default */
@@ -177,7 +180,7 @@ html.phone-edge .anon-root { padding-top: 0 !important; }
 .anon-root .anon-btn.danger { background: var(--a-btn-danger); border-color: var(--a-btn-danger); color: #ffffff; }
 
 /* empty and error */
-.anon-root .anon-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 16px; padding: 24px 16px; border: 1px solid var(--a-line); border-radius: 12px; background: var(--a-raise); }
+.anon-root .anon-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 16px; padding: 24px 16px; border: 1px solid var(--a-line); border-radius: 12px; background: var(--a-soft); }
 .anon-root .anon-card .big { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; background: var(--a-chip); color: var(--a-chip-ink); }
 .anon-root .anon-card .t { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--a-ink); }
 

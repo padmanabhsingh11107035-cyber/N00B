@@ -57,7 +57,7 @@ check(/activeTab !== 'chat' && activeTab !== 'reels' && featOn\('support'\) && \
 section('4. The bottom bar on phones (drawn for real)');
 const navOut = path.resolve('node_modules/.cache-features-nav.mjs');
 // one bundle for both, so the bar and the test share the very same context
-buildSync({ stdin: { contents: "export * from './src/components/Navigation/FloatingNavBar.tsx'; export * from './src/utils/featureFlags.tsx';", resolveDir: process.cwd(), loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: navOut, logLevel: 'error' });
+buildSync({ stdin: { contents: "export * from './src/components/Navigation/FloatingNavBar.tsx'; export * from './src/utils/featureFlags.tsx';", resolveDir: process.cwd(), loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', packages: 'external', jsx: 'automatic', outfile: navOut, logLevel: 'error', define: { 'import.meta.env': '{"VITE_SUPABASE_URL":"http://localhost","VITE_SUPABASE_ANON_KEY":"x","MODE":"test","DEV":false,"PROD":true,"BASE_URL":"/"}' } });
 const { FloatingNavBar, FeatureFlagsContext } = await import(pathToFileURL(navOut).href);
 const React = (await import('react')).default;
 const { renderToStaticMarkup } = await import('react-dom/server');
@@ -71,11 +71,12 @@ check(bare.includes('id="nav-item-feed"') && bare.includes('id="nav-item-profile
 fs.rmSync(navOut, { force: true });
 
 section('5. The menu on Home');
-for (const k of ['draw', 'studio', 'lenses', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'suggestions', 'drinks', 'creations']) {
-  check(new RegExp(`\\{featOn\\('${k}'\\) && \\(`).test(feed), `${k}: its entry is drawn only while the page is on`);
+// Home menu redesigned 2026-11-11: entries are list items "featOn('key') && { id: ..." (Lenses moved to the profile, the suggestion box to Settings: covered in section 6)
+for (const k of ['draw', 'studio', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'drinks', 'creations']) {
+  check(new RegExp(`featOn\\('${k}'\\) && \\{ id: `).test(feed),`${k}: its entry is drawn only while the page is on`);
 }
-check(/\{onOpenTab && featOn\('videos'\) && \(/.test(feed), 'the Feed (long videos) entry too');
-check(/FUN_FEATURES\.some\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)\)/.test(feed) && /FUN_FEATURES\.filter\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)\)\.map/.test(feed), 'the fun pages are listed one by one, and their heading goes when all four are off');
+check(/onOpenTab && featOn\('videos'\) && \{ id: 'videos'/.test(feed), 'the Feed (long videos) entry too');
+check(/FUN_FEATURES\.filter\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)\)\.map/.test(feed), 'the fun pages are listed one by one, each only while its page is on');
 check(/const featuresOff = useFeaturesOff\(\);/.test(feed), 'the menu reads the list from the app');
 
 section('6. Other doors');

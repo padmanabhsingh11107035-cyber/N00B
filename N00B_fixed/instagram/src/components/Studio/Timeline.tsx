@@ -243,7 +243,7 @@ export const Timeline: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
 
   const head = (tag: string, name: string, switches: React.ReactNode, color = 'sx-tag-v') => (
     <>
-      <div className="flex items-center gap-1 min-w-0"><span className={`sx-tag shrink-0 ${color}`}>{tag}</span><span className="sx-tl-name hidden sm:block truncate" title={name}>{name}</span></div>
+      <div className="flex items-center gap-1 min-w-0"><span className={`sx-tag shrink-0 ${color}`} aria-label={name} title={name}>{tag}</span><span className="sx-tl-name hidden sm:block truncate" title={name}>{name}</span></div>
       <div className="flex items-center gap-0.5">{switches}</div>
     </>
   );

@@ -1,4 +1,4 @@
-/* NOOB Studio: the look (Blinkit language). Light: white / light-grey editor, yellow top bar, green Export + primary buttons, yellow active tool. Dark: #121212 surfaces, same yellow bar. The preview stage stays a neutral dark surface in both. Solid fills and hairlines only:
+/* NOOB Studio: the look (bright yellow-and-green look). Light: white / light-grey editor, yellow top bar, green Export + primary buttons, yellow active tool. Dark: #121212 surfaces, same yellow bar. The preview stage stays a neutral dark surface in both. Solid fills and hairlines only:
    no gradients, no glow, and nothing blurred sits over the playing preview. Phone first (sheet + dock), the computer layout is the grid in index.css (.studio-grid).
    Everything is scoped to .sx-root and uses sx-* classes. Markup / classes only: no editing, export or file logic lives here. */
 
@@ -165,6 +165,9 @@
 @media (hover: hover) { .sx-zb:not(.is-on):hover { background: var(--sx-surface3); } }
 @media (pointer: coarse) { .sx-zb { min-width: 40px; height: 40px; } }
 @media (max-width: 639px) { .sx-zb:not(.is-on):nth-child(-n+3) { display: none; } .sx-zb-wide { padding: 0 12px; } }
+.sx-zb-chip { min-width: 52px; font-variant-numeric: tabular-nums; font-weight: 800; }
+@media (min-width: 640px) { .sx-zb-chip { display: none; } }
+@media (pointer: coarse) { .sx-zb-chip { min-width: 52px; height: 44px; } }
 .sx-selbox { border: 1.5px solid var(--sx-yellow); border-radius: 2px; }
 .sx-handle { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--sx-yellow); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
 .sx-handle::after { content: ''; position: absolute; inset: -12px; border-radius: 50%; }
@@ -189,7 +192,7 @@
 /* ---------- tool panel: a bottom sheet on a phone (peek ~27%, tall ~54%), a column on a computer ---------- */
 .sx-panel { background: var(--sx-surface); color: var(--sx-text); position: relative; z-index: 3; border-top: 1px solid var(--sx-line2); border-radius: 16px 16px 0 0; min-height: 0; overflow: hidden; animation: sx-sheet-up 180ms var(--sx-ease); }
 .sx-panel[data-size="peek"] { height: clamp(240px, 32dvh, 340px); }
-.sx-root[data-mode="video"] .sx-panel[data-size="peek"] { height: clamp(208px, 26dvh, 290px); }
+.sx-root[data-mode="video"] .sx-panel[data-size="peek"] { height: clamp(184px, 21dvh, 250px); }
 .sx-panel[data-size="tall"] { height: clamp(300px, 50dvh, 520px); }
 .sx-sheet-bar { touch-action: none; background: var(--sx-surface); border-bottom: 1px solid var(--sx-line); user-select: none; }
 .sx-grab-btn { display: flex; justify-content: center; align-items: center; width: 100%; height: 20px; padding: 0; border: 0; background: transparent; }
@@ -216,11 +219,13 @@
 
 .sx-slider-head { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
 .sx-slider-val { display: flex; align-items: center; gap: 2px; }
-.sx-num { width: 64px; height: 36px; padding: 0 8px; border-radius: 8px; background: var(--sx-surface2); color: var(--sx-text); border: 1px solid var(--sx-line); text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.sx-num { position: relative; width: 64px; height: 36px; padding: 0 8px; border-radius: 8px; background: var(--sx-surface2); color: var(--sx-text); border: 1px solid var(--sx-line); text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
 .sx-num::-webkit-outer-spin-button, .sx-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .sx-num:focus { outline: none; border-color: var(--sx-accent-text); }
 .sx-reset { position: relative; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--sx-mute); display: flex; align-items: center; justify-content: center; padding: 0; }
 .sx-reset::after { content: ''; position: absolute; inset: -6px; }
+.sx-slider-val { position: relative; }
+@media (pointer: coarse) { .sx-num { height: 44px; width: 68px; } .sx-slider-head { min-height: 44px; } .sx-reset { width: 40px; height: 40px; } }
 .sx-reset:disabled { opacity: 0.25; }
 @media (hover: hover) { .sx-reset:hover:not(:disabled) { background: var(--sx-surface3); color: var(--sx-text); } }
 
@@ -234,7 +239,7 @@
 .sx-range:focus-visible { outline-offset: 0; }
 .sx-range-sm { height: 32px; }
 
-.sx-chip { min-height: 40px; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--sx-text); background: var(--sx-surface2); border: 1.5px solid var(--sx-line); display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.sx-chip { min-height: 40px; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--sx-text); background: var(--sx-surface2); border: 1.5px solid var(--sx-line2); display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .sx-chips-scroll { overflow-x: auto; flex-wrap: nowrap; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; touch-action: pan-x; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .sx-chips-scroll::-webkit-scrollbar { display: none; }
 .sx-chips-scroll .sx-chip { flex-shrink: 0; white-space: nowrap; }
@@ -285,11 +290,11 @@
 .sx-filter { border-radius: 12px; overflow: hidden; background: var(--sx-surface2); border: 2px solid var(--sx-line2); text-align: center; color: var(--sx-text); padding: 0; }
 .sx-filter.is-on { border-color: var(--sx-accent-text); }
 .sx-filter-name { font-size: 12px; font-weight: 600; padding: 6px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sx-tpl { text-align: left; padding: 12px; border-radius: 12px; background: var(--sx-surface2); border: 1px solid var(--sx-line); color: var(--sx-text); }
+.sx-tpl { text-align: left; padding: 12px; border-radius: 12px; background: var(--sx-surface2); border: 1px solid var(--sx-line2); color: var(--sx-text); }
 .sx-tpl > div:nth-child(2) { font-size: 14px; font-weight: 700; margin-top: 4px; }
 .sx-tpl > div:nth-child(3) { font-size: 12px; color: var(--sx-mute); margin-top: 2px; }
 .sx-tpl-emoji { font-size: 24px; line-height: 1; }
-.sx-layer { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--sx-surface2); border: 1.5px solid var(--sx-line); font-size: 14px; cursor: pointer; }
+.sx-layer { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 0 4px 0 12px; border-radius: 12px; background: var(--sx-surface2); border: 1.5px solid var(--sx-line2); font-size: 14px; cursor: pointer; }
 .sx-layer.is-on { border-color: var(--sx-accent-text); background: var(--sx-sel-soft); }
 .sx-layer-btn { width: 36px; height: 40px; border: 0; background: transparent; color: var(--sx-mute); display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 8px; flex-shrink: 0; }
 .sx-layer-btn.is-danger { color: var(--sx-danger); }
@@ -325,7 +330,9 @@
 @media (hover: hover) { .sx-tlbtn:hover:not(:disabled) { background: var(--sx-surface2); } }
 .sx-tl-sep { width: 1px; height: 20px; background: var(--sx-line2); margin: 0 4px; }
 .sx-tl-body { touch-action: pan-x pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; max-height: min(30dvh, 230px); }
-.sx-root[data-sheet="peek"] .sx-tl-body { max-height: 130px; }
+.sx-root[data-sheet="peek"] .sx-tl-body { max-height: 124px; }
+.sx-root[data-sheet="peek"] .sx-tl-bar { height: 44px; padding-top: 2px; padding-bottom: 2px; }
+.sx-root[data-sheet="peek"] .sx-play { width: 36px; height: 36px; }
 .sx-root[data-sheet="tall"] .sx-tl-body { max-height: 0; overflow: hidden; }
 .sx-root[data-mode="video"] .sx-panel[data-size="tall"] { height: clamp(280px, 42dvh, 440px); }
 .sx-tl-rulerrow { background: var(--sx-bg2); }
@@ -343,7 +350,7 @@
 .sx-tag-a { background: var(--sx-clip-audio); }
 .sx-tag-c { background: var(--sx-clip-cc); }
 .sx-tgl { position: relative; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--sx-mute); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sx-tgl::after { content: ''; position: absolute; inset: -4px -2px; }
+.sx-tgl::after { content: ''; position: absolute; left: -8px; right: -8px; top: 50%; height: 44px; transform: translateY(-50%); }
 .sx-tgl.is-on { color: var(--sx-on-yellow); background: var(--sx-yellow); }
 @media (hover: hover) { .sx-tgl:not(.is-on):hover { color: var(--sx-text); background: var(--sx-surface3); } }
 .sx-playhead { background: var(--sx-tl-sel); width: 2px; margin-left: -1px; }
@@ -449,3 +456,7 @@
 .sx-section-head > button:disabled { color: var(--sx-mute); opacity: 0.6; }
 
 .sx-root [class*="bg-black/75"] { color: #fff; }
+
+/* panel buttons that still carry the old utility classes: a visible fill and edge in both themes */
+.sx-root .sx-panel button[class*="border-zinc"], .sx-root .sx-panel button.aspect-square { border-color: var(--sx-line2); }
+.sx-root .sx-panel button.aspect-square { background: var(--sx-surface2); border-width: 1px; border-style: solid; }

@@ -15,13 +15,16 @@ const header = post.slice(post.indexOf('<header'), post.indexOf('</header>'));
 section('1. The top of a post');
 check(/\{post\.displayName \|\| post\.username\}/.test(header) && /\{post\.isVerified && <VerifiedBadge size="sm" \/>\}/.test(header), 'the name and the verified tick are at the top, as they were');
 check(!/@\{post\.username\}/.test(header), 'the @username is no longer repeated under the name');
-check(/\{\(post\.location \|\| post\.category\) && \(\s*<div className="flex items-center gap-2 text-\[10px\] text-zinc-400">/.test(header), 'the line under the name is only drawn when there is a place or a category');
+check(/\{\(post\.location \|\| post\.category\) && \(\s*<div className="(?:hv-sub )?flex items-center gap-2 text-\[10px\] text-zinc-400">/.test(header), 'the line under the name is only drawn when there is a place or a category');
 check(/\{post\.location && <span>•<\/span>\}/.test(header) && /\{post\.category\}/.test(header) && /\{post\.location\}/.test(header), 'place and category are still shown, separated by a dot only when both are there');
 check(/@\{primaryTaggedUser\.username\}/.test(header), 'a co-authored post still shows its joint author line');
 check(/onClick=\{\(\) => setShowFullscreenAvatar\(true\)\}/.test(header) && /id=\{`post-options-btn-\$\{post\.id\}`\}/.test(header), 'the picture and the options button are still in the header');
 
 section('2. The username under the picture');
-check(/<span onClick=\{\(\) => goToProfile\(post\.userId\)\} className="font-bold text-white mr-1\.5 cursor-pointer underline decoration-1 underline-offset-\[3px\] decoration-zinc-50\/70">\s*\{post\.username\}\s*<\/span>/.test(post), 'the username is in front of the caption, underlined, and opens the profile');
+// the caption now goes through linkify (tappable #tags and @names), so the username span is checked as "the span right before the caption", whatever its classes are
+const capAt = post.indexOf('{linkify(shownCaption');
+const beforeCap = post.slice(Math.max(0, capAt - 900), capAt);
+check(/<span\s+onClick=\{\(\) => goToProfile\(post\.userId\)\}\s+className="hv-who[^"]*"[^>]*>/.test(post), 'the author name is drawn once, in the post header (hv-who), and opens the profile');
 check((post.match(/@\{post\.username\}/g) || []).length === 0, 'nowhere in the card is the author\'s @username drawn a second time');
 
 section('3. The three-line menu');

@@ -22,7 +22,7 @@ const guard = read('src/utils/mediaGuard.ts'), main = read('src/main.tsx'), supa
 check(/installMediaGuard\(rewriteDirectMedia\)/.test(main) && /export function rewriteDirectMedia/.test(supa) && /cachedFromDirect\(value, DIRECT_PREFIX, mediaOrigin\(\)\)/.test(supa), 'the app installs it first thing, with this site\'s own prefix (and the full address inside the Android app)');
 check(/Element\.prototype\.setAttribute/.test(guard) && /HTMLImageElement/.test(guard) && /HTMLMediaElement/.test(guard) && /HTMLSourceElement/.test(guard) && /'poster'/.test(guard), 'pictures, videos, songs, sources and posters are covered (the attribute and the property)');
 check(/DIRECT_MEDIA = /.test(sw) && /fetch\(self\.location\.origin \+ '\/m\/' \+ direct\[1\]/.test(sw) && /Range: range/.test(sw), 'the service worker is a second net (backgrounds in styles, anything else): the same file from /m/, the piece asked for passed on');
-check(/document\.visibilityState !== 'visible'\) return;[^\n]*\n\s*const users = await fetchTypingUsers/.test(chat), 'a chat tab nobody is looking at no longer asks for "typing" every 1.5 seconds');
+check(/document\.visibilityState === 'visible'\) \{[^\n]*\n\s*const users = await fetchTypingUsers/.test(chat), 'a chat tab nobody is looking at no longer asks for "typing" every 1.5 seconds');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

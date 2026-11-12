@@ -92,7 +92,7 @@ section('6. One view per person on a reel, and the new amounts in the app\'s tex
 const reels = read('src/components/Reels/ReelsView.tsx');
 check(/viewedReelsRef = useRef<Set<string>>/.test(reels) && /!viewedReelsRef\.current\.has\(currentReel\.id\)/.test(reels), 'a reel is reported once each time the page is open');
 const stats = read('src/components/Profile/AccountsStatisticsModal.tsx');
-check(/\+10,000,000 pts/.test(stats) && /\+1,000,000 pts/.test(stats) && !/\+25 pts/.test(stats) && !/\+5 pts/.test(stats), 'the profile\'s points page says +10,000,000 for content and +1,000,000 for a comment');
+check(/\+10M pts \/ post/.test(stats) &&!/\+25 pts/.test(stats) && !/\+5 pts/.test(stats), 'the profile\'s points page says +10M for a post or reel (the wallet redesign dropped the comment line)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

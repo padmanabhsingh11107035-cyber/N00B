@@ -13,7 +13,7 @@ const tabs = (src.match(/data-testid="explore-tabs">\s*<div className="([^"]*)"/
 check(/className="ex-seg w-full" role="tablist"/.test(src), 'the three tabs share the whole width of the screen (the Atlas switch)');
 check(!/data-testid="explore-tabs"/.test(src.slice(src.indexOf('data-testid="explore-tabs"') - 160, src.indexOf('data-testid="explore-tabs"'))) || !/overflow-x-auto/.test(src.slice(src.indexOf('data-testid="explore-tabs"') - 160, src.indexOf('data-testid="explore-tabs"') + 400)), 'the row of tabs is not a sideways scroller any more, so it stays still when touched');
 check(!/shrink-0 w-max min-w-full/.test(src), 'and it is not wider than the screen');
-check(/<span className="truncate">\{label\}<\/span>/.test(src), 'each tab may shrink to its column');
+check(/<span className="(?:block )?truncate">\{label\}<\/span>/.test(src), 'each tab may shrink to its column');
 check(/label: 'Posts'/.test(src) && /label: 'People'/.test(src) && /label: 'Reels'/.test(src), 'the words are short: Posts, People, Reels');
 check(!/Suggested users for u/.test(src), 'and the cut-off wording is gone');
 

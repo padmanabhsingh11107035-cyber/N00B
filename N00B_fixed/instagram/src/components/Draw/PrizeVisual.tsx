@@ -42,7 +42,7 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
   return (
     <div style={{ ...box, background: '#F2B63B', boxShadow: `inset 0 0 0 ${Math.max(2, size * 0.05)}px #d99a1c` }} className="rounded-full flex flex-col items-center justify-center text-amber-950">
       {short ? <span className="font-black leading-none tracking-tight" style={{ fontSize: size * (short.length > 3 ? 0.27 : 0.33) }}>{short}</span> : <Coins style={{ width: size * 0.5, height: size * 0.5 }} />}
-      <span className="font-bold uppercase leading-none opacity-70" style={{ fontSize: Math.max(6, size * 0.12), marginTop: size * 0.04 }}>pts</span>
+      <span className="font-bold uppercase leading-none" style={{ fontSize: Math.max(6, size * 0.12), marginTop: size * 0.04 }}>pts</span>
     </div>
   );
 };

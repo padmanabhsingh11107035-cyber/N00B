@@ -144,7 +144,7 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
         <div className="dr-wallet">
           <div className="dr-wallet-cell">
             <span className="dr-wallet-k">Your balance</span>
-            <span className="dr-wallet-v"><Coins className="w-4 h-4 dr-gold" /> {Number(balance).toLocaleString('en-US')}</span>
+            <span className="dr-wallet-v"><Coins className="w-4 h-4 dr-coin" /> {Number(balance).toLocaleString('en-US')}</span>
           </div>
           <div className="dr-wallet-cell">
             <span className="dr-wallet-k">This spin costs</span>
@@ -152,17 +152,6 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => (free ? void spin(false) : setConfirming(true))}
-          disabled={spinning || (!free && !afford)}
-          className={`dr-cta ${spinning ? 'is-busy' : free ? 'is-free' : afford ? 'is-paid' : 'is-off'}`}
-        >
-          {spinning ? <><Loader2 className="w-5 h-5 animate-spin" /> Spinning</>
-            : free ? <>Spin now · Free</>
-            : afford ? <><Coins className="w-5 h-5" /> Spin again · {priceShort(pack.price)} points</>
-            : <><Coins className="w-4.5 h-4.5" /> Need {priceShort(pointsNeeded(balance, pack.price))} more points</>}
-        </button>
         <p className="dr-fine">
           {free
             ? <>One free spin of every pack each {period}. After that you can spin again for {priceShort(pack.price)} points, as often as you like.</>
@@ -194,6 +183,19 @@ const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | '
           </div>
         </section>
       </div>
+      <div className="dr-cta-bar">
+        <button
+          type="button"
+          onClick={() => (free ? void spin(false) : setConfirming(true))}
+          disabled={spinning || (!free && !afford)}
+          className={`dr-cta ${spinning ? 'is-busy' : free ? 'is-free' : afford ? 'is-paid' : 'is-off'}`}
+        >
+          {spinning ? <><Loader2 className="w-5 h-5 animate-spin" /> Spinning</>
+            : free ? <>Spin now · Free</>
+            : afford ? <><Coins className="w-5 h-5" /> Spin again · {priceShort(pack.price)} points</>
+            : <><Coins className="w-4.5 h-4.5" /> Need {priceShort(pointsNeeded(balance, pack.price))} more points</>}
+        </button>
+        </div>
       {confirming && (
         <div className="dr-sheet-bg edge-own" onClick={() => setConfirming(false)}>
           <div className="dr-sheet" role="dialog" aria-label="Confirm spin" onClick={(e) => e.stopPropagation()}>
@@ -298,7 +300,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
             {/* balance and free-spin status */}
             <section className="dr-panel">
               <p className="dr-wallet-k">Your balance</p>
-              <p className="dr-hero-bal"><Coins className="w-6 h-6 dr-gold" /> {balanceNow.toLocaleString('en-US')}</p>
+              <p className="dr-hero-bal"><Coins className="w-6 h-6 dr-coin" /> {balanceNow.toLocaleString('en-US')}</p>
               <div className="dr-status">
                 {ready > 0 ? <><span className="dr-dot" /> {ready} of {state.packs.length} free spins ready</>
                   : nextOpening ? <><Timer className="w-4 h-4" /> Next free spin in <Countdown to={nextOpening} onDone={() => void refresh()} /></>

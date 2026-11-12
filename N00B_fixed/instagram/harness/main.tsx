@@ -111,6 +111,10 @@ async function boot() {
   await import('../src/index.css');
   await import('../src/polish.css');
   await import('../src/utils/devicePrefs.ts');
+  if (phone) {   // a touch phone matches (pointer: coarse) / (hover: none); a desktop mouse does not. Make those media rules apply so the phone-only rules (e.g. the fixed .msg-safe-strip) are really active.
+    const fake = () => { for (const sh of Array.from(document.styleSheets)) { let rules: CSSRuleList; try { rules = sh.cssRules; } catch { continue; } const walk = (list: CSSRuleList) => { for (const r of Array.from(list)) { if (r instanceof CSSMediaRule) { if (/pointer:\s*coarse|hover:\s*none/.test(r.media.mediaText) && !/hover:\s*hover|pointer:\s*fine/.test(r.media.mediaText)) r.media.mediaText = 'all'; walk(r.cssRules); } else if ((r as any).cssRules) walk((r as any).cssRules); } }; walk(rules); } };
+    fake(); window.setTimeout(fake, 500); window.setTimeout(fake, 1500);
+  }
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
   const { initTheme } = await import('../src/utils/theme.ts');
@@ -136,7 +140,7 @@ async function boot() {
   const currentUser = signedOut ? null : user;
 
   const Menu = () => {
-    const pages = [['draw', 'NOOB Draw'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['mood', 'Mood Status (slider)'], ['moodclassic', 'Mood Status (picker, notes, lists)'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['forms', 'NOOB Forms (my forms)'], ['form', 'NOOB Forms (public form)']];
+    const pages = [['draw', 'NOOB Draw'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['mood', 'Mood Status (slider)'], ['moodclassic', 'Mood Status (picker, notes, lists)'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['chat', 'Messages (chat list + chats)'], ['forms', 'NOOB Forms (my forms)'], ['form', 'NOOB Forms (public form)']];
     return h('div', { style: { padding: 20, fontFamily: 'sans-serif', color: theme === 'light' ? '#111' : '#eee' } },
       h('h2', null, 'NOOB visual harness'),
       h('p', null, 'Add &theme=light|dark &phone=1 &state=full|empty|loading|error &admin=1 &voted=1 &user=0 to any link.'),
@@ -163,6 +167,12 @@ async function boot() {
     const mod = await import('../src/components/Anonymous/AnonymousMessagesPage.tsx');
     const AnonymousMessagesPage = mod.AnonymousMessagesPage || mod.default;
     Page = () => h(AnonymousMessagesPage, { currentUser, onClose: () => console.info('[harness] onClose'), onLogin: () => console.info('[harness] onLogin') });
+  } else if (page === 'chat') {
+    // the Messages screen inside the same wrapper App.tsx uses (main.overflow-hidden, body padding-top from html.phone-edge)
+    const { ChatView } = await import('../src/components/Chat/ChatView.tsx');
+    root.setAttribute('data-page', 'chat');
+    Page = () => h('main', { className: 'relative w-full max-w-[480px] bg-page shadow-2xl flex flex-col min-h-screen md:mx-auto overflow-hidden shrink-0' },
+      h(ChatView, { currentUser, onMobileViewChange: noop, onUserUpdated: noop, onNavigateToProfile: (u) => console.info('[harness] profile', u?.username) }));
   } else if (page === 'studio') {
     const mod = await import('../src/components/Studio/StudioApp.tsx');
     const StudioApp = mod.StudioApp || mod.default;

@@ -179,6 +179,41 @@ const MOOD_PEOPLE = () => {
 };
 const moodPage = (ctx, filter) => (ctx.state === 'empty' ? { moods: [], hasMore: false } : { moods: MOOD_PEOPLE().filter((m) => !filter || m.mood === filter), hasMore: false });
 
+
+// ---------------------------------------------------------------- Messages (page=chat)
+const CHAT_PEOPLE = () => [
+  ...PEOPLE.map((p) => ({ id: p.userId, username: p.username, displayName: p.displayName, avatar: p.avatar, isVerified: p.isVerified })),
+  { id: 'p5', username: 'meera_d', displayName: 'Meera Desai', avatar: '/avatars/azura.webp', isVerified: false },
+  { id: 'p6', username: 'kabir.m', displayName: 'Kabir Malhotra', avatar: '/noob-logo-circle.png', isVerified: true },
+  { id: 'p7', username: 'sana.sheikh', displayName: 'Sana Sheikh', avatar: '/avatars/amara.webp', isVerified: false }
+];
+const meUser = () => ({ id: FAKE_USER_ID, username: 'aarav.sharma', displayName: 'Aarav Sharma', avatar: '/noob-logo-circle.png', isVerified: true });
+const CHAT_TEXTS = [
+  ['p1', 'Hey everyone, Diwali plan is on for Saturday!'], ['p2', 'Count me in. I will bring the sweets'], ['me', 'Great. @priya.nair can you book the terrace?'],
+  ['p1', 'Done. Here is the map https://maps.example.com/terrace'], ['p3', 'Can we start at 6? Office ends late'], ['me', '6 works for me'],
+  ['p4', 'I will get the speakers and lights'], ['p2', 'Rangoli stuff is with Meera, right?'], ['p5', 'Yes, bought it today'], ['me', 'Perfect, see you all there'],
+  ['p1', 'Reminder: no crackers on the terrace please'], ['p3', 'Haha noted, sparklers only']
+];
+const mkMsg = (chatId, i, who, text, base) => {
+  const sender = who === 'me' ? meUser() : CHAT_PEOPLE().find((x) => x.id === who);
+  return { id: chatId + '_m' + i, chatId, senderId: sender.id, senderUsername: sender.username, senderDisplayName: sender.displayName, senderAvatar: sender.avatar, text, createdAt: new Date(base + i * 60e3).toISOString() };
+};
+const CHAT_DEFS = [
+  { id: 'c_lounge', group: true, name: 'NOOB Global Lounge', ids: ['p1', 'p2', 'p3', 'p4'], unread: 12, pinned: true, last: 'Priya: Welcome to the Lounge!', ago: 4 * 60e3, glob: true },
+  { id: 'c_diwali', group: true, name: 'Diwali Plan', ids: ['p1', 'p2', 'p3', 'p4', 'p5'], unread: 3, last: 'Sana: sparklers only', ago: 20 * 60e3 },
+  { id: 'c_priya', ids: ['p1'], unread: 2, last: 'Did you see the match?', ago: 50 * 60e3 },
+  { id: 'c_rohan', ids: ['p2'], unread: 0, last: 'You: haha ok', ago: 3 * H },
+  { id: 'c_ananya', ids: ['p3'], unread: 0, last: 'Send me the notes', ago: 5 * H },
+  { id: 'c_vikram', ids: ['p4'], unread: 1, last: 'Bro the new reel is fire', ago: 9 * H },
+  { id: 'c_cricket', group: true, name: 'Cricket Gang', ids: ['p6', 'p2', 'p4'], unread: 0, last: 'Kabir: Sunday 7 am, nets', ago: 1 * D },
+  { id: 'c_meera', ids: ['p5'], unread: 0, last: 'Thanks a lot!', ago: 2 * D }
+];
+const chatList = () => CHAT_DEFS.map((d) => ({
+  id: d.id, isGroup: !!d.group, groupName: d.name, name: d.name, avatar: d.group ? '/noob-logo-circle.png' : undefined, isGlobalDefault: !!d.glob, isEncryptable: false,
+  participants: [meUser(), ...d.ids.map((i) => ({ ...CHAT_PEOPLE().find((x) => x.id === i), isFollowing: true }))],
+  lastMessage: { id: d.id + '_last', chatId: d.id, senderId: d.ids[0], senderUsername: 'x', text: d.last, createdAt: ago(d.ago) },
+  unreadCount: d.unread, isPinned: !!d.pinned, isMuted: false, themeColor: '#0E4B37', vanishMode: false, readReceiptsEnabled: true, createdAt: ago(30 * D), creatorId: FAKE_USER_ID, adminIds: [FAKE_USER_ID]
+}));
 // ---------------------------------------------------------------- the table of rpc answers
 export const rpcMocks = {
   mood_my: (a, ctx) => myMood(ctx) ?? null,
@@ -226,6 +261,10 @@ export const rpcMocks = {
   form_role: () => 'owner', form_publish: () => null, form_collab_list: () => [],
   form_public_get: (a, ctx) => (ctx.state === 'empty' ? { state: 'notfound' } : { state: 'open', id: 'f1', title: 'Diwali get-together RSVP', description: 'Tell us who is coming and what you will bring.', version: 1, questions: QS, theme: DRAFT.theme, settings: DRAFT.settings }),
   form_public_submit: () => ({ ok: true, result: null }),
+
+  my_chats: () => chatList(),
+  chat_messages: (a) => { const base = Date.now() - 3 * H; return { messages: CHAT_TEXTS.map(([w, t], i) => mkMsg(a.p_chat, i, w, t, base)), hiddenIds: [] }; },
+  search_users: () => CHAT_PEOPLE(), my_instant_inbox: () => [], my_chat_mutes: () => ({}), expire_chat_mutes: () => null,
 
   // generic things the shell asks on start
   get_app_settings: () => ({}), is_account_suspended: () => false, list_music_tracks: () => []

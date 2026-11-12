@@ -1784,6 +1784,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     forceStripColour(mobileView === 'list' && stripOn ? (stripGreen ? '#0E4B37' : (light ? '#ffffff' : '#0a0c0e')) : (mobileView === 'chat' ? (light ? '#ffffff' : '#0E4B37') : null));   // an open chat: the strip is the chat bar's own colour, one block
   }, [mobileView, stripOn, stripGreen]);
   useEffect(() => () => forceStripColour(null), []);
+  // Where the green header has scrolled behind the clock: until then the strip behind the clock is green (one block with the header), after that it is the page colour (the sheet is what passes under the clock).
+  const stripLimit = () => {
+    const sat = document.documentElement.classList.contains('phone-edge') ? (parseFloat(getComputedStyle(document.body).paddingTop) || 0) : 0;
+    const headH = headRef.current?.offsetHeight || 0;
+    return headH > 0 ? Math.max(30, headH - sat - 6) : 90;
+  };
   const setStrip = (green: boolean, nudge = false) => {
     setStripGreen(green);
     const root = document.documentElement;
@@ -1795,21 +1801,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
-    // phones with the page under the clock: the list must start at the very top edge of the screen; if it was placed lower, it is pulled up by exactly that much
-    const fixTop = () => {
-      const c = document.getElementById('chat-view-container');
-      if (!c || !document.documentElement.classList.contains('phone-edge') || c.getAttribute('data-view') !== 'list') return;
-      c.style.marginTop = '';
-      const top = Math.round(c.getBoundingClientRect().top);
-      if (top > 1) c.style.marginTop = `calc(var(--sat) * -1 - ${top}px)`;
-    };
-    [0, 120, 600].forEach((ms) => window.setTimeout(fixTop, ms));
     try { window.scrollTo(0, 0); } catch { /* ignore */ }   // a phone can leave the page scrolled after the keyboard of a chat
-    setStrip((listRef.current?.scrollTop ?? 0) < 90, true);
+    setStrip((listRef.current?.scrollTop ?? 0) < stripLimit(), true);
     // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)
     const again = [80, 400, 1000, 2200].map((ms) => window.setTimeout(() => {
       if (!root.classList.contains('msg-open')) return;
-      setStrip(Math.max(0, listRef.current?.scrollTop ?? 0) < 90);
+      setStrip(Math.max(0, listRef.current?.scrollTop ?? 0) < stripLimit());
     }, ms));
     return () => { again.forEach((t) => window.clearTimeout(t)); root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); setStripColour(null); };
   }, [mobileView]);
@@ -1825,11 +1822,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
         raf = 0;
         const y = Math.max(0, box.scrollTop);
         const h = headRef.current;
-        if (h && !calm) {
+        if (h && !calm && !document.documentElement.classList.contains('phone-edge')) {   // on a phone the header just scrolls away with the list: nothing half-faded is left under the clock
           h.style.transform = `translate3d(0, ${(y * 0.3).toFixed(1)}px, 0)`;
           h.style.opacity = String(Math.max(0, 1 - y / 220));
         }
-        if (green !== y < 90) { green = y < 90; setStrip(green); }
+        const lim = stripLimit();
+        if (green !== y < lim) { green = y < lim; setStrip(green); }
         if (y > 6) setShowLeftMenu(false);
         sweepRows();
       });
@@ -1875,6 +1873,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     <div
       id="chat-view-container"
       data-view={mobileView}
+      data-noob-keep="1"
       className={`w-full max-w-6xl mx-auto ${mobileView === 'list' ? 'bg-[#0a0c0e]' : 'bg-zinc-950'} border-zinc-800/80 shadow-2xl overflow-hidden flex flex-col ${
         mobileView === 'chat'
           ? 'fixed inset-0 z-50 h-[100dvh] max-w-none rounded-none border-0'

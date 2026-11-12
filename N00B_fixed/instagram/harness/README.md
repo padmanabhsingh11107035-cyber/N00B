@@ -30,6 +30,7 @@ Two ways to open every page (same query string):
 | `anon` | Anonymous Messages (`&admin=1` = the administrator's view with Remove buttons) |
 | `studio` | NOOB Studio with a sample photo (`&media=video` = a generated 3 s clip, `&media=none` = empty) |
 | `forms` | NOOB Forms, my forms. `&target=f1` = the editor of a form |
+| `chat` | Messages: the chat list and open chats (real ChatView in the App.tsx wrapper; `phone=1` for the notch layout) |
 | `form` | A public form as a visitor fills it (`/f/<address>`) |
 
 Options on every link:

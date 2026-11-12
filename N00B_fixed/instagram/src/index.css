@@ -1878,6 +1878,7 @@ html[data-doodle="off"] body::after, html[data-doodle="off"] body::before, html[
 a.noob-link, button.noob-link { color: #4da3ff !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 :root[data-theme="light"] a.noob-link, :root[data-theme="light"] button.noob-link { color: #0a60d0 !important; }
 /* an open chat on a phone: the page starts at the very top of the screen and the chat's own bar reaches up under the clock (the bar is the chat's colour, the clock sits on it) */
+html.phone-edge #chat-view-container { padding-top: 0 !important; }   /* the page-frame rule above (data-noob-page) must never add the clock height to this page: its own bar reaches the top edge */
 html.phone-edge #chat-view-container[data-view="chat"] { top: 0 !important; bottom: 0 !important; height: auto !important; margin-top: 0 !important; }
 /* ONE block at the top of an open chat: the strip behind the clock and the chat bar are the same solid green (white in Light), the bar's row sits right under the clock */
 html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 4px) !important; background: #0E4B37 !important; background-image: none !important; border-bottom-color: transparent !important; box-shadow: none !important; }

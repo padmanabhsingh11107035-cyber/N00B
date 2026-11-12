@@ -97,6 +97,7 @@ export const ROWS: RowDef[] = [
   // ---------------------------------------------------------------- More info and support
   { id: 'update', section: 'More info and support', label: 'Update NOOB', sub: 'Get the newest version', icon: RefreshCw, page: 'update', keywords: 'update upgrade new version latest refresh reload download apk android app install' },
   { id: 'help', section: 'More info and support', label: 'Help', icon: LifeBuoy, page: 'help', keywords: 'support faq questions contact report problem' },
+  { id: 'report-problem', section: 'More info and support', label: 'Report a problem', sub: 'Tell the team what went wrong', icon: LifeBuoy, action: 'openReportProblem', keywords: 'bug error crash broken not working issue report problem' },
   { id: 'assistant', section: 'More info and support', label: 'NOOB support assistant', sub: 'Ask the AI helper', icon: Sparkles, action: 'openSupport', keywords: 'ai support chat bot help' },
   { id: 'privacy-centre', section: 'More info and support', label: 'Privacy Centre', icon: ShieldCheck, page: 'privacy-centre', keywords: 'privacy policy terms encryption data checkup' },
   { id: 'account-status', section: 'More info and support', label: 'Account Status', icon: UserCheck, page: 'account-status', keywords: 'standing violations suspended reports' },

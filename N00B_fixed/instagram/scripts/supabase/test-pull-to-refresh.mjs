@@ -39,7 +39,7 @@ const feed = read('src/components/Feed/FeedView.tsx');
 const explore = read('src/components/Explore/ExploreView.tsx');
 check(/if \(startsInsideOverlay\(e\.target, e\.currentTarget\)\) return;\s*\n\s*if \(window\.scrollY <= 5\)/.test(feed), 'Home: a touch that lands on an overlay never starts a pull');
 check(!/startsInsideOverlay|handleTouchStart|pullDistance|Pull down to/.test(explore), 'Explore has no pull-down refresh any more: only the Home page refreshes');
-check(/z-\[95\] bg-black\/70 backdrop-blur-sm flex items-start overscroll-contain/.test(feed) && /overflow-y-auto overscroll-contain/.test(feed), 'the three-lines menu and its list do not pass their scrolling on to the page behind');
+check(/className=\"nmenu md:hidden fixed inset-0 z-\[95\] flex flex-col overscroll-contain/.test(feed) && /overflow-y-auto overscroll-contain/.test(feed), 'the three-lines menu and its list do not pass their scrolling on to the page behind');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

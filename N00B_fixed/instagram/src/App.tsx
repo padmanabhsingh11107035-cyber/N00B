@@ -164,6 +164,7 @@ import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
 import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
 import { setVisibleInterval } from './utils/visibleInterval';
+import { feedCache, clearFeedCache } from './utils/feedCache';
 
 // Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
 // console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
@@ -1008,17 +1009,35 @@ export default function App() {
   // Once someone is signed in, nudge the server's cleanup (finished Daily NOOB days, files nothing uses any more). The server ignores it if it ran in the last 10 minutes.
   useEffect(() => { if (currentUser?.id) pokeMediaCleanup(); }, [currentUser?.id]);
 
+  // Nobody signed in (log out, ended session, deleted account): the saved Home feed is wiped, so it can never be shown to the next person. (Not while the app is still loading or
+  // showing the retry page: then nothing is known about who is signed in.)
+  useEffect(() => { if (!loading && !initialLoadFailed && !currentUser) clearFeedCache(); }, [loading, initialLoadFailed, currentUser]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setInitialLoadFailed(false);
-      const [user, pList, trayData, rList, notifRes] = await Promise.all([
-        loadSignedInUser(), // a failed request is an error (Retry screen), not "logged out"
-        fetchPosts(),
-        fetchHomeStoryTray(),
-        fetchReels(),
-        fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
-      ]);
+      // Everything starts at once, but Home no longer waits for the slowest request: as soon as the signed-in account is known, the feed and story tray
+      // it saw last time (utils/feedCache.ts, this account's own copy) are shown, and the fresh ones replace them when they arrive.
+      const userP = loadSignedInUser(); // a failed request is an error (Retry screen), not "logged out"
+      const postsP = fetchPosts();
+      const trayP = fetchHomeStoryTray();
+      const reelsP = fetchReels();
+      const notifP = fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }));
+      for (const p of [postsP, trayP, reelsP, notifP]) p.catch(() => undefined);   // (so a failure of the user request below never leaves these unhandled)
+      let shownCached = false;
+      const earlyUser = await userP;
+      if (earlyUser && postsRef.current.length === 0) {
+        const cached = await feedCache().read<Post, Story>(earlyUser.id, { blockedIds: earlyUser.blockedUserIds }).catch(() => null);
+        if (cached && cached.posts.length > 0) {
+          shownCached = true;
+          setCurrentUser(earlyUser);
+          setPosts(cached.posts);
+          setStories(cached.stories);
+          setLoading(false);
+        }
+      }
+      const [user, pList, trayData, rList, notifRes] = await Promise.all([userP, postsP, trayP, reelsP, notifP]);
       // Best-effort only: keeps this device's last-seen time fresh for the device list, but never
       // forces a logout from here. This used to also sign a conflicting session out on every app
       // load/refresh — but every tab in a browser shares the same device id (see utils/deviceId.ts),
@@ -1028,8 +1047,14 @@ export default function App() {
       // one place it's unambiguous which account is actually trying to sign in.
       if (user) void checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
       setCurrentUser(user);
-      setPosts(pList);
-      setStories(trayData.stories);
+      // A failed request returns an empty list: never wipe what is on screen for that. And someone who has scrolled further than a screen keeps the list they are reading
+      // (the fresh one is saved for next time and shown on the next pull-to-refresh), so nothing jumps under their finger.
+      const keepShown = shownCached && (pList.length === 0 || window.scrollY > window.innerHeight);
+      if (!keepShown) {
+        setPosts(pList);
+        setStories(trayData.stories);
+      }
+      if (user && pList.length > 0) void feedCache().write(user.id, pList, trayData.stories);
       setHomeSuggestions(trayData.suggestions);
       setTraySeed(Math.random());
       setReels(rList);

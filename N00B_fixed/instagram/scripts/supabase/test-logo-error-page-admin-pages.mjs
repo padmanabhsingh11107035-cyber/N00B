@@ -39,11 +39,11 @@ check(/font-script absolute -top-5 -left-2 text-2xl[^"]*">oops!/.test(boundary) 
 check(/border border-dashed border-white\/20/.test(boundary) && /repeating-linear-gradient\(135deg/.test(boundary), 'a stitched dashed card and a striped pill button, as on the sign-in page');
 check(/Something went wrong/.test(boundary) && /Your account and data are safe — just reload to continue\./.test(boundary) && /Reload NOOB/.test(boundary), 'the same words as before');
 check(!/text-red-400|errorMessage\}/.test(boundary) && /console\.error\('Uncaught render error:', error, info\.componentStack\)/.test(boundary) && /if \(this\.props\.fallback\) \{\s*return this\.props\.fallback;/.test(boundary), 'no red technical message on the reload page (the error goes to the console instead), and the scoped fallback still works');
-check(/Suggested/.test(read('src/components/Explore/ExploreView.tsx')) && /Reel/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore still has its Post / Suggested users / Reel parts (the switcher was redesigned since this test was written)');
+check(/People/.test(read('src/components/Explore/ExploreView.tsx')) && /Reel/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore still has its Post / Suggested users / Reel parts (the switcher was redesigned since this test was written)');
 check(/onClick=\{this\.handleReload\}/.test(boundary) && /hardReload\(\)/.test(boundary), 'Reload still reloads (and fetches the newest version: utils/reloadApp.ts)');
 
 section('3. The admin pages');
-check(/'analytics' \| 'daily' \| 'storage' \| 'ads' \| (?:'moderation' \| )?'pages' \| (?:'gifts' \| )?'settings'/.test(admin), 'the Daily NOOB, Storage and Ads tabs in the admin panel');
+check(/'analytics' \| 'daily' \| 'storage' \| (?:'errors' \| )?'ads' \| (?:'moderation' \| )?'pages' \| (?:'gifts' \| )?'settings'/.test(admin), 'the Daily NOOB, Storage and Ads tabs in the admin panel');
 check(/setActiveTab\('daily'\)[\s\S]{0,500}<Trophy className="w-4 h-4" \/> Daily NOOB/.test(admin) && /setActiveTab\('storage'\)[\s\S]{0,500}<HardDrive className="w-4 h-4" \/> Storage/.test(admin), 'Daily NOOB and Storage tabs, for the main admin');
 check(/activeTab === 'daily' && main \? \(\s*<AdminDailyNoobPanel \/>/.test(admin) && /activeTab === 'storage' && main \? \(\s*<AdminStoragePanel \/>/.test(admin), 'each opens its own page');
 check(!/Daily NOOB — assign winners|Daily NOOB task|dailyWinners|dailyNoobDate/.test(admin), 'the old Daily NOOB blocks are gone from the Platform tab (they live on the new page now)');
@@ -71,7 +71,7 @@ check(/'admin_media_purge_take', \{ p_limit: 50 \}/.test(api) && /supabase\.stor
 check(/supabase\.rpc\('poke_media_cleanup'\)/.test(api) && /export function pokeMediaCleanup\(\): void/.test(api), 'the app can nudge the server\'s cleanup');
 check(/useEffect\(\(\) => \{ if \(currentUser\?\.id\) pokeMediaCleanup\(\); \}, \[currentUser\?\.id\]\);/.test(app), '... once a person is signed in');
 check(!/purgedMediaKeys/.test(api) && !/storage\.from\(MEDIA_BUCKET\)\.remove\(res\.mediaKey|remove\(\[res\.mediaKey\]\)/.test(api), 'the phone no longer tries to delete other people\'s Daily NOOB files itself (it never could)');
-check(/adminFetchDailyOverview,\s*adminFetchStorageOverview,\s*adminSetMediaCleanup,\s*adminScanUnusedMedia,\s*adminQueueUnusedMedia,\s*adminCancelMediaQueue,\s*adminRemoveDueMediaNow,\s*pokeMediaCleanup,/.test(apiIndex), 'all exported from the API index');
+check(/adminFetchDailyOverview,\s*adminFetchStorageOverview,\s*(?:adminFetchClientErrors,\s*adminClearClientErrors,\s*)?adminSetMediaCleanup,\s*adminScanUnusedMedia,\s*adminQueueUnusedMedia,\s*adminCancelMediaQueue,\s*adminRemoveDueMediaNow,\s*pokeMediaCleanup,/.test(apiIndex), 'all exported from the API index');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

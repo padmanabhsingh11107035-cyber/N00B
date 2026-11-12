@@ -37,6 +37,9 @@ const CHECKS = [
   ['Hashtags and editing a caption', ['node', '--liftoff-only', 'scripts/supabase/test-hashtags-edit.mjs']],
   ['Reposts: batching, count, feed', ['node', '--liftoff-only', 'scripts/supabase/test-repost-feed.mjs']],
   ['Tappable @mentions and timed chat mute', ['node', '--liftoff-only', 'scripts/supabase/test-mentions.mjs']],
+  ['Error reports and Report a problem', ['node', '--liftoff-only', 'scripts/supabase/test-client-errors.mjs']],
+  ['Smaller new uploads (photos, videos)', ['node', '--liftoff-only', 'scripts/supabase/test-upload-savings.mjs']],
+  ['Saved Home feed shown instantly', ['node', '--liftoff-only', 'scripts/supabase/test-feed-cache.mjs']],
   // the free protection of the data
   ['Supabase usage alert (80% line)', ['node', 'scripts/supabase/test-usage-alert.mjs']],
 ];

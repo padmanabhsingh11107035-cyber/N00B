@@ -8,6 +8,8 @@ import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotificati
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
+import { effectiveMaxSide, videoMaxStep } from '../utils/uploadSavings';
+import { clearFeedCache } from '../utils/feedCache';
 import { AD_MAX_PHOTOS, pagesOf, type ActiveAd, type AdApplication, type AdMediaKind, type AdminAdRow, type AdPage, type AdWhere } from '../utils/ads';
 import { uploadWithRetry } from '../utils/xhrUpload';
 import { factsOf } from '../utils/videoTranscode';
@@ -936,6 +938,7 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   } catch {
     // ignore
   }
+  clearFeedCache(); // the saved Home feed belongs to the account that is signing out
   await supabase.auth.signOut({ scope: 'local' });
   // The row update above also reaches this device's own "was I logged out remotely?" listener; ignore that echo.
   setTimeout(() => { selfEndingLogin = false; }, 5000);
@@ -1768,6 +1771,12 @@ async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOpti
   return { success: true, objectKey: key, url: resolveMedia(key), bytes: file.size, ...(shown ? { width: shown.width, height: shown.height } : {}) };
 }
 
+// Picture size and quality for a folder: the Settings > Media quality choice, capped per place (avatar 512, story/chat 1280, post 1600) unless High was chosen.
+function mediaSettingsFor(folder: MediaFolder): { maxSide: number; quality: number } {
+  const base = folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other');
+  return { ...base, maxSide: effectiveMaxSide(folder, base.maxSide) };
+}
+
 export async function uploadMediaFile(
   file: File,
   folder: MediaFolder = 'posts',
@@ -1776,7 +1785,7 @@ export async function uploadMediaFile(
   // Invisibly compress images/videos to reduce latency and bandwidth
   // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
   // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
-  const optimizedFile = opts.skipCompress ? file : await compressMedia(file, { ...(folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other')), onProgress: opts.onProgress, signal: opts.signal });   // Settings > Media quality
+  const optimizedFile = opts.skipCompress ? file : await compressMedia(file, { ...mediaSettingsFor(folder), maxStep: videoMaxStep(folder), onProgress: opts.onProgress, signal: opts.signal });   // Settings > Media quality
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -2509,6 +2518,33 @@ export async function adminFetchStorageOverview(): Promise<{ success: boolean; o
     return { success: true, overview: await rpc<AdminStorageOverview>('admin_storage_overview') };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not read the storage overview.') };
+  }
+}
+
+export interface AdminClientError {
+  fingerprint: string; kind: 'error' | 'rejection' | 'boundary' | 'user_report'; totalCount: number; firstSeen: string; lastSeen: string;
+  page: string; appVersion: string; platform: string; message: string; stack: string | null; note: string | null; users: number;
+}
+/** The error reports (admins only; the database refuses anybody else). */
+export async function adminFetchClientErrors(days = 7): Promise<{ success: boolean; errors?: AdminClientError[]; error?: string }> {
+  try {
+    const rows = await rpc<any[]>('admin_client_errors', { p_limit: 200, p_since: `${Math.max(1, Math.min(30, Math.floor(days)))} days` });
+    return {
+      success: true,
+      errors: (rows || []).map((r) => ({
+        fingerprint: r.fingerprint, kind: r.kind, totalCount: Number(r.total_count) || 1, firstSeen: r.first_seen, lastSeen: r.last_seen, page: r.page || '', appVersion: r.app_version || '',
+        platform: r.platform || '', message: r.message || '', stack: r.stack ?? null, note: r.note ?? null, users: Number(r.users) || 0
+      }))
+    };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not read the error reports.') };
+  }
+}
+export async function adminClearClientErrors(): Promise<{ success: boolean; removed?: number; error?: string }> {
+  try {
+    return { success: true, removed: Number(await rpc<number>('admin_clear_client_errors')) || 0 };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not clear the error reports.') };
   }
 }
 

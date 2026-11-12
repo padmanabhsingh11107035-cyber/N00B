@@ -25,6 +25,8 @@ Two ways to open every page (same query string):
 | `tot` | This or That inside the Fun frame (today's duel, previous days) |
 | `ask` | Ask Me Anything, my inbox (new / answered). `&target=priya.nair` = someone else's page where you send a question |
 | `polls` | Public Polls (active / ended / my polls). `&target=pl1` opens one poll |
+| `mood` | Mood Status, the live full-screen slider (face + ruler + Save mood). `&mood=none` = no mood saved yet |
+| `moodclassic` | Mood Status, the picker page (emoji grid, note, who sees it, my mood card, friends / community lists). `&mood=none` = unset, `&long=1` = very long note and names, `state=empty` = nothing shared |
 | `anon` | Anonymous Messages (`&admin=1` = the administrator's view with Remove buttons) |
 | `studio` | NOOB Studio with a sample photo (`&media=video` = a generated 3 s clip, `&media=none` = empty) |
 | `forms` | NOOB Forms, my forms. `&target=f1` = the editor of a form |

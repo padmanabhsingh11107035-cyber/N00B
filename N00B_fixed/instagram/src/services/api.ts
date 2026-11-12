@@ -180,6 +180,8 @@ export {
   adminSetDailyChallenge,
   adminFetchDailyOverview,
   adminFetchStorageOverview,
+  adminFetchClientErrors,
+  adminClearClientErrors,
   adminSetMediaCleanup,
   adminScanUnusedMedia,
   adminQueueUnusedMedia,

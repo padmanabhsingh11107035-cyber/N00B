@@ -1,0 +1,26 @@
+/* "Report a problem" bottom sheet: yellow header band, white / #121212 body, green buttons. Own variables so the app-wide grey remap cannot flatten it. */
+.rp-backdrop { z-index: 10050; background: rgba(0, 0, 0, .6); }
+.rp-sheet {
+  --r-bg: #121212; --r-soft: #1e1e1e; --r-line: #3a3a3a; --r-ink: #f5f5f5; --r-ink-soft: #b5b5b5; --r-err: #ff8a80;
+  --r-yellow: #f8cb46; --r-on-yellow: #1c1c1c; --r-green: #0c831f; --r-on-green: #ffffff;
+  background: var(--r-bg); color: var(--r-ink); color-scheme: dark; overflow: hidden;
+  border-radius: 24px 24px 0 0; max-height: 92vh; overflow-y: auto;
+  font-family: Inter, "SF Pro Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root[data-theme="light"] .rp-sheet { --r-bg: #ffffff; --r-soft: #f0f0f0; --r-line: #c9c9c9; --r-ink: #1c1c1c; --r-ink-soft: #5c5c5c; --r-err: #b3261e; color-scheme: light; }
+.rp-head { background: var(--r-yellow); color: var(--r-on-yellow); padding: 16px 20px; }
+.rp-title { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 800; color: var(--r-on-yellow); }
+.rp-body { padding: 16px 20px calc(env(safe-area-inset-bottom, 0px) + 20px); }
+.rp-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--r-ink); }
+.rp-input { width: 100%; resize: none; box-sizing: border-box; border-radius: 12px; border: 1.5px solid var(--r-line); background: var(--r-soft); color: var(--r-ink); padding: 12px; font-size: 15px; line-height: 1.4; outline: none; font-family: inherit; }
+.rp-input:focus { border-color: var(--r-green); }
+.rp-input::placeholder { color: var(--r-ink-soft); }
+.rp-attached { margin: 8px 0 0; font-size: 12px; line-height: 1.4; color: var(--r-ink-soft); overflow-wrap: anywhere; }
+.rp-error { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--r-err); }
+.rp-actions { display: flex; gap: 10px; margin-top: 16px; }
+.rp-btn { flex: 1; border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 700; background: var(--r-green); color: var(--r-on-green); cursor: pointer; font-family: inherit; }
+.rp-btn:disabled { opacity: .55; cursor: default; }
+.rp-btn-quiet { background: transparent; color: var(--r-ink); border: 1.5px solid var(--r-line); }
+.rp-thanks { margin: 8px 0 4px; font-size: 18px; font-weight: 800; color: var(--r-ink); }
+.rp-hint { margin: 0 0 16px; font-size: 13px; color: var(--r-ink-soft); }
+.rp-body > .rp-btn { width: 100%; }

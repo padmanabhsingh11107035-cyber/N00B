@@ -7,6 +7,8 @@ import { SLIDER_ORDER, moodAt, nearestMood } from '../../utils/moodSlider';
 // the eight moods in the order of the slider (low to high)
 const MOODS = SLIDER_ORDER.map((id) => ALL_MOODS.find((m) => m.id === id)!);
 import type { FunPageProps } from './types';
+import './fun.css';
+import './mood.css';
 
 // Mood: one full screen. The whole page takes the colour of how you feel, a face that follows your finger shows it, and a ruler at the bottom is the slider. The word at the top
 // is the mood. Letting go of the slider only picks the mood: the black "Save mood" button at the bottom saves it (who can see it stays as it was set; a new mood is for
@@ -14,7 +16,6 @@ import type { FunPageProps } from './types';
 // 20261016000003). The old page with the note, the lists and the choices is kept in MoodClassic.tsx.
 
 const PAD = 34;            // space left and right of the ruler (px)
-const PANEL_H = 232;       // the white panel at the bottom (px): the ruler, the Save button and one line under it
 
 // the next 12 midnight of the person's own time
 const nextMidnight = (): Date => { const d = new Date(); d.setHours(24, 0, 0, 0); return d; };
@@ -120,75 +121,78 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
   const idx = nearestMood(shown, last);
   const trackW = Math.max(1, width - PAD * 2);
   const knobX = PAD + shown * trackW;
+  const isSaved = saveState === 'saved' || (pickedId !== null && pickedId === savedId);
 
   return (
     <div
       ref={wrap}
-      className="fixed inset-0 z-[96] overflow-hidden select-none text-white"
-      style={{ background: m.color, touchAction: 'none', transition: 'none' }}
+      className="fx-root md-root md-live edge-own z-[96] select-none"
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
       role="application" aria-label="Mood"
     >
-      {onBack && (
-        <button type="button" aria-label="Go back" onPointerDown={(e) => e.stopPropagation()} onClick={onBack}
-          className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-10">
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-      )}
-
-      {/* the mood, in words */}
-      <div className="absolute left-0 right-0 text-center font-bold tracking-tight pointer-events-none" style={{ top: '11%', fontSize: 'clamp(40px, 12vw, 56px)', color: '#000', textShadow: 'none' }} data-testid="mood-word" aria-live="polite">
-        {MOODS[idx].label.toLowerCase()}
+      {/* the yellow header band, from above the notch */}
+      <div className="md-bar">
+        <div className="md-bar-row">
+          {onBack ? (
+            <button type="button" aria-label="Go back" onPointerDown={(e) => e.stopPropagation()} onClick={onBack} className="md-back">
+              <ChevronLeft className="w-6 h-6" aria-hidden="true" />
+            </button>
+          ) : <span className="md-back-gap" />}
+          <div className="md-bar-text">
+            <h1 className="md-bar-title">Mood</h1>
+            <p className="md-bar-sub">Drag the ruler to how you feel</p>
+          </div>
+        </div>
       </div>
 
-      {/* the face */}
-      <svg viewBox="0 0 375 300" className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: '19%', width: 'min(100%, 460px)' }} aria-hidden="true">
-        <defs>
-          <filter id="mood-soft" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="9" floodColor="#000" floodOpacity=".28" /></filter>
-          <filter id="mood-lip" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="3" floodColor="#000" floodOpacity=".3" /></filter>
-        </defs>
-        {[-1, 1].map((side) => {
-          const cx = 187.5 + side * 80, cy = 120;
-          const brow = side < 0 ? m.browL : m.browR;
-          return (
-            <g key={side}>
-              <rect x={cx - 38} y={cy - m.eyeH / 2 - brow.gap - 5} width="76" height="10" rx="5" fill="#1b1b1b" transform={`rotate(${brow.rot} ${cx} ${cy - m.eyeH / 2 - brow.gap})`} />
-              <ellipse cx={cx} cy={cy} rx={m.eyeW / 2} ry={m.eyeH / 2} fill="#fff" filter="url(#mood-soft)" />
-              <ellipse cx={cx + m.pdx} cy={cy + m.pdy} rx={Math.min(m.pupil / 2, m.eyeW / 2 - 3)} ry={Math.min(m.pupil / 2, m.eyeH / 2 - 2)} fill="#111" />
-              <circle cx={cx + m.pdx - m.pupil * 0.16} cy={cy + m.pdy - m.pupil * 0.18} r={Math.max(1.5, m.pupil * 0.11)} fill="#fff" opacity={m.eyeH > 40 ? 1 : 0} />
-            </g>
-          );
-        })}
-        <g transform={`translate(187.5 ${m.mouthY}) rotate(${m.mouthRot})`} filter="url(#mood-lip)">
-          <rect x={-m.mouthW / 2} y={-m.mouthH / 2} width={m.mouthW} height={m.mouthH} rx={Math.min(14, m.mouthH / 2.2)} fill="#1a0e13" stroke="#f6e3d2" strokeWidth="7" />
-          <rect x={-m.mouthW * 0.28} y={m.mouthH * 0.12} width={m.mouthW * 0.56} height={Math.max(2, m.mouthH * 0.2)} rx="6" fill="#ee2f6e" opacity={m.tongue} />
-          {[-1.5, -0.5, 0.5, 1.5].map((k) => (
-            <circle key={k} cx={k * m.mouthW * 0.15} cy="0" r={Math.max(1.5, m.mouthH * 0.06)} fill="#fff" opacity={m.teeth} />
-          ))}
-        </g>
-      </svg>
+      {/* the stage takes the colour of the mood: the word, and the face that follows the finger */}
+      <div className="md-stage" style={{ background: m.color }}>
+        <div className="md-word" data-testid="mood-word" aria-live="polite">{MOODS[idx].label.toLowerCase()}</div>
+        <svg viewBox="0 0 375 300" className="md-face" aria-hidden="true">
+          <defs>
+            <filter id="mood-soft" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="9" floodColor="#000" floodOpacity=".28" /></filter>
+            <filter id="mood-lip" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="3" floodColor="#000" floodOpacity=".3" /></filter>
+          </defs>
+          {[-1, 1].map((side) => {
+            const cx = 187.5 + side * 80, cy = 120;
+            const brow = side < 0 ? m.browL : m.browR;
+            return (
+              <g key={side}>
+                <rect x={cx - 38} y={cy - m.eyeH / 2 - brow.gap - 5} width="76" height="10" rx="5" fill="#1b1b1b" transform={`rotate(${brow.rot} ${cx} ${cy - m.eyeH / 2 - brow.gap})`} />
+                <ellipse cx={cx} cy={cy} rx={m.eyeW / 2} ry={m.eyeH / 2} fill="#fff" filter="url(#mood-soft)" />
+                <ellipse cx={cx + m.pdx} cy={cy + m.pdy} rx={Math.min(m.pupil / 2, m.eyeW / 2 - 3)} ry={Math.min(m.pupil / 2, m.eyeH / 2 - 2)} fill="#111" />
+                <circle cx={cx + m.pdx - m.pupil * 0.16} cy={cy + m.pdy - m.pupil * 0.18} r={Math.max(1.5, m.pupil * 0.11)} fill="#fff" opacity={m.eyeH > 40 ? 1 : 0} />
+              </g>
+            );
+          })}
+          <g transform={`translate(187.5 ${m.mouthY}) rotate(${m.mouthRot})`} filter="url(#mood-lip)">
+            <rect x={-m.mouthW / 2} y={-m.mouthH / 2} width={m.mouthW} height={m.mouthH} rx={Math.min(14, m.mouthH / 2.2)} fill="#1a0e13" stroke="#f6e3d2" strokeWidth="7" />
+            <rect x={-m.mouthW * 0.28} y={m.mouthH * 0.12} width={m.mouthW * 0.56} height={Math.max(2, m.mouthH * 0.2)} rx="6" fill="#ee2f6e" opacity={m.tongue} />
+            {[-1.5, -0.5, 0.5, 1.5].map((k) => (
+              <circle key={k} cx={k * m.mouthW * 0.15} cy="0" r={Math.max(1.5, m.mouthH * 0.06)} fill="#fff" opacity={m.teeth} />
+            ))}
+          </g>
+        </svg>
+      </div>
 
-      {problem && <div className="absolute left-0 right-0 text-center text-[12px] font-semibold text-white/90 pointer-events-none" style={{ bottom: `calc(${PANEL_H + 18}px + env(safe-area-inset-bottom))` }} role="status">{problem}</div>}
-
-      {/* the ruler */}
-      <div className="absolute left-0 right-0 bottom-0 bg-white" style={{ height: `calc(${PANEL_H}px + env(safe-area-inset-bottom))`, borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: '0 -8px 30px rgba(0,0,0,.12)' }}>
-        <div className="absolute rounded-full bg-white" style={{ width: 96, height: 96, left: knobX - 48, top: -34 }} />
-        <div className="absolute rounded-full" style={{ width: 54, height: 54, left: knobX - 27, top: -13, background: m.color, boxShadow: 'inset 0 -3px 6px rgba(0,0,0,.08)' }} data-testid="mood-knob" />
-        <div className="absolute left-0 right-0" style={{ top: 78, height: 44 }}>
+      {/* the docked panel: the ruler (the slider), the Save mood button and when it clears */}
+      <div className="md-panel">
+        <div className="md-ruler">
           {MOODS.map((mm, i) => {
             const x = PAD + (i / last) * trackW;
             const on = i === idx;
-            const dotX = PAD + ((i + 0.5) / last) * trackW;
             return (
               <React.Fragment key={mm.id}>
-                <span className="absolute rounded-full" style={{ left: x - 2.5, top: on ? 2 : 8, width: 5, height: on ? 40 : 28, background: on ? '#1b1b1b' : '#dcdcdc', transition: 'height .2s, top .2s, background .2s' }} />
-                {i < last && <span className="absolute rounded-full" style={{ left: dotX - 1.5, top: 20, width: 3, height: 3, background: '#e4e4e4' }} />}
+                <span className={`md-tick${on ? ' is-on' : ''}`} style={{ left: x - 2.5 }} />
+                <span className={`md-tick-emoji${on ? ' is-on' : ''}`} style={{ left: x - 14 }} aria-hidden="true">{mm.emoji}</span>
               </React.Fragment>
             );
           })}
+          <div className="md-knob" style={{ left: knobX - 17, background: m.color }} data-testid="mood-knob" />
         </div>
 
-        {/* the Save mood button, and when it clears */}
+        {problem && <p className="md-problem" role="status">{problem}</p>}
+
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
@@ -196,12 +200,11 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
           onClick={() => { void save(); }}
           disabled={saveState === 'saving' || saveState === 'saved' || (!!currentUser && pickedId !== null && pickedId === savedId)}
           data-testid="mood-save"
-          className="absolute left-5 right-5 flex items-center justify-center gap-2 rounded-full text-white font-extrabold text-[16px] cursor-pointer transition-transform active:scale-[.98]"
-          style={{ top: 140, height: 56, background: saveState === 'saved' ? '#16a34a' : '#0b0b0c', boxShadow: '0 16px 28px -16px rgba(0,0,0,.6)' }}
+          className={`md-save${isSaved ? ' is-saved' : ''}`}
         >
-          {saveState === 'saving' ? <><Loader2 className="w-5 h-5 animate-spin" />Saving…</> : (saveState === 'saved' || (pickedId !== null && pickedId === savedId)) ? <><Check className="w-5 h-5" strokeWidth={3} />Saved</> : 'Save mood'}
+          {saveState === 'saving' ? <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />Saving…</> : isSaved ? <><Check className="w-5 h-5" strokeWidth={3} aria-hidden="true" />Saved</> : 'Save mood'}
         </button>
-        <p className="absolute left-0 right-0 text-center text-[12px] font-medium text-zinc-500" style={{ top: 206 }}>Your mood clears by itself at 12 midnight.</p>
+        <p className="md-note">Your mood clears by itself at 12 midnight.</p>
       </div>
     </div>
   );

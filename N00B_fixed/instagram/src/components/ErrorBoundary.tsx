@@ -2,6 +2,7 @@ import React from 'react';
 import { LoginDoodles } from './Auth/LoginDoodles';
 import { LoginBigDoodles } from './Auth/LoginBigDoodles';
 import { NoobWordmark } from './Common/NoobWordmark';
+import { reportError } from '../utils/errorReporter';
 import { hardReload } from '../utils/reloadApp';
 
 interface ErrorBoundaryProps {
@@ -35,6 +36,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     console.error('Uncaught render error:', error, info.componentStack);
+    reportError('boundary', error);
   }
 
   handleReload = () => {

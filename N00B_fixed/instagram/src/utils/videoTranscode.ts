@@ -220,6 +220,8 @@ export interface TranscodeOptions {
   targetBytes?: number;
   /** Files up to this size are returned as they are (default 6 MB). */
   skipBelowBytes?: number;
+  /** Never make the picture taller than this (shorter side). */
+  maxStep?: number;
   /** 0..1 */
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
@@ -405,7 +407,8 @@ export async function transcodeVideo(file: File, opts: TranscodeOptions = {}): P
     sourceBytes: file.size,
     sourceVideoBps: probe.videoBps,
     targetBytes: target,
-    smallBytes: opts.skipBelowBytes
+    smallBytes: opts.skipBelowBytes,
+    maxStep: opts.maxStep
   });
   if (!plan.fits) throw new VideoTooLongError(probe.durationSec, maxSecondsThatFit(probe.audio?.bps ?? 128_000, target));
   if (!plan.transcode) { facts.set(file, { width: probe.width, height: probe.height }); return { file, plan, probe, unchanged: true }; }

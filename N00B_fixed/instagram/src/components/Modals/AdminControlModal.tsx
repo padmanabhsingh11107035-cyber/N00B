@@ -40,6 +40,7 @@ import {
   Share2,
   Trophy,
   HardDrive,
+  Bug,
   Copy,
   Check,
   Link as LinkIcon,
@@ -84,6 +85,7 @@ import { AdminUserTransactions } from './AdminUserTransactions';
 import { phoneFacts } from '../../utils/phoneLookup';
 import { AdminDailyNoobPanel } from './AdminDailyNoobPanel';
 import { AdminStoragePanel } from './AdminStoragePanel';
+import { AdminErrorsPanel } from './AdminErrorsPanel';
 import { AdminAdsPanel } from './AdminAdsPanel';
 import { AdminModerationPanel } from './AdminModerationPanel';
 import { AdminFeaturesPanel } from './AdminFeaturesPanel';
@@ -123,7 +125,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'gifts' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'analytics' | 'daily' | 'storage' | 'errors' | 'ads' | 'moderation' | 'pages' | 'gifts' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1422,6 +1424,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <HardDrive className="w-4 h-4" /> Storage
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('errors')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'errors'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+              data-testid="admin-tab-errors"
+            >
+              <Bug className="w-4 h-4" /> Errors
             </button>
           )}
 
@@ -2801,6 +2817,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminDailyNoobPanel />
           ) : activeTab === 'storage' && main ? (
             <AdminStoragePanel />
+          ) : activeTab === 'errors' && main ? (
+            <AdminErrorsPanel />
           ) : activeTab === 'ads' && main ? (
             <AdminAdsPanel onPendingChange={setAdsPending} />
           ) : activeTab === 'moderation' && main ? (

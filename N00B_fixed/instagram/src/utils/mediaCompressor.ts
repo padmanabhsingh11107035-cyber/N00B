@@ -3,6 +3,38 @@
  * Automatically compresses large camera photos and optimize media before server upload.
  */
 import type { OnUploadProgress } from './uploadProgress';
+import { shouldSkipImage, planImage, useReencoded, isAnimatedWebp, pngMayHaveAlpha } from './uploadSavings';
+
+let webpEncodeSupport: boolean | undefined;
+/** Can this browser write WebP from a canvas? (Chrome, Edge, Firefox, Android yes; Safari mostly no, which then keeps JPEG.) */
+export function canEncodeWebp(): boolean {
+  if (webpEncodeSupport !== undefined) return webpEncodeSupport;
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    webpEncodeSupport = c.toDataURL('image/webp').startsWith('data:image/webp');
+  } catch {
+    webpEncodeSupport = false;
+  }
+  return webpEncodeSupport;
+}
+
+const readHead = async (file: Blob, n = 32): Promise<Uint8Array> => {
+  try { return new Uint8Array(await file.slice(0, n).arrayBuffer()); } catch { return new Uint8Array(0); }
+};
+
+const hasSeeThroughPixels = (ctx: CanvasRenderingContext2D, w: number, h: number): boolean => {
+  try {
+    const data = ctx.getImageData(0, 0, w, h).data;
+    for (let i = 3; i < data.length; i += 4) if (data[i] < 250) return true;
+    return false;
+  } catch {
+    return true;   // cannot check: keep the original
+  }
+};
+
+const toBlobAsync = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+  new Promise<Blob | null>((resolve) => { try { canvas.toBlob((b) => resolve(b), type, quality); } catch { resolve(null); } });
 
 export async function compressImage(
   file: File,
@@ -10,98 +42,55 @@ export async function compressImage(
   maxHeight = 1600,
   quality = 0.82
 ): Promise<File> {
-  // HEIC/HEIF (the default iPhone camera format) can't be uploaded as-is — no browser except
-  // Safari can even display it, and the server rejects it outright. Route it through the same
-  // canvas pipeline as any other photo so it comes out as a JPEG everyone can view, instead of
-  // failing the upload (this is what made picking several iPhone photos at once fail while
-  // re-picking them one at a time sometimes "worked" — it depended on which ones iOS happened to
-  // hand over as HEIC). If this browser can't decode HEIC at all, onerror below still falls back
-  // to the original file, which the upload rejects with a clear message rather than silently.
-  const isHeic = file.type === 'image/heic' || file.type === 'image/heif';
+  // HEIC/HEIF (the default iPhone camera format) can't be uploaded as-is - no browser except Safari can even display it, and the server
+  // rejects it. It goes through the same canvas pipeline so it comes out as a JPEG everyone can view. If this browser can't decode HEIC,
+  // the original is returned and the upload then says so clearly.
+  // Left alone: not an image, SVG, GIF, animated WebP, tiny files. PNG/WebP with see-through pixels are left alone too (the canvas would flatten them).
+  const head = file.type === 'image/webp' ? await readHead(file) : new Uint8Array(0);
+  if (shouldSkipImage({ type: file.type, size: file.size, animated: isAnimatedWebp(head) })) return file;
 
-  // If file is already very small (< 100KB) and not HEIC, pass through — not an image at all
-  // skips compression too.
-  if (!file.type.startsWith('image/') || (!isHeic && file.size < 100 * 1024)) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => resolve(null);
+      el.src = url;
+    });
+    if (!img || !img.naturalWidth || !img.naturalHeight) return file;
+    // The browser applies the photo's rotation (EXIF) when it draws, and reports the width/height as shown.
+    const plan = planImage({ type: file.type, width: img.naturalWidth, height: img.naturalHeight, maxSide: Math.max(maxWidth, maxHeight), supportsWebp: canEncodeWebp() });
+    const canvas = document.createElement('canvas');
+    canvas.width = plan.width;
+    canvas.height = plan.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, plan.width, plan.height);
+
+    if (plan.needsAlphaCheck) {
+      const headBytes = file.type === 'image/png' ? await readHead(file) : head;
+      const maybe = file.type === 'image/png' ? pngMayHaveAlpha(headBytes) : true;
+      if (maybe && hasSeeThroughPixels(ctx, plan.width, plan.height)) return file;
+    }
+
+    let outType: string = plan.outType;
+    let blob = await toBlobAsync(canvas, outType, quality);
+    if (blob && blob.type !== outType) {   // the browser quietly wrote something else (e.g. PNG): use JPEG
+      outType = 'image/jpeg';
+      blob = await toBlobAsync(canvas, outType, quality);
+    }
+    if (!blob || blob.type !== outType) return file;
+    if (!useReencoded({ origSize: file.size, newSize: blob.size, scaled: plan.scaled, heic: plan.heic })) return file;
+
+    const ext = outType === 'image/webp' ? '.webp' : '.jpg';
+    return new File([blob], file.name.replace(/\.[^/.]+$/, '') + ext, { type: outType, lastModified: Date.now() });
+  } catch {
     return file;
+  } finally {
+    URL.revokeObjectURL(url);
   }
-
-  // If SVG, GIF, or WebP, preserve vector / animation — canvas drawImage()
-  // only ever captures a single static frame, so running an animated GIF or
-  // animated WebP (e.g. a Live Profile Picture) through this would silently
-  // flatten it to one frame.
-  if (file.type.includes('svg') || file.type.includes('gif') || file.type.includes('webp')) {
-    return file;
-  }
-
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-
-      img.onload = () => {
-        let { width, height } = img;
-
-        // Calculate aspect-ratio preserving dimensions
-        if (width > height) {
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(file);
-          return;
-        }
-
-        // Draw image onto canvas
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert to compressed JPEG or WebP blob
-        const outputType = isHeic || file.type === 'image/png' ? 'image/jpeg' : file.type;
-        canvas.toBlob(
-          (blob) => {
-            // HEIC always needs this conversion regardless of the resulting size — unlike a plain
-            // "did compression help" check for other formats, a HEIC source can't be uploaded at
-            // all, so a bigger-but-viewable JPEG beats a smaller-but-rejected original every time.
-            if (!blob || (!isHeic && blob.size >= file.size)) {
-              resolve(file);
-              return;
-            }
-
-            const cleanFileName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
-            const compressedFile = new File([blob], cleanFileName, {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-
-            resolve(compressedFile);
-          },
-          outputType,
-          quality
-        );
-      };
-
-      img.onerror = () => resolve(file);
-    };
-
-    reader.onerror = () => resolve(file);
-  });
 }
 
 const isAndroid = () => /android/i.test(navigator.userAgent);
@@ -242,7 +231,7 @@ async function compressVideoOnAndroid(file: File): Promise<File> {
  * Anything else that goes wrong falls back to the original file (and the upload then says clearly if it is too big), never to a stuck screen.
  * An Android browser that cannot re-encode at all still has the older recording-based path below.
  */
-export async function compressVideo(file: File, opts: { onProgress?: OnUploadProgress; signal?: AbortSignal } = {}): Promise<File> {
+export async function compressVideo(file: File, opts: { onProgress?: OnUploadProgress; signal?: AbortSignal; maxStep?: number } = {}): Promise<File> {
   if (!file.type.startsWith('video/')) {
     return file;
   }
@@ -251,6 +240,7 @@ export async function compressVideo(file: File, opts: { onProgress?: OnUploadPro
     if (t.canTranscode()) {
       const res = await t.transcodeVideo(file, {
         signal: opts.signal,
+        maxStep: opts.maxStep,
         onProgress: (fraction) => opts.onProgress?.({ stage: 'compressing', fraction })
       });
       return res.file;
@@ -276,12 +266,12 @@ export async function compressVideo(file: File, opts: { onProgress?: OnUploadPro
  * Universal media compressor that invisibly detects whether the file is an image or video
  * and compresses it accordingly.
  */
-export async function compressMedia(file: File, opts?: { maxSide?: number; quality?: number; onProgress?: OnUploadProgress; signal?: AbortSignal }): Promise<File> {
+export async function compressMedia(file: File, opts?: { maxSide?: number; quality?: number; maxStep?: number; onProgress?: OnUploadProgress; signal?: AbortSignal }): Promise<File> {
   try {
     if (file.type.startsWith('image/')) {
       return await compressImage(file, opts?.maxSide ?? 1600, opts?.maxSide ?? 1600, opts?.quality ?? 0.82);
     } else if (file.type.startsWith('video/')) {
-      return await compressVideo(file, { onProgress: opts?.onProgress, signal: opts?.signal });
+      return await compressVideo(file, { onProgress: opts?.onProgress, signal: opts?.signal, maxStep: opts?.maxStep });
     }
   } catch (err) {
     const name = (err as { name?: string } | null)?.name;

@@ -19,6 +19,7 @@ export interface SettingsActions {
   openPro: () => void;
   openGetVerified: () => void;
   openSupport: () => void;
+  openReportProblem: () => void;                 // the "Report a problem" sheet (sends the note and the page / version / device to the team)
   openSuggestionBox: () => void;                 // send feedback, an idea or a problem to the team
   openTerms: () => void;
   openPrivacyPolicy: () => void;

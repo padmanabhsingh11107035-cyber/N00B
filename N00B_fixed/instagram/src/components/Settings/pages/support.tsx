@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { BadgeCheck, Brain, Camera, ChevronDown, FileText, Gamepad2, Handshake, Info, Instagram, KeyRound, Lock, MessageCircle, MessageSquarePlus, Package, Radio, ShieldCheck, ShoppingBag, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
+import { LifeBuoy, BadgeCheck, Brain, Camera, ChevronDown, FileText, Gamepad2, Handshake, Info, Instagram, KeyRound, Lock, MessageCircle, MessageSquarePlus, Package, Radio, ShieldCheck, ShoppingBag, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
 import { PageShell, Section, Row, Note, Spinner } from '../kit';
 import type { PageProps } from '../types';
 const OrdersView = lazy(() => import('../../Store/OrdersView').then((m) => ({ default: m.OrdersView })));
@@ -40,6 +40,9 @@ export const HelpPage: React.FC<PageProps> = ({ ctx, back }) => {
   const supportOn = useFeatureOn('support'), ideasOn = useFeatureOn('suggestions');   // the administrator can switch either off for users
   return (
     <PageShell title="Help" onBack={back}>
+      <Section title="Something not working?">
+        <Row icon={LifeBuoy} label="Report a problem" sub="Tell the team what went wrong" onClick={ctx.actions.openReportProblem} testId="help-report-problem" />
+      </Section>
       {(supportOn || ideasOn) && (
         <Section title="Ask for help">
           {supportOn && <Row icon={Sparkles} label="NOOB support assistant" sub="Ask the AI helper, or talk to a person from the team" onClick={ctx.actions.openSupport} testId="help-assistant" />}

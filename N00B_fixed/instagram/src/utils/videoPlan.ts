@@ -38,6 +38,8 @@ export interface PlanInput {
   targetBytes?: number;
   /** A file this small is sent as it is. Defaults to SMALL_FILE_BYTES. */
   smallBytes?: number;
+  /** Never pick a picture taller than this (shorter side, e.g. 720); the original is not scaled up either way. Leave out for the full ladder. */
+  maxStep?: number;
 }
 
 export interface EncodingPlan {
@@ -91,7 +93,8 @@ export function planEncoding(input: PlanInput): EncodingPlan {
   }
 
   // A step is never bigger than the original (a 640-pixel video is not scaled up): its own size stands in for every step above it.
-  const sorted = [...new Set(SIZE_STEPS.map((s) => Math.min(s, srcShort)))].sort((a, b) => b - a);
+  const allowed = input.maxStep && input.maxStep >= SIZE_STEPS[SIZE_STEPS.length - 1] ? SIZE_STEPS.filter((s) => s <= input.maxStep!) : SIZE_STEPS;
+  const sorted = [...new Set(allowed.map((s) => Math.min(s, srcShort)))].sort((a, b) => b - a);
 
   const bppAt = (s: number, fps: number) => {
     const d = sizeForStep(input.width, input.height, s);

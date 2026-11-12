@@ -137,6 +137,7 @@ import { ProfileQrModal } from './ProfileQrModal';
 import type { SettingsContext } from '../Settings/types';
 import { BurgerLoading } from '../Common/BurgerLoading';
 import { LazyVideo } from '../Common/LazyVideo';
+import { openReportProblem } from '../Common/ReportProblemSheet';
 
 // Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
 // every visit — dynamic import() here and in App.tsx (which also renders AdminControlModal) share
@@ -575,6 +576,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openPro: () => setShowProFeaturesModal(true),
       openGetVerified: () => setShowGetVerifiedModal(true),
       openSupport: () => setShowSupportModal(true),
+      openReportProblem: () => openReportProblem(),
       openSuggestionBox: () => setShowSuggestionBox(true),
       openTerms: () => setShowTermsModal(true),
       openPrivacyPolicy: () => setShowPrivacyModal(true),

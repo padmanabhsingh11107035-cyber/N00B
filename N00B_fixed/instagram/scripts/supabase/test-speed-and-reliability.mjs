@@ -76,7 +76,7 @@ check(/<React\.Suspense fallback=\{<GameLoading \/>\}>\s*<div className="space-y
 check(['cyber_snake', 'snake', 'pac_grid', 'tictactoe', 'chess_blitz', 'snakes_ladders', 'ludo_classic', 'monopoly_noob', 'rps', 'speed_math', 'memory_match', 'reaction_tap', 'bubble_blitz'].every((id) => new RegExp('\\b' + id + ': \\[').test(modal)), 'every game id has its file(s) listed for preloading');
 
 section('5. Online games and start-up');
-check((modal.match(/setInterval\(pollOnce\(async \(\) => \{/g) || []).length === 4 && !/setInterval\(async/.test(modal), 'all four online polls (matchmaking, waiting for a friend, waiting for a result, live board) skip a turn while the last answer is still on its way');
+check((modal.match(/= pollOnce\(async \(\) => \{/g) || []).length === 4 && (modal.match(/setInterval\((?:checkMatch|tick), \d+\)/g) || []).length === 4 && !/setInterval\(async/.test(modal), 'all four online polls (matchmaking, waiting for a friend, waiting for a result, live board) skip a turn while the last answer is still on its way');
 check(/if \(busy\) return;\s*busy = true;\s*void ask\(\)\.finally\(\(\) => \{ busy = false; \}\);/.test(modal), 'pollOnce never runs two at once and always lets go afterwards');
 check(!/fetchHomeStoryTray\(\),\s*fetchReels\(\),\s*fetchUsers\(\)/.test(app) && /if \(user\) void fetchUsers\(\)\.then\(\(list\) => \{ if \(list\.length\) setRegisteredUsers\(list\); \}\);/.test(app), 'the first screen no longer waits for the heaviest request (the people list)');
 

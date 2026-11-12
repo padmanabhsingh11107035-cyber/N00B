@@ -39,7 +39,8 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, Repeat2 } from 'lucide-react';
+import { Wand2, Repeat2, AlertCircle } from 'lucide-react';
+import { openReportProblem } from '../Common/ReportProblemSheet';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
 import { sendLike } from '../../utils/likeSync';
@@ -662,6 +663,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           : { id: 'food', entryId: 'food', label: 'NOOB Food Stall', icon: <UtensilsCrossed />, hint: 'Burgers, bhel, fries, manchurian & coke', onClick: go('food', () => setShowFoodStall(true)) }),
         featOn('ai') && { id: 'ai', entryId: 'ai', label: 'NOOB AI', icon: <Bot />, hint: 'Talk to your AI friend by voice', onClick: go('ai', () => setShowNoobAi(true)) },
         featOn('support') && { id: 'support', entryId: 'support', label: 'Customer Support', icon: <MessageCircle />, hint: 'Chat with the NOOB support team', onClick: go('support', () => setShowSupportModal(true)) },
+        { id: 'report', entryId: 'report', label: 'Report a problem', icon: <AlertCircle />, hint: 'Tell us what went wrong', onClick: go('report', openReportProblem) },
         // NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app)
         featOn('drinks') && { id: 'drinks', entryId: 'drinks', label: 'NOOB Cold Drinks', icon: <CupSoda />, hint: 'Ten cans, ten flavours: scroll to explore in 3D', onClick: go('drinks', () => window.location.assign('/cold-drinks/')) },
         featOn('creations') && { id: 'creations', entryId: 'creations', label: 'More of our creations', icon: <Layers />, hint: 'Other websites we made: visit and explore', onClick: go('creations', () => setShowCreations(true)) },

@@ -1,0 +1,133 @@
+/* Mood Status (MoodPage = the live slider, MoodClassic = the picker with note, privacy and lists).
+   Same yellow-and-green language as fun.css: yellow header band from above the notch, white / #121212 page, green primary button, yellow chips and selected tiles,
+   hairline-bordered rows. Colour tokens (--fx-*) come from the .fx-root class that both pages also carry; everything here is scoped under .md-root.
+   Solid fills only. The only free colour on the page is the mood's own colour, painted on the face stage of the slider. */
+.md-root {
+  --md-tick: #8f8f8f;
+  --md-sel-line: #1c1c1c;
+}
+:root:not([data-theme="light"]) .md-root {
+  --md-tick: #7a7a7a;
+  --md-sel-line: #f8cb46;
+}
+
+/* ---------- header band (reaches under the notch) ---------- */
+.md-root .md-bar {
+  position: sticky; top: 0; z-index: 20; flex: none;
+  padding: calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 12px) 16px 12px;
+  background: var(--fx-yellow); color: #1c1c1c;
+}
+.md-root .md-bar-row { display: flex; align-items: center; gap: 12px; max-width: 640px; margin: 0 auto; }
+.md-root .md-back, .md-root .md-back-gap { flex: none; width: 44px; height: 44px; }
+.md-root .md-back {
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #ffffff; color: #1c1c1c;
+  transition: transform .14s var(--fx-ease);
+}
+.md-root .md-back:active { transform: scale(.94); }
+.md-root .md-bar-text { min-width: 0; flex: 1 1 0; }
+.md-root .md-bar-title { font-size: 20px; line-height: 26px; font-weight: 800; color: #1c1c1c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-root .md-bar-sub { font-size: 13px; line-height: 18px; font-weight: 600; color: #333333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-root :focus-visible { outline: 2px solid var(--fx-accent-text); outline-offset: 2px; }
+.md-root .md-bar :focus-visible { outline-color: #1c1c1c; }
+
+/* ================= LIVE SLIDER ================= */
+.md-root.md-live { display: flex; flex-direction: column; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.md-root .md-stage { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; }
+.md-root .md-word {
+  position: absolute; left: 16px; right: 16px; top: 20px; text-align: left; pointer-events: none;
+  font-size: clamp(36px, 11vw, 48px); line-height: 1.05; font-weight: 800; letter-spacing: 0; color: #000000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.md-root .md-face { position: absolute; left: 0; right: 0; top: 72px; bottom: 0; width: 100%; height: calc(100% - 72px); pointer-events: none; }
+.md-root .md-panel {
+  flex: none; position: relative; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: var(--fx-bg); border-top: 1px solid var(--fx-line);
+}
+.md-root .md-ruler { position: relative; height: 100px; margin: 0 -16px; }
+.md-root .md-ruler::before { content: ""; position: absolute; left: 34px; right: 34px; top: 49px; height: 4px; border-radius: 2px; background: var(--fx-track); }
+.md-root .md-knob {
+  position: absolute; top: 0; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--fx-ink); box-sizing: border-box; pointer-events: none;
+}
+.md-root .md-tick { position: absolute; top: 40px; width: 5px; height: 22px; border-radius: 3px; background: var(--md-tick); }
+.md-root .md-tick.is-on { top: 36px; height: 30px; background: var(--fx-ink); }
+.md-root .md-tick-emoji { position: absolute; top: 70px; width: 28px; text-align: center; font-size: 20px; line-height: 28px; opacity: .75; }
+.md-root .md-tick-emoji.is-on { opacity: 1; }
+.md-root .md-problem { margin: 4px 0 0; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--fx-bad); text-align: center; }
+.md-root .md-save {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 640px; height: 52px; margin: 8px auto 0; padding: 0 20px; border-radius: 12px;
+  background: var(--fx-accent); color: var(--fx-accent-ink); font-size: 16px; font-weight: 800; border: 0;
+  transition: transform .14s var(--fx-ease);
+}
+.md-root .md-save:active:not(:disabled) { transform: scale(.98); }
+.md-root .md-save:disabled { cursor: default; }
+.md-root .md-save.is-saved, .md-root .md-save.is-saved:disabled { background: var(--fx-pick-bg); color: var(--fx-accent-text); box-shadow: inset 0 0 0 1.5px var(--fx-accent-text); }
+.md-root .md-note { margin: 8px 0 0; text-align: center; font-size: 13px; line-height: 18px; color: var(--fx-ink2); }
+
+/* ================= PICKER PAGE ================= */
+.md-root.md-classic { overflow-x: hidden; overflow-y: auto; }
+.md-root .md-body { display: flex; flex-direction: column; gap: 24px; padding-top: 16px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); }
+.md-root .md-body.has-dock { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 112px); }
+.md-root .md-hint { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--fx-ink2); }
+.md-root .md-eyebrow { font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--fx-ink2); }
+
+/* my mood card */
+.md-root .md-mine { display: flex; align-items: center; gap: 16px; }
+.md-root .md-mine-tile { flex: none; width: 64px; height: 64px; border-radius: 16px; background: var(--fx-yellow); display: flex; align-items: center; justify-content: center; font-size: 36px; line-height: 1; }
+.md-root .md-mine-main { min-width: 0; flex: 1 1 0; }
+.md-root .md-mine-label { font-size: 22px; line-height: 28px; font-weight: 800; color: var(--fx-ink); }
+.md-root .md-mine-note { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--fx-ink); overflow-wrap: anywhere; word-break: break-word; }
+.md-root .md-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.md-root .md-meta-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 28px; padding: 4px 10px; border-radius: 14px; background: var(--fx-chip); color: var(--fx-chip-ink); font-size: 12px; line-height: 16px; font-weight: 700; }
+.md-root .md-meta-plain { font-size: 12px; line-height: 16px; color: var(--fx-ink2); }
+
+/* the emoji tiles */
+.md-root .md-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.md-root .md-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 80px; padding: 8px 2px; border-radius: 12px;
+  background: var(--fx-soft); border: 1px solid var(--fx-line2); color: var(--fx-ink);
+  transition: transform .14s var(--fx-ease), background .14s;
+}
+.md-root .md-tile:active { transform: scale(.95); }
+.md-root .md-tile-emoji { font-size: 32px; line-height: 36px; }
+.md-root .md-tile-label { max-width: 100%; font-size: 12px; line-height: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-root .md-tile[aria-checked="true"] { background: var(--fx-yellow); border-color: var(--md-sel-line); box-shadow: inset 0 0 0 1px var(--md-sel-line); color: #1c1c1c; }
+.md-root .md-tile[aria-checked="true"] .md-tile-label { font-weight: 800; }
+.md-root .md-pills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.md-root .md-pills .fx-pill { height: auto; min-height: 44px; padding: 8px 12px; border-radius: 12px; line-height: 18px; font-size: 14px; text-align: center; }
+
+/* sticky bottom action bar */
+.md-root .md-dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
+  background: var(--fx-bg); border-top: 1px solid var(--fx-line);
+}
+.md-root .md-dock .fx-btn { height: 52px; font-size: 16px; }
+
+/* lists */
+.md-root .md-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.md-root .md-chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 20px;
+  background: var(--fx-chip); border: 1px solid var(--fx-line2); color: var(--fx-chip-ink); font-size: 14px; font-weight: 700; white-space: nowrap;
+}
+.md-root .md-chip[aria-pressed="true"] { background: var(--fx-yellow); border-color: var(--fx-yellow); color: #1c1c1c; font-weight: 800; }
+.md-root .md-list { display: flex; flex-direction: column; gap: 8px; }
+.md-root .md-person {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 12px; border-radius: 12px; text-align: left;
+  background: var(--fx-surface); border: 1px solid var(--fx-line); box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+.md-root .md-person:active { background: var(--fx-soft); }
+.md-root .md-ava { flex: none; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--fx-soft); }
+.md-root .md-ava.is-letter { display: flex; align-items: center; justify-content: center; background: var(--fx-yellow); color: #1c1c1c; font-size: 18px; font-weight: 800; }
+.md-root .md-person-main { min-width: 0; flex: 1 1 0; display: flex; flex-direction: column; }
+.md-root .md-person-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; line-height: 20px; font-weight: 800; color: var(--fx-ink); }
+.md-root .md-trunc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-root .md-person-sub { font-size: 13px; line-height: 18px; color: var(--fx-ink2); }
+.md-root .md-person-note { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--fx-ink); overflow-wrap: anywhere; word-break: break-word; }
+.md-root .md-person-mood { flex: none; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.md-root .md-person-emoji { width: 44px; height: 44px; border-radius: 12px; background: var(--fx-chip); display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; }
+.md-root .md-person-label { max-width: 100%; font-size: 12px; line-height: 16px; font-weight: 700; color: var(--fx-ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .md-root .md-back, .md-root .md-save, .md-root .md-tile { transition: none; }
+}
+.md-root .fx-acts.md-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.md-root .md-acts .fx-act { justify-content: center; min-width: 0; padding: 0 8px; }
+.md-root .fx-seg-btn[aria-selected="false"] { box-shadow: inset 0 0 0 1px var(--fx-line2); background: var(--fx-surface); }

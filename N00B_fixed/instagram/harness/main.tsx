@@ -136,7 +136,7 @@ async function boot() {
   const currentUser = signedOut ? null : user;
 
   const Menu = () => {
-    const pages = [['draw', 'NOOB Draw'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['forms', 'NOOB Forms (my forms)'], ['form', 'NOOB Forms (public form)']];
+    const pages = [['draw', 'NOOB Draw'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['mood', 'Mood Status (slider)'], ['moodclassic', 'Mood Status (picker, notes, lists)'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['forms', 'NOOB Forms (my forms)'], ['form', 'NOOB Forms (public form)']];
     return h('div', { style: { padding: 20, fontFamily: 'sans-serif', color: theme === 'light' ? '#111' : '#eee' } },
       h('h2', null, 'NOOB visual harness'),
       h('p', null, 'Add &theme=light|dark &phone=1 &state=full|empty|loading|error &admin=1 &voted=1 &user=0 to any link.'),
@@ -148,13 +148,17 @@ async function boot() {
   if (page === 'draw') {
     const { NoobDrawPage } = await import('../src/components/Draw/NoobDrawPage.tsx');
     Page = () => { const [me, setMe] = React.useState(currentUser); return h(NoobDrawPage, { currentUser: me, onUserUpdated: setMe, onClose: () => console.info('[harness] onClose') }); };
-  } else if (['tot', 'ask', 'polls', 'forms', 'form'].includes(page)) {
+  } else if (['tot', 'ask', 'polls', 'mood', 'forms', 'form'].includes(page)) {
     const { FunHub } = await import('../src/components/Fun/FunHub.tsx');
-    const feature = { tot: 'this-or-that', ask: 'ask', polls: 'polls', forms: 'forms', form: 'form' }[page];
+    const feature = { tot: 'this-or-that', ask: 'ask', polls: 'polls', mood: 'mood', forms: 'forms', form: 'form' }[page];
     Page = () => {
       const [loc, setLoc] = React.useState({ feature, target: target ?? (page === 'form' ? 'cs-f1' : undefined) });
       return h(FunHub, { currentUser, location: loc, onNavigate: setLoc, onBack: () => console.info('[harness] onBack'), onHome: () => console.info('[harness] onHome'), onLogin: () => console.info('[harness] onLogin'), onOpenProfile: (u) => console.info('[harness] onOpenProfile', u?.username) });
     };
+  } else if (page === 'moodclassic') {
+    const mod = await import('../src/components/Fun/MoodClassic.tsx');
+    const MoodClassic = mod.default;
+    Page = () => h(MoodClassic, { currentUser, onBack: () => console.info('[harness] onBack'), onLogin: () => console.info('[harness] onLogin'), onOpenProfile: (u) => console.info('[harness] onOpenProfile', u?.username) });
   } else if (page === 'anon') {
     const mod = await import('../src/components/Anonymous/AnonymousMessagesPage.tsx');
     const AnonymousMessagesPage = mod.AnonymousMessagesPage || mod.default;

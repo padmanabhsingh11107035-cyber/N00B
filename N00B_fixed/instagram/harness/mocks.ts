@@ -156,8 +156,37 @@ const FORM = (id, title, description, status, count, daysAgo) => ({ owner_id: FA
 const FORMS = () => [FORM('f1', 'Diwali get-together RSVP', 'Tell us who is coming and what you will bring.', 'published', 128, 2), FORM('f2', 'Customer feedback', 'How was your order from the NOOB shop?', 'published', 36, 9),
   FORM('f3', 'Club registration 2026', 'Cricket, chess and coding club.', 'closed', 412, 40), FORM('f4', 'Untitled form', '', 'draft', 0, 0)];
 
+
+// ---------------------------------------------------------------- Mood Status
+// &mood=none = I have no mood set; &long=1 = very long note / names; state=empty = nobody shares a mood
+const moodQ = (k) => new URLSearchParams(location.search).get(k);
+let moodMine = undefined;
+const myMood = (ctx) => {
+  if (moodMine !== undefined) return moodMine;
+  if (ctx.state === 'empty' || moodQ('mood') === 'none') return null;
+  return { mood: 'happy', note: moodQ('long') === '1' ? 'Finally finished the whole semester project and the demo went far better than anyone in the team expected, so tonight is chai and a very long walk' : 'Chai, cricket and a free evening', updatedAt: ago(2 * H), visibility: 'followers', expiresAt: ahead(11 * H) };
+};
+const MOOD_PEOPLE = () => {
+  const long = moodQ('long') === '1';
+  return [
+    { ...PEOPLE[0], mood: 'excited', note: long ? 'Got the internship offer from the company I wanted most, still shaking, calling everyone I know right now!!' : 'Got the internship offer!', updatedAt: ago(12 * 60e3) },
+    { ...PEOPLE[1], displayName: long ? 'Rohan Kulkarni-Deshpande the Third of Pune' : 'Rohan Kulkarni', mood: 'tired', note: '', updatedAt: ago(1.5 * H) },
+    { ...PEOPLE[2], mood: 'loved', note: 'Mom made rajma chawal', updatedAt: ago(3 * H) },
+    { ...PEOPLE[3], mood: 'angry', note: 'Third power cut today', updatedAt: ago(5 * H) },
+    { userId: 'p5', username: 'meera.j', displayName: 'Meera Joshi', avatar: '', isVerified: false, mood: 'bored', note: '', updatedAt: ago(9 * H) },
+    { userId: 'p6', username: 'kabir.m', displayName: 'Kabir Mehta', avatar: '', isVerified: false, mood: 'confident', note: 'Presentation at 10', updatedAt: ago(20 * H) }
+  ];
+};
+const moodPage = (ctx, filter) => (ctx.state === 'empty' ? { moods: [], hasMore: false } : { moods: MOOD_PEOPLE().filter((m) => !filter || m.mood === filter), hasMore: false });
+
 // ---------------------------------------------------------------- the table of rpc answers
 export const rpcMocks = {
+  mood_my: (a, ctx) => myMood(ctx) ?? null,
+  mood_friends: (a, ctx) => moodPage(ctx),
+  mood_community: (a, ctx) => moodPage(ctx, a.p_mood),
+  mood_set: (a) => (moodMine = { mood: a.p_mood, note: a.p_note, visibility: a.p_visibility, updatedAt: new Date().toISOString(), expiresAt: a.p_expire_hours ? ahead(a.p_expire_hours * H) : null }),
+  mood_set_until: (a) => (moodMine = { mood: a.p_mood, note: a.p_note, visibility: a.p_visibility, updatedAt: new Date().toISOString(), expiresAt: a.p_expires_at }),
+  mood_clear: () => { moodMine = null; return null; },
   noob_draw_state: (a, ctx) => drawState(ctx),
   noob_draw_spin: (a, ctx) => {
     const pack = PACKS.find((p) => p.id === a.p_pack) || PACKS[0]; const prize = pack.prizes[Math.min(4, pack.prizes.length - 1)];

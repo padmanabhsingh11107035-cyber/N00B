@@ -10,6 +10,8 @@ import '@fontsource/dejavu-sans/latin-400.css';
 import '@fontsource/dejavu-sans/latin-700.css';
 import './index.css';
 import './polish.css';
+import { installErrorReporter } from './utils/errorReporter.ts';
+import { ReportProblemHost } from './components/Common/ReportProblemSheet.tsx';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';
 import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
@@ -136,6 +138,8 @@ const editorPage = !oldAddress && !isNativeApp() && isEditorHost();
 const approvalPage = !oldAddress && !editorPage && !isNativeApp() && cleanPath(window.location.pathname) === '/login-approval';
 const pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
 
+installErrorReporter();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
@@ -153,6 +157,7 @@ createRoot(document.getElementById('root')!).render(
           <InstallInvite />
           <ServiceGate />
           <AppUpdateGate />
+          <ReportProblemHost />
         </MusicPlayerProvider>
       )}
     </ErrorBoundary>

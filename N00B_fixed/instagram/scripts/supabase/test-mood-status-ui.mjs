@@ -60,7 +60,7 @@ check(/p\.account_type <> 'private'/.test(sql), 'the community list leaves priva
 
 section('7. The API');
 check(/'mood_set', \{ p_mood: input\.mood, p_note: input\.note, p_visibility: input\.visibility, p_expire_hours: input\.expireHours \}/.test(api) && !/\.from\('user_moods'\)/.test(api), 'every call goes through a database function');
-check(/setMyMood,\s*setMyMoodUntil,\s*clearMyMood,\s*fetchMyMood,\s*fetchUserMood,\s*fetchFriendMoods,\s*fetchCommunityMoods/.test(apiIndex) && /MoodStatus,\s*MoodPerson,\s*MoodPage/.test(apiIndex), 'the API index exports them');
+check(/setMyMood,\s*setMyMoodUntil,[\s\S]{0,120}?clearMyMood,\s*fetchMyMood,\s*fetchUserMood,\s*fetchFriendMoods,\s*fetchCommunityMoods/.test(apiIndex) && /MoodStatus,\s*MoodPerson,\s*MoodPage/.test(apiIndex), 'the API index exports them');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

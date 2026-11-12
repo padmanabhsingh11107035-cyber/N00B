@@ -1692,7 +1692,8 @@ html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inse
 html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
 html.phone-edge .msg-safe-strip:not(.on) { display: none !important; }
 /* Messages list: the area behind the clock is the green of the header, so the green reaches the very top of the screen */
-html.phone-edge .msg-safe-strip.on { display: block !important; height: var(--sat) !important; background: #0E4B37 !important; }
+/* phones with the page under the clock: NO fixed coloured block behind the clock. The green header itself reaches the top of the screen and scrolls away with the list; everything that scrolls passes through the clock area. */
+html.phone-edge .msg-safe-strip, html.phone-edge .msg-safe-strip.on { display: none !important; }
 html.phone-edge #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
 /* full-screen pages and pop-ups start just below the clock (their top edge moves down; nothing is added inside them). The ones that keep room for it themselves (.edge-own, own env() padding) are left alone. */
 html.phone-edge .fixed.inset-0:not(.edge-own):not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { top: var(--sat) !important; }

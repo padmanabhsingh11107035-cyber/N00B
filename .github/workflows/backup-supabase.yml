@@ -75,6 +75,17 @@ jobs:
           [ "$(ls out | wc -l)" = "1" ] && [ -s "out/noob-supabase-$stamp.tar.gz.enc" ] || { echo "::error::Encryption failed."; exit 1; }
           echo "STAMP=$stamp" >> "$GITHUB_ENV"
 
+      - name: Prove the backup opens with the passphrase (decrypt test, nothing is kept)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          f="out/noob-supabase-$STAMP.tar.gz.enc"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:BACKUP_PASSPHRASE -in "$f" -out /tmp/check.tar.gz
+          n=$(tar -tzf /tmp/check.tar.gz | wc -l)
+          rm -f /tmp/check.tar.gz
+          echo "Decrypt test passed: the archive opens and holds $n entries."
+          [ "$n" -gt 0 ] || { echo "::error::Decrypt test failed."; exit 1; }
+
       - uses: actions/upload-artifact@v4
         with:
           name: noob-supabase-backup-${{ env.STAMP }}

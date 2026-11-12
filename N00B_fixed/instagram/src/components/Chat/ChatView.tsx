@@ -1,6 +1,7 @@
 import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
+import { setChatMuted } from '../../services/chatMuteApi';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
 import { ChatThemeModal } from './ChatThemeModal';
@@ -17,6 +18,8 @@ import {
   ChevronDown,
   Search,
   Pin,
+  BellOff,
+  Bell,
   MoreVertical,
   Phone,
   Send,
@@ -665,7 +668,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const sentByMe = last.senderId === currentUser.id;
 
     if (newMessageArrived && !sentByMe && previousLastId !== null && !justOpenedChatRef.current) {
-      if (cs['chat.sounds']) playChatTone('in');
+      const chatIsMuted = !!conversations.find((c) => c.id === activeChatId)?.isMuted;
+      if (!chatIsMuted) { if (cs['chat.sounds']) playChatTone('in'); }
       if (cs['chat.vibrate'] && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(30);
     }
     if (justOpenedChatRef.current) {
@@ -937,6 +941,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
     } catch (err) {
       console.error(err);
       setConversations((list) => list.map((c) => (c.id === chatId ? { ...c, isPinned: wasPinned } : c)));
+    }
+  };
+
+  const [muteToast, setMuteToast] = useState<string | null>(null);
+  const handleToggleMute = async (chatId: string) => {
+    const wasMuted = !!conversations.find((c) => c.id === chatId)?.isMuted;
+    const setMuted = (v: boolean) => setConversations((list) => list.map((c) => (c.id === chatId ? { ...c, isMuted: v } : c)));
+    setMuted(!wasMuted);
+    const r = await setChatMuted(chatId, !wasMuted);
+    if (r.success) setMuted(!!r.isMuted);
+    else {
+      setMuted(wasMuted);
+      setMuteToast(r.error || 'Could not change the mute setting.');
+      window.setTimeout(() => setMuteToast(null), 3500);
     }
   };
 
@@ -2091,6 +2109,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           {displayName}
                         </span>
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
+                        {c.isMuted && <BellOff className="w-[14px] h-[14px] shrink-0 text-[#6c747b]" data-testid="chat-row-muted-icon" aria-label="Notifications muted" />}
                       </div>
 
                       <span className="text-[12.5px] leading-4 text-[#8b9198] shrink-0 tabular-nums">
@@ -2130,7 +2149,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <Pin className="w-[15px] h-[15px] text-[#6c747b]" strokeWidth={2} />
                         )}
                         {cs['chat.unreadBadges'] && c.unreadCount && c.unreadCount > 0 ? (
-                          <span className="min-w-[18px] h-[18px] px-[5px] rounded-full bg-[var(--mint)] text-[#033b2a] text-[11px] leading-none font-bold flex items-center justify-center tabular-nums">
+                          <span className={`min-w-[18px] h-[18px] px-[5px] rounded-full ${c.isMuted ? 'bg-[#6c747b]/60 text-white' : 'bg-[var(--mint)] text-[#033b2a]'} text-[11px] leading-none font-bold flex items-center justify-center tabular-nums`}>
                             {c.unreadCount}
                           </span>
                         ) : null}
@@ -2298,6 +2317,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       activeChat?.participants.find((p) => p.id !== currentUser.id)?.isVerified && (
                         <VerifiedBadge size="xs" />
                       )}
+                    {activeChat?.isMuted && <BellOff className="w-[14px] h-[14px] shrink-0 text-zinc-400" data-testid="chat-header-muted-icon" aria-label="Notifications muted" />}
+                    {muteToast && (
+                      <div role="status" data-testid="chat-mute-toast" className="fixed left-1/2 -translate-x-1/2 top-16 z-[80] max-w-[90vw] px-3 py-2 rounded-xl bg-zinc-900 text-white text-xs font-semibold border border-white/10 shadow-xl">{muteToast}</div>
+                    )}
                   </div>
 
                   <div className="chat-sub text-[13px] leading-tight text-zinc-400 flex items-center gap-x-2 min-w-0 overflow-hidden whitespace-nowrap">
@@ -2405,6 +2428,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       {activeChat?.isPinned && (
                         <span className="text-[10px] text-amber-400 font-bold">Pinned</span>
                       )}
+                    </button>
+
+                    {/* Option: Mute / Unmute notifications */}
+                    <button
+                      data-testid="chat-mute-toggle"
+                      aria-label={activeChat?.isMuted ? 'Unmute notifications' : 'Mute notifications'}
+                      onClick={() => {
+                        setShowChatActionsMenu(false);
+                        if (activeChat) handleToggleMute(activeChat.id);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {activeChat?.isMuted ? <Bell className="w-4 h-4 text-zinc-400" /> : <BellOff className="w-4 h-4 text-zinc-400" />}
+                      {activeChat?.isMuted ? 'Unmute' : 'Mute notifications'}
                     </button>
 
                     {/* Option: Theme & Nickname */}

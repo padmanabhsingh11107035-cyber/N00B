@@ -13,3 +13,17 @@ export function openInApp(url: unknown): boolean {
   if (typeof url !== 'string' || !url || !handler) return false;
   try { return handler(url) === true; } catch { return false; }
 }
+
+// A tapped #hashtag opens the hashtag page inside the app (App.tsx registers the opener once; the page is a layer on top of the page that is showing, with the usual way back).
+type TagHandler = (tag: string) => void;
+let tagHandler: TagHandler | null = null;
+
+export function setHashtagHandler(next: TagHandler | null): void {
+  tagHandler = next;
+}
+
+/** Opens the page of `tag` ("#robots" or "robots"). Returns false when the app has not registered an opener (nothing happens then). */
+export function openHashtag(tag: unknown): boolean {
+  if (typeof tag !== 'string' || !tag || !tagHandler) return false;
+  try { tagHandler(tag); return true; } catch { return false; }
+}

@@ -1,0 +1,21 @@
+// Mute notifications per chat. Usage: node scripts/supabase/test-chat-mute.mjs
+import fs from 'node:fs';
+let passed = 0, failed = 0;
+const check = (c, l) => { if (c) { passed++; console.log(`  ok   ${l}`); } else { failed++; console.log(`  FAIL ${l}`); } };
+const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
+const sql = read('supabase/migrations/20261112000002_chat_mute.sql');
+const api = read('src/services/chatMuteApi.ts');
+const view = read('src/components/Chat/ChatView.tsx');
+check(/function public\.set_chat_muted\(p_chat uuid, p_muted boolean\)/.test(sql) && /security definer set search_path = public/.test(sql), 'SQL: set_chat_muted exists, security definer, fixed search_path');
+check(/is_chat_member\(p_chat\)/.test(sql) && /errcode = '42501'/.test(sql), 'SQL: caller must be a member');
+check(/update public\.chat_members set is_muted = p_muted where chat_id = p_chat and user_id = me/.test(sql), 'SQL: updates only the caller\'s own row');
+check(/function public\.my_muted_chats\(\)/.test(sql) && /m\.user_id = auth\.uid\(\) and m\.is_muted/.test(sql), 'SQL: my_muted_chats lists only the caller\'s muted chats');
+check(/grant execute on function public\.set_chat_muted\(uuid, boolean\) to authenticated/.test(sql) && /revoke all on function public\.set_chat_muted/.test(sql), 'SQL: granted to authenticated only');
+check(!/alter table|drop |delete from/i.test(sql), 'SQL: additive only');
+check(/rpc\('set_chat_muted', \{ p_chat: chatId, p_muted: muted \}\)/.test(api) && /rpc\('my_muted_chats'\)/.test(api), 'client calls both rpc names');
+check(/data-testid="chat-mute-toggle"/.test(view) && /Mute notifications/.test(view) && /BellOff/.test(view), 'ChatView: menu item with testid and bell-off icon');
+check(/handleToggleMute/.test(view) && /setMuted\(wasMuted\)/.test(view) && /chat-mute-toast/.test(view), 'ChatView: optimistic update, rollback, inline toast');
+check(/chat-row-muted-icon/.test(view) && /chat-header-muted-icon/.test(view), 'ChatView: muted icon in list and header');
+check(/if \(!chatIsMuted\) \{ if \(cs\['chat\.sounds'\]\) playChatTone\('in'\)/.test(view), 'ChatView: no in-app sound for a muted chat');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

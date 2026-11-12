@@ -192,7 +192,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               {isReply && c.replyToUsername && c.replyToUsername !== c.username && (
                 <span onClick={() => openProfile(c.replyToUserId)} className="text-noob font-semibold mr-1 cursor-pointer hover:underline">@{c.replyToUsername}</span>
               )}
-              {c.text}
+              {linkify(c.text)}
             </p>
             {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
             <button

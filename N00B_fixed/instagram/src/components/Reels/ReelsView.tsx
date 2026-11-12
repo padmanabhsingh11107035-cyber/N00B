@@ -2,6 +2,8 @@ import { createPortal } from 'react-dom';
 import { RepostButton } from '../Common/RepostButton';
 import React, { useState, useRef, useEffect } from 'react';
 import { linkify } from '../Common/Linkified';
+import { EditCaptionSheet } from '../Common/EditCaptionSheet';
+import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
@@ -23,6 +25,7 @@ import {
   Film,
   ArrowLeft,
   Trash2,
+  Pencil,
   MoreVertical,
   Link2,
   Pin,
@@ -55,6 +58,7 @@ import {
   fetchReelLikers,
   fetchReelViewers,
   deleteReel,
+  updateReelCaption,
   fetchUserById,
   toggleCommentsReel,
   toggleLikeCountReel
@@ -696,6 +700,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   };
 
+  // Owner: "Edit caption". The reel in the list changes at once; other lists hear about it through captionEvents.
+  const [showEditReelCaption, setShowEditReelCaption] = useState(false);
+  useEffect(() => onCaptionEdited((d) => {
+    if (d.kind !== 'reel') return;
+    setLocalReels((prev) => prev.map((r) => (r.id === d.id ? { ...r, caption: d.caption, hashtags: d.hashtags } : r)));
+  }), []);
+
   const handleDeleteReel = async () => {
     if (!currentReel) return;
     if (!window.confirm('Delete this reel? It will be removed for good and cannot be brought back.')) return;
@@ -1143,6 +1154,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                         <Pin className="w-4 h-4 text-noob" /> {pinnedItems.some((p) => p.kind === 'reel' && p.itemId === currentReel.id) ? 'Unpin from Feed' : 'Pin to Feed'}
                       </button>
                     )}
+                    {isReelOwner && (
+                      <button
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          setShowEditReelCaption(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                        data-testid="reel-edit-caption"
+                      >
+                        <Pencil className="w-4 h-4 text-green-400" /> Edit caption
+                      </button>
+                    )}
                     {(isReelOwner || isMasterAdmin) && (
                       <button
                         onClick={() => {
@@ -1362,6 +1385,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         <div className="absolute top-[72px] inset-x-3 z-30 pointer-events-none"><div className="pointer-events-auto"><AdBanner page="reels" compact /></div></div>
       </div>
 
+      {showEditReelCaption && currentReel && createPortal(
+        <EditCaptionSheet
+          title="Edit caption"
+          initial={currentReel.caption || ''}
+          onClose={() => setShowEditReelCaption(false)}
+          onSave={async (text) => {
+            const res = await updateReelCaption(currentReel.id, text);
+            if (!res.success || !res.reel) return res.error || 'The caption could not be saved.';
+            announceCaptionEdited({ kind: 'reel', id: currentReel.id, caption: res.reel.caption, hashtags: res.reel.hashtags || [] });
+            return null;
+          }}
+        />,
+        document.body
+      )}
+
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && createPortal(
         <div className="fixed inset-0 z-[60] sm:flex sm:items-center sm:justify-center sm:p-4" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
@@ -1394,7 +1432,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   return (
                     <div key={c.id} className="py-1">
                       <div translate="no" className="p-2 bg-neutral-900 rounded-lg">
-                        <span className="font-bold text-noob">@{c.username}:</span> {c.text}
+                        <span className="font-bold text-noob">@{c.username}:</span> {linkify(c.text)}
                         {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
                         <button
                           type="button"

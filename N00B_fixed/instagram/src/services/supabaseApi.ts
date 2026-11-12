@@ -2554,6 +2554,53 @@ export function pokeMediaCleanup(): void {
   try { void Promise.resolve(supabase.rpc('poke_media_cleanup')).then(() => undefined, () => undefined); } catch { /* not important */ }
 }
 
+// ---- Hashtag pages and editing a caption after publishing (supabase/migrations/20261112000001_hashtags_and_edit_post.sql) ----
+export type HashtagSort = 'new' | 'top';
+const dropHashtagCache = () => { for (const k of [...shortCache.keys()]) if (k.startsWith('tag:')) shortCache.delete(k); };
+
+/** Posts that carry #tag, that this person is allowed to see (same visibility as opening a post by its link). Cached for a few seconds. */
+export async function fetchPostsByHashtag(tag: string, sort: HashtagSort = 'new', offset = 0, limit = 60): Promise<Post[]> {
+  const t = String(tag || '').replace(/^#+/, '').trim().toLowerCase();
+  return cached(`tag:p:${t}:${sort}:${offset}:${limit}`, async () => mapPosts(await rpc<any[]>('posts_by_hashtag', { p_tag: t, p_limit: limit, p_offset: offset, p_sort: sort })));
+}
+
+export async function fetchReelsByHashtag(tag: string, sort: HashtagSort = 'new', offset = 0, limit = 60): Promise<Reel[]> {
+  const t = String(tag || '').replace(/^#+/, '').trim().toLowerCase();
+  return cached(`tag:r:${t}:${sort}:${offset}:${limit}`, async () => {
+    const list = await rpc<any[]>('reels_by_hashtag', { p_tag: t, p_limit: limit, p_offset: offset, p_sort: sort });
+    return Array.isArray(list) ? list.map(mapReel) : [];
+  });
+}
+
+export async function fetchHashtagCounts(tag: string): Promise<{ posts: number; reels: number }> {
+  const t = String(tag || '').replace(/^#+/, '').trim().toLowerCase();
+  return cached(`tag:c:${t}`, async () => {
+    const r = await rpc<any>('hashtag_counts', { p_tag: t });
+    return { posts: Number(r?.posts) || 0, reels: Number(r?.reels) || 0 };
+  });
+}
+
+/** Owner only: changes the caption of a post; the hashtags follow the new caption. Returns the post as the server now has it, or an error text. */
+export async function updatePostCaption(postId: string, caption: string): Promise<{ success: boolean; post?: Post; error?: string }> {
+  try {
+    const res = await rpc<any>('update_post_caption', { p_post: postId, p_caption: caption });
+    dropHashtagCache();
+    return { success: true, post: mapPost(res) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The caption could not be saved.') };
+  }
+}
+
+export async function updateReelCaption(reelId: string, caption: string): Promise<{ success: boolean; reel?: Reel; error?: string }> {
+  try {
+    const res = await rpc<any>('update_reel_caption', { p_reel: reelId, p_caption: caption });
+    dropHashtagCache();
+    return { success: true, reel: mapReel(res) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The caption could not be saved.') };
+  }
+}
+
 // Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.
 export async function fetchReelById(reelId: string): Promise<Reel | null> {
   try {

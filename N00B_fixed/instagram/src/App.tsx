@@ -139,7 +139,9 @@ import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery,
 import { afterHistoryIdle } from './utils/historyGate';
 import { showTabAddress, tabFromHistoryEntry } from './utils/addressBar';
 import { useAnyFullPage } from './utils/fullPage';
-import { setInAppLinkHandler } from './utils/inAppLinks';
+import { setInAppLinkHandler, setHashtagHandler } from './utils/inAppLinks';
+import { normalizeTag, isValidTag } from './utils/hashtags';
+import { onCaptionEdited } from './utils/captionEvents';
 import { isOwnHost } from './utils/siteUrl';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
@@ -171,6 +173,7 @@ const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./compo
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
 import { BackToTop } from './components/Common/BackToTop';
+const HashtagPage = React.lazy(() => import('./components/Explore/HashtagPage').then((m) => ({ default: m.HashtagPage })));
 const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
 const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
@@ -230,6 +233,7 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 // What can be opened on top of the page that is showing: someone's profile, or the Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls).
 type AppLayer =
   | { id: string; kind: 'profile'; user: User }
+  | { id: string; kind: 'hashtag'; tag: string }
   | { id: 'fun'; kind: 'fun'; loc: FunLocation };
 
 export default function App() {
@@ -547,6 +551,7 @@ export default function App() {
   const [sharedLiveLoungePasscode, setSharedLiveLoungePasscode] = useState<string | null>(null);
   const [liveLoungeMeetingId, setLiveLoungeMeetingId] = useState<string | null>(null);   // a planned meeting opened from a notification
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
+  const [sharedTag, setSharedTag] = useState<string | null>(null);   // a link ?tag=<hashtag>: opens that hashtag page once someone is signed in
   const [sharedReelId, setSharedReelId] = useState<string | null>(null);
   const [sharedVideoId, setSharedVideoId] = useState<string | null>(null);
   // "Pay with NOOB Points" link from an email (?pro=<plan>&billing=<monthly|yearly>): opens that plan's payment page once signed in
@@ -570,6 +575,7 @@ export default function App() {
         const profileParam = params.get('profile');
         const joinParam = params.get('join');
         const postParam = params.get('post');
+        const tagParam = params.get('tag');
         const reelParam = params.get('reel');
         const videoParam = params.get('video');
         const liveLoungeParam = params.get('liveLounge');
@@ -617,6 +623,10 @@ export default function App() {
 
         if (postParam) {
           setSharedPostId(postParam);
+        }
+
+        if (tagParam && isValidTag(tagParam)) {
+          setSharedTag(normalizeTag(tagParam));
         }
 
         if (reelParam) {
@@ -678,6 +688,15 @@ export default function App() {
     url.searchParams.delete('post');
     window.history.replaceState({}, '', url.toString());
   }, [sharedPostId, currentUser]);
+
+  useEffect(() => {
+    if (!sharedTag || !currentUser) return;
+    openHashtagPage(sharedTag);
+    setSharedTag(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tag');
+    window.history.replaceState({}, '', url.toString());
+  }, [sharedTag, currentUser]);
 
   useEffect(() => {
     if (!sharedReelId || !currentUser) return;
@@ -1080,6 +1099,22 @@ export default function App() {
       pageLayers.push({ id: 'p:' + user.id, kind: 'profile', user });
     }
   };
+
+  // A tapped #hashtag (caption, comment, bio) or a ?tag= link opens the hashtag page on top of the page that is showing, like a profile: "Back" returns to that page as it was.
+  const openHashtagPage = (raw: string) => {
+    const tag = normalizeTag(raw);
+    if (!isValidTag(tag)) return;
+    const id = 'tag:' + tag;
+    const top = pageLayers.layers[pageLayers.layers.length - 1];
+    if (top && top.data.id === id) return;
+    pageLayers.push({ id, kind: 'hashtag', tag });
+  };
+  useEffect(() => { setHashtagHandler(openHashtagPage); return () => setHashtagHandler(null); });
+  // The owner changed a caption: the copies in the app's lists show the new text and tags straight away.
+  useEffect(() => onCaptionEdited((d) => {
+    if (d.kind === 'post') setPosts((prev) => prev.map((p) => (p.id === d.id ? { ...p, caption: d.caption, hashtags: d.hashtags } : p)));
+    else setReels((prev) => prev.map((r) => (r.id === d.id ? { ...r, caption: d.caption, hashtags: d.hashtags } : r)));
+  }), []);
 
   // The Fun pages of the three-line menu open on top of the page that is showing, like a profile: closing them (or the phone's back button) returns to that page exactly as it was.
   const openFun = (loc: FunLocation) => {
@@ -2048,7 +2083,18 @@ export default function App() {
         {/* profiles opened from the page above: each is its own page, the one on top shows, the ones under it wait exactly as they were */}
         {pageLayers.layers.map((layer, i) => (
           <PageLayerSlot key={layer.id} layerId={layer.id} hidden={i !== pageLayers.layers.length - 1} register={pageLayers.register}>
-            {layer.data.kind === 'profile' ? renderProfileView(layer.data.user) : (
+            {layer.data.kind === 'profile' ? renderProfileView(layer.data.user) : layer.data.kind === 'hashtag' ? (
+              <ErrorBoundary showErrorDetails>
+                <React.Suspense fallback={<LazyFallback />}>
+                  <HashtagPage
+                    tag={layer.data.tag}
+                    onBack={pageLayers.back}
+                    onOpenPost={(post) => { void handleNavigateToPost(post.id); }}
+                    onOpenReel={(reel) => { void handleNavigateToReel(reel.id); }}
+                  />
+                </React.Suspense>
+              </ErrorBoundary>
+            ) : (
               <ErrorBoundary showErrorDetails>
                 <React.Suspense fallback={<LazyFallback />}>
                   <FunHub

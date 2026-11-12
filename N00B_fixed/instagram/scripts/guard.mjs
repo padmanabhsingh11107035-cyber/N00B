@@ -23,6 +23,7 @@ const CHECKS = [
   ['Desktop / tablet layout', ['node', 'scripts/supabase/test-desktop-layout.mjs']],
   ['Bottom bar', ['node', 'scripts/supabase/test-bottom-nav-flat.mjs']],
   ['Reels page', ['node', 'scripts/supabase/test-reels-pager.mjs']],
+  ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],
   ['Top strip and install bar', ['node', 'scripts/supabase/test-peek-install-strip.mjs']],
   // features the administrator controls
@@ -33,6 +34,9 @@ const CHECKS = [
   ['Scratch cards', ['node', 'scripts/supabase/test-scratch-cards.mjs']],
   ['Lenses', ['node', 'scripts/supabase/test-lenses.mjs']],
   ['Family map', ['node', 'scripts/supabase/test-family.mjs']],
+  ['Hashtags and editing a caption', ['node', '--liftoff-only', 'scripts/supabase/test-hashtags-edit.mjs']],
+  // the free protection of the data
+  ['Supabase usage alert (80% line)', ['node', 'scripts/supabase/test-usage-alert.mjs']],
 ];
 
 const win = process.platform === 'win32';

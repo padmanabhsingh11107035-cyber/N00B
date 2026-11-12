@@ -1,0 +1,32 @@
+name: Usage alert
+
+# Free and automatic: every day GitHub asks the database how big it is (usage_probe(), migration 20261112000003) and opens / updates the issue
+# "Supabase free limit warning" when the database or file storage is at 80% of the free plan. GitHub e-mails the owner about issues.
+# Egress (5 GB/month) cannot be read this way: check Supabase Dashboard > Usage. Details: N00B_fixed/instagram/docs/BACKUP.md
+on:
+  schedule:
+    - cron: '45 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check usage and open the issue if needed
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/usage-alert.mjs

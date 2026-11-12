@@ -23,6 +23,7 @@ import {
   MessageSquareOff,
   EyeOff,
   Trash2,
+  Pencil,
   Link2,
   VolumeX,
   Music,
@@ -36,7 +37,10 @@ import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
 import { safeExternalUrl } from '../../utils/safeUrl';
 import { contentUrl } from '../../utils/routes';
-import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
+import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById, updatePostCaption } from '../../services/api';
+import { openHashtag } from '../../utils/inAppLinks';
+import { EditCaptionSheet } from '../Common/EditCaptionSheet';
+import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
@@ -102,6 +106,12 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showLikesSheet, setShowLikesSheet] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  // Owner: "Edit caption". The new caption (and the hashtags that follow from it) shows here at once; other lists hear about it through captionEvents.
+  const [showEditCaption, setShowEditCaption] = useState(false);
+  const [editedText, setEditedText] = useState<{ id: string; caption: string; hashtags: string[] } | null>(null);
+  useEffect(() => onCaptionEdited((d) => { if (d.kind === 'post' && d.id === post.id) setEditedText({ id: d.id, caption: d.caption, hashtags: d.hashtags }); }), [post.id]);
+  const shownCaption = editedText && editedText.id === post.id ? editedText.caption : post.caption;
+  const shownHashtags = editedText && editedText.id === post.id ? editedText.hashtags : post.hashtags;
 
   const copyPostLink = async () => {
     const shareUrl = contentUrl('post', post.id);
@@ -707,6 +717,18 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <Pin className="w-4 h-4 text-noob" /> {pinnedPosts.some((p) => p.kind === 'post' && p.itemId === post.id) ? 'Unpin from Feed' : 'Pin to Feed'}
                 </button>
               )}
+              {isOwner && (
+                <button
+                  onClick={() => {
+                    setShowEditCaption(true);
+                    setShowOptionsMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                  data-testid="post-edit-caption"
+                >
+                  <Pencil className="w-4 h-4 text-green-400" /> Edit caption
+                </button>
+              )}
               {(isOwner || isMasterAdmin) && (
                 <button
                   onClick={() => {
@@ -1036,9 +1058,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Captions with Formatted Line Breaks */}
         <div className="hv-caption mt-1.5 text-xs text-zinc-200">
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
-            {post.caption || ''}
+            {linkify(shownCaption || '')}
           </span>
-          {(post.caption || '').length > 90 && (
+          {(shownCaption || '').length > 90 && (
             <button
               onClick={() => setIsCaptionExpanded(!isCaptionExpanded)}
               className="text-zinc-400 hover:text-white text-[11px] ml-1.5 cursor-pointer"
@@ -1056,12 +1078,12 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* Hashtags */}
-        {post.hashtags && post.hashtags.length > 0 && (
+        {shownHashtags && shownHashtags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {post.hashtags.map((tag, idx) => (
+            {shownHashtags.map((tag, idx) => (
               <span
                 key={idx}
-                onClick={() => onSelectCategory && onSelectCategory(tag.replace('#', ''))}
+                onClick={() => { if (!openHashtag(tag) && onSelectCategory) onSelectCategory(tag.replace('#', '')); }}
                 className="text-[11px] text-noob/80 hover:text-noob hover:underline cursor-pointer"
               >
                 {tag}
@@ -1122,6 +1144,21 @@ export const PostCard: React.FC<PostCardProps> = ({
         isVerified={post.isVerified}
         onClose={() => setShowFullscreenAvatar(false)}
       />
+
+      {showEditCaption && (
+        <EditCaptionSheet
+          initial={shownCaption || ''}
+          onClose={() => setShowEditCaption(false)}
+          onSave={async (text) => {
+            const res = await updatePostCaption(post.id, text);
+            if (!res.success || !res.post) return res.error || 'The caption could not be saved.';
+            const d = { kind: 'post' as const, id: post.id, caption: res.post.caption, hashtags: res.post.hashtags || [] };
+            setEditedText({ id: d.id, caption: d.caption, hashtags: d.hashtags });
+            announceCaptionEdited(d);
+            return null;
+          }}
+        />
+      )}
 
       {showLikesSheet && (
         <LikesViewsSheet

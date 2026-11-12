@@ -18,7 +18,7 @@ check(/!isIos\(currentPushEnv\(\)\)\)/.test(invite), 'the install invitation nev
 check(/onIos \? " hidden" : ""/.test(page), 'the Install card in settings is hidden on an iPhone');
 check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\)\)/.test(auth), 'the login screen has no install button on an iPhone or when installed');
 console.log('\n3. Top strip and Messages colour');
-const strip = read('src/utils/statusStrip.ts'), main = read('src/main.tsx'), css = read('src/index.css'), chat = read('src/components/Chat/ChatView.tsx');
+const strip = read('src/utils/statusStrip.ts'), main = read('src/main.tsx'), css = read('src/index.css') + read('src/components/Chat/messagesList.css'), chat = read('src/components/Chat/ChatView.tsx');
 check(/elementFromPoint\(Math\.floor\(window\.innerWidth \/ 2\), 3\)/.test(strip) && /setAttribute\('content', colour\)/.test(strip) && /style\.backgroundColor = colour/.test(strip) && /pointer: coarse/.test(strip), 'on a touch screen the strip behind the clock / Dynamic Island takes the colour drawn at the top edge of the open page');
 check(/MutationObserver/.test(strip) && /'scroll', queue/.test(strip) && /setStripColour/.test(strip) && /noob-top-edge/.test(strip) && /initStatusStrip\(\);/.test(main), 'it follows page changes and scrolling, lets Messages set its own colour (also drawn by a thin bar at the top edge), and starts with the app');
 check(/--head: #0E4B37;/.test(css) && /'#0E4B37'/.test(chat) && !/02351f/.test(css + chat), 'the Messages header green is #0E4B37 everywhere');

@@ -99,7 +99,7 @@ check(/id: 'notepad', section: 'Quick tools'[^}]*page: 'notepad'/.test(reg) && /
 const pad = read('src/components/Settings/pages/notepad.tsx');
 check(/autosave|flush/.test(pad) && /Undo/.test(pad) && /Redo/.test(pad) && /Bold/.test(pad) && /Check list/.test(pad) && /Numbered list/.test(pad) && /Copy all/.test(pad) && /Save as \.txt/.test(pad) && /Search your notes/.test(pad) && /Bigger text/.test(pad) && /Share/.test(pad), 'it has what a basic notepad has: new, save by itself, undo, redo, bold / italic / underline, lists, speaking, copy, share, save as a file, search, text size, counts');
 check(/<SignupSourceCard userId=\{currentUser\.id\} \/>/.test(app) && (api.match(/markAskSource\(/g) || []).length === 2, 'the question is asked after sign-up with the code and after sign-up with Google');
-const chat = read('src/components/Chat/ChatView.tsx');
+const chat = read('src/components/Chat/ChatView.tsx') + read('src/components/Chat/MessagesList.tsx');
 check((chat.match(/m\.status === 'read' \?|lastMsg\?\.status === 'read' \?/g) || []).length === 2 && !/title="Delivered"/.test(chat), 'ticks: two grey ones once sent (in the chat and in the chat list), two blue ones only when seen, never one tick or blue by mistake');
 check(/'Delivered'/.test(chat) === false && /title="Seen"/.test(chat), 'the blue ones say "Seen"');
 

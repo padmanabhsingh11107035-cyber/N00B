@@ -5,7 +5,7 @@ import fs from 'node:fs';
 let passed = 0, failed = 0;
 const check = (cond, label) => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label}`); } };
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
-const stack = read('src/components/Chat/InstantsStack.tsx'), chat = read('src/components/Chat/ChatView.tsx');
+const stack = read('src/components/Chat/InstantsStack.tsx'), chat = read('src/components/Chat/ChatView.tsx') + read('src/components/Chat/MessagesList.tsx');
 
 check(/data-testid="instants-floating"/.test(stack) && /absolute right-0 bottom-\[110px\] z-30/.test(stack) && /pointer-events-none/.test(stack), 'the Instants are a floating piece at the right edge, above the bottom of the list, and take no room from the chats');
 check(!/overflow-x-auto no-scrollbar/.test(stack) && !/border-b border-zinc-900 flex items-center gap-3/.test(stack), 'there is no strip across the top of the page any more');
@@ -15,9 +15,9 @@ check(/groups\.slice\(0, 3\)/.test(stack) && /onClick=\{\(\) => onOpenViewer\(gr
 check(/rotate\(\$\{i % 2 \? 7 : -5\}deg\)/.test(stack) && /rotate-\[-7deg\]/.test(stack), 'the pieces are tilted, alternately');
 check(/Group by sender/.test(stack) && /fetchInstantInbox\(\)\.then/.test(stack) && /\[refreshKey\]/.test(stack), 'the inbox is still read the same way, and again after an instant was sent or seen');
 
-check(/<aside\s+className=\{`msg-page force-dark relative w-full shrink-0 flex flex-col/.test(chat), 'the list column is the frame the tab floats in');
-check(/<InstantsStack\s+onOpenCamera=\{\(\) => setShowInstantCamera\(true\)\}\s+onOpenViewer=\{\(queue\) => setInstantViewerQueue\(queue\)\}\s+refreshKey=\{instantsRefreshKey\}\s+\/>/.test(chat), 'the Chat page uses it');
-check(/setShowInstantsArchive\(true\);\s*\}\}[^>]*data-testid="instants-archive-open"/.test(chat) && /<Archive className="w-4 h-4 text-amber-300" \/> Your Instants/.test(chat), '"Your Instants" (your own history) is in the ⋮ menu of the page');
+check(/<aside className=\{`msg-page force-dark relative w-full shrink-0 flex-col/.test(chat), 'the list column is the frame the tab floats in');
+check(/<InstantsStack onOpenCamera=\{p\.onOpenInstantCamera\} onOpenViewer=\{p\.onOpenInstantViewer\} refreshKey=\{p\.instantsRefreshKey\} \/>/.test(chat), 'the Chat page uses it');
+check(/onShowInstantsArchive\(\);\s*\}\}[^>]*data-testid="instants-archive-open"/.test(chat) && /<Archive className="w-4 h-4 text-amber-300" \/> Your Instants/.test(chat), '"Your Instants" (your own history) is in the ⋮ menu of the page');
 check(/showInstantsArchive && \(\s*<InstantsArchive/.test(chat) && /showInstantCamera && \(\s*<InstantCamera/.test(chat) && /instantViewerQueue && \(\s*<InstantViewer/.test(chat), 'the camera, the viewer and the archive open as before');
 
 console.log(`\n${passed} passed, ${failed} failed`);

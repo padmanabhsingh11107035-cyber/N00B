@@ -19,7 +19,11 @@ const root = document.documentElement;
 try { localStorage.setItem('noob_theme', theme); } catch { /* storage blocked */ }
 root.setAttribute('data-theme', theme);
 root.setAttribute('data-theme-pref', theme);
-if (phone) {
+const envName = q.get('env') || 'ios';   // phone=1&env=android | ios (default) | ioslight (a phone page with no phone-edge: iOS light, the browser keeps its own bar)
+if (phone && envName === 'ioslight') {
+  root.style.setProperty('--h-sat', '0px'); root.style.setProperty('--h-sab', '34px');
+} else if (phone) {
+  if (envName === 'android') root.classList.add('phone-android');
   root.classList.add('phone-edge');                       // the page is drawn under the clock; html.phone-edge rules in src/index.css
   root.style.setProperty('--h-sat', '47px');              // env(safe-area-inset-top) / bottom are rewritten to these by vite.harness.config.ts
   root.style.setProperty('--h-sab', '34px');
@@ -171,8 +175,11 @@ async function boot() {
     // the Messages screen inside the same wrapper App.tsx uses (main.overflow-hidden, body padding-top from html.phone-edge)
     const { ChatView } = await import('../src/components/Chat/ChatView.tsx');
     root.setAttribute('data-page', 'chat');
-    Page = () => h('main', { className: 'relative w-full max-w-[480px] bg-page shadow-2xl flex flex-col min-h-screen md:mx-auto overflow-hidden shrink-0' },
-      h(ChatView, { currentUser, onMobileViewChange: noop, onUserUpdated: noop, onNavigateToProfile: (u) => console.info('[harness] profile', u?.username) }));
+    Page = () => h(React.Fragment, null,
+      h('main', { className: 'relative w-full max-w-[480px] bg-page shadow-2xl flex flex-col min-h-screen md:mx-auto overflow-hidden shrink-0' },
+        h(ChatView, { currentUser, onMobileViewChange: noop, onUserUpdated: noop, onNavigateToProfile: (u) => console.info('[harness] profile', u?.username) })),
+      // a stand-in for the bottom bar (the real one is fixed, z-40, --nav-h tall)
+      h('nav', { id: 'floating-bottom-nav', className: 'fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:hidden', style: { color: '#888', textAlign: 'center', fontSize: 12, paddingTop: 20 } }, 'bottom bar (stand-in)'));
   } else if (page === 'studio') {
     const mod = await import('../src/components/Studio/StudioApp.tsx');
     const StudioApp = mod.StudioApp || mod.default;

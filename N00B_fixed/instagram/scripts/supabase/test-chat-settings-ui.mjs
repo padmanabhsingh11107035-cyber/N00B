@@ -8,7 +8,7 @@ const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(
 const section = (t) => console.log(`\n${t}`);
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
 const page = read('src/components/Settings/pages/chats.tsx');
-const view = read('src/components/Chat/ChatView.tsx');
+const view = read('src/components/Chat/ChatView.tsx') + read('src/components/Chat/MessagesList.tsx');
 const api = read('src/services/settingsApi.ts');
 const sql = read('supabase/migrations/20261018000005_chat_settings_last_seen.sql');
 const U = (f) => import(pathToFileURL(path.resolve(f)).href);

@@ -1187,74 +1187,9 @@ html[data-cover-app], html[data-cover-app] body { background-color: var(--page);
 :root[data-theme="light"] .msg-pill { background: #ebe5d9; color: #8b857a; }
 :root[data-theme="light"] .msg-pill-on { background: #d6eee4; color: #0e8a67; }
 
-/* The Messages page (from the picture, in its measured sizes): always dark and premium in both themes - a flat deep-green header that meets a near-black sheet with big rounded
-   corners, one mint accent, the phone's own font (San Francisco on an iPhone). The bottom bar is not touched. */
-.msg-page {
-  --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e;
-  /* the green is the picture's (#02472b) taken a quarter darker; the round buttons and the gap inside a ring are lighter steps of it */
-  --head: #0E4B37; --head-btn: #1f6a4f; --head-btn-hover: #258060; --head-gap: #115440;
-  /* the big rounded top corners of the black sheet: 32 px on a phone, up to 52 px on a wide column; the green header goes exactly that far behind them */
-  --msg-r: clamp(32px, 8vw, 52px);
-  /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
-  --tx: calc(1 + (var(--tx0) - 1.38) * 0.6);
-  background: var(--panel) !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-}
-.msg-page button, .msg-page input { font-family: inherit; }
-.msg-page .msg-head { padding-top: 16px; }
-@media (display-mode: standalone) { .msg-page .msg-head { padding-top: 6px; } }
-.msg-page .msg-sheet, .msg-page .msg-sticky, :root[data-theme="light"] .msg-page .msg-sheet { background: var(--panel) !important; }
-/* the four filters always sit inside the sheet: everything about them grows and shrinks with the screen width, and a highlight slides to the chosen one */
-.msg-page .msg-pills {
-  --pf: clamp(12.5px, 3.5vw, 14px); --ph: clamp(31px, 8.4vw, 34px); --pl: clamp(8px, 2.75vw, 11px); --pr: clamp(4px, 1.5vw, 6px); --pg: clamp(3px, 1vw, 4px);
-  --chip: clamp(15px, 4.3vw, 17px); --chip-f: clamp(10px, 2.8vw, 11px);
-  padding-inline: clamp(10px, 3vw, 13px); column-gap: clamp(3px, 1.25vw, 5px); position: sticky;
-}
-@media (min-width: 768px) { .msg-page .msg-pills { justify-content: flex-start; column-gap: 8px; } }
-.msg-page .msg-pill, .msg-page .msg-pill-on { height: var(--ph); padding-left: var(--pl); padding-right: var(--pr); column-gap: var(--pg); font-size: var(--pf); z-index: 1; transition: background-color .3s ease, color .3s ease, transform .15s ease; }
-.msg-page .msg-pill-nocount { padding-right: var(--pl) !important; }
-.msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #181a1e !important; color: #d6dce4 !important; }
-.msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: transparent !important; color: var(--mint) !important; }
-.msg-page .msg-pill-slide { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 9999px; background: #0d3e2d; pointer-events: none; will-change: transform, width;
-  transition: transform .45s cubic-bezier(.22, 1, .36, 1), width .45s cubic-bezier(.22, 1, .36, 1), height .3s ease; }
-.msg-page .msg-chip { min-width: var(--chip); height: var(--chip); padding: 0 4px; font-size: var(--chip-f); line-height: var(--chip); background: #25282d; color: #979fa7; transition: background-color .3s ease, color .3s ease; }
-.msg-page .msg-chip-on { background: var(--mint); color: #033b2a; }
-.msg-page .msg-row { transition: opacity .38s ease, transform .38s cubic-bezier(.22,.8,.3,1), background-color .15s; }
-.msg-page .msg-row:not([data-in]) { opacity: 0; transform: translateY(14px); }
-/* a soft press feedback (like a phone's own lists): the row darkens, pills and people shrink a little while a finger is on them */
-.msg-page .msg-row:active { background-color: rgba(255, 255, 255, .06); }
-.msg-page .msg-pill:active, .msg-page .msg-pill-on:active { transform: scale(.96); }
-.msg-page [data-testid="messages-people"] button { transition: transform .15s ease; }
-.msg-page [data-testid="messages-people"] button:active { transform: scale(.95); }
-@media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
-/* (the colour behind the clock while Messages is open is set by utils/statusStrip.ts, only while the Messages page is on screen) */   /* no fade: a phone that samples the strip colour mid-fade keeps the old colour */
-@layer base {
-  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #0E4B37 !important; background-image: none !important; }
-  .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
-}
 
 @layer base { html body.light header h1.noob-brand.text-white { color: #0a0a0a !important; } }
 
-/* Messages page, LIGHT mode: the green header stays; the sheet under it (filters, chat rows, "start a new chat") is white with dark text. Dark mode is untouched. */
-@layer base {
-  html body.light .msg-page.force-dark { --panel: #ffffff; background-color: #ffffff !important; }
-  html body.light .msg-page .msg-sheet, html body.light .msg-page .msg-sticky { background: #ffffff !important; }
-  html body.light .msg-page .msg-pill { background: #f0f1f3 !important; color: #3b4148 !important; }
-  html body.light .msg-page .msg-pill-on { background: transparent !important; color: #0a7a55 !important; }
-  html body.light .msg-page .msg-pill-slide { background: #d7f0e5; }
-  html body.light .msg-page .msg-chip { background: #e2e4e8; color: #555c64; }
-  html body.light .msg-page .msg-chip-on { background: #07eca8; color: #033b2a; }
-  html body.light .msg-page [data-testid="messages-rows"] .text-white, html body.light .msg-page [data-testid="messages-rows"] [class*="text-white/"] { color: #0a0a0a !important; }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#9aa1a8]"] { color: #5f666d !important; }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#8b9198]"] { color: #6b7279 !important; }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="text-zinc-400"] { color: #5f666d !important; }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="text-[#7c848b]"] { color: #8a9198 !important; }
-  html body.light .msg-page .msg-row:active { background-color: rgba(0, 0, 0, .06); }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="hover:bg-white"]:hover { background-color: rgba(0, 0, 0, .04); }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="bg-[#1f2428]"] { background-color: #eceef1 !important; }
-  html body.light .msg-page [data-testid="messages-rows"] [class*="bg-[#1f2428]"] svg { color: #3b4148 !important; }
-}
 
 /* The sign-in and sign-up pages (from the Create Account picture): a teal header that melts into a dark rounded sheet, round social buttons, grey inputs and a coral pill button. Always dark, in both themes. */
 /* Sign-in and sign-up (redesign): midnight violet with drifting colour orbs, a glass sheet, gradient pill buttons and staggered entrances. Always dark, in both themes. */
@@ -1656,13 +1591,6 @@ html body.light .chat-wallpaper { background-image: linear-gradient(rgba(255, 25
 
 /* (inside the base layer, like the Light-theme rules these have to beat) */
 @layer base {
-/* ---- Messages: the strip behind the clock (iPhone) is a bar of the page itself, green while the header is in view, the page colour once it has scrolled away (both Dark and Light) ---- */
-.msg-safe-strip { display: none; }
-@media (pointer: coarse) {
-  html body .msg-safe-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 2147483001; pointer-events: none; background: #0a0c0e; }
-  html body .msg-safe-strip.on { background: #0E4B37; }
-  html[data-theme="light"] body .msg-safe-strip:not(.on) { background: #ffffff; }
-}
 /* the "last seen" line under the name in a chat: small, and shown whole */
 html body .chat-last-seen { font-size: 11px !important; line-height: 1.2 !important; white-space: nowrap; overflow: visible; text-overflow: clip; }
 
@@ -1690,11 +1618,6 @@ html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop
    --sat is the height of that area; everything that used to start below it is pushed down by --sat. ---- */
 html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
 html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
-html.phone-edge .msg-safe-strip:not(.on) { display: none !important; }
-/* Messages list: the area behind the clock is the green of the header, so the green reaches the very top of the screen */
-/* phones with the page under the clock: NO fixed coloured block behind the clock. The green header itself reaches the top of the screen and scrolls away with the list; everything that scrolls passes through the clock area. */
-html.phone-edge .msg-safe-strip, html.phone-edge .msg-safe-strip.on { display: none !important; }
-html.phone-edge #chat-view-container:not(.fixed) { height: calc(100dvh - var(--nav-h) - var(--sat)) !important; }
 /* full-screen pages and pop-ups start just below the clock (their top edge moves down; nothing is added inside them). The ones that keep room for it themselves (.edge-own, own env() padding) are left alone. */
 html.phone-edge .fixed.inset-0:not(.edge-own):not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { top: var(--sat) !important; }
 /* a bar that is fixed at the very top sits just under the clock. (Sticky bars are NOT moved: they stick inside the page, which already starts under the clock; moving them pushed them down a second time.) */
@@ -1885,9 +1808,7 @@ html.phone-edge #chat-view-container[data-view="chat"] { top: 0 !important; bott
 html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 4px) !important; background: #0E4B37 !important; background-image: none !important; border-bottom-color: transparent !important; box-shadow: none !important; }
 html.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background: #ffffff !important; border-bottom-color: #e6e6e6 !important; }
 
-/* ---- Phones (html.phone-edge): Messages lists reach the very top (the green header is drawn behind the clock, so there is no band above it); the Settings bar and the Reels bar are see-through ---- */
-html.phone-edge #chat-view-container[data-view="list"]:not(.fixed) { margin-top: calc(var(--sat) * -1); height: calc(100dvh + env(safe-area-inset-bottom, 0px) - var(--nav-h)) !important; }
-html.phone-edge #chat-view-container[data-view="list"] .msg-head { padding-top: calc(var(--sat) + 10px) !important; }
+/* ---- Phones (html.phone-edge): the Settings bar and the Reels bar are see-through ---- */
 html.phone-edge .nst-header, html.phone-edge .nst-header.is-stuck { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
 html.phone-edge .nst-root { padding-top: 0; }
 

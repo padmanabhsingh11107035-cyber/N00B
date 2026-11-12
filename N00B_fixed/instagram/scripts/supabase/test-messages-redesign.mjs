@@ -80,7 +80,7 @@ check(styleSelection('abc', 1, 1, 'bold').text === 'abc', 'nothing is selected: 
 check(JSON.stringify(splitNote('Title\nline 1\nline 2')) === '{"title":"Title","body":"line 1\\nline 2"}' && splitNote('only').body === '' && joinNote('Title', 'a\nb') === 'Title\na\nb' && joinNote('T', '') === 'T' && joinNote('A\nB', 'x') === 'A B\nx', 'the first line is the title, the rest the text');
 
 section('5. The screens');
-const chatSrc = read('src/components/Chat/ChatView.tsx'), pad = read('src/components/Settings/pages/notepad.tsx'), logs = read('src/components/Chat/CallLogsPage.tsx');
+const chatSrc = read('src/components/Chat/ChatView.tsx') + read('src/components/Chat/MessagesList.tsx'), pad = read('src/components/Settings/pages/notepad.tsx'), logs = read('src/components/Chat/CallLogsPage.tsx');
 check(/data-testid="messages-header"/.test(chatSrc) && />Messages<\/span>/.test(chatSrc) && /data-testid="messages-back"/.test(chatSrc) && /window\.history\.back\(\)/.test(chatSrc), 'the page is called Messages, and "Back" (to the page before) is the first entry of its menu');
 check(['messages-search', 'messages-new-chat', 'messages-calls', 'messages-new-group'].every((t) => chatSrc.includes(`data-testid="${t}"`)), 'under the title: search and find a person; calls and new group are in the menu');
 check(!/<SquarePen className="w-4 h-4" \/>\s*<\/button>\s*<button\s+onClick=\{\(\) => setShowChatSettings/.test(chatSrc) && /<InstantsStack/.test(chatSrc) && !/Search or start a new chat"\s*value=\{searchQuery\}[\s\S]{0,200}rounded-xl px/.test(chatSrc), 'the pencil button is gone; Instants stay exactly as they were');

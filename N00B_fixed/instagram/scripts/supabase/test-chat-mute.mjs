@@ -5,7 +5,7 @@ const check = (c, l) => { if (c) { passed++; console.log(`  ok   ${l}`); } else 
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
 const sql = read('supabase/migrations/20261112000002_chat_mute.sql');
 const api = read('src/services/chatMuteApi.ts');
-const view = read('src/components/Chat/ChatView.tsx');
+const view = read('src/components/Chat/ChatView.tsx') + read('src/components/Chat/MessagesList.tsx');
 check(/function public\.set_chat_muted\(p_chat uuid, p_muted boolean\)/.test(sql) && /security definer set search_path = public/.test(sql), 'SQL: set_chat_muted exists, security definer, fixed search_path');
 check(/is_chat_member\(p_chat\)/.test(sql) && /errcode = '42501'/.test(sql), 'SQL: caller must be a member');
 check(/update public\.chat_members set is_muted = p_muted where chat_id = p_chat and user_id = me/.test(sql), 'SQL: updates only the caller\'s own row');

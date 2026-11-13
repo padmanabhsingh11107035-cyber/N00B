@@ -81,6 +81,7 @@ import { AdminUserLogsPanel } from './AdminUserLogsPanel';
 import { AdminSignupSourcesPanel } from './AdminSignupSourcesPanel';
 import { AdminAccountsPanel } from './AdminAccountsPanel';
 import { AdminVisitorsPanel } from './AdminVisitorsPanel';
+const AdminUserDataPage = React.lazy(() => import('./AdminUserDataPage').then((m) => ({ default: m.AdminUserDataPage })));
 import { AdminUserTransactions } from './AdminUserTransactions';
 import { phoneFacts } from '../../utils/phoneLookup';
 import { AdminDailyNoobPanel } from './AdminDailyNoobPanel';
@@ -203,6 +204,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     void adminFetchAdApplications('pending').then((r) => { if (alive && r.ok) setAdsPending(r.pendingCount); });
     return () => { alive = false; };
   }, [main]);
+  const [showUserData, setShowUserData] = useState(false);   // the full-screen "User's data" map page (a page of its own, not a tab: it covers the whole screen)
   const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
   const [usersList, setUsersList] = useState<User[]>([]);
 
@@ -1547,6 +1549,16 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <Globe2 className="w-4 h-4" /> Visitors
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setShowUserData(true)}
+              className="pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer border-transparent text-zinc-400 hover:text-white"
+              data-testid="admin-tab-userdata"
+            >
+              <MapPin className="w-4 h-4" /> User's data
             </button>
           )}
 
@@ -3713,6 +3725,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           </div>
         </div>
+      )}
+      {showUserData && main && (
+        <React.Suspense fallback={null}>
+          <AdminUserDataPage onBack={() => setShowUserData(false)} />
+        </React.Suspense>
       )}
     </div>
   );

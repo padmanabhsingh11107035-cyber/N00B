@@ -44,6 +44,9 @@ const CHECKS = [
   ['Home feed variety (weighted shuffle, recently seen rarely early)', ['node', 'scripts/supabase/test-feed-variety.mjs']],
   ['Saved Home feed shown instantly', ['node', '--liftoff-only', 'scripts/supabase/test-feed-cache.mjs']],
   ['No x-forwarded-for first-entry trust', ['node', 'scripts/supabase/test-no-xff-first-trust.mjs']],
+  // the admin map of where users signed up and were last seen (approximate places only, no IP, admin only)
+  ['Admin User data map: database function (admin only, no IP)', ['node', '--liftoff-only', 'scripts/supabase/test-admin-user-locations.mjs']],
+  ['Admin User data map: offline gazetteer and resolver', ['node', '--liftoff-only', 'scripts/supabase/test-geo-places.mjs']],
   // the public games site on its own address
   ['Public games site (hub, Worker mapping, headers)', ['node', 'scripts/supabase/test-games-site.mjs']],
   // chat privacy

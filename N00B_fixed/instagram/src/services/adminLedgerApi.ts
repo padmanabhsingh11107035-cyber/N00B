@@ -61,3 +61,10 @@ export interface SiteVisits {
 }
 export const fetchSiteVisits = (o: { limit?: number; offset?: number; search?: string; who?: 'people' | 'all' | 'guests' | 'members' | 'bots' } = {}) =>
   call<SiteVisits>('admin_site_visits', { p_limit: o.limit ?? 100, p_offset: o.offset ?? 0, p_search: o.search || null, p_who: o.who || 'people' }, 'Visitors');
+
+// ---------------------------------------------------------------- user locations (the User data map page)
+export interface UserLocationPlace { city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null }
+export interface UserLocationRow { id: string; username: string | null; displayName: string | null; createdAt: string | null; signup: UserLocationPlace | null; last: UserLocationPlace | null }
+export interface UserLocations { rows: UserLocationRow[]; total: number; generatedAt: string }
+/** Approximate places only (never an IP address). The database refuses everyone but the main administrator. */
+export const fetchUserLocations = (limit = 2000) => call<UserLocations>('admin_user_locations', { p_limit: limit }, 'The user data map');

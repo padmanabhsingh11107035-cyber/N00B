@@ -214,8 +214,40 @@ const chatList = () => CHAT_DEFS.map((d) => ({
   lastMessage: { id: d.id + '_last', chatId: d.id, senderId: d.ids[0], senderUsername: 'x', text: d.last, createdAt: ago(d.ago) },
   unreadCount: d.unread, isPinned: !!d.pinned, isMuted: false, themeColor: '#0E4B37', vanishMode: false, readReceiptsEnabled: true, createdAt: ago(30 * D), creatorId: FAKE_USER_ID, adminIds: [FAKE_USER_ID]
 }));
+// ---------------------------------------------------------------- Admin: User's data (the green map)
+// 64 made-up people: many in India, the rest around the world; a few with only a country, a few with a place the gazetteer does not know, a few with nothing.
+const UD_PLACES: Array<[string, string, string]> = [
+  ['Mumbai', 'Maharashtra', 'IN'], ['Mumbai', 'Maharashtra', 'IN'], ['Mumbai', 'Maharashtra', 'IN'], ['Pune', 'Maharashtra', 'IN'], ['Pune', 'Maharashtra', 'IN'], ['Nagpur', 'Maharashtra', 'IN'],
+  ['Delhi', 'Delhi', 'IN'], ['Delhi', 'Delhi', 'IN'], ['Noida', 'Uttar Pradesh', 'IN'], ['Gurugram', 'Haryana', 'IN'], ['Lucknow', 'Uttar Pradesh', 'IN'], ['Kanpur', 'Uttar Pradesh', 'IN'],
+  ['Bengaluru', 'Karnataka', 'IN'], ['Bengaluru', 'Karnataka', 'IN'], ['Bengaluru', 'Karnataka', 'IN'], ['Mysuru', 'Karnataka', 'IN'], ['Chennai', 'Tamil Nadu', 'IN'], ['Chennai', 'Tamil Nadu', 'IN'],
+  ['Coimbatore', 'Tamil Nadu', 'IN'], ['Hyderabad', 'Telangana', 'IN'], ['Hyderabad', 'Telangana', 'IN'], ['Kolkata', 'West Bengal', 'IN'], ['Kolkata', 'West Bengal', 'IN'], ['Ahmedabad', 'Gujarat', 'IN'],
+  ['Surat', 'Gujarat', 'IN'], ['Jaipur', 'Rajasthan', 'IN'], ['Jodhpur', 'Rajasthan', 'IN'], ['Bhopal', 'Madhya Pradesh', 'IN'], ['Indore', 'Madhya Pradesh', 'IN'], ['Patna', 'Bihar', 'IN'],
+  ['Kochi', 'Kerala', 'IN'], ['Thiruvananthapuram', 'Kerala', 'IN'], ['Chandigarh', 'Chandigarh', 'IN'], ['Guwahati', 'Assam', 'IN'], ['Bhubaneswar', 'Odisha', 'IN'], ['Dehradun', 'Uttarakhand', 'IN'],
+  ['Some Small Town', 'Karnataka', 'IN'], ['', 'Punjab', 'IN'], ['', '', 'IN'], ['', '', 'IN'],
+  ['Dubai', 'Dubai', 'AE'], ['Dubai', 'Dubai', 'AE'], ['Doha', '', 'QA'], ['Riyadh', '', 'SA'], ['London', 'England', 'GB'], ['Manchester', 'England', 'GB'], ['New York', 'New York', 'US'],
+  ['San Francisco', 'California', 'US'], ['Ashburn', 'Virginia', 'US'], ['Toronto', 'Ontario', 'CA'], ['Sydney', 'New South Wales', 'AU'], ['Singapore', '', 'SG'], ['Kuala Lumpur', '', 'MY'],
+  ['Dhaka', 'Dhaka', 'BD'], ['Kathmandu', '', 'NP'], ['Karachi', 'Sindh', 'PK'], ['Berlin', 'Berlin', 'DE'], ['Paris', '', 'FR'], ['Lagos', '', 'NG'], ['Nairobi', '', 'KE'],
+  ['Sao Paulo', '', 'BR'], ['Tokyo', '', 'JP'], ['Atlantis', 'Nowhere', 'ZZ'], ['', '', '']
+];
+const UD_NAMES = ['aarav','vivaan','aditya','krish','ishaan','kabir','reyansh','vihaan','arjun','sai','ananya','diya','myra','aadhya','saanvi','kiara','navya','riya','pari','anika'];
+const udRows = () => UD_PLACES.map(([city, region, country], i) => {
+  const name = UD_NAMES[i % UD_NAMES.length];
+  const known = city || region || country;
+  const lastAt = i % 9 === 8 ? null : ago((i % 7 === 0 ? 2 + (i % 5) : 5 + i * 37) * 60e3 * (i % 3 === 0 ? 1 : 24));
+  const moved = i % 5 === 0 && known;
+  return {
+    id: 'ud-' + String(i).padStart(3, '0'), username: name + '.' + String(100 + i * 7), displayName: name[0].toUpperCase() + name.slice(1) + ' ' + ['Sharma', 'Nair', 'Iyer', 'Singh', 'Rao', 'Khan', 'Patel', 'Das'][i % 8], createdAt: ago((20 + i * 5) * D),
+    signup: known ? { city: moved ? 'Pune' : city || null, region: moved ? 'Maharashtra' : region || null, country: moved ? 'IN' : country || null, source: moved ? 'profile' : 'visit' } : null,
+    last: known && lastAt ? { city: city || null, region: region || null, country: country || null, at: lastAt } : null
+  };
+});
 // ---------------------------------------------------------------- the table of rpc answers
 export const rpcMocks = {
+  admin_user_locations: (a, ctx) => {
+    if (new URLSearchParams(location.search).get('denied') === '1') throw new Error('Access denied. Administrator privileges required.');
+    const rows = ctx.state === 'empty' ? [] : udRows();
+    return { rows, total: rows.length, generatedAt: new Date().toISOString() };
+  },
   mood_my: (a, ctx) => myMood(ctx) ?? null,
   mood_friends: (a, ctx) => moodPage(ctx),
   mood_community: (a, ctx) => moodPage(ctx, a.p_mood),

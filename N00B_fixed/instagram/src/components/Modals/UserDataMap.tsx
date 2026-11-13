@@ -246,15 +246,39 @@ export const UserDataMap: React.FC<{ dots: Dot[]; mode: DotMode; fx: boolean; ch
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      const v = viewRef.current;
+      // Two fingers on a touchpad, or the wheel: SLIDE the map (like scrolling). Zoom is pinch on a touchpad, Ctrl / Cmd + wheel, the + - buttons, or the + - keys.
+      if (!(e.ctrlKey || e.metaKey)) { setView({ k: v.k, tx: v.tx - e.deltaX * (e.deltaMode === 1 ? 16 : 1), ty: v.ty - e.deltaY * (e.deltaMode === 1 ? 16 : 1) }); return; }
       const r = el.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
-      const v = viewRef.current;
       const k = Math.max(0.01, Math.min(MAX_K, v.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016))));
       setView({ k, tx: px - (px - v.tx) * (k / v.k), ty: py - (py - v.ty) * (k / v.k) });
     };
+    try { el.focus({ preventScroll: true }); } catch { /* the keys work after the first click */ }   // so the keyboard slides the map as soon as the page opens
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [setView]);
+
+  // the keyboard: arrows slide the map, PageUp / PageDown slide it a screen, + and - zoom, 0 or Home shows it all again
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const s = sizeRef.current, v = viewRef.current;
+    const step = e.shiftKey ? 240 : 80;
+    const slide = (dx: number, dy: number) => { e.preventDefault(); setView({ k: v.k, tx: v.tx + dx, ty: v.ty + dy }); };
+    switch (e.key) {
+      case 'ArrowLeft': slide(step, 0); break;
+      case 'ArrowRight': slide(-step, 0); break;
+      case 'ArrowUp': slide(0, step); break;
+      case 'ArrowDown': slide(0, -step); break;
+      case 'PageUp': slide(0, s.h * 0.85); break;
+      case 'PageDown': slide(0, -s.h * 0.85); break;
+      case '+': case '=': e.preventDefault(); zoomBy(1.5); break;
+      case '-': case '_': e.preventDefault(); zoomBy(1 / 1.5); break;
+      case '0': case 'Home': e.preventDefault(); reset(); break;
+      case 'Escape': setPicked(null); setHover(null); hoverKey.current = ''; break;
+      default: break;
+    }
+  };
 
   const zoomBy = (f: number) => { const s = sizeRef.current, v = viewRef.current; const px = s.w / 2, py = s.h / 2; const k = Math.max(0.01, Math.min(MAX_K, v.k * f)); setView({ k, tx: px - (px - v.tx) * (k / v.k), ty: py - (py - v.ty) * (k / v.k) }, true); };
   const fitData = () => {
@@ -272,7 +296,7 @@ export const UserDataMap: React.FC<{ dots: Dot[]; mode: DotMode; fx: boolean; ch
   const tipPos = cur ? { x: cur.x * view.k + view.tx, y: cur.y * view.k + view.ty } : null;
 
   return (
-    <div ref={wrap} className={`ud-mapwrap${dragging ? ' drag' : ''}`} data-testid="ud-map"
+    <div ref={wrap} className={`ud-mapwrap${dragging ? ' drag' : ''}`} data-testid="ud-map" tabIndex={0} onKeyDown={onKeyDown}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
       onDoubleClick={(e) => { if (!isUi(e.target) && !hitAt(rel(e).x, rel(e).y).length) reset(); }} onPointerLeave={() => { setHover(null); hoverKey.current = ''; }}>
       {size.w > 0 && (

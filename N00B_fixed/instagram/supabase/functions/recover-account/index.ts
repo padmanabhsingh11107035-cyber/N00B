@@ -42,6 +42,7 @@
 // The keys it uses (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY) are provided to every Edge Function automatically.
 // Secret this function also needs for every emailed code (optional — without it, otp-request/signup-otp-request answer "not
 // configured", the login one falling back to the security-question check, signup itself becoming unavailable): RESEND_API_KEY.
+// Optional secret TURNSTILE_SECRET_KEY (Cloudflare Turnstile): when set, signup-otp-request also needs a valid turnstileToken; when absent, nothing changes. See docs/TURNSTILE.md.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -200,6 +201,38 @@ async function dnsHas(name: string, type: 'MX' | 'A' | 'AAAA'): Promise<DnsAnswe
     return null;
   }
 }
+// TURNSTILE-BEGIN
+// Cloudflare Turnstile (a free, privacy-friendly "are you a person" check) in front of the emailed sign-up code. Only when the secret
+// TURNSTILE_SECRET_KEY is set: without it nothing changes at all. The check is only for CREATING accounts, never for logging in.
+// A missing or wrong token is refused. If Cloudflare itself can not be reached (or answers with a problem of ours, such as a wrong secret) the
+// request is let through with a warning in the log: failing closed would stop every real person from joining the moment Cloudflare has a bad hour,
+// and the per-address and per-email limits in the database stay as the backstop. The token and the secret are never logged.
+async function verifyTurnstile(secret: string, token: unknown, ip: string, doFetch: (url: string, init: any) => Promise<any>, warn: (m: string) => void): Promise<{ ok: boolean }> {
+  if (!secret) return { ok: true };
+  const t = typeof token === 'string' ? token.trim() : '';
+  if (!t || t.length > 2048) return { ok: false };
+  try {
+    const form = new URLSearchParams();
+    form.set('secret', secret);
+    form.set('response', t);
+    if (ip && ip !== 'unknown') form.set('remoteip', ip);
+    const res = await doFetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form, signal: AbortSignal.timeout(5000) });
+    if (!res || !res.ok) { warn('turnstile: siteverify answered HTTP ' + (res && res.status) + ', letting the request through'); return { ok: true }; }
+    const out = await res.json();
+    if (out && out.success === true) return { ok: true };
+    const codes: string[] = Array.isArray(out && out['error-codes']) ? out['error-codes'].map((c: unknown) => String(c)) : [];
+    // the person's token was missing, wrong, used twice or too old: refuse. Anything else is our own set-up or Cloudflare's trouble: let through.
+    const theirs = codes.length === 0 || codes.every((c) => c === 'missing-input-response' || c === 'invalid-input-response' || c === 'timeout-or-duplicate' || c === 'bad-request');
+    if (theirs) return { ok: false };
+    warn('turnstile: siteverify reported ' + codes.join(',') + ', letting the request through');
+    return { ok: true };
+  } catch (_e) {
+    warn('turnstile: siteverify could not be reached, letting the request through');
+    return { ok: true };
+  }
+}
+// TURNSTILE-END
+
 async function checkEmailReachable(email: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const at = email.lastIndexOf('@');
   const domain = at > 0 ? email.slice(at + 1).trim().toLowerCase() : '';
@@ -451,6 +484,9 @@ Deno.serve(async (req) => {
   if (body?.action === 'signup-otp-request') {
     const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
     if (!key) return json({ error: 'Sign-ups are temporarily unavailable. Please try again later.', notConfigured: true }, 503);
+    // Turnstile (only when TURNSTILE_SECRET_KEY is set): checked first, before anything is looked up or any allowance is spent
+    const turnstile = await verifyTurnstile((Deno.env.get('TURNSTILE_SECRET_KEY') || '').trim(), body?.turnstileToken, ip, fetch, (m) => console.warn(m));
+    if (!turnstile.ok) return json({ error: 'Please complete the security check and try again.', code: 'captcha_failed' }, 400);
     // an address that can not take mail is refused here, before a code is made or the person's hourly allowance is spent
     const typed = String(body?.email ?? '').trim();
     if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(typed)) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User as UserIcon, FileText, Phone, CalendarDays, Camera, Check, Loader2, AlertCircle, CheckCircle2, LogOut, ShieldCheck } from 'lucide-react';
 import { User } from '../../types';
+import TurnstileBox, { useTurnstile } from './TurnstileBox';
 import {
   checkPendingOAuthSignup,
   completeOAuthSignup,
@@ -58,6 +59,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpResending, setOtpResending] = useState(false);
+  const turnstile = useTurnstile();   // the 'are you a person' check in front of the emailed code (renders nothing unless VITE_TURNSTILE_SITE_KEY is set)
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -167,8 +169,10 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
     if (!agreedToTerms) { setErrorMessage("Please check the box to agree to NOOB's general terms and privacy policy."); return; }
     if (needsEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { setErrorMessage('Please enter a valid email address.'); return; }
 
+    if (turnstile.blocker) { setErrorMessage(turnstile.blocker); return; }
     setLoading(true);
-    const res = await requestSignupOtp(email);
+    const res = await requestSignupOtp(email, turnstile.token);
+    turnstile.consume();
     setLoading(false);
     if (!res.success) { setErrorMessage(res.error || 'Could not send a verification code. Please try again.'); return; }
     setOtpCode('');
@@ -202,7 +206,9 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
   const handleResendOtp = async () => {
     setOtpResending(true);
     setOtpError(null);
-    const res = await requestSignupOtp(email);
+    if (turnstile.blocker) { setOtpResending(false); setOtpError(turnstile.blocker); return; }
+    const res = await requestSignupOtp(email, turnstile.token);
+    turnstile.consume();
     setOtpResending(false);
     if (!res.success) setOtpError(res.error || 'Could not send a new code. Please try again.');
   };
@@ -274,6 +280,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                     >
                       {otpLoading ? 'Verifying…' : 'Verify & Finish'}
                     </button>
+                    <TurnstileBox {...turnstile.boxProps} theme="dark" />
                     <button
                       type="button"
                       disabled={otpResending}
@@ -419,6 +426,8 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                 <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 w-4 h-4 accent-noob" />
                 <span className="text-xs text-zinc-400 leading-relaxed">I agree to NOOB's general terms and privacy policy.</span>
               </label>
+
+              <TurnstileBox {...turnstile.boxProps} theme="dark" />
 
               <button
                 type="submit"

@@ -33,6 +33,7 @@ const CHECKS = [
   ['Settings hub', ['node', 'scripts/supabase/test-settings-hub-ui.mjs']],
   ['Scratch cards', ['node', 'scripts/supabase/test-scratch-cards.mjs']],
   ['Lenses', ['node', 'scripts/supabase/test-lenses.mjs']],
+  ['Sign-up security check (Turnstile): off = unchanged, fail open', ['node', 'scripts/supabase/test-turnstile.mjs']],
   ['Family map', ['node', 'scripts/supabase/test-family.mjs']],
   ['Hashtags and editing a caption', ['node', '--liftoff-only', 'scripts/supabase/test-hashtags-edit.mjs']],
   ['Reposts: batching, count, feed', ['node', '--liftoff-only', 'scripts/supabase/test-repost-feed.mjs']],

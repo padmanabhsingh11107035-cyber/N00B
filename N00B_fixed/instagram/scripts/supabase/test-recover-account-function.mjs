@@ -284,7 +284,7 @@ check(r.status === 200 && r.json.status === 'found' && /^a•+@e•*@?/.test('')
 check(rpcCalls[0].args.p_ip === '5.6.7.8' && rpcCalls[0].args.p_email === ' Ana.Smith@Example.com ', 'the network address is Cloudflare\'s own header (a visitor can not write it); the database cleans the email itself');
 reset(); dbPlan.guest_support_email_check = () => ({ data: { status: 'found' }, error: null });
 await gcall({ action: 'guest-support-email', email: 'a@b.com' }, { 'x-forwarded-for': '9.9.9.9, 8.8.8.8' });
-check(rpcCalls[0].args.p_ip === '9.9.9.9', 'without it, the first forwarded address is used');
+check(rpcCalls[0].args.p_ip === '8.8.8.8', 'without it, the LAST forwarded address is used (the first is whatever the caller wrote)');
 for (const status of ['no_account', 'invalid_email', 'rate_limited', 'limit_reached', 'bad_browser']) {
   reset(); dbPlan.guest_support_email_check = () => ({ data: { status }, error: null });
   r = await gcall({ action: 'guest-support-email', email: 'x@y.com' });

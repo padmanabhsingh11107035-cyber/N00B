@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
 import { breachCount, BREACHED_PASSWORD_MESSAGE } from '../../utils/pwnedPassword';
+import TurnstileBox, { useTurnstile } from './TurnstileBox';
 import { loginUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession, type LoginApprovalTicket } from '../../services/api';
 import { LoginApprovalWait } from './LoginApprovalWait';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
@@ -480,6 +481,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [signupOtpError, setSignupOtpError] = useState<string | null>(null);
   const [signupOtpLoading, setSignupOtpLoading] = useState(false);
   const [signupOtpResending, setSignupOtpResending] = useState(false);
+  const turnstile = useTurnstile();   // the 'are you a person' check in front of the emailed code (switched on by VITE_TURNSTILE_SITE_KEY; renders nothing without it)
   const [signupOtpSuccess, setSignupOtpSuccess] = useState(false);
   const otpFormRef = useRef<HTMLFormElement>(null);   // the code form: it is sent by itself as soon as the sixth digit is in
   const [signupOtpSlow, setSignupOtpSlow] = useState(false);   // the check has taken more than a few seconds: say so instead of looking frozen
@@ -731,7 +733,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setErrorMessage(BREACHED_PASSWORD_MESSAGE);
       return;
     }
-    const otpRes = await requestSignupOtp(email.trim());
+    if (turnstile.blocker) { setLoading(false); setErrorMessage(turnstile.blocker); return; }
+    const otpRes = await requestSignupOtp(email.trim(), turnstile.token);
+    turnstile.consume();
     setLoading(false);
     if (!otpRes.success) {
       setErrorMessage(otpRes.error || 'Could not send a verification code. Please try again.');
@@ -814,7 +818,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const handleResendSignupOtp = async () => {
     setSignupOtpResending(true);
     setSignupOtpError(null);
-    const res = await requestSignupOtp(email.trim());
+    if (turnstile.blocker) { setSignupOtpResending(false); setSignupOtpError(turnstile.blocker); return; }
+    const res = await requestSignupOtp(email.trim(), turnstile.token);
+    turnstile.consume();
     setSignupOtpResending(false);
     if (!res.success) setSignupOtpError(res.error || 'Could not send a new code. Please try again.');
   };
@@ -1293,6 +1299,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     {signupOtpLoading && signupOtpSlow && (
                       <p data-testid="otp-slow-note" className="text-[11px] text-amber-300 text-center leading-relaxed">This is taking longer than usual — your connection looks slow. Please keep this screen open; it will carry on by itself.</p>
                     )}
+                    <TurnstileBox {...turnstile.boxProps} theme="dark" />
                     <button
                       type="button"
                       disabled={signupOtpResending}
@@ -1773,6 +1780,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   </span>
                 </label>
               </div>
+
+              <TurnstileBox {...turnstile.boxProps} theme="dark" />
 
               {/* Sign Up Button in Gen Z Vibrant Gradient */}
               <button

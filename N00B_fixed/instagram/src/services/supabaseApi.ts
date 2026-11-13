@@ -184,10 +184,10 @@ function dataUriToFile(uri: string, name = 'photo'): File | null {
 // really theirs and really reachable. Verifying does not sign anyone in by itself — check_signup /
 // handle_new_user on the database side refuse to create the account at all unless this specific
 // email was verified in the last 30 minutes, so this can't be skipped by calling signupUser directly.
-export async function requestSignupOtp(email: string): Promise<{ success: boolean; error?: string; notConfigured?: boolean }> {
+export async function requestSignupOtp(email: string, turnstileToken?: string): Promise<{ success: boolean; error?: string; notConfigured?: boolean }> {
   const unavailable = 'Could not send a verification code right now. Please try again later.';
   try {
-    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'signup-otp-request', email } });
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'signup-otp-request', email, ...(turnstileToken ? { turnstileToken } : {}) } });
     if (error) {
       let body: any = null;
       try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }

@@ -6,8 +6,22 @@ export type LensTarget = 'post' | 'story';
 // NOOB Lenses (the camera with face filters) is a page of its own, /lenses (lenses.html), so the app is not loaded a second time and the face finder (WebAssembly) can run under its
 // own security rules. In the app it is shown in a frame over everything, with "?embed=1" (a close button, and "Story" / "Post" buttons that hand the finished picture back here).
 // The picture is only ever put into the normal Post / Story creator: nothing is published from here.
+// The face finder's files (about 15 MB, from this website's own server, not the database) are fetched ahead in the background once, a few seconds after the app is up, only on a fast
+// connection (wifi / 4G) with data saving off. The browser keeps them (7 days), so Lenses starts at once the first time it is opened. Nothing else is touched.
+let warmed = false;
+const warmLenses = (): void => {
+  if (warmed) return;
+  const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string; type?: string } }).connection;
+  if (!c || c.saveData || (c.effectiveType && c.effectiveType !== '4g')) return;   // unknown or slow connection: no ahead-of-time download
+  warmed = true;
+  for (const u of ['/lenses/face_landmarker.task', '/lenses/mediapipe/vision_wasm_internal.wasm', '/lenses/mediapipe/vision_wasm_internal.js']) {
+    void fetch(u, { priority: 'low' } as RequestInit).then((r) => r.arrayBuffer()).catch(() => undefined);
+  }
+};
+
 export const LensHost: React.FC<{ onUse: (file: File, target: LensTarget) => void }> = ({ onUse }) => {
   const open = useLensOpen();
+  useEffect(() => { const id = window.setTimeout(warmLenses, 8000); return () => window.clearTimeout(id); }, []);
   useEffect(() => {
     if (!open) return;
     const onMessage = (e: MessageEvent) => {

@@ -88,7 +88,27 @@ export function orderUnseenFirst<T extends Orderable>(items: T[], userId: string
   const seen = getSeenSet(userId, kind);
   const fresh = items.filter((i) => isFresh(i, userId, seen)).sort((a, b) => time(b) - time(a));
   const rest = shuffled(items.filter((i) => !isFresh(i, userId, seen)));
-  return [...fresh, ...rest];
+  return spreadAuthors([...fresh, ...rest]);
+}
+
+/**
+ * Keeps the order, but never lets one person's posts come one after another while somebody else's are waiting:
+ * each place takes the first item (in the order given) whose author differs from the one just before it.
+ * Someone who uploaded ten posts at once is spread through the feed instead of filling a whole screen.
+ */
+export function spreadAuthors<T extends { userId: string }>(items: T[]): T[] {
+  const left = [...items];
+  const out: T[] = [];
+  let last = '';
+  while (left.length > 0) {
+    let at = 0;
+    const look = Math.min(left.length, 60);   // look ahead a bit, so a long run by one person does not cost much time
+    for (let i = 0; i < look; i++) { if (left[i].userId !== last) { at = i; break; } }
+    const [pick] = left.splice(at, 1);
+    out.push(pick);
+    last = pick.userId;
+  }
+  return out;
 }
 
 /**
@@ -103,11 +123,11 @@ export function mergeIntoOrder<T extends Orderable>(prevIds: string[], items: T[
   const added = items.filter((i) => !keptSet.has(i.id));
   if (added.length === 0) return kept;
   const seen = getSeenSet(userId, kind);
-  const top = added
+  const top = spreadAuthors(added
     .filter((i) => i.userId === userId || !seen.has(i.id))
-    .sort((a, b) => time(b) - time(a))
+    .sort((a, b) => time(b) - time(a)))
     .map((i) => i.id);
   const topSet = new Set(top);
-  const tail = shuffled(added.filter((i) => !topSet.has(i.id))).map((i) => i.id);
+  const tail = spreadAuthors(shuffled(added.filter((i) => !topSet.has(i.id)))).map((i) => i.id);
   return [...top, ...kept, ...tail];
 }

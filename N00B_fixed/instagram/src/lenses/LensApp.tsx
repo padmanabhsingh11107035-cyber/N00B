@@ -78,13 +78,17 @@ export const LensApp: React.FC = () => {
   const visibleRef = useRef(visible); visibleRef.current = visible;
   const index = Math.max(0, visible.findIndex((l) => l.id === lensId));
 
-  // ---- the face finder (starts at once; the camera does not wait for it)
+  // ---- the face finder: it starts only AFTER the camera picture is on the screen. Its program (11 MB) is compiled on the same thread that shows the camera, so starting it first
+  // made the camera wait 10-15 seconds. (The files are also fetched ahead in the background, see warmLenses.)
+  const wantFinder = cam === 'live' || !!still;
   useEffect(() => {
+    if (!wantFinder) return;
     let live = true;
-    loadTracker().then((tr) => { if (live) { trackerRef.current = tr; setFinder('ready'); } }).catch(() => { if (live) setFinder('failed'); });
-    void loadLogo().then((l) => { logoRef.current = l; });
-    return () => { live = false; };
-  }, []);
+    const go = (): void => { loadTracker().then((tr) => { if (live) { trackerRef.current = tr; setFinder('ready'); } }).catch(() => { if (live) setFinder('failed'); }); };
+    const id = window.setTimeout(go, 350);   // the first camera pictures are drawn before the heavy work begins
+    return () => { live = false; window.clearTimeout(id); };
+  }, [wantFinder]);
+  useEffect(() => { void loadLogo().then((l) => { logoRef.current = l; }); }, []);
 
   // ---- the little pictures of the lenses: drawn a few at a time after the first screen is up
   useEffect(() => {

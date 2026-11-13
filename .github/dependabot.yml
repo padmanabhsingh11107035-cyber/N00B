@@ -6,7 +6,12 @@ updates:
     directory: "/N00B_fixed/instagram"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    # Big (major) version jumps of the building blocks are done by hand, after testing: they break the checks and open a pile of failing pull requests.
+    # Security fixes are still opened on their own by GitHub, whatever is listed here.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]

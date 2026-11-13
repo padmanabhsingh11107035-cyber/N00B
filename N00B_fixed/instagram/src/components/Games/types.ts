@@ -62,7 +62,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     scoreGame: 'noob_run_3d',
     embedControls: 'Swipe left or right to change lane, up to jump, down to slide (or the arrow keys). Missions, skins and the ranking are in the menu. It has its own music and sounds; no NOOBs for this one, it is just for fun.',
     embedUrl: '/games/noob-run-3d/',
-    sameOriginOnly: true,   // its bundle (build/index-*.js) still addresses the app by window.location.origin; patch the bundle before moving it to VITE_GAMES_ORIGIN
     posters: [
       '/game-posters/noob-run-3d/01-cover.webp',
       '/game-posters/noob-run-3d/02-play.webp',
@@ -604,7 +603,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ownSound: true,
     embedLazy: true,
     embedUrl: '/games/critterkart/',
-    sameOriginOnly: true,   // its bundle (build/index-*.js, race bridge) still addresses the app by window.location.origin; patch it before moving it to VITE_GAMES_ORIGIN
     posters: [
       '/game-posters/critterkart/01-cover.webp',
       '/game-posters/critterkart/02-driver.webp'

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { HelixBoard } from '../../../services/api';
+import { planGameFrame } from '../../../utils/gamesOrigin';
 
 // Helix Fall is a 3D game built on its own (public/games/helix-fall, a separate page). It runs in a frame inside the game window and talks to the app with messages
 // ("helixfall:..." — the game's src/main.ts and public/embed-probe.js are the other end):
@@ -55,6 +56,9 @@ type Phase = 'loading' | 'ready' | 'stuck';
 
 export const HelixFallGame: React.FC<HelixFallGameProps> = ({ userName, pointsPerLevel, onLevel, onRun, loadBoard }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  // where the frame runs: the separate games address when this build has one (the bridge then accepts messages from that exact origin only), else the app's own address
+  const gamePath = `${GAME_PATH}?embed=1&name=${encodeURIComponent(userName.slice(0, 16))}`;
+  const plan = React.useMemo(() => planGameFrame(gamePath, { bridge: true, appOrigin: window.location.origin }), [gamePath]);
   const [note, setNote] = useState<Note>({ kind: 'idle' });
   const [phase, setPhase] = useState<Phase>('loading');
   // What the game page said while starting ("hello" details, errors): shown when it gets stuck, so the problem can be told exactly.
@@ -74,10 +78,10 @@ export const HelixFallGame: React.FC<HelixFallGameProps> = ({ userName, pointsPe
     setNotes([]);
     runEarnedRef.current = 0;
     let errorTimer = 0;
-    const tell = (message: Record<string, unknown>) => frameRef.current?.contentWindow?.postMessage(message, window.location.origin);
+    const tell = (message: Record<string, unknown>) => frameRef.current?.contentWindow?.postMessage(message, plan.origin);
     const stuckTimer = window.setTimeout(() => { if (phaseRef.current === 'loading') setPhase('stuck'); }, STUCK_AFTER_MS);
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.source !== frameRef.current?.contentWindow) return;
+      if (e.origin !== plan.origin || e.source !== frameRef.current?.contentWindow) return;
       const d = e.data as Record<string, unknown> | null;
       if (!d || typeof d.type !== 'string' || !d.type.startsWith('helixfall:')) return;
       const detail = typeof d.detail === 'string' ? d.detail.slice(0, 300) : '';
@@ -146,9 +150,9 @@ export const HelixFallGame: React.FC<HelixFallGameProps> = ({ userName, pointsPe
       window.clearTimeout(stuckTimer);
       window.clearTimeout(errorTimer);
     };
-  }, [attempt]);
+  }, [attempt, plan.origin]);
 
-  const src = `${GAME_PATH}?embed=1&name=${encodeURIComponent(userName.slice(0, 16))}`;
+  const src = plan.src;
   const money = (n: number) => n.toLocaleString();
   const good = note.kind === 'level' || (note.kind === 'ended' && note.earned > 0);
 
@@ -161,6 +165,9 @@ export const HelixFallGame: React.FC<HelixFallGameProps> = ({ userName, pointsPe
           title="Helix Fall"
           src={src}
           allow="autoplay; fullscreen"
+          referrerPolicy="no-referrer"
+          // boxed in like every other game; on the separate games address the game gets its own origin (no app sign-in there), see utils/gamesOrigin.ts
+          sandbox={plan.sandbox}
           allowFullScreen
           // The keyboard (A / D, arrows, Space) goes to the game as soon as it is on screen.
           onLoad={() => frameRef.current?.contentWindow?.focus()}

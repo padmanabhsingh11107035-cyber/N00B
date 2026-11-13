@@ -4,7 +4,7 @@
   try {
     if (window.parent === window || !/[?&]embed\b/.test(location.search)) return;
     var tell = function (type, detail) {
-      try { window.parent.postMessage({ type: 'helixfall:' + type, detail: detail }, location.origin); } catch (e) { /* the page around the game is gone */ }
+      try { window.parent.postMessage({ type: 'helixfall:' + type, detail: detail }, (()=>{try{let m=/[#&]noob-parent=([^&]+)/.exec(window.location.hash);if(m){let o=new URL(decodeURIComponent(m[1])).origin;if(o!=='null'&&o!==window.location.origin)return o}}catch{}return window.location.origin})()); } catch (e) { /* the page around the game is gone */ }
     };
     window.__helixTell = tell;
     tell('hello', [

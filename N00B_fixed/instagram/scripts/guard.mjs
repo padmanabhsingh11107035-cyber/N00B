@@ -49,6 +49,7 @@ const CHECKS = [
   ['Admin User data map: offline gazetteer and resolver', ['node', '--liftoff-only', 'scripts/supabase/test-geo-places.mjs']],
   // the admin Content tab shows everything, in pages; a deleted account leaves nothing behind
   ['Admin page User data: scroll, slide and keys', ['node', 'scripts/supabase/test-user-data-scroll.mjs']],
+  ['Home: the first post does not flash when the app opens', ['node', 'scripts/supabase/test-feed-first-order.mjs']],
   ['People who left vanish from lists and numbers at once', ['node', 'scripts/supabase/test-people-refresh.mjs']],
   ['Admin Content tab: every post / reel / video / story / instant in pages', ['node', '--liftoff-only', 'scripts/supabase/test-admin-content-paging.mjs']],
   ['Deleted accounts: no profile, follower or count left; clean-up of old leftovers', ['node', '--liftoff-only', 'scripts/supabase/test-deleted-accounts-cleanup.mjs']],

@@ -302,11 +302,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const postIdsKey = posts.map((p) => p.id).join(',');
   const appendedPostIdsRef = useRef(appendedPostIds);
   appendedPostIdsRef.current = appendedPostIds;
+  // The first posts of a visit: the order is made ONCE, in the render that first has posts, and the effect below keeps that very order. (Before, the first render showed the posts as they came, newest
+  // first, and the effect then swapped in the shuffled order: the first post flashed on every open.)
+  const firstOrderRef = useRef<string[] | null>(null);
+  if (feedOrder.length > 0) firstOrderRef.current = null;
+  else if (posts.length > 0 && !firstOrderRef.current) firstOrderRef.current = buildFeedOrder(posts, currentUser.id);
   useEffect(() => {
     const refreshed = lastRefreshNonceRef.current !== refreshNonce;
     lastRefreshNonceRef.current = refreshNonce;
     const appended = appendedPostIdsRef.current;
-    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : appended ? mergeIntoOrderPaged(prev, posts, currentUser.id, 'posts', appended, getSeenSet(currentUser.id, 'posts')) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
+    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : prev.length === 0 && firstOrderRef.current ? firstOrderRef.current : appended ? mergeIntoOrderPaged(prev, posts, currentUser.id, 'posts', appended, getSeenSet(currentUser.id, 'posts')) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdsKey, refreshNonce]);
 
@@ -385,14 +390,18 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   // Display order follows feedOrder (unseen first, then shuffled), not the raw posts array.
   const postsById = new Map(posts.map((p) => [p.id, p]));
-  const orderedPosts = feedOrder.map((id) => postsById.get(id)).filter((p): p is Post => !!p);
+  const shownOrder = feedOrder.length === 0 && firstOrderRef.current ? firstOrderRef.current : feedOrder;
+  const orderedPosts = shownOrder.map((id) => postsById.get(id)).filter((p): p is Post => !!p);
   // A post that arrived after the last rebuild (e.g. between renders, before the effect above has
   // run) has no spot in feedOrder yet — tack it on at the front rather than hiding it.
-  const knownIds = new Set(feedOrder);
+  const knownIds = new Set(shownOrder);
   const notYetOrdered = posts.filter((p) => !knownIds.has(p.id));
+  // an older page that has just arrived waits at the END (that is where its place is), only really new posts wait at the front
+  const notYetEnd = notYetOrdered.filter((p) => appendedPostIds?.has(p.id));
+  const notYetFront = notYetOrdered.filter((p) => !appendedPostIds?.has(p.id));
 
   // Filter posts
-  let filteredPosts = [...new Map([...notYetOrdered, ...orderedPosts].map((p) => [p.id, p] as const)).values()].filter((p) => !hiddenAdIds.includes(p.id));   // one card per post, whatever the lists above hold
+  let filteredPosts = [...new Map([...notYetFront, ...orderedPosts, ...notYetEnd].map((p) => [p.id, p] as const)).values()].filter((p) => !hiddenAdIds.includes(p.id));   // one card per post, whatever the lists above hold
 
   if (activeCategory !== 'All') {
     filteredPosts = filteredPosts.filter(

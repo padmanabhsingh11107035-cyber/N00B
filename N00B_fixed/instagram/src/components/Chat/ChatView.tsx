@@ -1749,7 +1749,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, []);
   useLayoutEffect(() => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
-    forceStripColour(stripOn ? (mobileView === 'chat' && light ? '#ffffff' : '#0E4B37') : null);
+    forceStripColour(stripOn ? (mobileView === 'chat' ? (light ? '#ffffff' : '#000000') : '#0E4B37') : null);   // an open chat: black (white in light); the Messages list keeps its green
   }, [mobileView, stripOn]);
   useEffect(() => () => forceStripColour(null), []);
   // coming back from a chat on a phone: the page itself may have been left scrolled by the chat's keyboard

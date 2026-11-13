@@ -1805,7 +1805,7 @@ a.noob-link, button.noob-link { color: #4da3ff !important; text-decoration: unde
 html.phone-edge #chat-view-container { padding-top: 0 !important; }   /* the page-frame rule above (data-noob-page) must never add the clock height to this page: its own bar reaches the top edge */
 html.phone-edge #chat-view-container[data-view="chat"] { top: 0 !important; bottom: 0 !important; height: auto !important; margin-top: 0 !important; }
 /* ONE block at the top of an open chat: the strip behind the clock and the chat bar are the same solid green (white in Light), the bar's row sits right under the clock */
-html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 4px) !important; background: #0E4B37 !important; background-image: none !important; border-bottom-color: transparent !important; box-shadow: none !important; }
+html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: calc(var(--sat) + 4px) !important; background: #000000 !important; background-image: none !important; border-bottom-color: transparent !important; box-shadow: none !important; }
 html.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background: #ffffff !important; border-bottom-color: #e6e6e6 !important; }
 
 /* ---- Phones (html.phone-edge): the Settings bar and the Reels bar are see-through ---- */

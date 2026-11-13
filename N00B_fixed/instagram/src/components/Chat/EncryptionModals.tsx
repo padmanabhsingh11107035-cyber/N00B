@@ -35,7 +35,7 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
   const locked = !!info?.encryptable;
   const groups = info?.peer?.code ? info.peer.code.split(' ') : [];
   return (
-    <div className="pm-root fixed inset-0 edge-own z-[125]" role="dialog" aria-modal="true" aria-label="Chat encryption" data-testid="chat-encryption-page">
+    <div className="pm-root fixed inset-0 edge-own z-[125]" data-noob-keep="1" role="dialog" aria-modal="true" aria-label="Chat encryption" data-testid="chat-encryption-page">
       <div className="pm-top">
         <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
         <div className="pm-top-text">
@@ -161,7 +161,7 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
   });
 
   return (
-    <div className="pm-root fixed inset-0 edge-own z-[130]" role="dialog" aria-modal="true" aria-label="Encryption keys and backup" data-testid="encryption-keys-page">
+    <div className="pm-root fixed inset-0 edge-own z-[130]" data-noob-keep="1" role="dialog" aria-modal="true" aria-label="Encryption keys and backup" data-testid="encryption-keys-page">
       <div className="pm-top">
         <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
         <div className="pm-top-text">

@@ -238,6 +238,8 @@ type AppLayer =
   | { id: string; kind: 'hashtag'; tag: string }
   | { id: 'fun'; kind: 'fun'; loc: FunLocation };
 
+const SHOW_SAVED_FEED = false;   // see loadInitialData
+
 export default function App() {
   // The page the address bar names (/explore, /reels ...) is the page that opens; anything else (/, a shared reel or profile link) opens Home.
   const [activeTab, setActiveTabState] = useState<NavTab>(() => { const t = typeof window !== 'undefined' ? tabFromPath(window.location.pathname) : null; return t && t !== 'post' ? t : 'feed'; });   // ('post' is the Create button, a window over a page, never a page of its own)
@@ -1027,7 +1029,9 @@ export default function App() {
       for (const p of [postsP, trayP, reelsP, notifP]) p.catch(() => undefined);   // (so a failure of the user request below never leaves these unhandled)
       let shownCached = false;
       const earlyUser = await userP;
-      if (earlyUser && postsRef.current.length === 0) {
+      // Switched off: showing last time's saved feed first made every opening start with the SAME posts in the SAME order and then swap them for the fresh feed.
+      // (The fresh feed is still saved below, so this can be turned back on.)
+      if (SHOW_SAVED_FEED && earlyUser && postsRef.current.length === 0) {
         const cached = await feedCache().read<Post, Story>(earlyUser.id, { blockedIds: earlyUser.blockedUserIds }).catch(() => null);
         if (cached && cached.posts.length > 0) {
           shownCached = true;

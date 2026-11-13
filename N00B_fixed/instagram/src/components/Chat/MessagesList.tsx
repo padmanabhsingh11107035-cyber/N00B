@@ -403,6 +403,8 @@ export function MessagesList(p: MessagesListProps) {
                             ? '💬 Message'
                             : lastMsg?.locked
                             ? '🔒 Locked message'
+                            : lastMsg?.sealed && !lastMsg.text
+                            ? (lastMsg.mediaType === 'audio' ? '🎤 Voice message' : lastMsg.mediaType === 'video' ? '🎥 Video' : '📷 Photo')
                             : missedCall
                             ? lastMsg!.text.replace(/^\s*\S*\s*(?=missed call)/i, '')
                             : lastMsg?.text || (c.isGroup ? 'Group channel active' : 'Chat started')}

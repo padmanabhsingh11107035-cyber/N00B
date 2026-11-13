@@ -30,9 +30,10 @@ import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET, creat
 import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
 import type { TeamMember, MyTeamApplication, TeamAdminState, TeamApplicationRow, ApplicationStatus } from '../utils/ourTeam';
 import { isTeamPhotoKey } from '../utils/ourTeam';
-import { createE2ee } from '../e2ee/service.ts';
+import { createE2ee, isMissingFunction } from '../e2ee/service.ts';
 import { deviceLabel } from '../e2ee/label.ts';
 import { bindMessages } from '../e2ee/messages.ts';
+import { openBlob, sealBlob, SealedMediaError, SEAL_CHUNK, SEAL_TAG, type SealedMedia } from '../e2ee/media.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
 import { markSeen, mergeSeen } from '../utils/seenContent';
 import { getDeviceId, getDeviceModel } from '../utils/deviceId';
@@ -1733,7 +1734,8 @@ const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
 const sizeText = (bytes: number) => (bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB` : `${Math.round(bytes / 1024 / 1024)} MB`);
 
-async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string; width?: number; height?: number; bytes?: number }> {
+// What a file may be before it is uploaded (also used for locked chat attachments, before they are locked): not a phone-only photo format, only picture / video / audio, and small enough for storage.
+function assertUploadable(file: File, extraBytes = 0): void {
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'dat';
   const mime = (file.type || '').toLowerCase();
   if (BLOCKED_EXTENSIONS.includes(ext) || mime === 'image/heic' || mime === 'image/heif' || mime === 'audio/x-ms-wma') {
@@ -1745,13 +1747,18 @@ async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOpti
   }
   if (!/^(image|video|audio)\//.test(mime)) throw new Error('Only image, video, and audio files can be uploaded.');
   // Storage takes at most 50 MB a file. Said here, in words, instead of after sending a gigabyte and getting "load error".
-  if (file.size > MAX_UPLOAD_BYTES) {
+  if (file.size > MAX_UPLOAD_BYTES || (extraBytes > 0 && file.size + extraBytes > MAX_UPLOAD_BYTES)) {
     throw new Error(
       mime.startsWith('video/')
         ? `This video is ${sizeText(file.size)}, and uploads can be at most 48 MB. It could not be made smaller on this phone. Try a shorter video, or use a lower video quality in your camera settings.`
         : `This file is ${sizeText(file.size)}, and uploads can be at most 48 MB.`
     );
   }
+}
+
+async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string; width?: number; height?: number; bytes?: number }> {
+  const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'dat';
+  assertUploadable(file);
 
   const key = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
   // Straight from the browser to storage — the file never passes through any server of ours. Sent as the storage library sends it (a form with the file), but with
@@ -1801,6 +1808,104 @@ export async function uploadMediaFile(
     throw new Error('Please log in to upload.');
   }
   return uploadToStorage(optimizedFile, folder, opts);
+}
+
+// ----------------------------------------------------------------------------- locked (end-to-end encrypted) chat attachments
+// In a chat that is end-to-end encrypted a picture, video or voice note is locked ON THIS DEVICE (src/e2ee/media.ts) before it is uploaded; the stored
+// file is random-looking bytes ("chat/<name>.sealed") and its key travels only inside the locked message. Needs migration 20261113000002 on the server.
+
+// Opened files live only here, in memory, for as long as the chat is open - never in localStorage, IndexedDB or a cache of the service worker.
+const SEALED_CACHE_BYTES = 96 * 1024 * 1024;
+const sealedCache = new Map<string, Blob>();
+const sealedPending = new Map<string, Promise<Blob>>();
+let sealedCacheSize = 0;
+function sealedCachePut(key: string, blob: Blob): void {
+  const before = sealedCache.get(key);
+  if (before) { sealedCacheSize -= before.size; sealedCache.delete(key); }
+  sealedCache.set(key, blob);
+  sealedCacheSize += blob.size;
+  for (const [k, b] of sealedCache) {          // oldest first
+    if (sealedCacheSize <= SEALED_CACHE_BYTES || sealedCache.size <= 1) break;
+    if (k === key) continue;
+    sealedCache.delete(k);
+    sealedCacheSize -= b.size;
+  }
+}
+/** Forgets every opened attachment (leaving the chats, signing out). */
+export function clearSealedCache(): void { sealedCache.clear(); sealedPending.clear(); sealedCacheSize = 0; }
+/** Already opened in memory (so showing it costs nothing)? */
+export function hasSealedAttachment(key: string): boolean { return sealedCache.has(key); }
+
+/** The opened file of a locked attachment (downloads and opens it; the same file asked twice is fetched once). Throws a readable message on failure. */
+export async function openSealedAttachment(sealed: { key: string; desc: SealedMedia }): Promise<Blob> {
+  const hit = sealedCache.get(sealed.key);
+  if (hit) return hit;
+  let job = sealedPending.get(sealed.key);
+  if (!job) {
+    job = (async () => {
+      let res: Response;
+      try { res = await fetch(resolveMedia(sealed.key)); } catch { throw new Error('Could not download this attachment. Check your connection and try again.'); }
+      if (!res.ok) throw new Error(res.status === 404 ? 'This attachment is no longer available.' : 'Could not download this attachment. Please try again.');
+      let opened: Blob;
+      try { opened = await openBlob(await res.blob(), sealed.desc); }
+      catch (err) { throw new Error(err instanceof SealedMediaError ? err.message : 'This attachment could not be opened.'); }
+      sealedCachePut(sealed.key, opened);
+      return opened;
+    })().finally(() => { sealedPending.delete(sealed.key); });
+    sealedPending.set(sealed.key, job);
+  }
+  return job;
+}
+
+const SEALED_NOT_READY = 'Locked attachments are not switched on on the server yet, so nothing was sent. Please try again later.';
+
+/**
+ * For a picture / video / voice note about to be sent: when the chat is end-to-end encrypted, makes it smaller as usual, locks it on this device, uploads
+ * the locked bytes and registers them; returns what sendMessage needs ({ key, desc }). Returns null when the chat is not one that is locked: the caller then
+ * uploads and sends it as before. When the chat must be locked but that can not be done this THROWS: nothing readable is ever uploaded instead.
+ */
+export async function prepareChatAttachment(chatId: string, file: File, opts: UploadOptions & { duration?: string } = {}): Promise<{ key: string; desc: SealedMedia } | null> {
+  let info;
+  try { info = await e2ee.chatCryptoForSend(chatId); } catch { throw new Error("Could not check this chat's encryption. Please try again."); }
+  if (info.mustLock) throw new Error('This device can not keep chat keys (private browsing?), so it can not send private messages. Use a normal browser window.');
+  if (!info.encryptable) return null;
+  if (!(await currentSession())) throw new Error('Please log in to upload.');
+  const optimized = opts.skipCompress ? file : await compressMedia(file, { ...mediaSettingsFor('chat'), maxStep: videoMaxStep('chat'), onProgress: opts.onProgress, signal: opts.signal });
+  assertUploadable(optimized, SEAL_TAG * Math.max(1, Math.ceil(optimized.size / SEAL_CHUNK)));
+  const shown = factsOf(optimized);
+  let sealed;
+  try { sealed = await sealBlob(optimized, { ct: optimized.type, dur: opts.duration, w: shown?.width, h: shown?.height }); }
+  catch (err) { throw new Error(err instanceof SealedMediaError ? err.message : 'Could not lock this attachment, so it was not sent.'); }
+  const key = `chat/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.sealed`;
+  const base = (import.meta.env.VITE_SUPABASE_URL as string) || '';
+  const anon = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '';
+  try {
+    await uploadWithRetry({
+      url: `${base}/storage/v1/object/${MEDIA_BUCKET}/${key}`,
+      headers: async () => ({ apikey: anon, Authorization: `Bearer ${(await currentSession())?.access_token || anon}`, 'x-upsert': 'false' }),
+      makeBody: () => {
+        const form = new FormData();
+        form.append('cacheControl', '31536000');
+        form.append('', new File([sealed.blob], 'attachment.sealed', { type: 'application/octet-stream' }));
+        return form;
+      },
+      onProgress: (fraction) => opts.onProgress?.({ stage: 'uploading', fraction }),
+      onRetry: (attempt, of, reason) => opts.onProgress?.({ stage: 'retrying', fraction: 0, attempt, of, reason }),
+      signal: opts.signal
+    });
+  } catch (err) {
+    if ((err as { name?: string })?.name === 'AbortError') throw err;
+    // (the bucket refuses a type it was not told about: the server update has not been installed)
+    if (/mime|not supported|unsupported|415|invalid/i.test(errorText(err, ''))) throw new Error(SEALED_NOT_READY);
+    throw err;
+  }
+  try { await rpc('register_sealed_media', { p_chat: chatId, p_key: key }); }
+  catch (err) {
+    void supabase.storage.from(MEDIA_BUCKET).remove([key]).then(() => undefined, () => undefined);
+    throw new Error(isMissingFunction(err) ? SEALED_NOT_READY : errorText(err, 'Could not send that attachment. Please try again.'));
+  }
+  sealedCachePut(key, optimized);      // what you sent shows at once, without downloading it again (memory only)
+  return { key, desc: sealed.desc };
 }
 
 // ----------------------------------------------------------------------------- stories & highlights
@@ -3104,15 +3209,29 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
       media = file ? (await uploadToStorage(file, 'posts')).objectKey : '';
     }
     // A text message (or a GIF / sticker, which is only a link to a picture) in a chat that CAN be locked is locked on this device. If it can
-    // not be locked the message FAILS: it is never quietly sent readable instead. Pictures, video and voice notes are not locked yet.
+    // not be locked the message FAILS: it is never quietly sent readable instead. A picture, video or voice note is locked first (prepareChatAttachment) and arrives here as `sealed`.
     const storedMedia = toStoredMedia(media);
     const lockedPayload = await prepareSend(chatId, {
       text: payload.text, storedMedia, mediaType: payload.mediaType, sharedTrack: payload.sharedTrack, gameInvite: payload.gameInvite,
       sharedProfileUserId: payload.sharedProfileUserId, sharedPostId: payload.sharedPostId,
-      audioDuration: payload.audioDuration, scheduledAt: payload.scheduledAt, replyToId: payload.replyTo?.messageId
+      audioDuration: payload.audioDuration, scheduledAt: payload.scheduledAt, replyToId: payload.replyTo?.messageId, sealed: payload.sealed
     });
+    if (payload.sealed && !lockedPayload) throw new Error('This chat can no longer be locked, so the locked attachment was not sent. Please send it again.');
     if (lockedPayload) {
-      const locked = await rpc<{ message: any }>('send_message', { p_chat: chatId, p: lockedPayload });
+      let locked: { message: any };
+      try { locked = await rpc<{ message: any }>('send_message', { p_chat: chatId, p: lockedPayload }); }
+      catch (err) {
+        // nothing was sent: the locked file that was uploaded for it is taken back (best effort; the server also clears forgotten ones after two days)
+        if (payload.sealed) void rpc('discard_sealed_media', { p_key: payload.sealed.key }).catch(() => undefined);
+        throw err;
+      }
+      if (payload.sealed) {
+        // ties the locked file to its message, so deleting the message deletes the file too (3 tries; a failure here loses nothing, it only delays cleanup)
+        const id = locked.message?.id;
+        for (let attempt = 0; id && attempt < 3; attempt++) {
+          try { await rpc('attach_sealed_media', { p_message: id, p_key: payload.sealed.key }); break; } catch { await new Promise((r) => setTimeout(r, 400 * (attempt + 1))); }
+        }
+      }
       return (await unlockMessages(chatId, [mapMessage(locked.message, true)]))[0];
     }
     const p: Record<string, unknown> = {

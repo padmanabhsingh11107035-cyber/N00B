@@ -14,6 +14,7 @@
 import * as C from './crypto.ts';
 import type { DeviceKey, Envelope, PublicJwk, Recipient } from './crypto.ts';
 import { mergeRings, type KeyStore, type StoredRing } from './keyring.ts';
+import { isSealedKey, kindOfMime, parseDescriptor, type SealedMedia } from './media.ts';
 
 export interface E2eeDeps {
   rpc: (fn: string, args?: Record<string, unknown>) => Promise<any>;
@@ -27,13 +28,17 @@ export interface E2eeDeps {
 }
 
 // What is inside a locked message. Text messages carry only "t"; a GIF or sticker (a link to a picture somewhere else) also carries "m" / "mt".
-export interface Payload { t: string; m?: string; mt?: string }
+// A locked picture / video / voice note carries "m" (the storage key of the LOCKED file), "mt" (image | video | audio) and "s": the file's own key and
+// details (see media.ts). Older versions of the app ignore "s" and "m" of that kind, so they show it as an attachment they can not open.
+export interface Payload { t: string; m?: string; mt?: string; s?: SealedMedia }
 
-export const encodePayload = (p: Payload): string => JSON.stringify(p.m ? { t: p.t, m: p.m, mt: p.mt } : { t: p.t });
+export const encodePayload = (p: Payload): string => JSON.stringify(p.s && p.m ? { t: p.t, m: p.m, mt: p.mt, s: p.s } : p.m ? { t: p.t, m: p.m, mt: p.mt } : { t: p.t });
 export function decodePayload(s: string): Payload {
   try {
     const j = JSON.parse(s);
     if (j && typeof j === 'object' && typeof j.t === 'string') {
+      const sealed = j.s !== undefined && isSealedKey(j.m) ? parseDescriptor(j.s) : null;
+      if (sealed) return { t: j.t, m: j.m, mt: kindOfMime(sealed.ct), s: sealed };
       return { t: j.t, ...(typeof j.m === 'string' && /^https:\/\//.test(j.m) ? { m: j.m, mt: typeof j.mt === 'string' ? j.mt : 'image' } : {}) };
     }
   } catch { /* not JSON: treated as plain text below */ }

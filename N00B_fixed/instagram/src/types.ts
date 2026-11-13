@@ -708,6 +708,9 @@ export interface Message {
   mediaUrl?: string;
   mediaType?: 'image' | 'video' | 'audio' | 'code' | 'game_invite' | 'sticker';
   audioDuration?: string;
+  // A picture / video / voice note that is end-to-end locked: `key` is where the LOCKED file is stored, `desc` holds its own key and details. The opened file is
+  // never part of the message (it lives only in memory while the chat is open), so nothing readable is ever saved with the message.
+  sealed?: { key: string; desc: import('./e2ee/media.ts').SealedMedia };
   createdAt: string;
   isEdited?: boolean;
   isPinned?: boolean;

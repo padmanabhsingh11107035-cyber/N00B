@@ -41,6 +41,8 @@ const CHECKS = [
   ['Smaller new uploads (photos, videos)', ['node', '--liftoff-only', 'scripts/supabase/test-upload-savings.mjs']],
   ['Saved Home feed shown instantly', ['node', '--liftoff-only', 'scripts/supabase/test-feed-cache.mjs']],
   ['No x-forwarded-for first-entry trust', ['node', 'scripts/supabase/test-no-xff-first-trust.mjs']],
+  // chat privacy
+  ['Locked chat pictures, videos and voice notes', ['node', 'scripts/supabase/test-e2ee-media.mjs']],
   // the free protection of the data
   ['Supabase usage alert (80% line)', ['node', 'scripts/supabase/test-usage-alert.mjs']],
 ];

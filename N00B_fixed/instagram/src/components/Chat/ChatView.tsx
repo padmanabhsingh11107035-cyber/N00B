@@ -154,6 +154,8 @@ import {
   fetchMessages,
   sendMessage,
   uploadMediaFile,
+  prepareChatAttachment,
+  clearSealedCache,
   toggleMessageReaction,
   editMessage,
   deleteMessage,
@@ -200,6 +202,7 @@ import { playChatTone } from '../../utils/chatTone';
 import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { mediaMayLoad } from '../../utils/chatMedia';
+import { SealedAttachment } from './SealedAttachment';
 import confetti from 'canvas-confetti';
 
 interface ChatViewProps {
@@ -1284,7 +1287,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   // Shared by photo/video attachments and voice messages below — same optimistic-then-confirm
   // pattern as handleSendGif/handleSendCustomSticker above, just generalized over the media type.
-  const sendMediaMessage = async (mediaUrl: string, mediaType: 'image' | 'video' | 'audio', audioDuration?: string) => {
+  const sendMediaMessage = async (mediaUrl: string, mediaType: 'image' | 'video' | 'audio', audioDuration?: string, sealed?: Message['sealed']) => {
     if (!activeChat) return;
     const optimisticMsg: Message = {
       id: `temp_${Date.now()}`,
@@ -1294,7 +1297,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
       senderDisplayName: currentUser.displayName,
       senderAvatar: currentUser.avatar,
       text: '',
-      mediaUrl,
+      mediaUrl: sealed ? undefined : mediaUrl,
+      sealed,
       mediaType,
       audioDuration,
       createdAt: new Date().toISOString(),
@@ -1309,14 +1313,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
         senderDisplayName: currentUser.displayName,
         senderAvatar: currentUser.avatar,
         text: '',
-        mediaUrl,
+        mediaUrl: sealed ? undefined : mediaUrl,
+        sealed,
         mediaType,
         audioDuration
       });
       setMessages((prev) => {
         const next = prev.map((m) =>
           m.id === optimisticMsg.id
-            ? { ...response, mediaUrl: response?.mediaUrl || mediaUrl, mediaType, audioDuration, status: 'delivered' }
+            ? { ...response, mediaUrl: sealed ? undefined : response?.mediaUrl || mediaUrl, sealed: sealed ? response?.sealed || sealed : undefined, mediaType, audioDuration, status: 'delivered' }
             : m
         );
         safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
@@ -1326,7 +1331,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         const label = mediaType === 'audio' ? '🎤 Voice message' : mediaType === 'video' ? '🎥 Video' : '📷 Photo';
         const next = prev.map((c) =>
           c.id === activeChat.id
-            ? { ...c, lastMessage: { ...response, mediaUrl: response?.mediaUrl || mediaUrl, status: 'delivered', text: label } }
+            ? { ...c, lastMessage: { ...response, mediaUrl: sealed ? undefined : response?.mediaUrl || mediaUrl, sealed: undefined, status: 'delivered', text: label } }
             : c
         );
         safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
@@ -1361,8 +1366,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setAttachIsVideo(mediaType === 'video');
     setIsUploadingAttachment(true);
     try {
-      const uploaded = await uploadMediaFile(file, 'chat', { signal: abort.signal, onProgress: setAttachProgress });
-      await sendMediaMessage(uploaded.objectKey || uploaded.url, mediaType);
+      // In an end-to-end encrypted chat the file is locked on this phone first and only the locked bytes are uploaded (null = not such a chat: as before).
+      const lockedFile = await prepareChatAttachment(activeChat.id, file, { signal: abort.signal, onProgress: setAttachProgress });
+      if (lockedFile) {
+        await sendMediaMessage('', mediaType, undefined, lockedFile);
+      } else {
+        const uploaded = await uploadMediaFile(file, 'chat', { signal: abort.signal, onProgress: setAttachProgress });
+        await sendMediaMessage(uploaded.objectKey || uploaded.url, mediaType);
+      }
     } catch (err) {
       const message = explainUploadError(err);
       setSendError(message);
@@ -1414,8 +1425,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const ss = String(durationSeconds % 60).padStart(2, '0');
       setIsUploadingAttachment(true);
       try {
-        const uploaded = await uploadMediaFile(file, 'chat');
-        await sendMediaMessage(uploaded.objectKey || uploaded.url, 'audio', `${mm}:${ss}`);
+        const lockedFile = await prepareChatAttachment(activeChat.id, file, { duration: `${mm}:${ss}` });
+        if (lockedFile) {
+          await sendMediaMessage('', 'audio', `${mm}:${ss}`, lockedFile);
+        } else {
+          const uploaded = await uploadMediaFile(file, 'chat');
+          await sendMediaMessage(uploaded.objectKey || uploaded.url, 'audio', `${mm}:${ss}`);
+        }
       } catch (err) {
         setSendError(err instanceof Error ? err.message : 'Could not send that voice message.');
         window.setTimeout(() => setSendError((c) => (c === (err instanceof Error ? err.message : 'Could not send that voice message.') ? '' : c)), 6000);
@@ -1433,6 +1449,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       recordingStreamRef.current?.getTracks().forEach((t) => t.stop());
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      clearSealedCache();      // opened (decrypted) attachments are kept in memory only while the chats are open
     };
   }, []);
 
@@ -2331,6 +2348,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         show a hardcoded "Voice Recording (0:14)" badge and then fall through to the
                         <img> branch below (nothing actually sent 'audio' messages, so it never got
                         exercised until now). */}
+                    {m.sealed && (
+                      <SealedAttachment message={m} allowed={isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])} onAsk={() => setLoadedMedia((prev) => new Set(prev).add(m.id))} />
+                    )}
+
                     {m.mediaType === 'audio' && m.mediaUrl && (
                       <div className="mb-2 flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 min-w-[180px]">
                         <Mic className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -2340,7 +2361,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     )}
 
                     {/* Settings > Chats > Photos and videos: a received picture / video that is not loaded by itself waits for a tap (what you sent yourself always shows) */}
-                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && !(isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
+                    {m.mediaUrl && !m.sealed && !isSticker && m.mediaType !== 'audio' && !(isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
                       <button
                         type="button"
                         data-testid="media-tap-to-load"
@@ -2352,7 +2373,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     )}
 
                     {/* Media / GIF / Video Display (stickers render separately, chrome-free, below) */}
-                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && (isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
+                    {m.mediaUrl && !m.sealed && !isSticker && m.mediaType !== 'audio' && (isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
                       <div className="mb-2 rounded-xl overflow-hidden min-h-[100px] max-w-xs sm:max-w-sm bg-black/40 border border-white/10 shadow-md">
                         {m.mediaType === 'video' ? (
                           <video
@@ -2446,7 +2467,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     ) : m.text ? (
                       <p translate="no" data-testid="msg-text" className={`leading-relaxed whitespace-pre-wrap break-words ${cs['chat.fontSize'] === 'small' ? 'text-[12px]' : cs['chat.fontSize'] === 'large' ? 'text-[17px]' : ''}`}>{renderMessageWithLinks(m.text, activeChat?.participants || [], onNavigateToProfile)}</p>
-                    ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile && !m.sharedPost ? (
+                    ) : !m.mediaUrl && !m.sealed && !m.sharedTrack && !m.gameInvite && !m.sharedProfile && !m.sharedPost ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
                       </p>

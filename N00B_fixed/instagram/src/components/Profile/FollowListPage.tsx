@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus, MoreVertical, Ban, Flag, EyeOff, User as UserIcon, X } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -26,6 +26,8 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
   onNavigateToUserProfile
 }) => {
   const [tab, setTab] = useState<'followers' | 'following'>(initialTab);
+  // opening the page asks for the people list again, so an account that was deleted is gone from the list and the numbers at once (see App.tsx)
+  useEffect(() => { try { window.dispatchEvent(new Event('noob:refresh-people')); } catch { /* the list on screen stays */ } }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());

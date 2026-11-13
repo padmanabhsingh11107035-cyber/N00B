@@ -1028,6 +1028,34 @@ export default function App() {
     if (feedPager && !loading && !initialLoadFailed && !currentUser) { feedPager.reset(); pagerOwnerRef.current = null; setAppendedIds(new Set<string>()); }
   }, [loading, initialLoadFailed, currentUser]);
 
+  // People who left (an account that was deleted) disappear from the lists and the numbers right away: the people list and my own follower / following numbers are asked for again
+  // when the app comes back to the front, when the connection comes back, every few minutes while it is open, and whenever a Followers / Following page opens.
+  const lastPeopleRefresh = useRef(0);
+  const currentUserRef = useRef<User | null>(null);
+  currentUserRef.current = currentUser;
+  const refreshPeopleNow = useCallback(async (force = false) => {
+    const meId = currentUserRef.current?.id;
+    if (!meId) return;
+    const now = Date.now();
+    if (!force && now - lastPeopleRefresh.current < 45000) return;
+    lastPeopleRefresh.current = now;
+    const list = await fetchUsers();
+    if (!list.length || currentUserRef.current?.id !== meId) return;   // a failed request never empties what is on screen
+    setRegisteredUsers(list);
+    const me = list.find((u) => u.id === meId);
+    if (me) setCurrentUser((prev) => (prev && prev.id === meId ? { ...prev, followersCount: me.followersCount ?? prev.followersCount, followingCount: me.followingCount ?? prev.followingCount, followingIds: me.followingIds ?? prev.followingIds } : prev));
+  }, []);
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const onShow = () => { if (document.visibilityState === 'visible') void refreshPeopleNow(); };
+    const onOpen = () => { void refreshPeopleNow(true); };
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshPeopleNow(); }, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('online', onShow);
+    window.addEventListener('noob:refresh-people', onOpen);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', onShow); window.removeEventListener('online', onShow); window.removeEventListener('noob:refresh-people', onOpen); };
+  }, [currentUser?.id, refreshPeopleNow]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);

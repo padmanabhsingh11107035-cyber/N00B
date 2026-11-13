@@ -56,6 +56,11 @@ export function mergeSeen(userId: string, kind: Kind, ids: string[]) {
   save(userId, kind, list);
 }
 
+/** The seen ids in the order they were seen (oldest first, most recently seen last). A copy. */
+export function getSeenList(userId: string, kind: Kind): string[] {
+  return [...load(userId, kind)];
+}
+
 export function markSeen(userId: string, kind: Kind, id: string) {
   mergeSeen(userId, kind, [id]);
 }
@@ -80,11 +85,61 @@ const time = (x: Orderable) => Date.parse(x.createdAt) || 0;
 /** Things this person hasn't seen yet and didn't publish themselves — the ones that go on top. */
 export const isFresh = (item: Orderable, userId: string, seen: Set<string>) => item.userId !== userId && !seen.has(item.id);
 
+// ---- Home feed variety: a different order on every open / refresh --------------------------------
+// Weighted random order WITHOUT replacement (Efraimidis-Spirakis): every item gets key = u^(1/w) with u random in (0,1], and the list is sorted by key,
+// biggest first. A bigger weight w means "likely to land near the top", but never "always". All numbers below are the knobs to tune.
+export const W_UNSEEN = 8;              // an unseen post from someone else, older than 3 days
+export const W_UNSEEN_3D = 10;          // ...younger than 3 days
+export const W_UNSEEN_24H = 12;         // ...younger than 24 hours (new content still mostly comes first, but not in a fixed order)
+export const W_OWN = 0.3;               // the person's own posts: rarely at the top
+export const W_SEEN_MIN = 0.01;         // a post seen most recently (~800x less likely than an unseen one to be early)
+export const W_SEEN_RANGE = 0.6;        // how much weight a long-ago-seen post can win back (it tends to W_SEEN_MIN + W_SEEN_RANGE)
+export const SEEN_DECAY_POSTS = 60;     // ...and how fast: after ~60 newer views it is back at about 63% of that range
+const DAY_MS = 86400000;
+
+export interface WeightedOpts {
+  userId: string;
+  seenList: readonly string[];          // seen ids, oldest first (see getSeenList)
+  now?: number;
+  rng?: () => number;
+}
+
+/** The weight of one item (see the constants above). rankOf: position from the END of the seen list, 0 = seen most recently. */
+export function feedWeight(item: Orderable, userId: string, rankOf: Map<string, number>, now: number): number {
+  if (item.userId === userId) return W_OWN;
+  const rank = rankOf.get(item.id);
+  if (rank === undefined) {
+    const age = now - time(item);
+    return age < DAY_MS ? W_UNSEEN_24H : age < 3 * DAY_MS ? W_UNSEEN_3D : W_UNSEEN;
+  }
+  return W_SEEN_MIN + W_SEEN_RANGE * (1 - Math.exp(-rank / SEEN_DECAY_POSTS));
+}
+
+/** A fresh weighted-random order of `items` (no duplicates), then one person's posts are spread apart. Pure: same rng, same answer. */
+export function weightedFeedOrder<T extends Orderable>(items: T[], opts: WeightedOpts): T[] {
+  const rng = opts.rng ?? Math.random, now = opts.now ?? Date.now();
+  const rankOf = new Map<string, number>();
+  const n = opts.seenList.length;
+  opts.seenList.forEach((id, i) => rankOf.set(id, n - 1 - i));
+  const done = new Set<string>();
+  const keyed: { item: T; key: number }[] = [];
+  for (const item of items) {
+    if (done.has(item.id)) continue;
+    done.add(item.id);
+    const w = feedWeight(item, opts.userId, rankOf, now);
+    const u = Math.max(rng(), 1e-12);
+    keyed.push({ item, key: Math.log(u) / w });   // same order as u^(1/w), without underflow
+  }
+  keyed.sort((a, b) => b.key - a.key);
+  return spreadAuthors(keyed.map((k) => k.item));
+}
+
 /**
- * Unseen items first, newest first; everything already seen (and the person's own posts) shuffled
- * behind them.
+ * Posts: a new weighted-random order every call (unseen posts mostly first, what was seen recently very unlikely to be early).
+ * Reels: unseen items first, newest first; everything already seen (and own) shuffled behind them.
  */
-export function orderUnseenFirst<T extends Orderable>(items: T[], userId: string, kind: Kind): T[] {
+export function orderUnseenFirst<T extends Orderable>(items: T[], userId: string, kind: Kind, rng?: () => number): T[] {
+  if (kind === 'posts') return weightedFeedOrder(items, { userId, seenList: getSeenList(userId, kind), rng });
   const seen = getSeenSet(userId, kind);
   const fresh = items.filter((i) => isFresh(i, userId, seen)).sort((a, b) => time(b) - time(a));
   const rest = shuffled(items.filter((i) => !isFresh(i, userId, seen)));
@@ -129,5 +184,5 @@ export function mergeIntoOrder<T extends Orderable>(prevIds: string[], items: T[
     .map((i) => i.id);
   const topSet = new Set(top);
   const tail = spreadAuthors(shuffled(added.filter((i) => !topSet.has(i.id)))).map((i) => i.id);
-  return [...top, ...kept, ...tail];
+  return [...new Set([...top, ...kept, ...tail])];
 }

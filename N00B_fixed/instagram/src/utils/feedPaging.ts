@@ -3,7 +3,7 @@
 //   - the cursor (the last row of a page: created_at + id) and the pager that asks the server for the next page;
 //   - merging a page into the posts already held (one entry per id, new rows only at the END);
 //   - laying an appended page into the frozen Home order without moving what is already there.
-import { isFresh, mergeIntoOrder, spreadAuthors } from './seenContent';
+import { isFresh, mergeIntoOrder, spreadAuthors, weightedFeedOrder, getSeenList } from './seenContent';
 
 export const FIRST_PAGE = 40;          // the Home start-up call
 export const NEXT_PAGE = 30;           // every later call
@@ -59,7 +59,7 @@ export const countUnseen = (rows: readonly Row[], userId: string, seen: Set<stri
 /**
  * Lays an appended page into the Home order. `appendedIds` are the ids that arrived as an older page; everything else is treated as
  * before (mergeIntoOrder: a new post on top, ...). What is in `prev` is never moved or removed (unless it left `items`), a later page only
- * ever goes AFTER it: its unseen posts first (newest first), then what was seen shuffled, authors spread. One entry per id.
+ * ever goes AFTER it: posts are ordered by weightedFeedOrder (same weights as the first screen), authors spread. One entry per id.
  */
 export function mergeIntoOrderPaged<T extends Row>(prev: string[], items: T[], userId: string, kind: 'posts' | 'reels', appendedIds: ReadonlySet<string>, seen: Set<string>, rand: () => number = Math.random): string[] {
   const inPrev = new Set(prev);
@@ -67,12 +67,19 @@ export function mergeIntoOrderPaged<T extends Row>(prev: string[], items: T[], u
   const rest = page.length ? items.filter((i) => !(appendedIds.has(i.id) && !inPrev.has(i.id))) : items;
   const base = mergeIntoOrder(prev, rest, userId, kind);
   if (page.length === 0) return dedupe(base);
+  const tail = (kind === 'posts'
+    ? weightedFeedOrder(page, { userId, seenList: getSeenList(userId, kind), rng: rand })
+    : legacyPageOrder(page, userId, seen, rand)).map((i) => i.id);
+  return dedupe([...base, ...tail]);
+}
+
+/** Reels: a later page = its unseen items first (newest first), then what was seen shuffled, authors spread. */
+function legacyPageOrder<T extends Row>(page: T[], userId: string, seen: Set<string>, rand: () => number): T[] {
   const time = (x: Row) => Date.parse(x.createdAt) || 0;
   const fresh = page.filter((i) => isFresh(i, userId, seen)).sort((a, b) => time(b) - time(a));
   const old = page.filter((i) => !isFresh(i, userId, seen));
   for (let i = old.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [old[i], old[j]] = [old[j], old[i]]; }
-  const tail = spreadAuthors([...fresh, ...old]).map((i) => i.id);
-  return dedupe([...base, ...tail]);
+  return spreadAuthors([...fresh, ...old]);
 }
 
 export const dedupe = (ids: string[]): string[] => [...new Set(ids)];

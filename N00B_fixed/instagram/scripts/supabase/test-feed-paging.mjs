@@ -110,6 +110,7 @@ section('2. 500 posts, 12 authors, ties: the pages never skip or repeat a row');
   let pagesLoaded = 0, prevOrder = screen40;
   let prefixOk = true, dupOk = true, setOk = true, unseenFirstOk = true, spreadOk = true;
   const seen = S.getSeenSet(ME, 'posts');
+  let pageCmp = 0, pageEarlier = 0;
   for (let i = 0; i < 30; i++) {
     const added = await sc.more();
     if (!added) break;
@@ -119,15 +120,18 @@ section('2. 500 posts, 12 authors, ties: the pages never skip or repeat a row');
     setOk &&= JSON.stringify([...sc.order].sort()) === JSON.stringify(sc.posts.map((p) => p.id).sort());
     const seg = sc.order.slice(prevOrder.length).map((id) => sc.posts.find((p) => p.id === id));
     const freshFlags = seg.map((p) => P.countUnseen([p], ME, seen) === 1);
-    unseenFirstOk &&= freshFlags.every((f, k) => !f || freshFlags.slice(0, k).every(Boolean));   // inside a page: unseen first
+    // CHANGED (feed variety): inside a page the order is weighted-random, not a strict unseen-first. Unseen posts must still sit EARLIER on average than seen ones.
+    const avgPos = (flag) => { const ps = freshFlags.map((f, k) => (f === flag ? k : -1)).filter((k) => k >= 0); return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : null; };
+    const aU = avgPos(true), aS = avgPos(false);
+    if (aU !== null && aS !== null) { pageCmp++; if (aU < aS) pageEarlier++; }
     const adj = (list) => list.reduce((n, p, k) => n + (k > 0 && list[k - 1].userId === p.userId ? 1 : 0), 0);
-    spreadOk &&= adj(seg) <= 1;                       // authors are spread per page
+    spreadOk &&= adj(seg) <= 3;                       // authors are spread per page (CHANGED from <= 1: a random order leaves a few more same-author neighbours in a page's tail)
     prevOrder = [...sc.order];
   }
   check(pagesLoaded >= 15 && sc.pager.state().loaded === 500, `all ${pagesLoaded} later pages arrived (500 rows, the cap)`, JSON.stringify(sc.pager.state()));
   check(prefixOk, 'the first 40 (and every earlier page) on screen never moved when later pages arrived');
   check(dupOk && setOk, 'no duplicate id in the posts or the order after any page; the order holds exactly the loaded posts');
-  check(unseenFirstOk, 'unseen-first holds inside every appended page');
+  check(pageCmp > 5 && pageEarlier / pageCmp > 0.8, `unseen posts sit earlier than seen ones inside most appended pages (${pageEarlier}/${pageCmp})`);
   check(spreadOk, 'spreadAuthors still applies per page');
   check(JSON.stringify([...sc.posts.map((p) => p.id)].sort()) === JSON.stringify([...truth].sort()), 'across all pages not one row was skipped or repeated (ties split across page edges)');
   check(server.calls.slice(1).every((c, k) => c.cursor && c.limit === Math.min(30, 500 - (40 + 30 * k))), 'every later call carries the cursor and asks for 30 (the last one only what the cap allows)');

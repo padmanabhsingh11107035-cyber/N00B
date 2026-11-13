@@ -10,6 +10,7 @@ import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { effectiveMaxSide, videoMaxStep } from '../utils/uploadSavings';
 import { clearFeedCache } from '../utils/feedCache';
+import { wipeChatCaches } from '../utils/chatCache';
 import { AD_MAX_PHOTOS, pagesOf, type ActiveAd, type AdApplication, type AdMediaKind, type AdminAdRow, type AdPage, type AdWhere } from '../utils/ads';
 import { uploadWithRetry } from '../utils/xhrUpload';
 import { factsOf } from '../utils/videoTranscode';
@@ -940,6 +941,8 @@ export async function logoutUser(): Promise<{ success: boolean }> {
     // ignore
   }
   clearFeedCache(); // the saved Home feed belongs to the account that is signing out
+  wipeChatCaches(); // so do the saved chat lists / message lists (noob_chats_cache_*, noob_msgs_cache_*)
+  pendingSealedAttach.length = 0;
   await supabase.auth.signOut({ scope: 'local' });
   // The row update above also reaches this device's own "was I logged out remotely?" listener; ignore that echo.
   setTimeout(() => { selfEndingLogin = false; }, 5000);
@@ -3167,6 +3170,7 @@ export async function fetchMessages(chatId: string, after?: string): Promise<Mes
 
 /** The messages of a chat, or null when they could not be fetched (so the caller keeps what it shows instead of an empty chat). */
 export async function fetchMessagesStrict(chatId: string): Promise<Message[] | null> {
+  void flushSealedAttach(); // opening a chat: retry any locked attachment that was sent but not yet tied to its message
   try {
     const res = await rpc<{ messages: any[] } | null>('chat_messages', { p_chat: chatId, p_after: null });
     if (!res || !Array.isArray(res.messages)) return null;
@@ -3197,6 +3201,32 @@ export async function hideMessageForMe(messageId: string): Promise<boolean> {
   }
 }
 
+// Locked attachments whose follow-up "attach" call failed. Only {messageId, storage name} - no file key - and only in memory.
+const pendingSealedAttach: { messageId: string; key: string }[] = [];
+let flushingSealedAttach = false;
+function queueSealedAttach(messageId: string, key: string): void {
+  if (!pendingSealedAttach.some((p) => p.key === key)) pendingSealedAttach.push({ messageId, key });
+}
+export async function flushSealedAttach(): Promise<void> {
+  if (flushingSealedAttach || pendingSealedAttach.length === 0) return;
+  flushingSealedAttach = true;
+  try {
+    for (const item of [...pendingSealedAttach]) {
+      try { await rpc('attach_sealed_media', { p_message: item.messageId, p_key: item.key }); }
+      catch (err) {
+        // "does not belong" means it is already tied or the message is gone: nothing left to do. Anything else (offline, server) stays queued.
+        if (!/does not belong/i.test(errorText(err, ''))) continue;
+      }
+      const i = pendingSealedAttach.findIndex((p) => p.key === item.key);
+      if (i >= 0) pendingSealedAttach.splice(i, 1);
+    }
+  } finally { flushingSealedAttach = false; }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { void flushSealedAttach(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void flushSealedAttach(); });
+}
+
 export async function sendMessage(chatId: string, payload: Partial<Message>): Promise<Message & { aiResponse?: Message }> {
   try {
     let media = payload.mediaUrl || '';
@@ -3224,9 +3254,12 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
       if (payload.sealed) {
         // ties the locked file to its message, so deleting the message deletes the file too (3 tries; a failure here loses nothing, it only delays cleanup)
         const id = locked.message?.id;
-        for (let attempt = 0; id && attempt < 3; attempt++) {
-          try { await rpc('attach_sealed_media', { p_message: id, p_key: payload.sealed.key }); break; } catch { await new Promise((r) => setTimeout(r, 400 * (attempt + 1))); }
+        let attached = false;
+        for (let attempt = 0; id && attempt < 3 && !attached; attempt++) {
+          try { await rpc('attach_sealed_media', { p_message: id, p_key: payload.sealed.key }); attached = true; } catch { await new Promise((r) => setTimeout(r, 400 * (attempt + 1))); }
         }
+        // still not tied: try again later (app comes back to the front, network returns, a chat opens). Kept in memory only - the key is a storage name, never a file key.
+        if (id && !attached) queueSealedAttach(id, payload.sealed.key);
       }
       return (await unlockMessages(chatId, [mapMessage(locked.message, true)]))[0];
     }

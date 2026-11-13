@@ -76,7 +76,9 @@ check((await n(`select count(*)::int n from public.media_unused_candidates($1::i
 await db.query(`update public.sealed_media set created_at = now() - interval '3 days' where key = $1`, [K4]);
 const K5 = 'chat/1700000000006-fffffff.sealed';
 await upload(ann, K5); await rpc(ann, 'register_sealed_media', dm.id, K5);
-check((await queued(K4)) === 1 && (await n('select count(*)::int n from public.sealed_media where key = $1', [K4])) === 0, "the owner's next upload clears a registration forgotten for two days (its file is queued)");
+check((await queued(K4)) === 0 && (await n('select count(*)::int n from public.sealed_media where key = $1', [K4])) === 1, 'a registration left unattached for 3 days is KEPT (a delivered attachment is never purged by a later upload)');
+await rpc(ann, 'attach_sealed_media', await send(dm.id), K4);
+check((await rpc(ann, 'discard_sealed_media', K4)).success && (await queued(K4)) === 0, 'and once attached it can not be discarded');
 await db.query('delete from public.chats where id = $1', [dm.id]);
 check((await queued(K2)) === 1 && (await queued(K5)) === 1, 'deleting the whole chat queues every locked file in it');
 
@@ -89,9 +91,11 @@ const types = (await db.query(`select allowed_mime_types t from storage.buckets 
 check(types.includes('image/*') && types.includes('video/*') && types.includes('audio/*') && types.includes('application/octet-stream'), 'the bucket takes pictures, video, audio - and the opaque type');
 const stray = await asUser(db, ann, async () => { try { await db.query(`insert into storage.objects (bucket_id, name, owner_id, metadata) values ('media', 'posts/9-x.jpg', $1, '{"mimetype":"application/octet-stream"}')`, [ann]); return 'allowed'; } catch { return 'refused'; } });
 check(stray === 'refused', 'an opaque file in ANY other folder is refused by the policy (only chat/<name>.sealed takes it)');
+const strayCase = await asUser(db, ann, async () => { try { await db.query(`insert into storage.objects (bucket_id, name, owner_id, metadata) values ('media', 'posts/9-c.jpg', $1, '{"mimetype":"Application/Octet-Stream"}')`, [ann]); return 'allowed'; } catch { return 'refused'; } });
+check(strayCase === 'refused', 'the same type written in capitals is refused outside chat/<name>.sealed too');
 const fine = await asUser(db, ann, async () => { try { await db.query(`insert into storage.objects (bucket_id, name, owner_id, metadata) values ('media', 'posts/9-y.jpg', $1, '{"mimetype":"image/jpeg"}'), ('media', 'chat/9-z.sealed', $1, '{"mimetype":"application/octet-stream"}'), ('media', 'chat/9-w.jpg', $1, '{"mimetype":"image/jpeg"}'), ('media', 'chat/9-v.jpg', $1, '{}')`, [ann]); return 'allowed'; } catch (e) { return e.message; } });
 check(fine === 'allowed', 'normal uploads (and a locked file) still pass', fine);
-const again = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261113000002_sealed_chat_media.sql'), 'utf8');
+const again = ['20261113000002_sealed_chat_media.sql', '20261113000003_sealed_media_keep_unattached.sql'].map((f) => fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8')).join(' ');
 let twice = 'ok';
 try { await db.exec(again); } catch (e) { twice = e.message; }
 check(twice === 'ok', 'running the migration a second time is harmless', twice);

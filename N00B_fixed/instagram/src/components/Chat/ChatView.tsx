@@ -195,6 +195,7 @@ import { InstantsArchive } from './InstantsArchive';
 import { CloseFriendsPicker } from './CloseFriendsPicker';
 import type { InstantInboxItem } from '../../services/api';
 import { safeJsonStringify, safeLocalStorageSet } from '../../utils/safeJson';
+import { cacheSafeMessages, cacheSafeChats } from '../../utils/chatCache';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { formatClockTime } from '../../utils/formatTime';
 import { formatLastSeen } from '../../utils/lastSeen';
@@ -722,7 +723,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         !c.participants?.some((p: any) => p.isAi)
     );
     setConversations(realChats);
-    safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+    safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(realChats)));
     // timed mutes: remember the end times, and show a mute whose time has passed as not muted (the server switches it off too)
     void fetchChatMuteUntil().then((m) => {
       setMuteUntil(m);
@@ -772,7 +773,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           !c.participants?.some((p: any) => p.isAi)
       );
       setConversations(realChats);
-      safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+      safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(realChats)));
       } else if (!listRefreshTimerRef.current) {
         // too soon: do the list refresh once the gap is over (a single trailing refresh covers every event in between)
         listRefreshTimerRef.current = setTimeout(() => { listRefreshTimerRef.current = null; void syncLiveChatData(); }, CHAT_LIST_MIN_GAP_MS - sinceList + 50);
@@ -825,7 +826,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       // chat is still the one actually open.
       if (activeChatIdRef.current !== chatId) return;
       setMessages(data);
-      safeLocalStorageSet(`${CACHE_KEY_MSGS}_${chatId}`, safeJsonStringify(data));
+      safeLocalStorageSet(`${CACHE_KEY_MSGS}_${chatId}`, safeJsonStringify(cacheSafeMessages(data)));
     } catch (err) {
       console.error(err);
     }
@@ -891,7 +892,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setConversations((prev) => {
         if (prev.some((c) => c.id === newChat.id)) return prev;
         const updated = [newChat, ...prev];
-        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(updated));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(updated)));
         return updated;
       });
       setActiveChatId(newChat.id);
@@ -1112,7 +1113,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       // Replace optimistic message with saved server response
       setMessages((prev) => {
         const next = prev.map((m) => (m.id === optimisticMsg.id ? { ...response, status: 'delivered' } : m));
-        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(cacheSafeMessages(next)));
         return next;
       });
 
@@ -1123,7 +1124,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...c, lastMessage: { ...response, status: 'delivered' } }
             : c
         );
-        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(next)));
         return next;
       });
 
@@ -1177,7 +1178,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...response, mediaUrl: response?.mediaUrl || gifUrl, mediaType: 'image', status: 'delivered' }
             : m
         );
-        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(cacheSafeMessages(next)));
         return next;
       });
       setConversations((prev) => {
@@ -1194,7 +1195,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               }
             : c
         );
-        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(next)));
         return next;
       });
     } catch (err) {
@@ -1233,7 +1234,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         const next = prev.map((m) =>
           m.id === optimisticMsg.id ? { ...response, mediaType: 'sticker', status: 'delivered' } : m
         );
-        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(cacheSafeMessages(next)));
         return next;
       });
     } catch (err) {
@@ -1276,7 +1277,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...response, mediaUrl: response?.mediaUrl || stickerUrl, mediaType: 'sticker', status: 'delivered' }
             : m
         );
-        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(cacheSafeMessages(next)));
         return next;
       });
     } catch (err) {
@@ -1324,7 +1325,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...response, mediaUrl: sealed ? undefined : response?.mediaUrl || mediaUrl, sealed: sealed ? response?.sealed || sealed : undefined, mediaType, audioDuration, status: 'delivered' }
             : m
         );
-        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(cacheSafeMessages(next)));
         return next;
       });
       setConversations((prev) => {
@@ -1334,7 +1335,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...c, lastMessage: { ...response, mediaUrl: sealed ? undefined : response?.mediaUrl || mediaUrl, sealed: undefined, status: 'delivered', text: label } }
             : c
         );
-        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(cacheSafeChats(next)));
         return next;
       });
     } catch (err) {

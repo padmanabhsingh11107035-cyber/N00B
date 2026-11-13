@@ -55,11 +55,12 @@ check(!r.ok || r.rows.length === 0, "nobody can read somebody else's device or p
 check((await as(B, 'authenticated', `select public.admin_user_json(p) from public.profiles p where p.id = $1`, [A])).ok === false, 'and the function that builds the administrator view can not be called from a browser at all (the admin screens reach it through their own checked functions)');
 
 section('3. The Worker answers /__geo about the caller');
-const geo = await worker.fetch({ url: 'https://noobsocials.com/__geo', method: 'GET', cf: { city: 'Surat', region: 'Gujarat', country: 'IN' }, headers: new Headers() }, {}, { waitUntil() {} });
+const geo = await worker.fetch({ url: 'https://noobsocials.com/__geo', method: 'GET', cf: { city: 'Surat', region: 'Gujarat', country: 'IN', latitude: '21.19594', longitude: '72.83023' }, headers: new Headers() }, {}, { waitUntil() {} });
 const gj = await geo.json();
 check(geo.status === 200 && gj.city === 'Surat' && gj.region === 'Gujarat' && gj.country === 'IN' && geo.headers.get('cache-control') === 'no-store', 'city, region and country of the connection, never kept by a cache');
 const none = await (await worker.fetch({ url: 'https://noobsocials.com/__geo', method: 'GET', headers: new Headers() }, {}, { waitUntil() {} })).json();
-check(none.city === '' && none.country === '', 'where it is not known the answer is empty (never an error)');
+check(gj.latitude === 21.196 && gj.longitude === 72.83, 'latitude and longitude of the connection (approximate, 3 decimals)');
+check(none.city === '' && none.country === '' && none.latitude === null && none.longitude === null, 'where it is not known the answer is empty (never an error)');
 
 check(/run_worker_first[^\]]*"\/__geo"/.test(read('wrangler.jsonc')) || read('wrangler.jsonc').includes('"run_worker_first": ["/*", "!/assets/*"'),'the website hands that address to the Worker (otherwise the app page would answer it)');
 

@@ -1,21 +1,24 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Maximize2, Minus, Plus, Scan } from 'lucide-react';
 import { WORLD_BORDERS_PATH, WORLD_LAND_PATH } from '../../data/worldMapPath';
-import { MAP_H, MAP_W, agoShort, clusterDots, dateOnly, placeLabel, type Cluster, type Dot, type UserLocationRow } from '../../utils/userLocations';
+import { DotHash, MAP_H, MAP_W, agoShort, dateOnly, unproject, type Dot, type UserPlace } from '../../utils/userLocations';
 
-// The green world map of the admin page "User data": pan (drag), zoom (wheel, pinch, + / -), double-click or double-tap to reset, yellow dots (ring = where the person signed up,
-// filled = where they were last seen), dots that overlap are joined into one counted dot. The map is the real land outline from src/data/worldMapPath.ts, drawn as one inline SVG.
+// The green world map of the admin page "User data": pan (drag), zoom (wheel, pinch, + / -), double-click or double-tap to reset. The land is one inline SVG; the dots are drawn on a canvas
+// on top (tiny, about 2 px: a ring = where the person signed up, filled = where they were last seen). Dots are never merged and carry no numbers; a spatial hash finds the dot under a
+// finger. Zoomed in far, a faint graticule and a crosshair with a coordinate readout of the MAP appear (the readout is about the map, not about a user).
 export type DotMode = 'signup' | 'last' | 'both';
 interface View { k: number; tx: number; ty: number }
-interface Picked { dots: Dot[]; mx: number; my: number }
+interface Picked { list: Dot[]; idx: number }
 
-const CELL = 20, MAX_K = 150, DAY = 86400000;
+const MAX_K = 150, HIT_PX = 15, CROSS_ZOOM = 4;
 const GRATICULE = (() => {
   let d = '';
   for (let lng = -180; lng <= 180; lng += 30) { const x = ((lng + 180) * MAP_W) / 360; d += `M${x} 0V${MAP_H}`; }
   for (let lat = -30; lat <= 60; lat += 30) { const y = ((84 - lat) * MAP_W) / 360; d += `M0 ${y}H${MAP_W}`; }
   return d;
 })();
+const DEG = MAP_W / 360;   // map units per degree
+const STEPS = [30, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.01];
 
 const clampView = (v: View, W: number, H: number, minK: number): View => {
   const k = Math.max(minK, Math.min(MAX_K, v.k));
@@ -25,15 +28,17 @@ const clampView = (v: View, W: number, H: number, minK: number): View => {
   return { k, tx, ty };
 };
 
-export const UserDataMap: React.FC<{
-  dots: Dot[]; mode: DotMode; focus: { userId: string; nonce: number } | null; onPick: (userId: string | null) => void; children?: React.ReactNode;
-}> = ({ dots, mode, focus, onPick, children }) => {
+export const UserDataMap: React.FC<{ dots: Dot[]; mode: DotMode; fx: boolean; children?: React.ReactNode }> = ({ dots, mode, fx, children }) => {
   const wrap = useRef<HTMLDivElement | null>(null);
+  const canvas = useRef<HTMLCanvasElement | null>(null);
+  const crossV = useRef<HTMLDivElement | null>(null);
+  const crossH = useRef<HTMLDivElement | null>(null);
+  const readout = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [view, setViewState] = useState<View>({ k: 1, tx: 0, ty: 0 });
   const viewRef = useRef(view);
   const [picked, setPicked] = useState<Picked | null>(null);
-  const [hover, setHover] = useState<Picked | null>(null);
+  const [hover, setHover] = useState<Dot | null>(null);
   const [dragging, setDragging] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const raf = useRef(0);
@@ -62,8 +67,8 @@ export const UserDataMap: React.FC<{
   }, []);
   useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current); }, []);
 
-  const reset = useCallback(() => { setView(homeOf(sizeRef.current), true, true); setPicked(null); setHover(null); onPick(null); }, [setView, onPick]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const showWorld = () => { setView({ k: minKOf(sizeRef.current), tx: 0, ty: 0 }, true); setPicked(null); setHover(null); onPick(null); };
+  const reset = useCallback(() => { setView(homeOf(sizeRef.current), true, true); setPicked(null); setHover(null); }, [setView]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const showWorld = () => { setView({ k: minKOf(sizeRef.current), tx: 0, ty: 0 }, true); setPicked(null); setHover(null); };
 
   // size of the box: the whole world fits at first
   useLayoutEffect(() => {
@@ -94,28 +99,110 @@ export const UserDataMap: React.FC<{
   // "last seen" times in the tooltips keep up with the clock (once a minute, and not while the tab is hidden)
   useEffect(() => { const t = window.setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 60000); return () => window.clearInterval(t); }, []);
 
+  // ---- what is shown, and how to find a dot near a point
+  const shown = useMemo(() => dots.filter((d) => mode === 'both' || d.kind === mode), [dots, mode]);
+  const hash = useMemo(() => new DotHash(shown), [shown]);
+  const zoomedIn = view.k >= minKOf(size) * CROSS_ZOOM;
+  const hitAt = (px: number, py: number): Dot[] => {
+    const v = viewRef.current;
+    return hash.near((px - v.tx) / v.k, (py - v.ty) / v.k, HIT_PX / v.k);
+  };
+
+  // ---- the dots (canvas): tiny, crisp, a barely visible glow; nothing is merged
+  useEffect(() => {
+    const cv = canvas.current;
+    if (!cv || !size.w) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = size.w, H = size.h;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const { k, tx, ty } = view;
+    // faint graticule once zoomed in far (lines every 10 / 5 / 1 ... degrees, whichever keeps them about 80 px apart)
+    if (k >= minKOf(size) * CROSS_ZOOM) {
+      const step = STEPS.find((s) => s * DEG * k <= 140 && s * DEG * k >= 40) ?? STEPS[STEPS.length - 1];
+      const lng0 = Math.floor(((-tx / k) / DEG - 180) / step) * step, lng1 = ((W - tx) / k) / DEG - 180;
+      const lat1 = 84 - (-ty / k) / DEG, lat0 = 84 - ((H - ty) / k) / DEG;
+      ctx.beginPath();
+      for (let g = lng0; g <= lng1 + step; g += step) { const x = Math.round((g + 180) * DEG * k + tx) + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      for (let g = Math.floor(lat0 / step) * step; g <= lat1 + step; g += step) { const y = Math.round((84 - g) * DEG * k + ty) + 0.5; ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.strokeStyle = 'rgba(0,255,102,0.24)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+    const rings: number[] = [], fills: number[] = [];
+    for (const d of shown) {
+      const sx = d.x * k + tx, sy = d.y * k + ty;
+      if (sx < -6 || sy < -6 || sx > W + 6 || sy > H + 6) continue;
+      (d.kind === 'signup' ? rings : fills).push(sx, sy);
+    }
+    // glow: one soft disc under every dot, drawn in two paths
+    ctx.fillStyle = 'rgba(255,214,10,0.10)';
+    ctx.beginPath(); for (let i = 0; i < rings.length; i += 2) { ctx.moveTo(rings[i] + 4.4, rings[i + 1]); ctx.arc(rings[i], rings[i + 1], 4.4, 0, 6.2832); }
+    for (let i = 0; i < fills.length; i += 2) { ctx.moveTo(fills[i] + 4, fills[i + 1]); ctx.arc(fills[i], fills[i + 1], 4, 0, 6.2832); }
+    ctx.fill();
+    ctx.strokeStyle = '#FFD60A'; ctx.lineWidth = 0.9;
+    ctx.beginPath(); for (let i = 0; i < rings.length; i += 2) { ctx.moveTo(rings[i] + 2.2, rings[i + 1]); ctx.arc(rings[i], rings[i + 1], 2.2, 0, 6.2832); }
+    ctx.stroke();
+    ctx.fillStyle = '#FFD60A';
+    ctx.beginPath(); for (let i = 0; i < fills.length; i += 2) { ctx.moveTo(fills[i] + 1.9, fills[i + 1]); ctx.arc(fills[i], fills[i + 1], 1.9, 0, 6.2832); }
+    ctx.fill();
+    // the chosen person: a thin green ring round each of that person's dots, joined by a dotted line
+    const cur = picked?.list[picked.idx];
+    if (cur) {
+      const own = shown.filter((d) => d.row.id === cur.row.id);
+      ctx.strokeStyle = '#00ff66'; ctx.lineWidth = 1;
+      for (const d of own) { ctx.beginPath(); ctx.arc(d.x * k + tx, d.y * k + ty, d === cur ? 7 : 5, 0, 6.2832); ctx.stroke(); }
+      if (own.length === 2) { ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(own[0].x * k + tx, own[0].y * k + ty); ctx.lineTo(own[1].x * k + tx, own[1].y * k + ty); ctx.stroke(); ctx.setLineDash([]); }
+    }
+  }, [view, size, shown, picked]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- the crosshair and its readout (written straight into the page, no re-render per move)
+  const crossAt = (px: number, py: number) => {
+    const v = viewRef.current;
+    const on = v.k >= minKOf(sizeRef.current) * CROSS_ZOOM;
+    if (crossV.current) { crossV.current.style.display = on ? 'block' : 'none'; crossV.current.style.transform = `translateX(${px}px)`; }
+    if (crossH.current) { crossH.current.style.display = on ? 'block' : 'none'; crossH.current.style.transform = `translateY(${py}px)`; }
+    if (readout.current) {
+      readout.current.style.display = on ? 'block' : 'none';
+      if (on) { const g = unproject((px - v.tx) / v.k, (py - v.ty) / v.k); readout.current.textContent = `MAP  LAT ${g.lat.toFixed(3)}  LNG ${g.lng.toFixed(3)}`; }
+    }
+  };
+  useEffect(() => { if (!zoomedIn) crossAt(-10, -10); }, [zoomedIn]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- gestures
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef<{ x: number; y: number; tx: number; ty: number; moved: boolean; d0: number; k0: number; cx: number; cy: number; t0: number } | null>(null);
+  const gesture = useRef<{ x: number; y: number; tx: number; ty: number; moved: boolean; d0: number; k0: number; cx: number; cy: number } | null>(null);
   const lastTap = useRef({ t: 0, x: 0, y: 0 });
+  const hoverKey = useRef('');
   const rel = (e: { clientX: number; clientY: number }) => { const r = wrap.current!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-  const isHit = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('[data-hit],[data-ud-ui]');
+  const isUi = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('[data-ud-ui]');
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (isHit(e.target)) return;
+    if (isUi(e.target)) return;
     const p = rel(e);
+    crossAt(p.x, p.y);
     pointers.current.set(e.pointerId, p);
     const v = viewRef.current;
-    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, tx: v.tx, ty: v.ty, moved: false, d0: 0, k0: v.k, cx: 0, cy: 0, t0: Date.now() };
+    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, tx: v.tx, ty: v.ty, moved: false, d0: 0, k0: v.k, cx: 0, cy: 0 };
     else if (pointers.current.size === 2 && gesture.current) {
       const [a, b] = [...pointers.current.values()];
       gesture.current = { ...gesture.current, moved: true, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, k0: v.k, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, tx: v.tx, ty: v.ty };
     }
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    const g = gesture.current;
-    if (!g || !pointers.current.has(e.pointerId)) return;
     const p = rel(e);
+    crossAt(p.x, p.y);
+    const g = gesture.current;
+    if (!g || !pointers.current.has(e.pointerId)) {
+      // a mouse moving over the map: the dot under it shows its card (touch needs a tap)
+      if (e.pointerType === 'mouse' && !picked && !isUi(e.target)) {
+        const near = hitAt(p.x, p.y)[0] ?? null;
+        const key = near ? near.key : '';
+        if (key !== hoverKey.current) { hoverKey.current = key; setHover(near); }
+      }
+      return;
+    }
     pointers.current.set(e.pointerId, p);
     if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
@@ -127,7 +214,7 @@ export const UserDataMap: React.FC<{
     }
     const dx = p.x - g.x, dy = p.y - g.y;
     if (!g.moved && Math.hypot(dx, dy) < 5) return;
-    if (!g.moved) { g.moved = true; setDragging(true); try { wrap.current?.setPointerCapture(e.pointerId); } catch { /* not important */ } setHover(null); }
+    if (!g.moved) { g.moved = true; setDragging(true); try { wrap.current?.setPointerCapture(e.pointerId); } catch { /* not important */ } setHover(null); hoverKey.current = ''; }
     setView({ k: viewRef.current.k, tx: g.tx + dx, ty: g.ty + dy });
   };
   const onPointerUp = (e: React.PointerEvent) => {
@@ -138,9 +225,13 @@ export const UserDataMap: React.FC<{
       setDragging(false);
       if (g && !g.moved) {
         const p = rel(e), t = Date.now();
-        const dbl = t - lastTap.current.t < 320 && Math.hypot(p.x - lastTap.current.x, p.y - lastTap.current.y) < 28;
-        lastTap.current = { t: dbl ? 0 : t, x: p.x, y: p.y };
-        if (dbl) reset(); else { setPicked(null); onPick(null); }
+        const found = hitAt(p.x, p.y);
+        if (found.length) { setPicked({ list: found, idx: 0 }); setHover(null); hoverKey.current = ''; lastTap.current = { t: 0, x: 0, y: 0 }; }
+        else {
+          const dbl = t - lastTap.current.t < 320 && Math.hypot(p.x - lastTap.current.x, p.y - lastTap.current.y) < 28;
+          lastTap.current = { t: dbl ? 0 : t, x: p.x, y: p.y };
+          if (dbl) reset(); else setPicked(null);
+        }
       }
       gesture.current = null;
     } else if (pointers.current.size === 1 && g) {
@@ -167,101 +258,41 @@ export const UserDataMap: React.FC<{
 
   const zoomBy = (f: number) => { const s = sizeRef.current, v = viewRef.current; const px = s.w / 2, py = s.h / 2; const k = Math.max(0.01, Math.min(MAX_K, v.k * f)); setView({ k, tx: px - (px - v.tx) * (k / v.k), ty: py - (py - v.ty) * (k / v.k) }, true); };
   const fitData = () => {
-    const vis = dots.filter((d) => mode === 'both' || d.kind === mode);
+    const vis = shown;
     const s = sizeRef.current;
     if (!vis.length) { reset(); return; }
-    zoomToDots(vis, s, 40);
-  };
-  function zoomToDots(list: Dot[], s: { w: number; h: number }, pad: number) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const d of list) { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); y0 = Math.min(y0, d.y); y1 = Math.max(y1, d.y); }
-    const bw = Math.max(x1 - x0, 0.3), bh = Math.max(y1 - y0, 0.15);
+    for (const d of vis) { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); y0 = Math.min(y0, d.y); y1 = Math.max(y1, d.y); }
+    const bw = Math.max(x1 - x0, 0.3), bh = Math.max(y1 - y0, 0.15), pad = 40;
     const k = Math.min(MAX_K, Math.max(minKOf(s), Math.min((s.w - pad * 2) / bw, (s.h - pad * 2) / bh)), 24);
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    setView({ k, tx: s.w / 2 - cx * k, ty: s.h / 2 - cy * k }, true);
-  }
-
-  // ---- what is shown
-  const shown = useMemo(() => dots.filter((d) => mode === 'both' || d.kind === mode), [dots, mode]);
-  const clusters = useMemo<Cluster[]>(() => clusterDots(shown, view, CELL).filter((c) => c.x > -20 && c.y > -20 && c.x < size.w + 20 && c.y < size.h + 20), [shown, view, size.w, size.h]);
-  const pulsing = useMemo(() => {
-    const set = new Set<string>();
-    for (const d of shown) if (d.kind === 'last' && set.size < 40) { const at = Date.parse(d.row.last?.at || ''); if (Number.isFinite(at) && now - at < DAY) set.add(d.key); }
-    return set;
-  }, [shown, now]);
-
-  // a person was chosen in the list: go there
-  useEffect(() => {
-    if (!focus) return;
-    const own = dots.filter((d) => d.row.id === focus.userId);
-    const want = own.find((d) => (mode === 'both' ? d.kind === 'last' : d.kind === mode)) ?? own[0];
-    if (!want) { setPicked(null); return; }
-    const s = sizeRef.current;
-    const k = Math.min(MAX_K, Math.max(viewRef.current.k, minKOf(s) * 8, 14));
-    setView({ k, tx: s.w / 2 - want.x * k, ty: s.h / 2 - want.y * k }, true);
-    setPicked({ dots: [want], mx: want.x, my: want.y });
-  }, [focus?.nonce]);   // eslint-disable-line react-hooks/exhaustive-deps
-
-  const pick = (c: Cluster) => {
-    const dts = c.dots;
-    const mx = dts.reduce((n, d) => n + d.x, 0) / dts.length, my = dts.reduce((n, d) => n + d.y, 0) / dts.length;
-    setPicked({ dots: dts, mx, my });
-    setHover(null);
-    onPick(new Set(dts.map((d) => d.row.id)).size === 1 ? dts[0].row.id : null);
+    setView({ k, tx: s.w / 2 - ((x0 + x1) / 2) * k, ty: s.h / 2 - ((y0 + y1) / 2) * k }, true);
   };
 
-  const tipFor = picked ?? hover;
-  const tipPos = tipFor ? { x: tipFor.mx * view.k + view.tx, y: tipFor.my * view.k + view.ty } : null;
-  const linkFor = picked && picked.dots.length === 1 ? dots.filter((d) => d.row.id === picked.dots[0].row.id) : [];
+  const cur = picked ? picked.list[picked.idx] : hover;
+  const tipPos = cur ? { x: cur.x * view.k + view.tx, y: cur.y * view.k + view.ty } : null;
 
   return (
     <div ref={wrap} className={`ud-mapwrap${dragging ? ' drag' : ''}`} data-testid="ud-map"
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-      onDoubleClick={(e) => { if (!isHit(e.target)) reset(); }} onPointerLeave={() => setHover(null)}>
+      onDoubleClick={(e) => { if (!isUi(e.target) && !hitAt(rel(e).x, rel(e).y).length) reset(); }} onPointerLeave={() => { setHover(null); hoverKey.current = ''; }}>
       {size.w > 0 && (
-        <svg className="ud-svg" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`} role="img" aria-label="World map with a yellow dot for each place a user signed up or was last seen">
+        <svg className="ud-svg" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`} role="img" aria-label="World map with a tiny yellow dot for each place a user signed up or was last seen">
           <g transform={`translate(${view.tx} ${view.ty}) scale(${view.k})`}>
             <path className="ud-grid" d={GRATICULE} vectorEffect="non-scaling-stroke" />
             <path className="ud-land" d={WORLD_LAND_PATH} vectorEffect="non-scaling-stroke" />
             <path className="ud-border" d={WORLD_BORDERS_PATH} vectorEffect="non-scaling-stroke" />
           </g>
-          {linkFor.length === 2 && (() => {
-            const [a, b] = linkFor;
-            return <line className="ud-link" x1={a.x * view.k + view.tx} y1={a.y * view.k + view.ty} x2={b.x * view.k + view.tx} y2={b.y * view.k + view.ty} />;
-          })()}
-          {clusters.map((c) => {
-            const users = c.dots.length > 1 ? new Set(c.dots.map((d) => d.row.id)).size : 1;
-            const many = users > 1;   // one person's ring and dot in the same spot are not a crowd
-            const isSel = !!picked && picked.dots.some((p) => c.dots.includes(p));
-            const r = many ? Math.min(15, 8 + Math.log2(users) * 1.8) : c.dots.length > 1 ? 6.5 : 3.6;
-            const hasRing = c.dots.some((d) => d.kind === 'signup'), hasFill = c.dots.some((d) => d.kind === 'last');
-            return (
-              <g key={c.key} data-hit="1" onClick={(e) => { e.stopPropagation(); pick(c); }}
-                onPointerEnter={(e) => { if (e.pointerType === 'mouse' && !picked) setHover({ dots: c.dots, mx: (c.x - view.tx) / view.k, my: (c.y - view.ty) / view.k }); }}
-                onPointerLeave={() => setHover(null)}>
-                <circle className="ud-hit" data-hit="1" cx={c.x} cy={c.y} r={Math.max(r + 6, 13)} />
-                {!many && c.dots.some((d) => pulsing.has(d.key)) && <circle className="ud-halo" cx={c.x} cy={c.y} r={4} />}
-                {many ? (
-                  <>
-                    <circle className="ud-cl" cx={c.x} cy={c.y} r={r} />
-                    <text className="ud-cl-n" x={c.x} y={c.y}>{users > 99 ? '99+' : users}</text>
-                  </>
-                ) : (
-                  <>
-                    {hasRing && <circle className="ud-dot-ring" cx={c.x} cy={c.y} r={hasFill ? 6.5 : 3.4} />}
-                    {hasFill && <circle className="ud-dot-fill" cx={c.x} cy={c.y} r={3.6} />}
-                  </>
-                )}
-                {isSel && <circle className="ud-sel" cx={c.x} cy={c.y} r={r + 5} />}
-              </g>
-            );
-          })}
         </svg>
       )}
-      {tipFor && tipPos && size.w > 0 && (
-        <Tip at={tipPos} box={size} sel={tipFor} pinned={!!picked} now={now}
-          onClose={() => { setPicked(null); setHover(null); onPick(null); }}
-          onZoom={() => { zoomToDots(tipFor.dots, sizeRef.current, 70); setPicked(null); setHover(null); }} />
+      <canvas ref={canvas} className="ud-dots" style={{ width: size.w, height: size.h }} aria-hidden="true" data-testid="ud-dots" />
+      {fx && <div className="ud-radar" aria-hidden="true" />}
+      <div ref={crossV} className="ud-cross v" aria-hidden="true" />
+      <div ref={crossH} className="ud-cross h" aria-hidden="true" />
+      <div ref={readout} className="ud-readout" aria-hidden="true" data-testid="ud-readout" />
+      {cur && tipPos && size.w > 0 && (
+        <Tip at={tipPos} box={size} dot={cur} count={picked ? picked.list.length : 0} index={picked ? picked.idx : 0} now={now} pinned={!!picked}
+          onNext={() => setPicked((p) => (p ? { ...p, idx: (p.idx + 1) % p.list.length } : p))}
+          onClose={() => { setPicked(null); setHover(null); hoverKey.current = ''; }} />
       )}
       <div className="ud-tools" data-ud-ui="1">
         <button className="ud-btn" onClick={() => zoomBy(1.8)} aria-label="Zoom in" title="Zoom in"><Plus size={18} /></button>
@@ -276,41 +307,34 @@ export const UserDataMap: React.FC<{
 
 const agoText = (iso: string | null | undefined, now: number) => { const a = agoShort(iso, now); return a === 'now' ? 'just now' : a === '?' ? 'unknown' : `${a} ago`; };
 
-const Tip: React.FC<{ at: { x: number; y: number }; box: { w: number; h: number }; sel: Picked; pinned: boolean; now: number; onClose: () => void; onZoom: () => void }> = ({ at, box, sel, pinned, now, onClose, onZoom }) => {
-  const W = Math.min(268, box.w - 16);
-  const people: UserLocationRow[] = Array.from(new Map<string, UserLocationRow>(sel.dots.map((d) => [d.row.id, d.row] as [string, UserLocationRow])).values());
-  const many = people.length > 1;
-  const H = many ? 190 : 156;
+const Tip: React.FC<{ at: { x: number; y: number }; box: { w: number; h: number }; dot: Dot; count: number; index: number; now: number; pinned: boolean; onNext: () => void; onClose: () => void }> = ({ at, box, dot, count, index, now, pinned, onNext, onClose }) => {
+  const W = Math.min(262, box.w - 16);
+  const H = 214;
   let left = at.x + 14, top = at.y + 14;
   if (left + W > box.w - 8) left = at.x - W - 14;
   if (left < 8) left = 8;
   if (top + H > box.h - 8) top = at.y - H - 14;
   if (top < 8) top = 8;
-  const row: UserLocationRow = sel.dots[0].row;
+  const row = dot.row;
+  const pl: UserPlace | null = dot.kind === 'last' ? row.last : row.signup;
+  const geo = dot.src === 'ip-geo' && dot.lat !== null && dot.lng !== null;
   return (
-    <div className="ud-tip" style={{ left, top }} role="dialog" aria-label="User location" data-ud-ui="1" data-hit="1" data-testid="ud-tip" onPointerDown={(e) => e.stopPropagation()}>
-      {many ? (
-        <>
-          <div className="h">&gt; {people.length} users here</div>
-          <ul>
-            {people.slice(0, 6).map((r) => (
-              <li key={r.id}>@{r.username || '?'} <span style={{ color: 'var(--ud-muted)' }}>{placeLabel(r.last ?? r.signup)} {r.last?.at ? agoShort(r.last.at, now) : 'signup'}</span></li>
-            ))}
-            {people.length > 6 && <li style={{ color: 'var(--ud-muted)' }}>+ {people.length - 6} more</li>}
-          </ul>
-          <div className="row"><button className="ud-btn" onClick={onZoom} data-ud-ui="1">Zoom in</button>{pinned && <button className="ud-btn" onClick={onClose} data-ud-ui="1">Close</button>}</div>
-        </>
-      ) : (
-        <>
-          <div className="h">&gt; @{row.username || '?'}</div>
-          <dl>
-            <dt>name</dt><dd>{row.displayName || '-'}</dd>
-            <dt>made</dt><dd>created {dateOnly(row.createdAt)}</dd>
-            <dt>signup</dt><dd className={sel.dots[0].kind === 'signup' ? 'y' : undefined}>{row.signup ? placeLabel(row.signup) : 'unknown'}</dd>
-            <dt>seen</dt><dd className={sel.dots[0].kind === 'last' ? 'y' : undefined}>{row.last?.at ? `last seen ${agoText(row.last.at, now)} @ ${placeLabel(row.last)}` : 'unknown'}</dd>
-          </dl>
-          {pinned && <div className="row"><button className="ud-btn" onClick={onClose} data-ud-ui="1">Close</button></div>}
-        </>
+    <div className="ud-tip" style={{ left, top }} role="dialog" aria-label="User location" data-ud-ui="1" data-testid="ud-tip" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="h">&gt; @{row.username || '?'} <span className="k">{dot.kind === 'signup' ? 'signed up' : 'last seen'}</span></div>
+      <dl>
+        <dt>place</dt><dd className="y">{dot.label}</dd>
+        <dt>geo</dt><dd>{geo ? `${dot.lat!.toFixed(3)}, ${dot.lng!.toFixed(3)}` : 'n/a (place name only)'}</dd>
+        <dt>ip</dt><dd>{pl?.ip || 'n/a'}</dd>
+        <dt>device</dt><dd>{[pl?.platform, pl?.device].filter(Boolean).join(' / ') || 'n/a'}</dd>
+        <dt>made</dt><dd>{dateOnly(row.createdAt)}</dd>
+        <dt>seen</dt><dd>{agoText(row.last?.at, now)}</dd>
+      </dl>
+      <div className="src">{geo ? 'LOC SRC ip-geo ±city' : 'LOC SRC place-name'}</div>
+      {pinned && (
+        <div className="row">
+          {count > 1 && <button className="ud-btn" onClick={onNext} data-ud-ui="1">Next {index + 1}/{count}</button>}
+          <button className="ud-btn" onClick={onClose} data-ud-ui="1">Close</button>
+        </div>
       )}
     </div>
   );

@@ -230,15 +230,31 @@ const UD_PLACES: Array<[string, string, string]> = [
   ['Sao Paulo', '', 'BR'], ['Tokyo', '', 'JP'], ['Atlantis', 'Nowhere', 'ZZ'], ['', '', '']
 ];
 const UD_NAMES = ['aarav','vivaan','aditya','krish','ishaan','kabir','reyansh','vihaan','arjun','sai','ananya','diya','myra','aadhya','saanvi','kiara','navya','riya','pari','anika'];
+// the connection's own coordinates (IP geolocation: usually the city). Every 7th person has none (an old visit): the page falls back to the place name.
+const UD_GEO: Record<string, [number, number]> = {
+  Mumbai: [19.076, 72.878], Pune: [18.52, 73.857], Nagpur: [21.146, 79.088], Delhi: [28.614, 77.209], Noida: [28.535, 77.391], Gurugram: [28.459, 77.027], Lucknow: [26.847, 80.947],
+  Kanpur: [26.449, 80.332], Bengaluru: [12.972, 77.594], Mysuru: [12.296, 76.639], Chennai: [13.083, 80.271], Coimbatore: [11.017, 76.956], Hyderabad: [17.385, 78.487], Kolkata: [22.573, 88.364],
+  Ahmedabad: [23.023, 72.572], Surat: [21.196, 72.83], Jaipur: [26.912, 75.787], Jodhpur: [26.239, 73.024], Bhopal: [23.26, 77.413], Indore: [22.72, 75.857], Patna: [25.594, 85.138],
+  Kochi: [9.932, 76.267], Thiruvananthapuram: [8.524, 76.937], Chandigarh: [30.733, 76.779], Guwahati: [26.145, 91.736], Bhubaneswar: [20.296, 85.825], Dehradun: [30.317, 78.032],
+  Dubai: [25.205, 55.271], Doha: [25.286, 51.533], Riyadh: [24.714, 46.675], London: [51.507, -0.128], Manchester: [53.481, -2.243], 'New York': [40.713, -74.006],
+  'San Francisco': [37.775, -122.419], Ashburn: [39.044, -77.487], Toronto: [43.653, -79.383], Sydney: [-33.869, 151.209], Singapore: [1.352, 103.82], 'Kuala Lumpur': [3.139, 101.687],
+  Dhaka: [23.811, 90.412], Kathmandu: [27.717, 85.324], Karachi: [24.861, 67.01], Berlin: [52.52, 13.405], Paris: [48.857, 2.352], Lagos: [6.524, 3.379], Nairobi: [-1.286, 36.82],
+  'Sao Paulo': [-23.55, -46.633], Tokyo: [35.677, 139.65]
+};
+const UD_IP = (i: number, k: number) => `${[203, 198, 192][k % 3]}.${[0, 51, 0][k % 3]}.${[113, 100, 2][k % 3]}.${(i * 13 + k * 29) % 250 + 1}`;
 const udRows = () => UD_PLACES.map(([city, region, country], i) => {
   const name = UD_NAMES[i % UD_NAMES.length];
   const known = city || region || country;
   const lastAt = i % 9 === 8 ? null : ago((i % 7 === 0 ? 2 + (i % 5) : 5 + i * 37) * 60e3 * (i % 3 === 0 ? 1 : 24));
   const moved = i % 5 === 0 && known;
+  const g = UD_GEO[city];
+  const wob = (n: number) => ((i * 37 + n * 11) % 100) / 5000;   // the connection is near the city, not always exactly at its centre
+  const geo = g && i % 7 !== 3 ? { lat: Math.round((g[0] + wob(1)) * 1000) / 1000, lng: Math.round((g[1] + wob(2)) * 1000) / 1000 } : { lat: null, lng: null };
+  const platform = ['pwa', 'web', 'app'][i % 3], device = ['Phone', 'Phone', 'Computer', 'Tablet'][i % 4];
   return {
     id: 'ud-' + String(i).padStart(3, '0'), username: name + '.' + String(100 + i * 7), displayName: name[0].toUpperCase() + name.slice(1) + ' ' + ['Sharma', 'Nair', 'Iyer', 'Singh', 'Rao', 'Khan', 'Patel', 'Das'][i % 8], createdAt: ago((20 + i * 5) * D),
-    signup: known ? { city: moved ? 'Pune' : city || null, region: moved ? 'Maharashtra' : region || null, country: moved ? 'IN' : country || null, source: moved ? 'profile' : 'visit' } : null,
-    last: known && lastAt ? { city: city || null, region: region || null, country: country || null, at: lastAt } : null
+    signup: known ? { city: moved ? 'Pune' : city || null, region: moved ? 'Maharashtra' : region || null, country: moved ? 'IN' : country || null, source: moved ? 'profile' : 'visit', ...(moved ? { lat: null, lng: null } : geo), ip: UD_IP(i, 0), platform, device } : null,
+    last: known && lastAt ? { city: city || null, region: region || null, country: country || null, at: lastAt, ...geo, ip: UD_IP(i, 1), platform, device } : null
   };
 });
 // ---------------------------------------------------------------- the table of rpc answers

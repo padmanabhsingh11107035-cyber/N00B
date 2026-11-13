@@ -1,7 +1,7 @@
 // The offline gazetteer and resolver behind the admin page "User data" (src/data/geoPlaces.ts, src/utils/userLocations.ts, src/data/worldMapPath.ts).
 // Usage: node --liftoff-only scripts/supabase/test-geo-places.mjs
 import fs from 'node:fs';
-import { resolvePlace, countryCode, jitter, JITTER_DEGREES, project, buildDots, clusterDots, agoShort, dateOnly, placeLabel, tables, hash01 } from '../../src/utils/userLocations.ts';
+import { resolvePlace, countryCode, jitter, JITTER_DEGREES, project, buildDots, clusterDots, placeCoords, DotHash, unproject, agoShort, dateOnly, placeLabel, tables, hash01 } from '../../src/utils/userLocations.ts';
 import { WORLD_LAND_PATH, WORLD_BORDERS_PATH, WORLD_MAP_WIDTH, WORLD_MAP_HEIGHT } from '../../src/data/worldMapPath.ts';
 
 let passed = 0, failed = 0;
@@ -103,6 +103,19 @@ check(placeLabel({ city: 'Pune', country: 'IN' }) === 'Pune, IN' && placeLabel({
 const now = Date.parse('2026-11-13T12:00:00Z');
 check(agoShort('2026-11-13T11:59:50Z', now) === 'now' && agoShort('2026-11-13T11:57:00Z', now) === '3m' && agoShort('2026-11-13T07:00:00Z', now) === '5h' && agoShort('2026-11-11T12:00:00Z', now) === '2d' && agoShort('2026-07-01T12:00:00Z', now) === '4mo' && agoShort('2024-01-01T00:00:00Z', now) === '2y' && agoShort(null, now) === '?', 'short times');
 check(dateOnly('2026-03-01T10:00:00Z') === '2026-03-01' && dateOnly(null) === '?', 'dates');
+
+section('7b. Coordinates from the connection, and finding a dot');
+check(placeCoords({ lat: 21.196, lng: 72.83 }).lat === 21.196 && placeCoords({ lat: 0, lng: 0 }) === null && placeCoords({ lat: 91, lng: 1 }) === null && placeCoords({ lat: 1, lng: 181 }) === null && placeCoords({ lat: null, lng: 3 }) === null && placeCoords({ lat: '5', lng: 3 }) === null && placeCoords(null) === null, 'only real numbers inside the ranges are coordinates');
+const g = buildDots([{ id: 'g', username: 'gee', displayName: 'G', createdAt: null, signup: { city: 'Surat', region: null, country: 'IN', lat: 21.196, lng: 72.83 }, last: { city: 'Surat', region: null, country: 'IN', at: '2026-11-13T09:00:00Z', lat: 21.196, lng: 72.83, ip: '203.0.113.5' } }, { id: 'h', username: 'hue', displayName: 'H', createdAt: null, signup: null, last: { city: 'Pune', region: null, country: 'IN', at: '2026-11-13T09:00:00Z' } }]).dots;
+const here = project({ lat: 21.196, lng: 72.83 });
+check(g.filter((d) => d.src === 'ip-geo').length === 2 && g.every((d) => d.src !== 'ip-geo' || (Math.abs(d.x - here.x) < 1e-9 && Math.abs(d.y - here.y) < 1e-9)), 'connection coordinates are used exactly (no scatter)');
+const nm = g.find((d) => d.src === 'place-name');
+check(nm && nm.lat === null && nm.lng === null, 'without coordinates the place name is used (scattered, and marked place-name)');
+const hash = new DotHash(g);
+check(hash.near(here.x, here.y, 0.5).length === 2 && hash.near(here.x + 100, here.y, 0.5).length === 0, 'the spatial hash finds the dots near a point and none far away');
+check(hash.near(here.x + 0.3, here.y, 1)[0].row.id === 'g', 'nearest first');
+const back = unproject(here.x, here.y);
+check(near(back.lat, 21.196, 1e-6) && near(back.lng, 72.83, 1e-6), 'unproject is the inverse of project');
 
 section('8. The files');
 const files = ['../../src/utils/userLocations.ts', '../../src/data/geoPlaces.ts'].map((f) => fs.readFileSync(new URL(f, import.meta.url), 'utf8')).join('\n');

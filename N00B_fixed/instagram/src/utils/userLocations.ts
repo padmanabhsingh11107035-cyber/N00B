@@ -115,7 +115,13 @@ export const MAP_W = WORLD_MAP_WIDTH;
 export const MAP_H = WORLD_MAP_HEIGHT;
 
 // ---------------------------------------------------------------------------------------------- the rows
-export interface UserPlace { city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null }
+export interface UserPlace {
+  city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null
+  /** approximate position of the connection (IP geolocation, usually the city; NOT a GPS reading), from the same visit */
+  lat?: number | null; lng?: number | null
+  /** shown only to the main administrator (this whole answer is admin only) */
+  ip?: string | null; platform?: string | null; device?: string | null
+}
 export interface UserLocationRow { id: string; username: string | null; displayName: string | null; createdAt: string | null; signup: UserPlace | null; last: UserPlace | null }
 
 export const placeLabel = (p: PlaceText | null | undefined): string => {
@@ -126,18 +132,30 @@ export const placeLabel = (p: PlaceText | null | undefined): string => {
 };
 
 export type DotKind = 'signup' | 'last';
-export interface Dot { key: string; kind: DotKind; row: UserLocationRow; level: PlaceLevel; x: number; y: number; label: string }
+/** 'ip-geo' = the connection's own coordinates (accurate to the IP-geolocation level, usually the city); 'place-name' = looked up from the place name and scattered a little */
+export type LocSource = 'ip-geo' | 'place-name';
+export interface Dot { key: string; kind: DotKind; row: UserLocationRow; level: PlaceLevel; x: number; y: number; label: string; src: LocSource; lat: number | null; lng: number | null }
+
+/** valid coordinates (numbers inside the real ranges) or null */
+export function placeCoords(p: UserPlace | null | undefined): LatLng | null {
+  const a = typeof p?.lat === 'number' ? p.lat : NaN, b = typeof p?.lng === 'number' ? p.lng : NaN;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a) > 85 || Math.abs(b) > 180) return null;   // the map stops at 85 degrees
+  if (a === 0 && b === 0) return null;   // "null island": a missing value, not a place
+  return { lat: a, lng: b };
+}
 
 export function buildDots(rows: UserLocationRow[]): { dots: Dot[]; unplaced: { signup: number; last: number; users: number } } {
   const dots: Dot[] = [];
   let us = 0, ul = 0, uu = 0;
   for (const row of rows) {
-    const s = resolvePlace(row.signup), l = resolvePlace(row.last);
+    const cs = placeCoords(row.signup), cl = placeCoords(row.last);
+    const s = cs ? { ...cs, level: 'city' as PlaceLevel } : resolvePlace(row.signup), l = cl ? { ...cl, level: 'city' as PlaceLevel } : resolvePlace(row.last);
     if (row.signup && !s) us++;
     if (row.last && !l) ul++;
     if (!s && !l) uu++;
-    if (s) { const q = project(jitter(s, `${row.id}|s`)); dots.push({ key: `${row.id}|s`, kind: 'signup', row, level: s.level, x: q.x, y: q.y, label: placeLabel(row.signup) }); }
-    if (l) { const q = project(jitter(l, `${row.id}|l`)); dots.push({ key: `${row.id}|l`, kind: 'last', row, level: l.level, x: q.x, y: q.y, label: placeLabel(row.last) }); }
+    // the connection's own coordinates are used as they are; a place found by name is scattered a little (never a street address)
+    if (s) { const q = project(cs ? cs : jitter(s, `${row.id}|s`)); dots.push({ key: `${row.id}|s`, kind: 'signup', row, level: s.level, x: q.x, y: q.y, label: placeLabel(row.signup), src: cs ? 'ip-geo' : 'place-name', lat: cs ? cs.lat : null, lng: cs ? cs.lng : null }); }
+    if (l) { const q = project(cl ? cl : jitter(l, `${row.id}|l`)); dots.push({ key: `${row.id}|l`, kind: 'last', row, level: l.level, x: q.x, y: q.y, label: placeLabel(row.last), src: cl ? 'ip-geo' : 'place-name', lat: cl ? cl.lat : null, lng: cl ? cl.lng : null }); }
   }
   return { dots, unplaced: { signup: us, last: ul, users: uu } };
 }
@@ -176,3 +194,27 @@ export function agoShort(iso: string | null | undefined, now = Date.now()): stri
   return `${Math.floor(d / 365)}y`;
 }
 export const dateOnly = (iso: string | null | undefined): string => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : '?');
+
+// ---------------------------------------------------------------------------------------------- hit testing
+/** A spatial hash over map units, so a tap finds the dots near it without looking at every dot. Dots are never merged: overlapping dots are simply all drawn. */
+export class DotHash {
+  private cells = new Map<number, Dot[]>();
+  private cell: number;
+  constructor(dots: Dot[], cell = 2) {
+    this.cell = cell; for (const d of dots) { const k = this.key(Math.floor(d.x / cell), Math.floor(d.y / cell)); const a = this.cells.get(k); if (a) a.push(d); else this.cells.set(k, [d]); } }
+  private key(cx: number, cy: number) { return (cx + 4096) * 16384 + (cy + 4096); }
+  /** dots within `r` map units of (x, y), nearest first */
+  near(x: number, y: number, r: number): Dot[] {
+    const c = this.cell, out: { d: Dot; q: number }[] = [];
+    const x0 = Math.floor((x - r) / c), x1 = Math.floor((x + r) / c), y0 = Math.floor((y - r) / c), y1 = Math.floor((y + r) / c);
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+      const a = this.cells.get(this.key(cx, cy));
+      if (!a) continue;
+      for (const d of a) { const q = (d.x - x) * (d.x - x) + (d.y - y) * (d.y - y); if (q <= r * r) out.push({ d, q }); }
+    }
+    return out.sort((p, q) => p.q - q.q).map((o) => o.d);
+  }
+}
+
+/** map units back to degrees (the inverse of project) */
+export function unproject(x: number, y: number): LatLng { return { lat: 84 - (y * 360) / WORLD_MAP_WIDTH, lng: (x * 360) / WORLD_MAP_WIDTH - 180 }; }

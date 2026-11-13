@@ -44,6 +44,14 @@ export interface VisitInfo {
   browser: string; os: string; device: string; platform: AppPlatform; language: string; timezone: string; screen: string; referrer: string; path: string; userAgent: string;
 }
 
+/** The approximate position of the connection (from NOOB's own /__geo): only numbers inside the real ranges are kept, anything else is ignored. */
+export function validCoords(lat: unknown, lng: unknown): { lat: number; lng: number } | null {
+  const a = typeof lat === 'number' ? lat : NaN;
+  const b = typeof lng === 'number' ? lng : NaN;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a) > 90 || Math.abs(b) > 180) return null;
+  return { lat: Math.round(a * 1000) / 1000, lng: Math.round(b * 1000) / 1000 };
+}
+
 /** Only the other site's name, never what was on its address (a link can carry private bits). */
 export function referrerHost(referrer: string, ownHost: string): string {
   try {

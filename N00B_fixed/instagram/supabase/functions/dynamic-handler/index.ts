@@ -437,6 +437,9 @@ async function handlePurgeMedia(req: Request, admin: any): Promise<Response> {
     }
     const keys: string[] = Array.isArray(data) ? data.filter((k: unknown): k is string => typeof k === 'string' && k.length > 0) : [];
     if (keys.length === 0) break;
+    // a chat file may also have a copy in the private chat bucket (docs/PRIVATE-CHAT-MEDIA.md): removed too, best effort (when that bucket does not exist yet this is a harmless no-op)
+    const chatKeys = keys.filter((k) => k.startsWith('chat/'));
+    if (chatKeys.length) { try { await admin.storage.from('chatmedia').remove(chatKeys); } catch { /* no private bucket yet */ } }
     const { error: removeError } = await admin.storage.from('media').remove(keys);
     await admin.rpc('media_purge_done', { p_secret: secret, p_keys: keys, p_error: removeError ? String(removeError.message || 'remove failed').slice(0, 200) : null });
     if (removeError) {

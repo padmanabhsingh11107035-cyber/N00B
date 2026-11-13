@@ -136,15 +136,127 @@ async function fill(cache, key) {
   finally { inFlight.delete(key); }
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------- private chat media
+// A file under chat/ is private to the chat that has it. Locked attachments (chat/<name>.sealed) are random-looking bytes only the chat can open, so they stay as they are (public, cached).
+// Every other chat file is handed out only when the database says "yes": the Worker calls  can_read_chat_media(key)  with the CALLER'S OWN sign-in token (so the database knows who
+// asks; the Worker holds no secret and no service key at all) and only then streams the file. The answer is remembered for a minute in this Worker instance (a video asks for many
+// pieces). CHAT_MEDIA_GATE (a Worker variable): "off" = as before, "log" (the default) = the check is only written down in the logs, the file is served as before, "on" = enforced.
+const CHAT_MEMO_SECONDS = 60, CHAT_MEMO_NO_SECONDS = 15, CHAT_MEMO_MAX = 500;
+const chatMemo = new Map();   // sha-256 of the token + key -> { allowed, until }
+
+/** is this key a plain chat file (the ones that are private)? */
+export function isGatedChatKey(key) { return typeof key === 'string' && key.startsWith('chat/') && !key.endsWith('.sealed'); }
+/** "off" | "log" | "on"; anything else (or nothing) is "log". Using the private bucket needs the gate, so it switches the gate on. */
+export function gateMode(env) {
+  if (env && env.CHAT_MEDIA_PRIVATE_BUCKET === 'on') return 'on';
+  const v = String((env && env.CHAT_MEDIA_GATE) || 'log').toLowerCase();
+  return v === 'off' || v === 'on' ? v : 'log';
+}
+/** the sign-in token of a request ("Authorization: Bearer <jwt>"), or '' */
+export function bearerToken(request) {
+  const m = /^Bearer\s+([A-Za-z0-9._~+/=-]{20,4096})$/i.exec(request.headers.get('Authorization') || '');
+  return m ? m[1] : '';
+}
+async function sha256Hex(text) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+const refusal = (status) => new Response(status === 401 ? 'Unauthorized' : status === 404 ? 'Not found' : 'Unavailable', {
+  status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*', Vary: 'Authorization' }
+});
+
+/** asks the database: 'yes' | 'no' | 'auth' (the token is not a signed-in person's) | 'error' (could not be asked: never a reason to open the file) */
+export async function chatMediaVerdict(token, apikey, key, fetchImpl = fetch) {
+  const memoKey = (await sha256Hex(token)) + '|' + key;
+  const now = Date.now();
+  const hit = chatMemo.get(memoKey);
+  if (hit && hit.until > now) return hit.allowed ? 'yes' : 'no';
+  let res;
+  try {
+    res = await fetchImpl(`${SUPABASE}/rest/v1/rpc/can_read_chat_media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_key: key })
+    });
+  } catch { return 'error'; }
+  if (res.status === 401 || res.status === 403) { await res.body?.cancel(); return 'auth'; }
+  if (!res.ok) { await res.body?.cancel(); return 'error'; }
+  let allowed;
+  try { allowed = (await res.json()) === true; } catch { return 'error'; }
+  if (chatMemo.size >= CHAT_MEMO_MAX) chatMemo.delete(chatMemo.keys().next().value);
+  chatMemo.set(memoKey, { allowed, until: now + (allowed ? CHAT_MEMO_SECONDS : CHAT_MEMO_NO_SECONDS) * 1000 });
+  return allowed ? 'yes' : 'no';
+}
+/** for tests */
+export function clearChatMemo() { chatMemo.clear(); }
+
+/** log mode: write down what the answer would have been (never the token) */
+async function logGate(request, key, env) {
+  try {
+    const token = bearerToken(request), apikey = request.headers.get('apikey') || (env && env.SUPABASE_PUBLISHABLE_KEY) || '';
+    const verdict = token && apikey ? await chatMediaVerdict(token, apikey, key) : 'no-token';
+    console.log(JSON.stringify({ chatGate: 'log', verdict, key }));
+  } catch { /* a log line is never a reason to fail */ }
+}
+
+const privateUpstream = (key) => `${SUPABASE}/storage/v1/object/authenticated/chatmedia/${key.split('/').map(encodeURIComponent).join('/')}`;
+
+async function serveChatMedia(request, key, env) {
+  const token = bearerToken(request);
+  const apikey = request.headers.get('apikey') || (env && env.SUPABASE_PUBLISHABLE_KEY) || '';
+  if (!token || !apikey) return refusal(401);
+  const verdict = await chatMediaVerdict(token, apikey, key);
+  if (verdict === 'auth') return refusal(401);
+  if (verdict === 'error') return refusal(503);
+  if (verdict === 'no') return refusal(404);   // the same answer as a file that does not exist
+
+  const range = request.headers.get('Range');
+  const method = request.method === 'HEAD' ? 'HEAD' : 'GET';
+  let up = null;
+  if (env && env.CHAT_MEDIA_PRIVATE_BUCKET === 'on') {
+    // the private bucket first (with the caller's own token: the bucket's rule asks the same question again), the old public bucket for files that were not moved yet
+    const r = await fetch(privateUpstream(key), { method, headers: { Authorization: `Bearer ${token}`, apikey, ...(range ? { Range: range } : {}) } });
+    if (r.status === 200 || r.status === 206 || r.status === 416) up = r; else await r.body?.cancel();
+  }
+  if (!up) {
+    // (the public bucket is only asked AFTER the check above; its address is public anyway, so the data centre may keep the bytes for a day to spare Supabase: nobody can reach them without the check)
+    up = await fetch(upstreamUrl(key), { method, headers: range ? { Range: range } : {}, cf: { cacheEverything: true, cacheTtl: 86400 } });
+  }
+  if (up.status === 404 || up.status === 400) { await up.body?.cancel(); return refusal(404); }
+  if (!(up.status === 200 || up.status === 206 || up.status === 416)) { await up.body?.cancel(); return refusal(502); }
+  logOrigin('chat', key, up.headers.get('Content-Length'));
+  const h = new Headers({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
+    'Cache-Control': 'private, no-store',
+    Vary: 'Authorization',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': MEDIA_HEADERS['Content-Security-Policy'],
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    'Accept-Ranges': 'bytes',
+    'X-Media-Cache': 'PRIVATE'
+  });
+  for (const name of ['Content-Type', 'Content-Length', 'Content-Range', 'ETag', 'Last-Modified']) { const v = up.headers.get(name); if (v) h.set(name, v); }
+  return new Response(method === 'HEAD' ? null : up.body, { status: up.status, headers: h });
+}
+
 /**
  * GET / HEAD /m/<key>.
  * @param {Request} request @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx
  */
-export async function serveMedia(request, ctx, cacheStorage = globalThis.caches) {
+export async function serveMedia(request, ctx, cacheStorage = globalThis.caches, env = {}) {
   const url = new URL(request.url);
   const key = mediaKey(url.pathname);
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...MEDIA_HEADERS, 'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS', 'Access-Control-Allow-Headers': 'Range, If-None-Match, If-Modified-Since', 'Cache-Control': 'public, max-age=86400' } });
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...MEDIA_HEADERS, 'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS', 'Access-Control-Allow-Headers': 'Range, If-None-Match, If-Modified-Since, Authorization, apikey', 'Cache-Control': 'public, max-age=86400' } });
   if (!key || (request.method !== 'GET' && request.method !== 'HEAD')) return new Response('Not found', { status: key ? 405 : 404, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+
+  // Pictures, videos and voice notes of CHATS are private to the chat (docs/PRIVATE-CHAT-MEDIA.md): they never come from the shared cache below, only after the database says the
+  // person asking is in that chat.
+  if (isGatedChatKey(key)) {
+    const mode = gateMode(env);
+    if (mode === 'on') return serveChatMedia(request, key, env);
+    if (mode === 'log') { const job = logGate(request, key, env); if (ctx && ctx.waitUntil) ctx.waitUntil(job); else await job; }   // only written down; the file is served exactly as before
+  }
 
   const cache = cacheStorage.default;
   const range = request.headers.get('Range');
@@ -231,7 +343,7 @@ export default {
     }
     const refused = botGate(request);   // AI programs read only the legal and information pages (worker/botGate.js)
     if (refused) return refused;
-    if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx);
+    if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx, globalThis.caches, env);
     // The approximate place of the connection (city, region, country), as Cloudflare works it out from the internet address: told only to the person who asks, about their own
     // connection, never stored here, never sent to anyone else (the Terms and the Privacy Policy say so). The app saves it on the person's account.
     if (url.pathname === '/__geo' && (request.method === 'GET' || request.method === 'HEAD')) {

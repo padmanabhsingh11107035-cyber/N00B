@@ -46,6 +46,10 @@ const CHECKS = [
   ['Public games site (hub, Worker mapping, headers)', ['node', 'scripts/supabase/test-games-site.mjs']],
   // chat privacy
   ['Locked chat pictures, videos and voice notes', ['node', 'scripts/supabase/test-e2ee-media.mjs']],
+  ['Private chat media: Worker gate', ['node', 'scripts/supabase/test-chat-media-worker.mjs']],
+  ['Private chat media: phone side', ['node', 'scripts/supabase/test-chat-media-client.mjs']],
+  ['Private chat media: copy tool safety', ['node', 'scripts/supabase/test-chat-media-migration.mjs']],
+  ['Private chat media: database access rules', ['node', '--liftoff-only', 'scripts/supabase/test-chat-media-access.mjs']],
   // the free protection of the data
   ['Supabase usage alert (80% line)', ['node', 'scripts/supabase/test-usage-alert.mjs']],
 ];

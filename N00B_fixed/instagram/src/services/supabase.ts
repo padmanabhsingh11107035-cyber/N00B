@@ -4,6 +4,7 @@ import { recordDiag } from './authDiag';
 import { makeServiceAwareFetch, reportServiceDown, reportServiceUp } from './serviceHealth';
 import { createTabSessions, type KV } from './tabSessions';
 import { mediaOrigin } from '../utils/siteUrl';
+import { clearChatMediaCache } from './authedMedia';
 import { cachedFromDirect } from '../utils/mediaGuard';
 
 // Public values — safe to ship to every browser (the publishable key only ever grants what the
@@ -88,7 +89,7 @@ export const supabase = createClient(url || 'http://localhost:54321', key || 'mi
 
 // Write the login events to the recorder (never awaits anything: the library calls this from inside its own locks).
 supabase.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT') recordDiag({ kind: 'signed-out' });
+  if (event === 'SIGNED_OUT') { recordDiag({ kind: 'signed-out' }); clearChatMediaCache(); }   // downloaded private chat files are forgotten with the sign-in
   else if (event === 'SIGNED_IN') recordDiag({ kind: 'signed-in' });
   else if (event === 'TOKEN_REFRESHED') recordDiag({ kind: 'token-refreshed' });
 });

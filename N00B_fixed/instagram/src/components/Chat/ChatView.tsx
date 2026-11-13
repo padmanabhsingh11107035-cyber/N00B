@@ -203,6 +203,8 @@ import { playChatTone } from '../../utils/chatTone';
 import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { mediaMayLoad } from '../../utils/chatMedia';
+import { ChatMedia } from './ChatMedia';
+import { chatMediaKeyOf, rememberChatMedia } from '../../services/authedMedia';
 import { SealedAttachment } from './SealedAttachment';
 import confetti from 'canvas-confetti';
 
@@ -1373,6 +1375,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         await sendMediaMessage('', mediaType, undefined, lockedFile);
       } else {
         const uploaded = await uploadMediaFile(file, 'chat', { signal: abort.signal, onProgress: setAttachProgress });
+        rememberChatMedia(uploaded.objectKey, file);      // shown from memory at once (the private download would race the message that tells the database about the file)
         await sendMediaMessage(uploaded.objectKey || uploaded.url, mediaType);
       }
     } catch (err) {
@@ -1431,6 +1434,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           await sendMediaMessage('', 'audio', `${mm}:${ss}`, lockedFile);
         } else {
           const uploaded = await uploadMediaFile(file, 'chat');
+          rememberChatMedia(uploaded.objectKey, file);
           await sendMediaMessage(uploaded.objectKey || uploaded.url, 'audio', `${mm}:${ss}`);
         }
       } catch (err) {
@@ -2356,7 +2360,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {m.mediaType === 'audio' && m.mediaUrl && (
                       <div className="mb-2 flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 min-w-[180px]">
                         <Mic className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <audio src={m.mediaUrl} controls className="h-8 flex-1 min-w-0" style={{ maxWidth: 220 }} />
+                        <ChatMedia src={m.mediaUrl} kind="audio" className="h-8 flex-1 min-w-0" style={{ maxWidth: 220 }} />
                         {m.audioDuration && <span className="text-[10px] text-zinc-400 shrink-0">{m.audioDuration}</span>}
                       </div>
                     )}
@@ -2377,11 +2381,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {m.mediaUrl && !m.sealed && !isSticker && m.mediaType !== 'audio' && (isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
                       <div className="mb-2 rounded-xl overflow-hidden min-h-[100px] max-w-xs sm:max-w-sm bg-black/40 border border-white/10 shadow-md">
                         {m.mediaType === 'video' ? (
-                          <video
-                            src={m.mediaUrl}
-                            controls
-                            className="w-full max-h-72 rounded-xl object-contain"
-                          />
+                          <ChatMedia src={m.mediaUrl} kind="video" className="w-full max-h-72 rounded-xl object-contain" />
+                        ) : chatMediaKeyOf(m.mediaUrl) ? (
+                          <ChatMedia src={m.mediaUrl} kind="image" alt="Attachment" className="w-full max-h-72 min-h-[100px] rounded-xl object-contain bg-black/30" />
                         ) : (
                           <img
                             src={m.mediaUrl}

@@ -23,6 +23,7 @@ import { probeService } from './serviceHealth';
 import { markAskSource } from '../utils/signupSource';
 import { dueNow, readApproxPlace, readDeviceInfo } from '../utils/deviceInfo';
 import { mediaOrigin, isNativeApp } from '../utils/siteUrl';
+import { configureAuthedMedia } from './authedMedia';
 import { oauthRedirectTo, openNativeAuthPage } from './nativeAuth';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
@@ -147,6 +148,9 @@ async function currentSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
+
+// plain chat files are private to their chat: shown only after downloading them with the signed-in person's token (services/authedMedia.ts)
+configureAuthedMedia({ token: async () => (await currentSession())?.access_token ?? null, apikey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '', origin: mediaOrigin() });
 
 export async function fetchHealth(): Promise<{ status: string; usersCount?: number }> {
   try {
@@ -1727,6 +1731,8 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
+const CHAT_PRIVATE_BUCKET = 'chatmedia';
+
 type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs' | 'team' | 'ads';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
@@ -1764,8 +1770,10 @@ async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOpti
   // progress, a new try when the connection drops, and a stop when it stalls (see xhrUpload.ts).
   const base = (import.meta.env.VITE_SUPABASE_URL as string) || '';
   const anon = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '';
+  // a plain chat file goes to the private bucket once the owner has switched that on (VITE_CHAT_PRIVATE_BUCKET=1, default off; docs/PRIVATE-CHAT-MEDIA.md); every other file as always
+  const bucket = folder === 'chat' && String(import.meta.env.VITE_CHAT_PRIVATE_BUCKET || '') === '1' ? CHAT_PRIVATE_BUCKET : MEDIA_BUCKET;
   await uploadWithRetry({
-    url: `${base}/storage/v1/object/${MEDIA_BUCKET}/${key}`,
+    url: `${base}/storage/v1/object/${bucket}/${key}`,
     headers: async () => ({ apikey: anon, Authorization: `Bearer ${(await currentSession())?.access_token || anon}`, 'x-upsert': 'false' }),
     makeBody: () => {
       const form = new FormData();

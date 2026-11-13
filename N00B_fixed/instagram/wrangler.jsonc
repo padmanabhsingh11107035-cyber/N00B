@@ -11,6 +11,11 @@
   // of the app (/m/<key>, kept in the data centre's cache so Supabase Storage is not asked for the same file again and again); and /__geo (the approximate place of the person who asks: city, region, country), every other address is served straight from the
   // files, as before. See worker/index.js.
   "main": "worker/index.js",
+  // Private chat pictures, videos and voice notes (docs/PRIVATE-CHAT-MEDIA.md). Change a value here and push to switch (a value set only in the Cloudflare dashboard would be overwritten by the next deploy).
+  //   CHAT_MEDIA_GATE: "log" = chat files are still served to everybody, the would-be refusals are only written to the Worker's logs (the safe first step);
+  //                    "on" = only members of the chat get a chat file; "off" = nothing is checked or logged.
+  //   CHAT_MEDIA_PRIVATE_BUCKET: "on" = also look in the private bucket "chatmedia" first (turns the gate on by itself); "off" = only the old public bucket.
+  "vars": { "CHAT_MEDIA_GATE": "log", "CHAT_MEDIA_PRIVATE_BUCKET": "off" },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

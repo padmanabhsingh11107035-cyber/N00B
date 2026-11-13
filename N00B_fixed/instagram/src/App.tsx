@@ -31,6 +31,7 @@ import {
   checkSessionStatus,
   loadSignedInUser,
   fetchPosts,
+  fetchPostsPage,
   fetchPostById,
   fetchHomeStoryTray,
   fetchReels,
@@ -165,6 +166,8 @@ import { isMainAdmin } from './adminAccess';
 import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
 import { setVisibleInterval } from './utils/visibleInterval';
 import { feedCache, clearFeedCache } from './utils/feedCache';
+import { createFeedPager, mergePages, shouldLoadMore, countUnseen, FULL_LIST_CAP } from './utils/feedPaging';
+import { getSeenSet } from './utils/seenContent';
 
 // Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
 // console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
@@ -239,6 +242,8 @@ type AppLayer =
   | { id: 'fun'; kind: 'fun'; loc: FunLocation };
 
 const SHOW_SAVED_FEED = false;   // see loadInitialData
+// Build switch (default OFF = Home loads the newest 200 posts in one call, exactly as always). On (VITE_FEED_PAGING=1): Home loads 40, then older pages of 30 as the person scrolls (utils/feedPaging.ts).
+const FEED_PAGING = import.meta.env.VITE_FEED_PAGING === '1';
 
 export default function App() {
   // The page the address bar names (/explore, /reels ...) is the page that opens; anything else (/, a shared reel or profile link) opens Home.
@@ -391,6 +396,10 @@ export default function App() {
   const visiblePosts = useMemo(() => posts.filter((p) => !p.isArchived), [posts]);
   const postsRef = useRef<Post[]>([]);
   postsRef.current = posts;
+  // Paged Home feed (only when FEED_PAGING is on; otherwise none of this exists): the pager asks the server for pages, `appendedIds` are the posts that arrived as an older page (Home lays them out after what it already shows).
+  const feedPager = useMemo(() => (FEED_PAGING ? createFeedPager<Post>({ fetchPage: fetchPostsPage }) : null), []);
+  const [appendedIds, setAppendedIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const pagerOwnerRef = useRef<string | null>(null);   // whose list the pager is building: a page that arrives after another person signed in is thrown away
   const [storiesState, setStories] = useState<Story[]>([]);
   const stories = useMemo(() => applyLikes(storiesState, 'story'), [storiesState, likeVersion]);
   // The home-page story tray: the stories this person may see plus random accounts to follow (reshuffled each time the
@@ -1014,6 +1023,10 @@ export default function App() {
   // Nobody signed in (log out, ended session, deleted account): the saved Home feed is wiped, so it can never be shown to the next person. (Not while the app is still loading or
   // showing the retry page: then nothing is known about who is signed in.)
   useEffect(() => { if (!loading && !initialLoadFailed && !currentUser) clearFeedCache(); }, [loading, initialLoadFailed, currentUser]);
+  // (paged feed) nobody signed in: forget the cursor and who the pager was working for, so a page that is still on its way is thrown away
+  useEffect(() => {
+    if (feedPager && !loading && !initialLoadFailed && !currentUser) { feedPager.reset(); pagerOwnerRef.current = null; setAppendedIds(new Set<string>()); }
+  }, [loading, initialLoadFailed, currentUser]);
 
   const loadInitialData = async () => {
     try {
@@ -1022,7 +1035,7 @@ export default function App() {
       // Everything starts at once, but Home no longer waits for the slowest request: as soon as the signed-in account is known, the feed and story tray
       // it saw last time (utils/feedCache.ts, this account's own copy) are shown, and the fresh ones replace them when they arrive.
       const userP = loadSignedInUser(); // a failed request is an error (Retry screen), not "logged out"
-      const postsP = fetchPosts();
+      const postsP = feedPager ? feedPager.first().catch(() => [] as Post[]) : fetchPosts();   // (paged: 40 posts; a failed request is an empty list, as with fetchPosts)
       const trayP = fetchHomeStoryTray();
       const reelsP = fetchReels();
       const notifP = fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }));
@@ -1057,7 +1070,9 @@ export default function App() {
       if (!keepShown) {
         setPosts(pList);
         setStories(trayData.stories);
+        if (feedPager) setAppendedIds(new Set<string>());
       }
+      if (feedPager && user) { pagerOwnerRef.current = user.id; void topUpUnseen(user.id, pList); }
       if (user && pList.length > 0) void feedCache().write(user.id, pList, trayData.stories);
       setHomeSuggestions(trayData.suggestions);
       setTraySeed(Math.random());
@@ -1076,6 +1091,50 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // ---- paged Home feed (FEED_PAGING) ----
+  // The next older page. Returns the posts that were really added (null: nothing to do, it failed, or the list it belonged to is gone).
+  // Never touches what is already in the list: new rows only go to the end, an id already held is skipped.
+  const loadMorePosts = async (): Promise<Post[] | null> => {
+    if (!feedPager) return null;
+    const owner = pagerOwnerRef.current;
+    if (!owner) return null;
+    const rows = await feedPager.more();
+    if (!rows || pagerOwnerRef.current !== owner) return null;
+    const { added } = mergePages<Post>(postsRef.current, rows);
+    if (added.length > 0) {
+      setPosts((prev) => mergePages<Post>(prev, added).posts);
+      setAppendedIds((prev) => new Set<string>([...prev, ...added.map((p) => p.id)]));
+    }
+    return added;
+  };
+  // A first page with few unseen posts from other people: fetch a little further (at most up to UNSEEN_FILL_MAX posts) so that unseen older posts are not all missing. It runs after Home is drawn and never delays it.
+  const topUpUnseen = async (uid: string, firstPage: Post[]) => {
+    if (!feedPager) return;
+    let all = firstPage;
+    for (let n = 0; n < 10; n++) {
+      const st = feedPager.state();
+      if (!shouldLoadMore({ feedLength: Infinity, visibleCount: 0, unseenCount: countUnseen(all, uid, getSeenSet(uid, 'posts')), loaded: st.loaded, ended: st.ended, inflight: st.inflight })) break;
+      const added = await loadMorePosts();
+      if (!added) break;
+      all = [...all, ...added];
+    }
+  };
+  // Profile and Explore work from the whole list of posts the app holds (before paging that was always the newest 200): when one of them is open, load the pages up to that same size.
+  useEffect(() => {
+    if (!feedPager || !currentUser) return;
+    if (!(activeTab === 'explore' || activeTab === 'profile' || pageLayers.layers.length > 0)) return;
+    let stop = false;
+    void (async () => {
+      for (let n = 0; n < 10 && !stop; n++) {
+        const st = feedPager.state();
+        if (st.ended || st.loaded >= FULL_LIST_CAP) break;
+        if (!(await loadMorePosts())) break;
+      }
+    })();
+    return () => { stop = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedPager, currentUser?.id, activeTab, pageLayers.layers.length]);
 
   // Both handlers only ever searched whatever was ALREADY loaded (the current reels/feed page) —
   // a reel or post from outside that locally-loaded set silently opened the generic reels/feed
@@ -1973,6 +2032,8 @@ export default function App() {
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
             onRefreshFeed={loadInitialData}
+            onNeedMorePosts={feedPager ? () => { void loadMorePosts(); } : undefined}
+            appendedPostIds={feedPager ? appendedIds : undefined}
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
             onNavigateToVideo={handleNavigateToVideo}

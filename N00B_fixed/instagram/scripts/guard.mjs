@@ -40,6 +40,7 @@ const CHECKS = [
   ['Tappable @mentions and timed chat mute', ['node', '--liftoff-only', 'scripts/supabase/test-mentions.mjs']],
   ['Error reports and Report a problem', ['node', '--liftoff-only', 'scripts/supabase/test-client-errors.mjs']],
   ['Smaller new uploads (photos, videos)', ['node', '--liftoff-only', 'scripts/supabase/test-upload-savings.mjs']],
+  ['Home feed in pages (switch off by default; SQL, cursor, merge)', ['node', '--liftoff-only', 'scripts/supabase/test-feed-paging.mjs']],
   ['Saved Home feed shown instantly', ['node', '--liftoff-only', 'scripts/supabase/test-feed-cache.mjs']],
   ['No x-forwarded-for first-entry trust', ['node', 'scripts/supabase/test-no-xff-first-trust.mjs']],
   // the public games site on its own address

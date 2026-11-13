@@ -66,6 +66,7 @@ export {
   declineFollowRequest,
   respondToSuggestedUser,
   fetchPosts,
+  fetchPostsPage,
   fetchPostById,
   fetchLikedPosts,
   fetchSavedPosts,

@@ -1344,6 +1344,17 @@ export async function fetchPosts(_category?: string, _location?: string): Promis
   }
 }
 
+// One page of the Home feed (only used when the build switch VITE_FEED_PAGING=1 is on): `limit` posts strictly after the cursor, newest first.
+// Unlike fetchPosts this THROWS when the request fails, so the pager can tell "no more posts" from "could not ask".
+export async function fetchPostsPage(limit: number, cursor: { at: string; id: string } | null): Promise<Post[]> {
+  const session = await currentSession();
+  if (!session) return [];
+  const args: Record<string, unknown> = { p_limit: limit };
+  if (cursor) { args.p_before_at = cursor.at; args.p_before_id = cursor.id; }
+  const [list] = await Promise.all([rpc<any[]>('feed_posts_page', args), cursor ? Promise.resolve() : syncSeenContent(session.user.id)]);
+  return mapPosts(list);
+}
+
 // Used for a "?post=<id>" deep link or a shared-post chat card — the post may not be in whatever
 // feed page happens to already be loaded, so this fetches it directly. Returns null for a post
 // that doesn't exist, is archived, or the viewer isn't allowed to see (treated the same either way).

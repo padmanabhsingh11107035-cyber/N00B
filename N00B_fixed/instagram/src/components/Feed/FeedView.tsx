@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { orderUnseenFirst, mergeIntoOrder } from '../../utils/seenContent';
+import { orderUnseenFirst, mergeIntoOrder, getSeenSet } from '../../utils/seenContent';
+import { mergeIntoOrderPaged, NEAR_END } from '../../utils/feedPaging';
 import {
   Bell,
   Video,
@@ -131,6 +132,10 @@ interface FeedViewProps {
   onClearStatusNote?: () => void;
   onOpenNotifications: () => void;
   onRefreshFeed: () => void;
+  // Paged Home feed (build switch VITE_FEED_PAGING=1; both are left out when it is off and Home behaves exactly as before): ask for the next older page when few posts are left below,
+  // and the ids that arrived as such an older page (they are laid out AFTER what is already ordered, never above it).
+  onNeedMorePosts?: () => void;
+  appendedPostIds?: ReadonlySet<string>;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
   onNavigateToVideo?: (videoId: string) => void;
@@ -183,6 +188,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onOpenStatusNoteModal,
   onOpenNotifications,
   onRefreshFeed,
+  onNeedMorePosts,
+  appendedPostIds,
   onNavigateToPost,
   onNavigateToReel,
   onNavigateToVideo,
@@ -293,10 +300,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [refreshNonce, setRefreshNonce] = useState(0);
   const lastRefreshNonceRef = useRef(0);
   const postIdsKey = posts.map((p) => p.id).join(',');
+  const appendedPostIdsRef = useRef(appendedPostIds);
+  appendedPostIdsRef.current = appendedPostIds;
   useEffect(() => {
     const refreshed = lastRefreshNonceRef.current !== refreshNonce;
     lastRefreshNonceRef.current = refreshNonce;
-    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
+    const appended = appendedPostIdsRef.current;
+    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : appended ? mergeIntoOrderPaged(prev, posts, currentUser.id, 'posts', appended, getSeenSet(currentUser.id, 'posts')) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdsKey, refreshNonce]);
 
@@ -559,6 +569,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
     if (alignSessionRef.current?.id !== initialPostId) startAlignToPost(initialPostId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPostId, filteredPosts.length, visibleCount, activeFeedFilter, activeCategory]);
+
+  // Paged feed: when few posts are left below what is drawn, ask for the next older page (the App shares one request at a time and knows when the end is reached).
+  const needMoreRef = useRef(onNeedMorePosts);
+  needMoreRef.current = onNeedMorePosts;
+  useEffect(() => {
+    if (needMoreRef.current && filteredPosts.length - visibleCount <= NEAR_END) needMoreRef.current();
+  }, [filteredPosts.length, visibleCount, activeFeedFilter, activeCategory]);
 
   // IntersectionObserver for lag-free infinite scrolling
   useEffect(() => {

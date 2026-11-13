@@ -1,0 +1,94 @@
+name: Backup Supabase with media
+
+# Free and automatic: on the 1st of every month GitHub copies all NOOB database rows, the account list AND the media files (photos, videos, voice notes) with the read-only script scripts/backup-supabase.mjs,
+# checks the copy against its manifest, ENCRYPTS it and keeps it as a build artifact for 60 days. This repository is PUBLIC, so the artifact is only ever the
+# encrypted file: without the BACKUP_PASSPHRASE secret it is unreadable. A failed job (missing rows, missing secrets) e-mails the owner.
+# Setup and restore steps: N00B_fixed/instagram/docs/BACKUP.md
+on:
+  schedule:
+    - cron: '30 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-supabase-media
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: N00B_fixed/instagram/package-lock.json
+
+      - name: Check the three secrets are set
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          fail=0
+          [ -n "$SUPABASE_URL" ] || { echo "::error::Secret SUPABASE_URL is missing (Settings > Secrets and variables > Actions). See docs/BACKUP.md."; fail=1; }
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || { echo "::error::Secret SUPABASE_SERVICE_ROLE_KEY is missing. See docs/BACKUP.md."; fail=1; }
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::Secret BACKUP_PASSPHRASE is missing. Without it the backup would be public. See docs/BACKUP.md."; fail=1
+          elif [ "${#BACKUP_PASSPHRASE}" -lt 24 ]; then
+            echo "::error::Secret BACKUP_PASSPHRASE is shorter than 24 characters. Make a longer one (docs/BACKUP.md)."; fail=1
+          fi
+          exit $fail
+
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Back up the database rows, accounts and media files (read-only)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-supabase.mjs
+
+      - name: Verify the copy against its manifest
+        run: |
+          dir=$(ls -d backups/supabase-* | head -n 1)
+          [ -n "$dir" ] || { echo "::error::No backup folder was created."; exit 1; }
+          node scripts/backup-supabase.mjs --verify "$dir"
+          echo "BACKUP_DIR=$dir" >> "$GITHUB_ENV"
+
+      - name: Pack and encrypt (the plaintext is deleted)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          stamp=$(date -u +%Y-%m-%d)
+          mkdir -p out
+          tar -czf "out/noob-supabase-$stamp.tar.gz" -C backups "$(basename "$BACKUP_DIR")"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE -in "out/noob-supabase-$stamp.tar.gz" -out "out/noob-supabase-$stamp.tar.gz.enc"
+          rm -rf backups "out/noob-supabase-$stamp.tar.gz"
+          ls -l out
+          [ "$(ls out | wc -l)" = "1" ] && [ -s "out/noob-supabase-$stamp.tar.gz.enc" ] || { echo "::error::Encryption failed."; exit 1; }
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+
+      - name: Prove the backup opens with the passphrase (decrypt test, nothing is kept)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          f="out/noob-supabase-$STAMP.tar.gz.enc"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:BACKUP_PASSPHRASE -in "$f" -out /tmp/check.tar.gz
+          n=$(tar -tzf /tmp/check.tar.gz | wc -l)
+          rm -f /tmp/check.tar.gz
+          echo "Decrypt test passed: the archive opens and holds $n entries."
+          [ "$n" -gt 0 ] || { echo "::error::Decrypt test failed."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noob-supabase-backup-with-media-${{ env.STAMP }}
+          path: N00B_fixed/instagram/out/*.enc
+          retention-days: 60
+          if-no-files-found: error

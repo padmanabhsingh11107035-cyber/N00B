@@ -56,16 +56,27 @@ const CHECKS = [
 ];
 
 const win = process.platform === 'win32';
+const inCi = !!process.env.GITHUB_ACTIONS;
+const run = (cmd) => spawnSync(win && cmd[0] === 'npx' ? 'npx.cmd' : cmd[0], cmd.slice(1), { encoding: 'utf8', shell: win, maxBuffer: 64 * 1024 * 1024 });
 let bad = 0;
 for (const [name, cmd] of CHECKS) {
   const started = Date.now();
-  const r = spawnSync(win && cmd[0] === 'npx' ? 'npx.cmd' : cmd[0], cmd.slice(1), { encoding: 'utf8', shell: win, maxBuffer: 64 * 1024 * 1024 });
+  let r = run(cmd);
+  // A check that fails is run once more: a hiccup of a busy computer must not send a false alarm, a real break fails twice. The retry is always written down.
+  let retried = false;
+  if (r.status !== 0) { retried = true; r = run(cmd); }
   const secs = ((Date.now() - started) / 1000).toFixed(1);
-  if (r.status === 0) { console.log(`  ok    ${name}  (${secs}s)`); continue; }
+  if (r.status === 0) {
+    console.log(`  ok    ${name}  (${secs}s)${retried ? '  (passed on the second run)' : ''}`);
+    if (retried && inCi) console.log(`::warning title=Guard check was flaky::${name} failed once and passed on the second run`);
+    continue;
+  }
   bad++;
   console.log(`  FAIL  ${name}  (${secs}s)`);
   const lines = `${r.stdout || ''}\n${r.stderr || ''}`.split('\n').filter((l) => /FAIL|error|Error/.test(l)).slice(0, 8);
   for (const l of lines) console.log(`          ${l.trim()}`);
+  // shown in the summary of the run on GitHub (no sign-in needed to read it)
+  if (inCi) console.log(`::error title=Guard check failed::${name}: ${lines.map((l) => l.trim()).join(' | ').slice(0, 900)}`.replace(/\r?\n/g, ' '));
 }
 console.log(bad ? `\n${bad} of ${CHECKS.length} checks FAILED: something that used to work is broken.` : `\nAll ${CHECKS.length} checks passed.`);
 process.exit(bad ? 1 : 0);

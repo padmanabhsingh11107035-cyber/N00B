@@ -331,7 +331,7 @@ check(groqCalls[0].body.messages.at(-1).content.length === 2000, 'a very long te
 reset(); groqPlan = [{ ok: true, text: 'ok' }];
 await call({ message: 'Are my chats private?' }, 'tok-dee');
 const kb2 = groqCalls[0].body.messages[0].content;
-check(/END-TO-END ENCRYPTION/.test(kb2) && /Photos, videos, voice notes, shared music and game invites are NOT locked yet/.test(kb2) && /not even NOOB/.test(kb2), 'it knows the chats are end-to-end encrypted, and what is NOT locked yet');
+check(/END-TO-END ENCRYPTION/.test(kb2) && /Shared music, shared posts and game invites are NOT locked yet/.test(kb2) && /not even NOOB/.test(kb2), 'it knows the chats are end-to-end encrypted, and what is NOT locked yet');
 check(/Profile → ⋮ → Chat encryption/.test(kb2) && /security code/.test(kb2) && /cannot recover them for you/.test(kb2) && /NEVER promise/.test(kb2), 'it knows where the keys and backup are, what the security code is, and never to over-promise');
 check(/every emoji/.test(kb2), 'and that the emoji picker has every emoji');
 

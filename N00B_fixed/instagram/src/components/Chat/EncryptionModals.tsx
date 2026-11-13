@@ -35,7 +35,7 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
   const locked = !!info?.encryptable;
   const groups = info?.peer?.code ? info.peer.code.split(' ') : [];
   return (
-    <div className="pm-root fixed inset-0 z-[125]" role="dialog" aria-modal="true" aria-label="Chat encryption" data-testid="chat-encryption-page">
+    <div className="pm-root fixed inset-0 edge-own z-[125]" role="dialog" aria-modal="true" aria-label="Chat encryption" data-testid="chat-encryption-page">
       <div className="pm-top">
         <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
         <div className="pm-top-text">
@@ -81,11 +81,11 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
             <div className="pm-card">
               <div className="pm-row">
                 <span className="pm-dot"><Lock size={16} /></span>
-                <div className="pm-row-text"><p className="pm-row-title">Locked</p><p className="pm-row-desc">Text messages, replies, edits, and GIFs and stickers.</p></div>
+                <div className="pm-row-text"><p className="pm-row-title">Locked</p><p className="pm-row-desc">Text messages, replies, edits, GIFs and stickers, and photos, videos and voice notes.</p></div>
               </div>
               <div className="pm-row">
                 <span className="pm-dot warn"><Unlock size={16} /></span>
-                <div className="pm-row-text"><p className="pm-row-title">Not locked yet</p><p className="pm-row-desc">Photos, videos, voice notes, shared music and game invites are stored normally.</p></div>
+                <div className="pm-row-text"><p className="pm-row-title">Not locked yet</p><p className="pm-row-desc">Shared music, shared posts and game invites are stored normally.</p></div>
               </div>
               <div className="pm-row">
                 <span className="pm-dot dim"><Eye size={16} /></span>
@@ -161,7 +161,7 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
   });
 
   return (
-    <div className="pm-root fixed inset-0 z-[130]" role="dialog" aria-modal="true" aria-label="Encryption keys and backup" data-testid="encryption-keys-page">
+    <div className="pm-root fixed inset-0 edge-own z-[130]" role="dialog" aria-modal="true" aria-label="Encryption keys and backup" data-testid="encryption-keys-page">
       <div className="pm-top">
         <button type="button" onClick={onClose} className="pm-back" aria-label="Back"><ArrowLeft size={20} /></button>
         <div className="pm-top-text">

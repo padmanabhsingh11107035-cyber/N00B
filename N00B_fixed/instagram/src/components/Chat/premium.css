@@ -15,7 +15,7 @@
 
 .pm-top {
   flex: none; display: flex; align-items: center; gap: 12px;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 14px;
+  padding: calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 6px) 18px 14px;   /* the page reaches the top of the screen by itself (edge-own), so only the clock height + a little is left above the title */
   border-bottom: 1px solid rgba(230, 200, 138, .14);
   background: #0d0f1d;
 }

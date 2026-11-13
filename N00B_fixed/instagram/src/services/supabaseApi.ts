@@ -1325,16 +1325,12 @@ function syncSeenContent(userId: string): Promise<void> {
   return seenSyncInFlight;
 }
 
-/** How many posts Home asks for at start-up, and how many it can reach in all (the server's own default; it has no offset, so "more" is a bigger limit). */
-export const FEED_FIRST_PAGE = 40;
-export const FEED_FULL = 200;
-
-export async function fetchPosts(_category?: string, _location?: string, limit: number = FEED_FULL): Promise<Post[]> {
+export async function fetchPosts(_category?: string, _location?: string): Promise<Post[]> {
   // (The old server ignored both filters too — screens filter what they show.)
   try {
     const session = await currentSession();
     if (!session) return []; // logged-out visitors see nothing (and we don't even ask)
-    const [list] = await Promise.all([rpc<any[]>('feed_posts', { p_limit: limit }), syncSeenContent(session.user.id)]);
+    const [list] = await Promise.all([rpc<any[]>('feed_posts'), syncSeenContent(session.user.id)]);
     return mapPosts(list);
   } catch {
     return [];

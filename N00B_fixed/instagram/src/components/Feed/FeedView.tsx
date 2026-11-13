@@ -137,10 +137,6 @@ interface FeedViewProps {
   // A specific post to scroll to and highlight (e.g. tapped from a profile grid or Explore) — the
   // feed is shuffled and paginated, so without this the target post may not even be rendered yet.
   initialPostId?: string;
-  /** Home starts with only the newest posts: this asks the app for the rest (safe to call again and again). */
-  onNeedMorePosts?: () => void;
-  /** true while older posts are still to come from the server */
-  hasMorePosts?: boolean;
   onInitialPostIdHandled?: () => void;
   onNavigateToProfile?: (user: User) => void;
   // The Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls): they open on top of this page.
@@ -200,8 +196,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
   allUsers = [],
   onUserUpdated,
   initialPostId,
-  onNeedMorePosts,
-  hasMorePosts = false,
   onInitialPostIdHandled
 }) => {
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following' | 'favourites'>('foryou');
@@ -302,7 +296,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   useEffect(() => {
     const refreshed = lastRefreshNonceRef.current !== refreshNonce;
     lastRefreshNonceRef.current = refreshNonce;
-    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : mergeIntoOrder(prev, posts, currentUser.id, 'posts', { olderAtEnd: true })));
+    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postIdsKey, refreshNonce]);
 
@@ -388,7 +382,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const notYetOrdered = posts.filter((p) => !knownIds.has(p.id));
 
   // Filter posts
-  let filteredPosts = [...notYetOrdered, ...orderedPosts].filter((p) => !hiddenAdIds.includes(p.id));
+  let filteredPosts = [...new Map([...notYetOrdered, ...orderedPosts].map((p) => [p.id, p] as const)).values()].filter((p) => !hiddenAdIds.includes(p.id));   // one card per post, whatever the lists above hold
 
   if (activeCategory !== 'All') {
     filteredPosts = filteredPosts.filter(
@@ -565,12 +559,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
     if (alignSessionRef.current?.id !== initialPostId) startAlignToPost(initialPostId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPostId, filteredPosts.length, visibleCount, activeFeedFilter, activeCategory]);
-
-  // Close to the end of what is loaded (or fewer than two pages left): fetch the older posts now, so the next screen is there before the finger is.
-  useEffect(() => {
-    if (hasMorePosts && onNeedMorePosts && filteredPosts.length - visibleCount <= POSTS_PER_PAGE * 3) onNeedMorePosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMorePosts, filteredPosts.length, visibleCount]);
 
   // IntersectionObserver for lag-free infinite scrolling
   useEffect(() => {
@@ -982,7 +970,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
             {/* Infinite Scroll Load More Sentinel */}
             <div ref={loadMoreSentinelRef} className="w-full py-4 flex items-center justify-center">
-              {isLoadingMore || (!hasMore && hasMorePosts) ? (
+              {isLoadingMore ? (
                 <div className="flex items-center gap-2 text-xs text-zinc-400">
                   <Loader2 className="w-4 h-4 text-noob animate-spin" />
                   <span>Loading more posts...</span>

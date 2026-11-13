@@ -15,7 +15,7 @@
   //   CHAT_MEDIA_GATE: "log" = chat files are still served to everybody, the would-be refusals are only written to the Worker's logs (the safe first step);
   //                    "on" = only members of the chat get a chat file; "off" = nothing is checked or logged.
   //   CHAT_MEDIA_PRIVATE_BUCKET: "on" = also look in the private bucket "chatmedia" first (turns the gate on by itself); "off" = only the old public bucket.
-  "vars": { "CHAT_MEDIA_GATE": "on", "CHAT_MEDIA_PRIVATE_BUCKET": "off" },
+  "vars": { "CHAT_MEDIA_GATE": "on", "CHAT_MEDIA_PRIVATE_BUCKET": "on" },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

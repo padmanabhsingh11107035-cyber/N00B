@@ -394,6 +394,7 @@ export {
   requestNoobAiWake,
   adminSetExplorePin,
   fetchAdminContentFeed,
+  fetchAdminContentPage,
   deleteChatMessage,
   registerPushToken,
   fetchVapidPublicKey,

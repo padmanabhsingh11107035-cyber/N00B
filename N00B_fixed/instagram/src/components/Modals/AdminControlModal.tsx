@@ -99,7 +99,7 @@ import {
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification,
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
-  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory, deleteLongVideo,
+  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentPage, deletePost, deleteReel, deleteStory, deleteLongVideo,
   fetchPublicPlatformSettings, adminSetPlatformSettings, adminSetMusicPageHidden, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
@@ -296,6 +296,12 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [pinningId, setPinningId] = useState<string | null>(null);
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+  // paging: the real total, where the next page starts, and a guard so a slow answer for "posts" can not land on the "reels" list
+  const [contentTotal, setContentTotal] = useState<number | null>(null);
+  const [contentNext, setContentNext] = useState<{ at: string; id: string } | null>(null);
+  const [loadingMoreContent, setLoadingMoreContent] = useState(false);
+  const contentRequest = useRef(0);
+  const contentSentinel = useRef<HTMLDivElement | null>(null);
   const [deletingContentId, setDeletingContentId] = useState<string | null>(null);
 
   // "Apply to join us" submissions
@@ -406,14 +412,42 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   }, [contentType]);
 
   const loadContent = async (type: 'posts' | 'reels' | 'videos' | 'stories' | 'instants') => {
+    const ticket = ++contentRequest.current;
     setLoadingContent(true);
+    setLoadingMoreContent(false);
     setContentItems([]);
+    setContentTotal(null);
+    setContentNext(null);
     refreshPinnedFeed(true);
-    const res = await fetchAdminContentFeed(type);
-    if (res.success) setContentItems(res.items);
+    const res = await fetchAdminContentPage(type, null);
+    if (ticket !== contentRequest.current) return;
+    if (res.success) { setContentItems(res.items); setContentTotal(res.total); setContentNext(res.next); }
     else setStatusMessage({ text: res.error || 'Could not load content.', type: 'error' });
     setLoadingContent(false);
   };
+
+  // the next page (the Load more button, and automatically when the end of the list scrolls into view)
+  const loadMoreContent = async () => {
+    if (!contentNext || loadingMoreContent || loadingContent) return;
+    const ticket = contentRequest.current;
+    setLoadingMoreContent(true);
+    const res = await fetchAdminContentPage(contentType, contentNext);
+    if (ticket !== contentRequest.current) return;
+    if (res.success) {
+      setContentItems((prev) => { const seen = new Set(prev.map((x) => x.id)); return [...prev, ...res.items.filter((x) => !seen.has(x.id))]; });
+      setContentNext(res.next);
+      if (res.total !== null) setContentTotal(res.total);
+    } else setStatusMessage({ text: res.error || 'Could not load more.', type: 'error' });
+    setLoadingMoreContent(false);
+  };
+
+  useEffect(() => {
+    const el = contentSentinel.current;
+    if (!el || !contentNext || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) loadMoreContent(); }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [contentNext, loadingMoreContent, loadingContent, contentType, contentItems.length]);
 
   // What can be pinned to the Feed page: posts, reels and videos (stories vanish after a day and instants are private photos).
   const pinKindOf = (): 'post' | 'reel' | 'video' | null => (contentType === 'posts' ? 'post' : contentType === 'reels' ? 'reel' : contentType === 'videos' ? 'video' : null);
@@ -598,7 +632,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       : contentType === 'reels' ? await deleteReel(item.id)
       : contentType === 'videos' ? await deleteLongVideo(item.id)
       : await deleteStory(item.id);
-    if (ok) setContentItems((prev) => prev.filter((x) => x.id !== item.id));
+    if (ok) { setContentItems((prev) => prev.filter((x) => x.id !== item.id)); setContentTotal((n) => (n === null ? n : Math.max(0, n - 1))); }
     else setStatusMessage({ text: 'Could not remove this.', type: 'error' });
     setDeletingContentId(null);
   };
@@ -2401,6 +2435,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     </button>
                   ))}
                 </div>
+                <span className="text-[11px] text-zinc-400 shrink-0" data-testid="admin-content-count">
+                  {contentTotal !== null ? `${contentTotal} ${contentType}` : ''}
+                </span>
                 <button onClick={() => loadContent(contentType)} className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium shrink-0">
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingContent ? 'animate-spin' : ''}`} /> Refresh
                 </button>
@@ -2498,6 +2535,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {!loadingContent && contentNext && (
+                <div ref={contentSentinel} className="py-3 text-center">
+                  <button onClick={loadMoreContent} disabled={loadingMoreContent} className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-bold text-noob hover:bg-zinc-800 disabled:opacity-60 cursor-pointer">
+                    {loadingMoreContent ? 'Loading...' : `Load more (${contentItems.length} of ${contentTotal ?? '?'})`}
+                  </button>
                 </div>
               )}
             </div>

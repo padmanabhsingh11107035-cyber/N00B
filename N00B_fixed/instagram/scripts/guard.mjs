@@ -47,6 +47,9 @@ const CHECKS = [
   // the admin map of where users signed up and were last seen (approximate places only, no IP, admin only)
   ['Admin User data map: database function (admin only, no IP)', ['node', '--liftoff-only', 'scripts/supabase/test-admin-user-locations.mjs']],
   ['Admin User data map: offline gazetteer and resolver', ['node', '--liftoff-only', 'scripts/supabase/test-geo-places.mjs']],
+  // the admin Content tab shows everything, in pages; a deleted account leaves nothing behind
+  ['Admin Content tab: every post / reel / video / story / instant in pages', ['node', '--liftoff-only', 'scripts/supabase/test-admin-content-paging.mjs']],
+  ['Deleted accounts: no profile, follower or count left; clean-up of old leftovers', ['node', '--liftoff-only', 'scripts/supabase/test-deleted-accounts-cleanup.mjs']],
   // the public games site on its own address
   ['Public games site (hub, Worker mapping, headers)', ['node', 'scripts/supabase/test-games-site.mjs']],
   // chat privacy

@@ -31,6 +31,7 @@ export async function createTestDb({ autoExpose = true, upTo = null } = {}) {
       raw_app_meta_data jsonb default '{}'::jsonb,
       last_sign_in_at timestamptz,
       banned_until timestamptz,
+      deleted_at timestamptz,
       created_at timestamptz default now()
     );
     create function auth.uid() returns uuid language sql stable as

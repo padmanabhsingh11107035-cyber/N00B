@@ -5373,6 +5373,34 @@ export async function fetchAdminContentFeed(type: AdminContentType, limit = 60):
   }
 }
 
+export interface AdminContentCursor { at: string; id: string }
+export interface AdminContentPage { success: boolean; items: any[]; total: number | null; hasMore: boolean; next: AdminContentCursor | null; error?: string }
+
+/** One page of the admin Content tab (migration 20261114000005): the page after `cursor`, the real total, and where the next page starts. */
+export async function fetchAdminContentPage(type: AdminContentType, cursor: AdminContentCursor | null = null, limit = 60): Promise<AdminContentPage> {
+  try {
+    const res = await rpc<any>('admin_content_page', { p_type: type, p_limit: limit, p_before_at: cursor?.at ?? null, p_before_id: cursor?.id ?? null });
+    const map = type === 'videos' ? mapLongVideo
+      : type === 'instants' ? (i: any) => ({ ...i, userAvatar: resolveMedia(i.userAvatar), mediaUrl: resolveMedia(i.mediaUrl) })
+      : type === 'reels' ? mapReel : type === 'stories' ? mapStory : mapPost;
+    return {
+      success: true,
+      items: (res.items || []).map(map),
+      total: typeof res.total === 'number' ? res.total : Number(res.total ?? 0),
+      hasMore: !!res.hasMore,
+      next: res.hasMore && res.nextAt && res.nextId ? { at: String(res.nextAt), id: String(res.nextId) } : null,
+    };
+  } catch (err) {
+    const missing = /could not find the function|schema cache/i.test(String((err as any)?.message || ''));
+    if (missing && !cursor) {
+      // the paging update is not installed yet: show what the old functions give (at most 200) and say so, instead of nothing
+      const old = await fetchAdminContentFeed(type, 200);
+      return { success: old.success, items: old.items, total: null, hasMore: false, next: null, error: old.success ? undefined : old.error };
+    }
+    return { success: false, items: [], total: null, hasMore: false, next: null, error: errorText(err, 'Could not load content.') };
+  }
+}
+
 // Admin removal of any chat message (a person deleting their own uses deleteMessage).
 export async function deleteChatMessage(
   _chatId: string,

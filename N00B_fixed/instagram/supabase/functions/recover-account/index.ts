@@ -398,7 +398,8 @@ Deno.serve(async (req) => {
   const admin = createClient(url, serviceKey(), {
     auth: { persistSession: false, autoRefreshToken: false }
   });
-  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
+  // The caller's address: Cloudflare's own header first (a caller can not write it); else the LAST x-forwarded-for entry (added by the platform's proxy, the first one is whatever the caller sent).
+  const ip = (req.headers.get('cf-connecting-ip') || '').trim() || (req.headers.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean).pop() || 'unknown';
   const unavailable = { error: 'Recovery is unavailable right now. Please try again later.' };
 
   // -------------------------------------------------------------- guest support: the help chat on the login page (the network address comes from Cloudflare's own header first: a visitor can not write that one)

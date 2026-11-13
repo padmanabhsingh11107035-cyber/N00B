@@ -66,6 +66,8 @@ export {
   declineFollowRequest,
   respondToSuggestedUser,
   fetchPosts,
+  FEED_FIRST_PAGE,
+  FEED_FULL,
   fetchPostById,
   fetchLikedPosts,
   fetchSavedPosts,

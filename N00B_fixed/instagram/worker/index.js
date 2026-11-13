@@ -5,6 +5,8 @@
 //      The older address  /media/<key>  (what app versions from before the cache still ask for: an Android app that was not updated, a tab left open for days) is the same thing.
 // Every other address is served straight from the files, as before.
 import { botGate } from './botGate.js';
+// hosts that serve only /games/* (the separate games address; add the host here when it is created in Cloudflare)
+const GAMES_HOSTS = new Set(['games.noobsocials.com']);
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
@@ -218,6 +220,10 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // The separate games address (docs/GAMES-ORIGIN.md): it serves ONLY the games' files, never the app, so nothing of the app (and no sign-in) can ever exist on it.
+    if (GAMES_HOSTS.has(url.hostname) && !url.pathname.startsWith('/games/')) {
+      return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+    }
     const refused = botGate(request);   // AI programs read only the legal and information pages (worker/botGate.js)
     if (refused) return refused;
     if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx);

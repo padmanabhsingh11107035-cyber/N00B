@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
 import { supabase } from '../../../services/supabase';
 import { setMusicAudioSession } from '../../../utils/gameMusic';
+import { planGameFrame } from '../../../utils/gamesOrigin';
 import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone, gameScoreBoard, gameScoreSubmit } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
@@ -26,6 +27,10 @@ interface HostedGameFrameProps {
   scoreGame?: string;
   /** an online race: the game asks this page to open a Supabase Realtime room, and this page passes the small messages between the players' phones (nothing else is shared). */
   multiplayer?: { game: string; id: string; name: string };
+  /** the game keeps nothing of its own in browser storage and has no bridge: it is framed WITHOUT same-origin rights (see utils/gamesOrigin.ts). Ignored for a game with a ranking, score or race. */
+  isolated?: boolean;
+  /** the game's files cannot yet be moved to a separate games address (they still address the app by window.location.origin) */
+  sameOriginOnly?: boolean;
 }
 
 const useUpright = (): boolean => {
@@ -39,7 +44,12 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame, multiplayer }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame, multiplayer, isolated, sameOriginOnly }) => {
+  // where and how the frame runs: the app's own address (default), or the separate games address when one is set for this build
+  const plan = React.useMemo(
+    () => planGameFrame(url, { isolated, sameOriginOnly, bridge: !!(ranking || scoreGame || multiplayer), appOrigin: window.location.origin }),
+    [url, isolated, sameOriginOnly, ranking, scoreGame, multiplayer],
+  );
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -67,44 +77,44 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     } catch { /* nothing to undo */ }
   };
 
-  // The game and this page talk by messages, only to and from this one frame on this same site: the game says "level N was cleared" and "send me the ranking".
+  // The game and this page talk by messages, only to and from this one frame (on this same site, or on the separate games address when one is set): the game says "level N was cleared" and "send me the ranking".
   useEffect(() => {
     if (!ranking) return;
     const onMessage = async (e: MessageEvent) => {
       const win = frameRef.current?.contentWindow;
-      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      if (!win || e.source !== win || e.origin !== plan.origin) return;
       const d = e.data as { noobGame?: string; type?: string; level?: unknown } | null;
       if (!d || d.noobGame !== ranking) return;
       if (d.type === 'level-done' && typeof d.level === 'number' && Number.isInteger(d.level)) {
         await (ranking === 'color-sort' ? colorSortLevelDone : brickEscapeLevelDone)(d.level);
       } else if (d.type === 'board-request') {
         const board = await (ranking === 'color-sort' ? colorSortLeaderboard : brickEscapeLeaderboard)();
-        win.postMessage({ noobGame: ranking, type: 'board', ok: !!board, board }, window.location.origin);
+        win.postMessage({ noobGame: ranking, type: 'board', ok: !!board, board }, plan.origin);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [ranking]);
+  }, [ranking, plan.origin]);
 
   // Score games: {noobScore: <game id>, type: 'submit', score} and {type: 'board-request'}, from this one frame on this same site only.
   useEffect(() => {
     if (!scoreGame) return;
     const onMessage = async (e: MessageEvent) => {
       const win = frameRef.current?.contentWindow;
-      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      if (!win || e.source !== win || e.origin !== plan.origin) return;
       const d = e.data as { noobScore?: string; type?: string; score?: unknown } | null;
       if (!d || d.noobScore !== scoreGame) return;
       if (d.type === 'submit' && typeof d.score === 'number' && Number.isFinite(d.score)) {
         const res = await gameScoreSubmit(scoreGame, d.score);
-        win.postMessage({ noobScore: scoreGame, type: 'submitted', ok: !!res.success, best: res.best, newBest: !!res.newBest, error: res.error }, window.location.origin);
+        win.postMessage({ noobScore: scoreGame, type: 'submitted', ok: !!res.success, best: res.best, newBest: !!res.newBest, error: res.error }, plan.origin);
       } else if (d.type === 'board-request') {
         const board = await gameScoreBoard(scoreGame);
-        win.postMessage({ noobScore: scoreGame, type: 'board', ok: !!board, board }, window.location.origin);
+        win.postMessage({ noobScore: scoreGame, type: 'board', ok: !!board, board }, plan.origin);
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [scoreGame]);
+  }, [scoreGame, plan.origin]);
 
   // Online race: {noobMp: <game>, type: 'join', room} opens the room's channel; {type: 'send', event, payload} goes to the other players; what they send comes back as {type: 'msg', event, payload}.
   useEffect(() => {
@@ -112,14 +122,14 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let subscribed = false;
     const queue: { event: string; payload: unknown }[] = [];
-    const reply = (m: Record<string, unknown>) => frameRef.current?.contentWindow?.postMessage({ noobMp: multiplayer.game, ...m }, window.location.origin);
+    const reply = (m: Record<string, unknown>) => frameRef.current?.contentWindow?.postMessage({ noobMp: multiplayer.game, ...m }, plan.origin);
     const close = () => {
       if (channel) { try { void supabase.removeChannel(channel); } catch { /* already gone */ } }
       channel = null; subscribed = false; queue.length = 0;
     };
     const onMessage = (e: MessageEvent) => {
       const win = frameRef.current?.contentWindow;
-      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      if (!win || e.source !== win || e.origin !== plan.origin) return;
       const d = e.data as { noobMp?: string; type?: string; room?: unknown; event?: unknown; payload?: unknown } | null;
       if (!d || d.noobMp !== multiplayer.game) return;
       if (d.type === 'join' && typeof d.room === 'string' && /^[A-Z0-9]{4,8}$/.test(d.room)) {
@@ -147,7 +157,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     };
     window.addEventListener('message', onMessage);
     return () => { window.removeEventListener('message', onMessage); close(); };
-  }, [multiplayer?.game, multiplayer?.id, multiplayer?.name]);
+  }, [multiplayer?.game, multiplayer?.id, multiplayer?.name, plan.origin]);
 
   // iPhone: while a game is open, its sounds play even with the side switch on silent (like a song does)
   useEffect(() => {
@@ -189,12 +199,12 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
         {(visible || (!lazy && !wasShown)) && <iframe
           ref={frameRef}
           title={title}
-          src={url}
+          src={plan.src}
           allow="autoplay; fullscreen; gamepad"
           allowFullScreen
           referrerPolicy="no-referrer"
-          // boxed in: it can run and keep its own saved data, but cannot navigate NOOB away
-          sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+          // boxed in: it can run and cannot navigate NOOB away; whether it may keep its own saved data (allow-same-origin) depends on where it runs (see utils/gamesOrigin.ts)
+          sandbox={plan.sandbox}
           onLoad={() => setLoaded(true)}
           className="block w-full h-full border-0 bg-black"
         />}
@@ -218,7 +228,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
         <div className="flex items-center justify-between gap-2 px-1">
           <p className="text-[10px] text-zinc-500">
             Stuck on loading?{' '}
-            <a href={url} target="_blank" rel="noopener noreferrer" className="underline text-zinc-300">Open the game on its own</a>
+            <a href={plan.separate ? plan.src : url} target="_blank" rel="noopener noreferrer" className="underline text-zinc-300">Open the game on its own</a>
           </p>
           <button
             onClick={enterFull}

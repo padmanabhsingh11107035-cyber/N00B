@@ -64,22 +64,19 @@
 /games/helix-fall/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 # Neon Alley (a game made with the Godot engine) runs in a frame of its own, from this site as well. The engine needs WebAssembly and the game's scripts need to evaluate small bits of
 # code; both are allowed for this folder only. Its two big files come from /games/neon-alley/data/ (see worker/index.js).
 /games/neon-alley/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 # Underhall: After Curfew (a 3D game made with Three.js) runs in a frame of its own, from this same site. Only its own scripts, models, pictures, sounds and fonts are allowed; it needs no
 # network, no frames and no WebAssembly.
 /games/underhall/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/underhall/assets/*
   Cache-Control: public, max-age=31536000, immutable
 /games/underhall/models/*
@@ -97,8 +94,7 @@
 /games/the-rogue/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/the-rogue/the-rogue.css
   Cache-Control: no-cache
 /games/the-rogue/assets/*
@@ -116,8 +112,7 @@
 /games/canyon-rush/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/canyon-rush/build/*
   Cache-Control: public, max-age=31536000, immutable
 /games/canyon-rush/assets/*
@@ -127,8 +122,7 @@
 /games/critterkart/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/critterkart/build/*
   Cache-Control: public, max-age=31536000, immutable
 # Siegecraft (a 3D catapult game made with Three.js and the Rapier physics engine) runs in a frame of its own, from this same site, like Critter Kart: only its own scripts, model and fonts, no network,
@@ -136,8 +130,7 @@
 /games/siegecraft/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/siegecraft/build/*
   Cache-Control: public, max-age=31536000, immutable
 /games/siegecraft/logo.png
@@ -147,8 +140,7 @@
 /games/coil-rush/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/coil-rush/build/*
   Cache-Control: public, max-age=31536000, immutable
 /games/coil-rush/assets/*
@@ -158,14 +150,12 @@
 /games/color-sort/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 # Brick Escape (a sliding-brick puzzle: plain files, no build step) runs in a frame of its own, from this same site, under the same rules as Color Sort above.
 /games/brick-escape/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self';
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self';
 # Score games made of plain files (Flappy Bird 20 ...): like Color Sort, only their own scripts and style, no network, no frames. The small shared script that sends a score to NOOB and shows
 # the ranking lives in /games/_shared/ (not fingerprinted: kept for a day).
 /games/brick-escape/*.js
@@ -182,37 +172,32 @@
 /games/noob-run-3d/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/noob-run-3d/build/*
   Cache-Control: public, max-age=31536000, immutable
 # Royal Ludo (a classic board game for 2 to 4 players with computer opponents, plain files, no network): like Flappy Bird 20 above.
 /games/royal-ludo/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/royal-ludo/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/nocta-uno/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/nocta-uno/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/noobgames-hub/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/noobgames-hub/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/strikebowl/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/strikebowl/assets/*
   Cache-Control: public, max-age=31536000, immutable
 /games/*.html
@@ -220,64 +205,55 @@
 /games/lane-runner/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/lane-runner/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/frostzero/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/frostzero/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/farbound/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/farbound/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/apexdrift/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/apexdrift/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/breachpt/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/breachpt/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/ashenfang/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/ashenfang/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/metro-rush/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/metro-rush/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/terrafoundry/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/terrafoundry/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/vertical-platformer/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /face/*
   Cache-Control: public, max-age=604800
 /games/*/warm.json
@@ -287,15 +263,13 @@
 /games/pulsegrid/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/pulsegrid/assets/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/flappy20/*
   ! X-Frame-Options
   ! Content-Security-Policy
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/flappy20/flappy.js
   Cache-Control: public, max-age=31536000, immutable
 /games/helix-fall/assets/*

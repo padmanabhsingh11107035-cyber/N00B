@@ -3,11 +3,12 @@
 // A small round trophy button (top right) opens the board. It does nothing when the game is opened on its own, outside NOOB. No network of its own: it only talks to the page that shows it.
 (function () {
   'use strict';
+  var NOOB_PARENT = (function () { try { var m = /[#&]noob-parent=([^&]+)/.exec(window.location.hash); if (m) { var o = new URL(decodeURIComponent(m[1])).origin; if (o !== 'null' && o !== window.location.origin) return o; } } catch (e) { /* no separate games address: the page around the game is on this same site */ } return window.location.origin; })();
   var tag = document.currentScript;
   var GAME = (tag && tag.getAttribute('data-game')) || '';
   var inFrame = window.parent !== window;
   var panel, list, mine, button, status;
-  function post(msg) { if (inFrame && GAME) window.parent.postMessage(Object.assign({ noobScore: GAME }, msg), window.location.origin); }
+  function post(msg) { if (inFrame && GAME) window.parent.postMessage(Object.assign({ noobScore: GAME }, msg), NOOB_PARENT); }
   function el(name, css, text) { var e = document.createElement(name); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
   var FONT = "font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;";
 
@@ -49,7 +50,7 @@
     mine.textContent = b.me ? 'Your best: ' + Number(b.me.best).toLocaleString() + ' (place ' + b.me.rank + ')' : 'You have no score yet.';
   }
   window.addEventListener('message', function (e) {
-    if (e.source !== window.parent || e.origin !== window.location.origin) return;
+    if (e.source !== window.parent || e.origin !== NOOB_PARENT) return;
     var d = e.data;
     if (!d || d.noobScore !== GAME) return;
     if (d.type === 'board' && panel) render(d.ok ? d.board : null);

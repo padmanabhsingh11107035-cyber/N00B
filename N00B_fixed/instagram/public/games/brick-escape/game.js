@@ -1,6 +1,7 @@
 // Brick Escape: draws the tray, takes the finger, and keeps the progress. The rules are in rules.js, the levels in levels.js (made and checked by the solver).
 (function () {
   'use strict';
+  var NOOB_PARENT = (function () { try { var m = /[#&]noob-parent=([^&]+)/.exec(window.location.hash); if (m) { var o = new URL(decodeURIComponent(m[1])).origin; if (o !== 'null' && o !== window.location.origin) return o; } } catch (e) { /* no separate games address: the page around the game is on this same site */ } return window.location.origin; })();
   var R = window.BrickEscapeRules, RAW = window.BRICK_ESCAPE_LEVELS || [];
   function $(id) { return document.getElementById(id); }
   var STORE = 'brick-escape:v1', ASPECT = 1.5, GAP = 4;
@@ -361,7 +362,7 @@
   var boardEl = $('board'), boardList = $('boardList'), boardMe = $('boardMe'), boardWait = 0;
   function tell(msg) {
     msg.noobGame = 'brick-escape';
-    try { window.parent.postMessage(msg, window.location.origin); } catch (e) { /* nobody listens: the game is still fully playable */ }
+    try { window.parent.postMessage(msg, NOOB_PARENT); } catch (e) { /* nobody listens: the game is still fully playable */ }
   }
   function boardNote(text) { boardList.textContent = ''; var li = document.createElement('li'); li.className = 'empty'; li.textContent = text; boardList.appendChild(li); boardMe.textContent = ''; }
   function showBoard(data) {
@@ -390,7 +391,7 @@
     boardWait = window.setTimeout(function () { boardNote('The ranking is not available right now.'); }, 8000);
   }
   window.addEventListener('message', function (e) {
-    if (e.origin !== window.location.origin || e.source !== window.parent) return;
+    if (e.origin !== NOOB_PARENT || e.source !== window.parent) return;
     var d = e.data;
     if (d && d.noobGame === 'brick-escape' && d.type === 'board' && !boardEl.hidden) showBoard(d.ok ? d.board : null);
   });

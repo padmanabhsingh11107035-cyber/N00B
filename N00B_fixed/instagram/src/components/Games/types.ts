@@ -28,6 +28,11 @@ export interface MiniGameMeta {
   embedControls?: string;
   // A score game with a ranking (public.game_score_rules): its id there. The game sends its score and asks for the board through utils (public/games/_shared/noob-score.js).
   scoreGame?: string;
+  // M2 (docs/GAMES-ORIGIN.md): true = the game keeps nothing of its own in browser storage (or copes when storage is refused) and has no ranking/score/race bridge, so it is framed WITHOUT
+  // allow-same-origin (an opaque origin: it cannot read the app's sign-in). Verified one by one; a game whose code reads localStorage without a guard must NOT be marked.
+  isolated?: boolean;
+  // true = the game's own files address the app by window.location.origin, so they cannot be moved to the separate games address (VITE_GAMES_ORIGIN) until they are changed.
+  sameOriginOnly?: boolean;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -57,6 +62,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     scoreGame: 'noob_run_3d',
     embedControls: 'Swipe left or right to change lane, up to jump, down to slide (or the arrow keys). Missions, skins and the ranking are in the menu. It has its own music and sounds; no NOOBs for this one, it is just for fun.',
     embedUrl: '/games/noob-run-3d/',
+    sameOriginOnly: true,   // its bundle (build/index-*.js) still addresses the app by window.location.origin; patch the bundle before moving it to VITE_GAMES_ORIGIN
     posters: [
       '/game-posters/noob-run-3d/01-cover.webp',
       '/game-posters/noob-run-3d/02-play.webp',
@@ -598,6 +604,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ownSound: true,
     embedLazy: true,
     embedUrl: '/games/critterkart/',
+    sameOriginOnly: true,   // its bundle (build/index-*.js, race bridge) still addresses the app by window.location.origin; patch it before moving it to VITE_GAMES_ORIGIN
     posters: [
       '/game-posters/critterkart/01-cover.webp',
       '/game-posters/critterkart/02-driver.webp'

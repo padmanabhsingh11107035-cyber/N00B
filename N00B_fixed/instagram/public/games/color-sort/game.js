@@ -4,6 +4,7 @@
 // The rules are in rules.js; this file draws the bottles as one svg that scales to fit the screen, animates the pours and plays the sounds (made here, no sound files).
 (function () {
   'use strict';
+  var NOOB_PARENT = (function () { try { var m = /[#&]noob-parent=([^&]+)/.exec(window.location.hash); if (m) { var o = new URL(decodeURIComponent(m[1])).origin; if (o !== 'null' && o !== window.location.origin) return o; } } catch (e) { /* no separate games address: the page around the game is on this same site */ } return window.location.origin; })();
   var R = window.ColorSortRules;
   var LEVELS = window.COLOR_SORT_LEVELS;
   if (!R || !LEVELS || !LEVELS.length) return;
@@ -419,7 +420,7 @@
   function tell(msg) {
     if (!inFrame) return;
     msg.noobGame = 'color-sort';
-    try { window.parent.postMessage(msg, window.location.origin); } catch (e) { /* nobody listens: the game is still fully playable */ }
+    try { window.parent.postMessage(msg, NOOB_PARENT); } catch (e) { /* nobody listens: the game is still fully playable */ }
   }
   function sameSiteImage(u) { return typeof u === 'string' && ((u.charAt(0) === '/' && u.charAt(1) !== '/') || u.indexOf(window.location.origin + '/') === 0); }
   function boardNote(text) { boardList.textContent = ''; var li = document.createElement('li'); li.className = 'empty'; li.textContent = text; boardList.appendChild(li); boardMe.textContent = ''; }
@@ -455,7 +456,7 @@
   $('boardClose').addEventListener('click', function () { boardEl.hidden = true; });
   boardEl.addEventListener('pointerdown', function (e) { if (e.target === boardEl) boardEl.hidden = true; });
   window.addEventListener('message', function (e) {
-    if (e.source !== window.parent || e.origin !== window.location.origin) return;
+    if (e.source !== window.parent || e.origin !== NOOB_PARENT) return;
     var d = e.data;
     if (d && d.noobGame === 'color-sort' && d.type === 'board' && !boardEl.hidden) showBoard(d.ok ? d.board : null);
   });

@@ -50,6 +50,8 @@ export const LensApp: React.FC = () => {
   const [ratio, setRatio] = useState(9 / 16);          // the shape of the picture on the screen
   const [srcAr, setSrcAr] = useState(3 / 4);           // the shape the camera gives
   const [cameras, setCameras] = useState(0);
+  const [saved, setSaved] = useState(false);          // the finished picture was saved, shared or handed to the Story / Post creator (nothing is kept on a server: if it is not, leaving loses it)
+  const [leave, setLeave] = useState<null | (() => void)>(null);   // what to do after the "save it first?" question
   const [taught, setTaught] = useState(false);         // the first-time tip goes away after the first lens change or picture
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -280,19 +282,37 @@ export const LensApp: React.FC = () => {
       const blob = await canvasToBlob(cv);
       const file = new File([blob], photoName(lensRef.current.id), { type: 'image/jpeg' });
       setShot((old) => { if (old) URL.revokeObjectURL(old.url); return { file, url: URL.createObjectURL(file), w: o.w, h: o.h }; });
+      setSaved(false);
       setPhase('review');
     } catch { setNote('The picture could not be made. Please try again.'); }
   }, []);
 
-  const retake = useCallback(() => { setShot((old) => { if (old) URL.revokeObjectURL(old.url); return null; }); setPhase('camera'); }, []);
+  const retakeNow = useCallback(() => { setShot((old) => { if (old) URL.revokeObjectURL(old.url); return null; }); setSaved(false); setPhase('camera'); }, []);
+  // Lenses keeps nothing on a server. A finished picture that was not saved, shared or sent to the Story / Post creator is lost when the person goes back, closes the page or leaves: ask first.
+  const unsaved = phase === 'review' && !!shot && !saved;
+  const unsavedRef = useRef(unsaved); unsavedRef.current = unsaved;
+  const askLeave = useCallback((action: () => void): void => { if (unsavedRef.current) setLeave(() => action); else action(); }, []);
+  const retake = useCallback(() => askLeave(retakeNow), [askLeave, retakeNow]);
 
   const onShare = async (): Promise<void> => {
     if (!shot) return;
     const r = await sharePhoto(shot.file);
-    if (r === 'unsupported') { savePhoto(shot.file); setNote('Saved. Open it from your downloads or photos to share it.'); }
+    if (r === 'unsupported') { savePhoto(shot.file); setSaved(true); setNote('Saved. Open it from your downloads or photos to share it.'); }
+    else if (r === 'shared') setSaved(true);
   };
-  const onSave = (): void => { if (shot) { savePhoto(shot.file); setNote('Saved to your device'); } };
+  const onSave = (): void => { if (shot) { savePhoto(shot.file); setSaved(true); setNote('Saved to your device'); } };
   const toApp = useCallback((message: { type: 'use'; file: File; target: 'post' | 'story' } | { type: 'close' }): void => { try { window.parent.postMessage({ noobLens: true, ...message }, window.location.origin); } catch { /* not in the app */ } }, []);
+  const closeLenses = useCallback((): void => askLeave(() => toApp({ type: 'close' })), [askLeave, toApp]);
+  // the browser's own question when the tab is closed or reloaded with an unsaved picture, and the phone's Back button (it asks first, then goes back to the camera)
+  useEffect(() => {
+    if (!unsaved) return;
+    const onUnload = (e: BeforeUnloadEvent): void => { e.preventDefault(); e.returnValue = ''; };
+    const onPop = (): void => { window.history.pushState({ lz: 1 }, ''); setLeave(() => retakeNow); };
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('popstate', onPop);
+    try { window.history.pushState({ lz: 1 }, ''); } catch { /* no history in this frame */ }
+    return () => { window.removeEventListener('beforeunload', onUnload); window.removeEventListener('popstate', onPop); };
+  }, [unsaved, retakeNow]);
 
   const pickPhoto = (file: File | undefined): void => {
     if (!file) return;
@@ -319,11 +339,11 @@ export const LensApp: React.FC = () => {
       if (e.key !== 'Escape') return;
       if (sheet) setSheet(false);
       else if (phase === 'review') retake();
-      else if (embed) toApp({ type: 'close' });
+      else if (embed) closeLenses();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [sheet, phase, embed, retake, toApp]);
+  }, [sheet, phase, embed, retake, closeLenses]);
 
   const q = query.trim();
   const shown = q ? LENSES.filter((l) => lensMatches(l, q)) : visible;
@@ -345,8 +365,8 @@ export const LensApp: React.FC = () => {
 
       <header className="lz-top">
         {embed
-          ? <button className="lz-round" aria-label="Close" onClick={() => toApp({ type: 'close' })}><X size={22} /></button>
-          : <a className="lz-brand" href="/" aria-label="NOOB"><img src="/brand/noob-wordmark.png" alt="NOOB" /></a>}
+          ? <button className="lz-round" aria-label="Close" onClick={closeLenses}><X size={22} /></button>
+          : <a className="lz-brand" href="/" aria-label="NOOB" onClick={(e) => { if (unsavedRef.current) { e.preventDefault(); askLeave(() => { window.location.href = '/'; }); } }}><img src="/brand/noob-wordmark.png" alt="NOOB" /></a>}
         <span className="lz-title">Lenses</span>
         <div className="lz-actions">
           {phase === 'camera' && (
@@ -442,12 +462,26 @@ export const LensApp: React.FC = () => {
               <button className="lz-btn" onClick={retake}><RotateCcw size={18} /> Retake</button>
               <button className="lz-btn" onClick={onSave}><Download size={18} /> Save</button>
               <button className="lz-btn lz-primary" onClick={() => void onShare()}><Share2 size={18} /> Share</button>
-              {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'story' })}><Send size={18} /> Story</button>}
-              {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'post' })}><Send size={18} /> Post</button>}
+              {embed && <button className="lz-btn" onClick={() => { setSaved(true); toApp({ type: 'use', file: shot.file, target: 'story' }); }}><Send size={18} /> Story</button>}
+              {embed && <button className="lz-btn" onClick={() => { setSaved(true); toApp({ type: 'use', file: shot.file, target: 'post' }); }}><Send size={18} /> Post</button>}
             </div>
             <p className="lz-foot">{shot.w} × {shot.h} · Share it to any app, or touch and hold the picture to save it. The NOOB tag stays on it.</p>
           </>
         )
+      )}
+
+      {leave && shot && (
+        <div className="lz-sheetback" onClick={() => setLeave(null)}>
+          <div className="lz-sheet" role="dialog" aria-label="Save your picture" data-testid="lens-leave" onClick={(e) => e.stopPropagation()}>
+            <h3>Save your picture first?</h3>
+            <p>Lenses does not keep your pictures anywhere. If you leave now, this picture is gone.</p>
+            <div className="lz-row">
+              <button className="lz-btn lz-primary" onClick={() => { const go = leave; onSave(); setLeave(null); go(); }}><Download size={18} /> Save, then leave</button>
+              <button className="lz-btn" onClick={() => { const go = leave; setSaved(true); setLeave(null); go(); }}>Leave without saving</button>
+              <button className="lz-btn" onClick={() => setLeave(null)}>Stay</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {sheet && (

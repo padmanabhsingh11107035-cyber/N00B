@@ -1323,7 +1323,8 @@ Deno.serve(async (req) => {
     const { data } = await admin.auth.getUser(token);
     userId = data?.user?.id ?? null;
   }
-  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
+  // The caller's address: Cloudflare's own header first (a caller can not write it); else the LAST x-forwarded-for entry (added by the platform's proxy, the first one is whatever the caller sent).
+  const ip = (req.headers.get('cf-connecting-ip') || '').trim() || (req.headers.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean).pop() || 'unknown';
   // The app's own texts in another language: has its own (higher) pace limit, because a new language needs many small requests.
   if (body?.action === 'translate-ui') return await handleTranslateUi(body, admin, userId, ip);
   // What people wrote, for the Translator tool: its own pace limit too (a feed of captions is many small requests).

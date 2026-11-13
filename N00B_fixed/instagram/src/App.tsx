@@ -31,6 +31,8 @@ import {
   checkSessionStatus,
   loadSignedInUser,
   fetchPosts,
+  FEED_FIRST_PAGE,
+  FEED_FULL,
   fetchPostById,
   fetchHomeStoryTray,
   fetchReels,
@@ -87,7 +89,7 @@ import { armNotificationSound, playNotificationSound } from './utils/notificatio
 import { armSongPlayer } from './utils/songSound';
 import { takeRestorePage } from './utils/pageResume';
 import { predictFollowToggle, predictFollowersCount } from './utils/followPredict';
-import { buildStoryTray, topUpSuggestions, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
+import { buildStoryTray, topUpSuggestions, TRAY_SUGGESTION_TARGET, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { SwitchAccountModal } from './components/Modals/SwitchAccountModal';
@@ -165,6 +167,7 @@ import { isMainAdmin } from './adminAccess';
 import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
 import { setVisibleInterval } from './utils/visibleInterval';
 import { feedCache, clearFeedCache } from './utils/feedCache';
+import { getSeenSet } from './utils/seenContent';
 
 // Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
 // console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
@@ -1013,6 +1016,52 @@ export default function App() {
   // showing the retry page: then nothing is known about who is signed in.)
   useEffect(() => { if (!loading && !initialLoadFailed && !currentUser) clearFeedCache(); }, [loading, initialLoadFailed, currentUser]);
 
+  // The older part of Home (the server has no "offset", so this asks for the whole 200 once). Called when the feed nears its end, when a profile / Explore /
+  // anything but Home and Reels opens (their grids read from this list), and when the first page was mostly seen already.
+  const feedFullRef = useRef(false);
+  const feedFullInFlight = useRef<Promise<void> | null>(null);
+  const [feedComplete, setFeedComplete] = useState(false);
+  const loadAllPosts = useCallback((): Promise<void> => {
+    if (feedFullRef.current) return Promise.resolve();
+    if (feedFullInFlight.current) return feedFullInFlight.current;
+    const job = (async () => {
+      const list = await fetchPosts(undefined, undefined, FEED_FULL);
+      if (list.length === 0) return;   // a failed request: try again next time something asks
+      feedFullRef.current = true;
+      setFeedComplete(true);
+      // the fresh list, plus anything already on hand that is older than all of it (a deep-linked post)
+      const oldest = Math.min(...list.map((p) => Date.parse(p.createdAt) || 0));
+      setPosts((prev) => {
+        const ids = new Set(list.map((p) => p.id));
+        return [...list, ...prev.filter((p) => !ids.has(p.id) && (Date.parse(p.createdAt) || 0) < oldest)];
+      });
+    })().finally(() => { feedFullInFlight.current = null; });
+    feedFullInFlight.current = job;
+    return job;
+  }, []);
+
+  // The whole people list: only fetched once somebody does something (a tap or a key press anywhere), so a visit that is just reading Home never downloads it.
+  const peopleLoadedRef = useRef(false);
+  const loadPeople = useCallback(() => {
+    if (peopleLoadedRef.current) return;
+    peopleLoadedRef.current = true;
+    void fetchUsers().then((list) => { if (list.length) setRegisteredUsers(list); else peopleLoadedRef.current = false; });
+  }, []);
+  useEffect(() => { peopleLoadedRef.current = false; }, [currentUser?.id]);
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const go = () => { loadPeople(); window.removeEventListener('pointerdown', go, true); window.removeEventListener('keydown', go, true); };
+    window.addEventListener('pointerdown', go, true);
+    window.addEventListener('keydown', go, true);
+    return () => { window.removeEventListener('pointerdown', go, true); window.removeEventListener('keydown', go, true); };
+  }, [currentUser?.id, loadPeople]);
+  useEffect(() => { if (currentUser?.id && sharedProfileUsername) loadPeople(); }, [currentUser?.id, sharedProfileUsername, loadPeople]);
+  // Profiles, Explore, saved posts and the like read the full list of posts: leaving Home for them (or opening a profile over it) fetches the older posts.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    if ((activeTab !== 'feed' && activeTab !== 'reels' && activeTab !== 'videos') || pageLayers.layers.length > 0) void loadAllPosts();
+  }, [currentUser?.id, activeTab, pageLayers.layers.length, loadAllPosts]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -1020,7 +1069,8 @@ export default function App() {
       // Everything starts at once, but Home no longer waits for the slowest request: as soon as the signed-in account is known, the feed and story tray
       // it saw last time (utils/feedCache.ts, this account's own copy) are shown, and the fresh ones replace them when they arrive.
       const userP = loadSignedInUser(); // a failed request is an error (Retry screen), not "logged out"
-      const postsP = fetchPosts();
+      // Only the newest page at first (a fraction of the data); the older posts are fetched when something needs them (loadAllPosts below). Someone who already has them loaded keeps getting all of them on a refresh.
+      const postsP = fetchPosts(undefined, undefined, feedFullRef.current ? FEED_FULL : FEED_FIRST_PAGE);
       const trayP = fetchHomeStoryTray();
       const reelsP = fetchReels();
       const notifP = fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }));
@@ -1054,12 +1104,17 @@ export default function App() {
         setPosts(pList);
         setStories(trayData.stories);
       }
+      if (pList.length < (feedFullRef.current ? FEED_FULL : FEED_FIRST_PAGE)) feedFullRef.current = true;   // fewer than asked for: that is everything there is
+      setFeedComplete(feedFullRef.current);
       if (user && pList.length > 0) void feedCache().write(user.id, pList, trayData.stories);
+      // Almost everything on this first page was seen already: the unseen older posts (they come first in the feed) must be fetched now, not at the end.
+      if (user && !feedFullRef.current && pList.filter((p) => p.userId !== user.id && !getSeenSet(user.id, 'posts').has(p.id)).length < 8) void loadAllPosts();
       setHomeSuggestions(trayData.suggestions);
       setTraySeed(Math.random());
       setReels(rList);
       // The people list is the heaviest request there is and nothing on the first screen needs it: it loads after Home is up (and Explore, opened meanwhile, shares the same request).
-      if (user) void fetchUsers().then((list) => { if (list.length) setRegisteredUsers(list); });
+      // (Not downloaded at start-up any more: see loadPeople, which runs on the first tap / key, or at once when the Home suggestions come up short.)
+      if (user && trayData.suggestions.length < TRAY_SUGGESTION_TARGET) void loadPeople();
       if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {
         announceNotifications(notifRes.notifications, true);   // the first load: everything here is already known
         setNotifications(notifRes.notifications);
@@ -1969,6 +2024,8 @@ export default function App() {
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
             onRefreshFeed={loadInitialData}
+            onNeedMorePosts={() => { void loadAllPosts(); }}
+            hasMorePosts={!feedComplete}
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
             onNavigateToVideo={handleNavigateToVideo}

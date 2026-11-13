@@ -17,8 +17,8 @@ const GAMES = [
 ];
 section('0. The shared pieces');
 const shim = read('public/games/_shared/noob-score.js'), frame = read('src/components/Games/minigames/HostedGameFrame.tsx');
-check(/window\.parent\.postMessage\(/.test(shim) && /window\.location\.origin/.test(shim) && /e\.source !== window\.parent/.test(shim) && !/fetch\(|XMLHttpRequest|WebSocket|innerHTML/.test(shim), 'the shared script only talks to the page that shows the game, with the same origin, and builds its list without innerHTML');
-check(/if \(!win \|\| e\.source !== win \|\| e\.origin !== window\.location\.origin\) return;[\s\S]{0,200}noobScore !== scoreGame/.test(frame) && /gameScoreSubmit\(scoreGame, d\.score\)/.test(frame) && /gameScoreBoard\(scoreGame\)/.test(frame), 'the Games page answers only its own frame, only for its own game');
+check(/window\.parent\.postMessage\(/.test(shim) && /NOOB_PARENT/.test(shim) && /e\.source !== window\.parent/.test(shim) && !/fetch\(|XMLHttpRequest|WebSocket|innerHTML/.test(shim), 'the shared script only talks to the page that shows the game, with the same origin, and builds its list without innerHTML');
+check(/if \(!win \|\| e\.source !== win \|\| e\.origin !== plan\.origin\) return;[\s\S]{0,200}noobScore !== scoreGame/.test(frame) && /gameScoreSubmit\(scoreGame, d\.score\)/.test(frame) && /gameScoreBoard\(scoreGame\)/.test(frame), 'the Games page answers only its own frame, only for its own game');
 check(/"!\/games\/_shared\/\*"/.test(wr) && /\/games\/_shared\/\*\n  Cache-Control/.test(headers), 'the shared folder is routed and cached');
 for (const g of GAMES) {
   section(`${g.card}`);

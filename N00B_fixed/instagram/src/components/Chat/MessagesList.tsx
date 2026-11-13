@@ -415,7 +415,7 @@ export function MessagesList(p: MessagesListProps) {
                         )}
                         {cs['chat.unreadBadges'] && c.unreadCount && c.unreadCount > 0 ? (
                           <span className={`min-w-[18px] h-[18px] px-[5px] rounded-full ${c.isMuted ? 'bg-[#6c747b]/60 text-white' : 'bg-[var(--mint)] text-[#033b2a]'} text-[11px] leading-none font-bold flex items-center justify-center tabular-nums`}>
-                            {c.unreadCount}
+                            {c.unreadCount > 99 ? '99+' : c.unreadCount}
                           </span>
                         ) : null}
                       </div>

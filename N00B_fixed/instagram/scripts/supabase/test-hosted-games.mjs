@@ -27,15 +27,18 @@ check(!/setGameMusicOn\(false\)/.test(view), 'and the person\'s own on/off choic
 
 section('3. The frame');
 const frame = read('src/components/Games/minigames/HostedGameFrame.tsx');
-const sandbox = (frame.match(/sandbox="([^"]+)"/) || [])[1] || '';
+const gamesOrigin = read('src/utils/gamesOrigin.ts');
+const sandbox = ((gamesOrigin.match(/SANDBOX_BASE = '([^']+)'/) || [])[1] || '') + ' allow-same-origin';   // the strict base plus the one flag added when the game may keep saves
 check(/allow-scripts/.test(sandbox) && /allow-same-origin/.test(sandbox) && !/allow-top-navigation/.test(sandbox) && !/allow-forms/.test(sandbox), 'it is boxed in: it can run but cannot navigate NOOB away');
+check(frame.includes('sandbox={plan.sandbox}') && gamesOrigin.includes('opaque ? SANDBOX_BASE') && !/allow-top-navigation|allow-forms/.test(gamesOrigin), 'the sandbox comes from one place; an isolated game gets no allow-same-origin');
+check(read('src/components/Games/types.ts').includes('isolated?: boolean') && frame.includes('bridge: !!(ranking || scoreGame || multiplayer)'), 'a game with a ranking, score or race is never isolated');
 check(/referrerPolicy="no-referrer"/.test(frame), 'it is told nothing about who opened it');
 const modal = read('src/components/Games/GamePlayModal.tsx');
 check(/game\.embedUrl && \(currentMode === 'select_mode' \|\| currentMode === 'play_bot'\)/.test(modal) && /visible=\{currentMode === 'play_bot'\}/.test(modal), 'it is added when the game\'s page opens (out of sight) and only brought into view by Play, so the download has a head start');
 check(/!game\.embedUrl && \(\s*<GenericArcadeGame/.test(modal), 'the generic arcade engine is never used for it');
 const headers = read('public/_headers');
 const block = (headers.match(/\/games\/neon-alley\/\*\n((?:  .+\n)+)/) || [])[1] || '';
-check(/! X-Frame-Options/.test(block) && /X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'the site\'s security rules let the app show the game page, and only the app');
+check(/! X-Frame-Options/.test(block) && block.includes("frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com;") && !/X-Frame-Options: SAMEORIGIN/.test(block), 'the site\'s security rules let the app show the game page, and only the app');
 check(/'wasm-unsafe-eval'/.test(block) && !/connect-src[^;]*https:/.test(block), 'the engine may run, and the page may load nothing from anywhere else');
 
 section('4. Everything is on this site\'s own address, and nothing names where the game came from');

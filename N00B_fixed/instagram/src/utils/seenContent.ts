@@ -116,18 +116,31 @@ export function spreadAuthors<T extends { userId: string }>(items: T[]): T[] {
  * removed) without moving what's already there: new unseen items — and anything the person just
  * published themselves — go on top, newest first; new already-seen items are shuffled in at the end.
  */
-export function mergeIntoOrder<T extends Orderable>(prevIds: string[], items: T[], userId: string, kind: Kind): string[] {
+export function mergeIntoOrder<T extends Orderable>(prevIds: string[], items: T[], userId: string, kind: Kind, opts?: { olderAtEnd?: boolean }): string[] {
   const byId = new Map(items.map((i) => [i.id, i]));
   const kept = prevIds.filter((id) => byId.has(id));
   const keptSet = new Set(kept);
-  const added = items.filter((i) => !keptSet.has(i.id));
+  let added = items.filter((i) => !keptSet.has(i.id));
   if (added.length === 0) return kept;
   const seen = getSeenSet(userId, kind);
+  // Older posts that arrive later (the next page of the feed) belong AFTER what is already on screen, never above it: unseen ones newest first, then the seen ones shuffled.
+  let older: T[] = [];
+  if (opts?.olderAtEnd && kept.length > 0) {
+    const oldest = Math.min(...kept.map((id) => time(byId.get(id)!)));
+    older = added.filter((i) => i.userId !== userId && time(i) < oldest);
+    const olderSet = new Set(older.map((i) => i.id));
+    added = added.filter((i) => !olderSet.has(i.id));
+  }
+  const olderTail = older.length === 0 ? [] : spreadAuthors([
+    ...older.filter((i) => !seen.has(i.id)).sort((a, b) => time(b) - time(a)),
+    ...shuffled(older.filter((i) => seen.has(i.id)))
+  ]).map((i) => i.id);
+  if (added.length === 0) return [...kept, ...olderTail];
   const top = spreadAuthors(added
     .filter((i) => i.userId === userId || !seen.has(i.id))
     .sort((a, b) => time(b) - time(a)))
     .map((i) => i.id);
   const topSet = new Set(top);
   const tail = spreadAuthors(shuffled(added.filter((i) => !topSet.has(i.id)))).map((i) => i.id);
-  return [...top, ...kept, ...tail];
+  return [...top, ...kept, ...tail, ...olderTail];
 }

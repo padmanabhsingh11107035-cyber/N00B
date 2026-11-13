@@ -5,8 +5,7 @@
 //      The older address  /media/<key>  (what app versions from before the cache still ask for: an Android app that was not updated, a tab left open for days) is the same thing.
 // Every other address is served straight from the files, as before.
 import { botGate } from './botGate.js';
-// hosts that serve only /games/* (the separate games address; add the host here when it is created in Cloudflare)
-const GAMES_HOSTS = new Set(['games.noobsocials.com']);
+import { routeFor } from './gamesSite.js';   // the separate games address: its games hub and its 404s (see gamesSite.js)
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
@@ -220,9 +219,15 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // The separate games address (docs/GAMES-ORIGIN.md): it serves ONLY the games' files, never the app, so nothing of the app (and no sign-in) can ever exist on it.
-    if (GAMES_HOSTS.has(url.hostname) && !url.pathname.startsWith('/games/')) {
+    // The separate games address (docs/GAMES-ORIGIN.md): a public games site. "/" is the games hub (plain files, no sign-in), /games/* are the games; everything else is a 404, so nothing of the app
+    // (and no sign-in) can ever exist on it. On the app's address the hub's folder is a 404 too (worker/gamesSite.js).
+    const route = routeFor(url.hostname, url.pathname);
+    if (route.kind === 'notfound') {
       return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+    }
+    if (route.kind === 'hub') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' } });
+      return env.ASSETS.fetch(new Request(new URL(route.asset, url.origin), request));
     }
     const refused = botGate(request);   // AI programs read only the legal and information pages (worker/botGate.js)
     if (refused) return refused;

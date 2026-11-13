@@ -1,0 +1,290 @@
+{
+ "games": [
+  {
+   "id": "noob_run_3d",
+   "title": "NOOB Run 3D",
+   "description": "A 3D endless runner.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/noob-run-3d/",
+   "poster": "/game-posters/noob-run-3d/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "flappy20",
+   "title": "Flappy Bird 20",
+   "description": "Tap to flap and fly through the pipes.",
+   "category": "reflex",
+   "players": "Solo",
+   "url": "/games/flappy20/",
+   "poster": "/game-posters/flappy20/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "royal_ludo",
+   "title": "Royal Ludo",
+   "description": "The classic race home for 2 to 4 players.",
+   "category": "puzzle",
+   "players": "Solo / Friend",
+   "url": "/games/royal-ludo/",
+   "poster": "/game-posters/royal-ludo/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "nocta_uno",
+   "title": "Nocta",
+   "description": "A premium UNO-style card game for 2 to 10 players.",
+   "category": "puzzle",
+   "players": "Solo / Friend",
+   "url": "/games/nocta-uno/",
+   "poster": "/game-posters/nocta-uno/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "noobgames_hub",
+   "title": "NOOB Party Pack",
+   "description": "A pack of quick games for 1 to 4 players on one screen: pick how many are playing, pick a game and go.",
+   "category": "arcade",
+   "players": "Solo / Friend",
+   "url": "/games/noobgames-hub/",
+   "poster": "/game-posters/noobgames-hub/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "strikebowl",
+   "title": "Strike Bowl",
+   "description": "A five-frame 3D bowling challenge with real pin physics.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/strikebowl/",
+   "poster": "/game-posters/strikebowl/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "lane_runner",
+   "title": "Lane Runner: Endless",
+   "description": "An endless 3D run-and-gun horde game.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/lane-runner/",
+   "poster": "/game-posters/lane-runner/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "frostzero",
+   "title": "Frostline Zero",
+   "description": "An avalanche run down a frozen mountain.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/frostzero/",
+   "poster": "/game-posters/frostzero/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "farbound",
+   "title": "Farbound: Ruins Beyond",
+   "description": "A small, quiet 3D exploration adventure above the clouds.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/farbound/",
+   "poster": "/game-posters/farbound/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "apexdrift",
+   "title": "Apex Drift",
+   "description": "A 60-second 3D arcade drift score attack.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/apexdrift/",
+   "poster": "/game-posters/apexdrift/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "breachpt",
+   "title": "Breachpoint Zero",
+   "description": "A 3D first-person shooter.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/breachpt/",
+   "poster": "/game-posters/breachpt/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "ashenfang",
+   "title": "Ashenfang: The Colossus Trail",
+   "description": "A single-player 3D action hunt.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/ashenfang/",
+   "poster": "/game-posters/ashenfang/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "metro_rush",
+   "title": "Metro Rush",
+   "description": "A colourful 3D endless runner down a three-lane rail line.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/metro-rush/",
+   "poster": "/game-posters/metro-rush/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "terrafoundry",
+   "title": "TerraFoundry",
+   "description": "Shape a wild, living world.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/terrafoundry/",
+   "poster": "/game-posters/terrafoundry/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "vertical_platformer",
+   "title": "Vertical Platformer",
+   "description": "An endless vertical climber.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/vertical-platformer/",
+   "poster": "/game-posters/vertical-platformer/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "pulsegrid",
+   "title": "PulseGrid Arena",
+   "description": "A 3D rhythm-dance game: enter the arrow sequence, then land the beat as the marker crosses the target zone.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/pulsegrid/",
+   "poster": "/game-posters/pulsegrid/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  },
+  {
+   "id": "siegecraft",
+   "title": "Siegecraft",
+   "description": "Wind back the catapult, find the angle and bring two castles down.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/siegecraft/",
+   "poster": "/game-posters/siegecraft/01-cover.webp",
+   "portrait": false,
+   "lazy": true
+  },
+  {
+   "id": "coil_rush",
+   "title": "Coil Rush",
+   "description": "Steer a glowing cosmic worm, grow by eating energy and swallow planets, stars and comets for permanent powers.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/coil-rush/",
+   "poster": "/game-posters/coil-rush/01-cover.webp",
+   "portrait": true,
+   "lazy": true
+  },
+  {
+   "id": "the_rogue_shadowfall",
+   "title": "The Rogue: Shadowfall",
+   "description": "A dark-fantasy 3D roguelite.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/the-rogue/",
+   "poster": "/game-posters/the-rogue/01-cover.webp",
+   "portrait": false,
+   "lazy": true
+  },
+  {
+   "id": "color_sort",
+   "title": "Color Sort",
+   "description": "Pour the colours from bottle to bottle until each colour fills a bottle of its own.",
+   "category": "puzzle",
+   "players": "Solo",
+   "url": "/games/color-sort/",
+   "poster": "/game-posters/color-sort/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "brick_escape",
+   "title": "Brick Escape",
+   "description": "A tray full of studded bricks, with doors in its walls.",
+   "category": "puzzle",
+   "players": "Solo",
+   "url": "/games/brick-escape/",
+   "poster": "/game-posters/brick-escape/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "critter_kart",
+   "title": "Critter Kart",
+   "description": "Pick one of six critter drivers and race five rivals over three laps of Frosting Loop Valley.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/critterkart/",
+   "poster": "/game-posters/critterkart/01-cover.webp",
+   "portrait": false,
+   "lazy": true
+  },
+  {
+   "id": "canyon_rush_circuit",
+   "title": "Canyon Rush Circuit",
+   "description": "Drift, boost and jump through a sunlit 3D canyon.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/canyon-rush/",
+   "poster": "/game-posters/canyon-rush/01-cover.webp",
+   "portrait": false,
+   "lazy": true
+  },
+  {
+   "id": "helix_fall",
+   "title": "Helix Fall",
+   "description": "Rotate the tower, find the gaps and drop the glowing orb down.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/helix-fall/",
+   "poster": "/game-posters/helix-fall/01-hero-drop.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
+   "id": "underhall_after_curfew",
+   "title": "Underhall: After Curfew",
+   "description": "A superhero school dungeon in 3D.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/underhall/",
+   "poster": "/game-posters/underhall/01-cover.webp",
+   "portrait": false,
+   "lazy": true
+  },
+  {
+   "id": "neon_alley",
+   "title": "Neon Alley: Last Call",
+   "description": "A neon pixel-art street brawler.",
+   "category": "arcade",
+   "players": "Solo",
+   "url": "/games/neon-alley/",
+   "poster": "/game-posters/neon-alley/01-cover.webp",
+   "portrait": false,
+   "lazy": false
+  }
+ ]
+}

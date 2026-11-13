@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NOOB Games - play free in your browser</title>
+<meta name="description" content="Play free games in your browser: racers, runners, puzzles, card and board games and more. No account needed. Sign up to NOOB to save your progress.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F8CB46">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://games.noobsocials.com/">
+<link rel="icon" href="/brand/noob-logo-120.png" type="image/png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NOOB Games">
+<meta property="og:title" content="NOOB Games - play free in your browser">
+<meta property="og:description" content="Racers, runners, puzzles, card and board games. No account needed.">
+<meta property="og:url" content="https://games.noobsocials.com/">
+<meta property="og:image" content="https://games.noobsocials.com/brand/og-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/hub.css">
+</head>
+<body>
+<header class="signbar" id="signbar">
+  <a class="signlink" href="https://noobsocials.com/">Sign up / Log in to save your progress</a>
+</header>
+
+<main class="home" id="home">
+  <section class="hero">
+    <img class="logo" src="/brand/noob-logo-120.png" width="64" height="64" alt="NOOB">
+    <div>
+      <h1>NOOB Games</h1>
+      <p>Play free. No account needed.</p>
+    </div>
+  </section>
+  <p class="status" id="status" role="status">Loading games...</p>
+  <ul class="grid" id="grid"></ul>
+  <footer class="foot">
+    <p>Playing as a guest: scores are not saved to a NOOB account.
+      <a href="https://noobsocials.com/">Sign up / Log in</a> to save your progress.</p>
+  </footer>
+</main>
+
+<section class="player" id="player" hidden aria-label="Game">
+  <div class="bar">
+    <button type="button" class="back" id="back">&larr; Back to games</button>
+    <h2 class="title" id="playTitle"></h2>
+    <button type="button" class="fs" id="fs" hidden>Full screen</button>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" aria-describedby="dlgText">
+    <h2 id="dlgTitle">Save your progress</h2>
+    <p id="dlgText">Sign up or log in to keep your scores and unlock rewards.</p>
+    <a class="btn primary" id="dlgSignup" href="https://noobsocials.com/">Sign up / Log in</a>
+    <button type="button" class="btn secondary" id="dlgNotNow">Not now</button>
+  </div>
+</div>
+
+<noscript><p class="status">This games site needs JavaScript. You can still <a href="https://noobsocials.com/">sign up or log in</a>.</p></noscript>
+<script src="/hub.js" defer></script>
+</body>
+</html>

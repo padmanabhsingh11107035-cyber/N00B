@@ -276,6 +276,12 @@
   Cache-Control: public, max-age=31536000, immutable
 /game-posters/*
   Cache-Control: public, max-age=604800
+# The public games hub (public/games-site/, shown at the root of games.noobsocials.com by worker/gamesSite.js): its own scripts and style only, no network, no inline code, and it can not be
+# framed. The games it frames keep their own rules above (each already allows 'self' as a frame ancestor). Kept for five minutes so a change reaches players quickly.
+/games-site/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; media-src 'none'; connect-src 'self'; frame-src 'self'; worker-src 'none'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'none'
+  Cache-Control: public, max-age=300
 
 # The files that decide whether the app is up to date are never kept by a browser or a CDN: the page itself, the tiny file naming the current build (the app re-reads
 # it to know a newer version exists, see src/utils/appVersion.ts) and the service worker. Everything else has a fingerprint in its name and can be kept forever.

@@ -1,0 +1,8 @@
+# Games site: the hub page is open; the games' own pages are only opened from the hub.
+User-agent: *
+Allow: /$
+Allow: /hub.css
+Allow: /hub.js
+Allow: /game-posters/
+Allow: /brand/
+Disallow: /games/

@@ -22,7 +22,7 @@ Almost every engine game (apexdrift, ashenfang, breachpt, coil-rush, critterkart
 ## Owner steps for the separate address
 
 1. **Cloudflare, Workers & Pages, worker `n00b`, Settings, Domains & Routes, Add, Custom domain:** `games.noobsocials.com`. (The DNS record is created by Cloudflare itself since the zone `noobsocials.com` is there. Same Worker, same assets. Wait until the certificate shows Active.)
-2. Check (a browser or `curl -I`): `https://games.noobsocials.com/games/royal-ludo/` loads (200) and shows `content-security-policy: ... frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com`; `https://games.noobsocials.com/` answers **404** (the app is not served there).
+2. Check (a browser or `curl -I`): `https://games.noobsocials.com/games/royal-ludo/` loads (200) and shows `content-security-policy: ... frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com`; `https://games.noobsocials.com/` shows the public games hub (see below), while app addresses (`/profile`, `/sw.js`, `/manifest.json`) answer **404**.
 3. **Supabase:** nothing to add. The games never talk to Supabase themselves (their CSP is `connect-src 'self'`); the score/ranking calls are made by the app.
 4. **Build setting:** add the variable `VITE_GAMES_ORIGIN` = `https://games.noobsocials.com` in Cloudflare (Workers Builds, Settings, Variables and secrets, **build** variable) and redeploy. To roll back, delete the variable and redeploy; behaviour returns to the current one.
 5. Do **not** put the app's own CSP `frame-src` in the way: the app's CSP has `frame-src https:` (public/_headers, rule `/*`), so framing `https://games.noobsocials.com` is already allowed. If `frame-src` is ever narrowed, add the games address.
@@ -33,3 +33,11 @@ Almost every engine game (apexdrift, ashenfang, breachpt, coil-rush, critterkart
 - **Saves start empty.** Each game's saved data (bests, unlocked skins, settings, unfinished runs) lives in the browser storage of the address it ran on. On the games address that storage is new and empty. Nothing is deleted (the old saves stay on the app's address, unreadable by the games) but players will see their local game progress reset. Rankings and NOOB payouts are in the database and are not affected. If that is not acceptable, a one-time copy needs a small bridge page on the app's address that posts each game's keys to the games address; ask for it before switching.
 - The warm-up code (`utils/*Warmup.ts`) still pre-fetches the big games' files from the app's address; after the switch that pre-fetch no longer helps (it warms the wrong address) and costs bandwidth. It can be pointed at `GAMES_ORIGIN` in a later change (those files would then need CORS headers or `no-cors` fetches).
 - Games on the games address share one origin among themselves: one game's script could read another game's saves there (never the app's sign-in). That is the same as today.
+
+
+## Public games site (hub at the root of the games address)
+
+- `public/games-site/` (index.html, hub.css, hub.js, games.json, robots.txt): plain files, no sign-in, no app code. `worker/gamesSite.js` (`routeFor`) maps `/`, `/index.html`, `/hub.css`, `/hub.js`, `/games.json`, `/robots.txt` on the games host to `/games-site/*`; everything else except `/games/*` is 404. On the app host `/games-site/*` is 404. Folders that bypass the Worker (`/assets/*`, `/brand/*`, `/game-posters/*`, some `/games/*`) are still plain static files on both hosts, as before.
+- Rerun after the catalogue changes: `node scripts/gen-games-site.mjs` (the test fails when games.json is out of date).
+- First visit: dialog "Save your progress" with "Not now" remembered 7 days; the yellow line "Sign up / Log in to save your progress" is always on top. Guests: the hub answers the games' ranking and online-room questions with "not available" (never scores, never "*").
+- Test: `node scripts/supabase/test-games-site.mjs` (part of `npm run guard`). Rollback: revert the `routeFor` call in worker/index.js (the root is 404 again).

@@ -4,6 +4,9 @@
 /** hosts that serve only the games and the games hub (the separate games address; add a host here when it is created in Cloudflare) */
 export const GAMES_HOSTS = new Set(['games.noobsocials.com']);
 
+/** the game folders that exist (public/games/<name>/). On the games address ONLY these are served: an unknown /games/<x>/ must be a plain 404, not the app's fallback page (the app must never run there). A test keeps this list equal to the folders. */
+export const GAME_DIRS = new Set(['_shared', 'apexdrift', 'ashenfang', 'breachpt', 'brick-escape', 'canyon-rush', 'coil-rush', 'color-sort', 'critterkart', 'farbound', 'flappy20', 'frostzero', 'helix-fall', 'lane-runner', 'metro-rush', 'neon-alley', 'nocta-uno', 'noob-run-3d', 'noobgames-hub', 'pulsegrid', 'royal-ludo', 'siegecraft', 'strikebowl', 'terrafoundry', 'the-rogue', 'underhall', 'vertical-platformer']);
+
 /** the hub's own files: address on the games host -> file in the website's files. "/" is asked for as the folder (".../index.html" would be answered with a redirect). */
 const HUB = {
   '/': '/games-site/',
@@ -24,7 +27,7 @@ export function routeFor(hostname, pathname) {
     // on the app's address the hub's folder is not a page (it would otherwise be shown by the app's fallback)
     return pathname === '/games-site' || pathname.startsWith('/games-site/') ? { kind: 'notfound' } : { kind: 'pass' };
   }
-  if (pathname.startsWith('/games/')) return { kind: 'pass' };
+  if (pathname.startsWith('/games/')) return GAME_DIRS.has(pathname.split('/')[2] || '') ? { kind: 'pass' } : { kind: 'notfound' };
   if (Object.prototype.hasOwnProperty.call(HUB, pathname)) return { kind: 'hub', asset: HUB[pathname] };
   return { kind: 'notfound' };
 }

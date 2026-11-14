@@ -38,7 +38,13 @@ const G = 'games.noobsocials.com', M = 'noobsocials.com';
 check(GAMES_HOSTS.has(G) && routeFor(G, '/').kind === 'hub' && routeFor(G, '/').asset === '/games-site/', 'games host: / is the hub (not the app)');
 check(['/index.html', '/hub.css', '/hub.js', '/games.json', '/robots.txt'].every((p) => routeFor(G, p).kind === 'hub' && routeFor(G, p).asset.startsWith('/games-site/')), 'games host: the hub files are mapped');
 check(['/sw.js', '/manifest.json', '/profile', '/reels', '/login', '/version.json', '/assets/x.js', '/games-site/hub.js', '/games', '/m/a.jpg', '/__geo', '/hub.js/x', '/../index.html'].every((p) => routeFor(G, p).kind === 'notfound'), 'games host: sw.js, manifest, app routes, media, geo and everything else are 404');
-check(routeFor(G, '/games/flappy20/').kind === 'pass' && routeFor(G, '/games/neon-alley/data/x.bin').kind === 'pass', 'games host: /games/* passes as before');
+check(routeFor(G, '/games/flappy20/').kind === 'pass' && routeFor(G, '/games/neon-alley/data/x.bin').kind === 'pass', 'games host: /games/<a real game>/ passes as before');
+check(['/games/zzz/', '/games/', '/games/../x', '/games/app/', '/games/_shared'].map((p) => routeFor(G, p).kind).join() === 'notfound,notfound,notfound,notfound,pass', 'games host: an unknown /games/<x>/ is a 404, never the app page (only the real game folders pass)');
+{
+  const { GAME_DIRS } = await import(pathToFileURL(path.resolve('worker/gamesSite.js')).href);
+  const dirs = fs.readdirSync('public/games', { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
+  check(JSON.stringify([...GAME_DIRS].sort()) === JSON.stringify(dirs), 'the list of game folders in the Worker equals the folders in public/games');
+}
 check(['/', '/profile', '/sw.js', '/games/flappy20/', '/hub.js', '/m/a.jpg', '/assets/x.js'].every((p) => routeFor(M, p).kind === 'pass'), 'main host: nothing changed');
 check(routeFor(M, '/games-site/').kind === 'notfound' && routeFor(M, '/games-site/hub.js').kind === 'notfound', 'main host: the hub folder is not a page there');
 

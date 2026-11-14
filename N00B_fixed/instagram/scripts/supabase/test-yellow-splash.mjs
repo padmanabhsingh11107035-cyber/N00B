@@ -58,7 +58,7 @@ check(fs.existsSync(res + 'drawable/splash_logo.xml') && fs.existsSync(res + 'dr
 
 console.log('Timing and hand-over (public/splash.js)');
 const code = read('public/splash.js');
-check(/MIN_MS = 1100, MAX_MS = 1800, FADE_MS = 250/.test(code) && /#F8CB46/.test(code), 'at least 1.1 s, at most 1.8 s, fade 250 ms');
+check(/MIN_MS = 1100, MAX_MS = 1800, FADE_MS = 60/.test(code) && /#F8CB46/.test(code), 'at least 1.1 s, at most 1.8 s, fade 60 ms');
 check(/__noobSplash\?\.ready\(\)/.test(read('src/App.tsx')) && /noobSplash\?\.ready\(\)/.test(read('src/main.tsx')) && /noob-splash-end/.test(read('src/utils/statusStrip.ts')) && /__noobSplash\?: \{ active\?: boolean/.test(read('src/utils/statusStrip.ts')), 'the app tells the splash when it is ready; the strip waits for it and repaints after');
 check(/__noobSplash\.cancel/.test(read('public/editor-init.js')), 'NOOB Studio keeps its own black screen');
 

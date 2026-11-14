@@ -180,7 +180,7 @@ export function MessagesList(p: MessagesListProps) {
       {/* Instants: a small tab at the right edge of the list, it takes no room from the chats */}
       <InstantsStack onOpenCamera={p.onOpenInstantCamera} onOpenViewer={p.onOpenInstantViewer} refreshKey={p.instantsRefreshKey} />
 
-          {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
+          {/* ONE scroller: the coloured header stays put and the chat sheet slides up over it, the filters stay on top, the chats appear line by line */}
           <div ref={listRef} className="msg-scroll relative flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-none no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
           <div className="msg-head force-dark shrink-0 px-5 pb-[calc(20px+var(--msg-r))]" data-testid="messages-header">
             {/* title row: "Messages" with the number of chats; the menu (back, calls, new group, settings ...) is the three dots at the right */}

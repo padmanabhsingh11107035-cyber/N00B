@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <!-- yellow behind the page while it starts, so no black flash shows between the launch screen and the yellow opening screen of the app -->
+        <item name="android:windowBackground">@color/noob_yellow</item>
+        <item name="android:statusBarColor">@color/noob_black</item>
+        <item name="android:navigationBarColor">@color/noob_black</item>
+    </style>
+
+
+    <!-- Launch screen: all yellow with the NOOB logo, no words (Android 12+ uses the first three items, older phones the background drawable). -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/noob_yellow</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:background">@drawable/splash_yellow</item>
+    </style>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The NOOB logo for the launch screen: black N, O (eye), O (eye), B on a transparent background (no words). Made from public/brand/noob-splash-logo.svg.
+     Android 12+ shows it in a circle in the middle of the yellow launch screen, so it is kept inside the middle 176 of 288 dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <group android:translateX="25.45" android:translateY="29.39" android:scaleX="0.232" android:scaleY="0.232">
+        <path android:strokeColor="#000000" android:strokeWidth="44" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M163.5,571V417L291.5,571V417" />
+        <path android:fillColor="#000000" android:fillType="evenOdd" android:pathData="M726 398H820C856 398 874 418 874 446C874 465 866 477 855 485C872 492 882 508 882 532C882 570 862 592 826 592H726Q714 592 714 580V410Q714 398 726 398ZM758 438H812Q822 438 822 448V464Q822 474 812 474H758ZM758 510H822Q834 510 834 522V538Q834 550 822 550H758Z" />
+        <path android:fillColor="#000000" android:pathData="M318,494a98,98 0 1,0 196,0a98,98 0 1,0 -196,0Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M332,494a84,84 0 1,0 168,0a84,84 0 1,0 -168,0Z" />
+        <path android:fillColor="#000000" android:pathData="M376,492a52,52 0 1,0 104,0a52,52 0 1,0 -104,0Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M432.5,469a12.5,12.5 0 1,0 25.0,0a12.5,12.5 0 1,0 -25.0,0Z" />
+        <path android:fillColor="#000000" android:pathData="M511,494a98,98 0 1,0 196,0a98,98 0 1,0 -196,0Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M525,494a84,84 0 1,0 168,0a84,84 0 1,0 -168,0Z" />
+        <path android:fillColor="#000000" android:pathData="M569,492a52,52 0 1,0 104,0a52,52 0 1,0 -104,0Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M625.5,469a12.5,12.5 0 1,0 25.0,0a12.5,12.5 0 1,0 -25.0,0Z" />
+    </group>
+</vector>

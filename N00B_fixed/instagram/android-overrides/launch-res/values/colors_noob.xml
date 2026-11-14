@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="noob_black">#0a0a0a</color>
+    <!-- the NOOB launch colour (the opening screen of the app is the same yellow) -->
+    <color name="noob_yellow">#F8CB46</color>
+</resources>

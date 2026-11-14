@@ -50,7 +50,7 @@ check(/\/launch\/\*\n  Cache-Control/.test(headers) && rules <= 100, `_headers h
 console.log('Android');
 const man = JSON.parse(read('public/manifest.json'));
 check(man.background_color === '#F8CB46' && man.theme_color === '#F8CB46', 'manifest background and launch colour are yellow');
-const res = 'android/app/src/main/res/';
+const res = 'android-overrides/launch-res/';   // the generated android/ folder is not in git; these are the files for it
 check(/#F8CB46/i.test(read('capacitor.config.json')) && /noob_yellow">#F8CB46/.test(read(res + 'values/colors_noob.xml')), 'capacitor.config.json and colors: yellow');
 const styles = read(res + 'values/styles.xml') + read(res + 'values-v27/styles.xml');
 check(/windowSplashScreenBackground">@color\/noob_yellow/.test(styles) && /windowSplashScreenAnimatedIcon">@drawable\/splash_logo/.test(styles) && /windowLayoutInDisplayCutoutMode">shortEdges/.test(styles), 'Android 12+ launch screen: yellow, logo icon, drawn under the cut-out');

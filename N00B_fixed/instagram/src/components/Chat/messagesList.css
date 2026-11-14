@@ -6,7 +6,9 @@
 @media (display-mode: standalone) { .msg-page { --msg-top: 6px; } }
 html.phone-edge .msg-page { --msg-top: 10px; }
 .msg-page .msg-head { padding-top: calc(var(--msg-sat) + var(--msg-top)); }
-.msg-page .msg-scroll { overscroll-behavior: contain; }
+/* the list never stretches past its ends, also not when it is flung fast (an iPhone's rubber band): the sheet fills what is left of the screen when there are only a few chats,
+   and the last chat sits right above the bottom bar when there are many */
+.msg-page .msg-scroll { overscroll-behavior: none; }
 
 /* The Messages page (from the picture, in its measured sizes): always dark and premium in both themes - a flat deep-green header that meets a near-black sheet with big rounded
    corners, one mint accent, the phone's own font (San Francisco on an iPhone). The bottom bar is not touched. */

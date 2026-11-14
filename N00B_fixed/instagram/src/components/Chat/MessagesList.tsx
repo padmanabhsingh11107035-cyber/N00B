@@ -181,8 +181,8 @@ export function MessagesList(p: MessagesListProps) {
       <InstantsStack onOpenCamera={p.onOpenInstantCamera} onOpenViewer={p.onOpenInstantViewer} refreshKey={p.instantsRefreshKey} />
 
           {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
-          <div ref={listRef} className="msg-scroll relative flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
-          <div className="msg-head force-dark px-5 pb-[calc(20px+var(--msg-r))]" data-testid="messages-header">
+          <div ref={listRef} className="msg-scroll relative flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-none no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
+          <div className="msg-head force-dark shrink-0 px-5 pb-[calc(20px+var(--msg-r))]" data-testid="messages-header">
             {/* title row: "Messages" with the number of chats; the menu (back, calls, new group, settings ...) is the three dots at the right */}
             <div className="flex items-end gap-2.5 h-[38px]">
               <h1 className="min-w-0 text-[33px] leading-[38px] font-bold text-white tracking-[-0.5px]">
@@ -277,7 +277,7 @@ export function MessagesList(p: MessagesListProps) {
           </div>
 
           {/* the big rounded sheet that holds the filters and the chats, overlapping the header */}
-          <div className="msg-sheet relative z-[1] -mt-[var(--msg-r)] rounded-t-[var(--msg-r)] min-h-[70vh]">
+          <div className="msg-sheet relative z-[1] -mt-[var(--msg-r)] rounded-t-[var(--msg-r)] flex-[1_0_auto]">
 
           {/* filters (All, Unread, Favourites, Groups): all four sit inside the sheet (they scale with the screen width), a soft highlight slides to the one you pick */}
           <div ref={pillsRef} className="msg-sticky msg-pills sticky top-[-12px] z-10 rounded-t-[var(--msg-r)] pt-[22px] pb-[17px] flex items-center justify-between overflow-x-auto no-scrollbar" data-testid="messages-filters">
@@ -334,7 +334,7 @@ export function MessagesList(p: MessagesListProps) {
           </div>
 
           {/* Chat List Rows */}
-          <div data-testid="messages-rows" className="pb-[120px]">
+          <div data-testid="messages-rows" className="pb-2">
             {finalFilteredConversations.length === 0 && filteredFriendsWithoutChat.length === 0 && (
               <div className="p-8 text-center text-zinc-500 text-sm space-y-2">
                 <MessageCircle className="w-8 h-8 text-zinc-600 mx-auto opacity-50" />

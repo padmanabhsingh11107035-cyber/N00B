@@ -11,6 +11,13 @@ html.phone-edge .msg-page { --msg-top: 10px; }
 .msg-page .msg-scroll { overscroll-behavior: none; }
 /* the coloured top stays where it is while the list is scrolled: the chat sheet (its big rounded corners first) slides up over it and covers it */
 .msg-page .msg-head { position: sticky; top: 0; z-index: 0; }
+/* the Header colour button: a colour wheel that turns slowly around a drop in the chosen colour */
+.msg-page .msg-hue { isolation: isolate; transition: transform .15s ease; }
+.msg-page .msg-hue::before { content: ""; position: absolute; inset: 0; border-radius: 50%; z-index: -1; background: conic-gradient(#ff4d4d, #ffb020, #f8cb46, #2ecc71, #26c6da, #2979ff, #7c4dff, #f06292, #ff4d4d); animation: msg-hue-turn 9s linear infinite; }
+.msg-page .msg-hue:active { transform: scale(.92); }
+.msg-page .msg-hue-in { box-shadow: 0 0 0 1.5px var(--head); }
+@keyframes msg-hue-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .msg-page .msg-hue::before { animation: none; } }
 .msg-page .msg-sheet { box-shadow: 0 -14px 28px -18px rgba(0, 0, 0, .45); }
 
 /* The Messages page (from the picture, in its measured sizes): always dark and premium in both themes - a flat deep-green header that meets a near-black sheet with big rounded

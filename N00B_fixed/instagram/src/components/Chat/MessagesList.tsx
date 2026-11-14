@@ -236,6 +236,16 @@ export function MessagesList(p: MessagesListProps) {
                   <MapPinned className="w-[21px] h-[21px]" strokeWidth={2.1} />
                 </button>
               )}
+              {/* Header colour: a turning colour wheel around a drop in the colour that is chosen now (opens the page with the 30 colours) */}
+              <button type="button" onClick={() => setShowHeadColour(true)} aria-label="Header colour: choose the colour of the top of this page" title="Header colour" data-testid="messages-head-colour"
+                className="msg-hue relative w-[45px] h-[45px] rounded-full flex items-center justify-center cursor-pointer shrink-0">
+                <span className="msg-hue-in relative w-[35px] h-[35px] rounded-full bg-[var(--head-btn)] flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" className="w-[19px] h-[19px]" aria-hidden="true">
+                    <path d="M12 2.6c3.4 4.1 6.4 7.6 6.4 11.3A6.4 6.4 0 0 1 12 20.4a6.4 6.4 0 0 1-6.4-6.5c0-3.7 3-7.2 6.4-11.3Z" fill="var(--head)" />
+                    <path d="M9 14.2c0 1.7 1.2 3 2.9 3.2" fill="none" stroke="var(--head-btn)" strokeWidth="1.7" strokeLinecap="round" opacity=".55" />
+                  </svg>
+                </span>
+              </button>
             </div>
 
             {/* the people row: "Your Instant" first (it opens the camera), then the verified people you chat with (pinned first) in a mint ring */}
@@ -508,9 +518,6 @@ export function MessagesList(p: MessagesListProps) {
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); p.onShowSettings(); }} className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Palette className="w-4 h-4 text-[var(--mint)]" /> Chat Bubble Theme
-                    </button>
-                    <button onClick={() => { setShowLeftMenu(false); setShowHeadColour(true); }} data-testid="messages-head-colour" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white cursor-pointer">
-                      <span className="w-4 h-4 rounded-full shrink-0 border border-white/40" style={{ backgroundColor: headColour }} /> Header colour
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); p.onShowInstantsArchive(); }} data-testid="instants-archive-open" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Archive className="w-4 h-4 text-amber-300" /> Your Instants

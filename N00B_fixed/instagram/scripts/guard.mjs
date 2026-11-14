@@ -23,6 +23,7 @@ const CHECKS = [
   ['Desktop / tablet layout', ['node', 'scripts/supabase/test-desktop-layout.mjs']],
   ['Bottom bar', ['node', 'scripts/supabase/test-bottom-nav-flat.mjs']],
   ['Reels page', ['node', 'scripts/supabase/test-reels-pager.mjs']],
+  ['Games page look (red theme, dark and light, drawn posters)', ['node', 'scripts/supabase/test-games-page-look.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],
   ['Top strip and install bar', ['node', 'scripts/supabase/test-peek-install-strip.mjs']],

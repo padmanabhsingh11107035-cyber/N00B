@@ -144,7 +144,7 @@ async function boot() {
   const currentUser = signedOut ? null : user;
 
   const Menu = () => {
-    const pages = [['draw', 'NOOB Draw'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['mood', 'Mood Status (slider)'], ['moodclassic', 'Mood Status (picker, notes, lists)'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['chat', 'Messages (chat list + chats)'], ['forms', 'NOOB Forms (my forms)'], ['userdata&admin=1', "Admin: User's data (green map)"], ['form', 'NOOB Forms (public form)']];
+    const pages = [['draw', 'NOOB Draw'], ['games', 'Games'], ['tot', 'This or That'], ['ask', 'Ask Me Anything (inbox)'], ['ask&target=priya.nair', 'Ask Me Anything (someone\'s page)'], ['polls', 'Public Polls'], ['mood', 'Mood Status (slider)'], ['moodclassic', 'Mood Status (picker, notes, lists)'], ['anon', 'Anonymous Messages'], ['studio', 'NOOB Studio'], ['chat', 'Messages (chat list + chats)'], ['forms', 'NOOB Forms (my forms)'], ['userdata&admin=1', "Admin: User's data (green map)"], ['form', 'NOOB Forms (public form)']];
     return h('div', { style: { padding: 20, fontFamily: 'sans-serif', color: theme === 'light' ? '#111' : '#eee' } },
       h('h2', null, 'NOOB visual harness'),
       h('p', null, 'Add &theme=light|dark &phone=1 &state=full|empty|loading|error &admin=1 &voted=1 &user=0 to any link.'),
@@ -180,6 +180,10 @@ async function boot() {
         h(ChatView, { currentUser, onMobileViewChange: noop, onUserUpdated: noop, onNavigateToProfile: (u) => console.info('[harness] profile', u?.username) })),
       // a stand-in for the bottom bar (the real one is fixed, z-40, --nav-h tall)
       h('nav', { id: 'floating-bottom-nav', className: 'fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:hidden', style: { color: '#888', textAlign: 'center', fontSize: 12, paddingTop: 20 } }, 'bottom bar (stand-in)'));
+  } else if (page === 'games') {
+    // the Games page (the people list is the harness user only; the leaderboard comes from the mocks, or is empty)
+    const { GamesView } = await import('../src/components/Games/GamesView.tsx');
+    Page = () => h(GamesView, { currentUser, allUsers: [currentUser], onUserUpdated: noop, onNavigateToUserProfile: noop, onBack: () => console.info('[harness] onBack') });
   } else if (page === 'loader') {
     // the loading page. &steps=0..5 = how many start-up requests are done, &steps=end = ready (100 %), &tracked=0 = the turning ring of a page being fetched
     const { NoobStackLoader } = await import('../src/components/Common/NoobStackLoader.tsx');

@@ -47,6 +47,17 @@
         "dev"
       ],
       "port": 5190
+    },
+    {
+      "name": "n00b-harness",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "N00B_fixed/instagram",
+        "run",
+        "harness"
+      ],
+      "port": 5190
     }
   ]
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { LoadingPage } from '../Common/LoadingPages';
+import './gamesZ.css';
 import {
   Gamepad2,
   Trophy,
@@ -40,6 +41,7 @@ import { formatNoobPoints } from '../../utils/formatPoints';
 import { useResumeState } from '../../utils/useResumeState';
 import { setResumePage, clearResumePageIf, clearGameSnapshot } from '../../utils/pageResume';
 import { startGameMusic, stopGameMusic, isGameMusicOn, setGameMusicOn } from '../../utils/gameMusic';
+import { forceStripColour } from '../../utils/statusStrip';
 
 interface GamesViewProps {
   currentUser: User;
@@ -90,6 +92,17 @@ export const GamesView: React.FC<GamesViewProps> = ({
     startGameMusic();
     return () => stopGameMusic();
   }, [quietGame]);
+  // The page reaches from the very top to the bottom bar: the strip behind the clock / camera takes the page's own colour (dark or light) while the list is on screen,
+  // and goes back to normal when a game is open or the page is left.
+  const gameOpen = !!selectedGameForPlay;
+  useEffect(() => {
+    if (gameOpen) return undefined;
+    const paint = () => forceStripColour(document.documentElement.getAttribute('data-theme') === 'light' ? '#f4f4f6' : '#0c0c0e');
+    paint();
+    const mo = new MutationObserver(paint);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => { mo.disconnect(); forceStripColour(null); };
+  }, [gameOpen]);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -183,99 +196,107 @@ export const GamesView: React.FC<GamesViewProps> = ({
   // everybody who has played at least one game, the most played first
   const players = allUsers.filter((u) => u.id !== currentUser.id && (u.gamesPlayedCount || 0) >= 1).sort((a, b) => (b.gamesPlayedCount || 0) - (a.gamesPlayedCount || 0));
 
+  const catLabel = (k: string) => CATEGORIES.find((c) => c.key === k)?.label || 'Game';
+  // a game without a picture of its own gets a poster drawn by the page: one of six colourways (always the same one for the same game) and the game's initials
+  const artOf = (g: MiniGameMeta) => {
+    let h = 0;
+    for (let i = 0; i < g.id.length; i++) h = (h * 31 + g.id.charCodeAt(i)) >>> 0;
+    const words = g.title.replace(/[^A-Za-z0-9 ]/g, ' ').split(' ').filter(Boolean);
+    return { c: h % 6, mono: ((words[0]?.[0] || 'N') + (words[1]?.[0] || '')).toUpperCase() };
+  };
+  const poster = (game: MiniGameMeta, rank?: number) => {
+    const art = artOf(game);
+    return (
+      <span className="gz-poster">
+        {game.posters && game.posters[0] ? (
+          <img src={game.posters[0]} alt="" loading="lazy" decoding="async" draggable={false} />
+        ) : (
+          <span className="gz-art" data-c={art.c} data-testid="game-art">
+            <span className="gz-mono" aria-hidden="true">{art.mono}</span>
+            <span className="gz-art-t line-clamp-2">{game.title}</span>
+          </span>
+        )}
+        {game.isNew && <span className="gz-new">NEW</span>}
+        {rank ? <span className="gz-rank">#{rank}</span> : null}
+        <span className="gz-cat"><span className="block min-w-0 truncate">{catLabel(game.category)}</span></span>
+        <span className="gz-go" aria-hidden="true"><Play className="w-4 h-4 fill-white ml-0.5" /></span>
+      </span>
+    );
+  };
+
   const tile = (game: MiniGameMeta, wide = false) => (
     <button
       key={game.id}
       type="button"
       onClick={() => setSelectedGameForPlay(game)}
-      className={`rbx-tile group text-left shrink-0 self-start cursor-pointer ${wide ? 'w-full' : 'w-[200px] sm:w-[230px] lg:w-[260px]'}`}
+      className={`gz-tile group text-left shrink-0 self-start cursor-pointer ${wide ? 'w-full' : 'w-[214px] sm:w-[236px] lg:w-[262px]'}`}
       data-testid={`game-tile-${game.id}`}
     >
-      <div className="relative aspect-video overflow-hidden rounded-xl bg-[#232527] ring-1 ring-white/5 transition-transform duration-200 group-hover:scale-[1.03]">
-        {game.posters && game.posters[0] ? (
-          <img src={game.posters[0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover object-center" />
-        ) : (
-          // no picture of its own yet: one clean, same-size card (the game's colours, its name) instead of the old cartoon banner
-          <div className={`w-full h-full bg-gradient-to-br ${game.bannerBg} flex items-center justify-center p-3 text-center`}>
-            <span className="text-[15px] sm:text-base font-black leading-tight text-white drop-shadow line-clamp-3">{game.title}</span>
-          </div>
-        )}
-        {game.isNew && <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#00b06f] text-[10px] font-extrabold text-white">NEW</span>}
-        <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="w-11 h-11 rounded-full bg-white/95 flex items-center justify-center"><Play className="w-5 h-5 text-black fill-black ml-0.5" /></span>
+      <span className="gz-card">
+        {poster(game)}
+        <span className="gz-body block">
+          <span className="gz-name block line-clamp-2 min-h-[2.5em]">{game.title}</span>
+          <span className="gz-meta">
+            <span className="gz-pill"><Users className="w-3 h-3 shrink-0" /><span className="block min-w-0 truncate">{game.players}</span></span>
+            <span className="block min-w-0 truncate">{game.rewardNote || (game.pointsReward > 0 ? 'Earn NOOBs' : 'For fun')}</span>
+          </span>
         </span>
-      </div>
-      <p className="mt-2 text-[13px] font-bold text-white leading-snug line-clamp-2 min-h-[2.6em]">{game.title}</p>
-      <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#bdbebe] truncate">
-        <Users className="w-3 h-3 shrink-0" />
-        <span className="truncate">{game.players}</span>
-        <span className="text-[#6f7072]">·</span>
-        <span className="truncate">{game.rewardNote || (game.pointsReward > 0 ? 'Earn NOOBs' : 'For fun')}</span>
-      </p>
+      </span>
     </button>
   );
 
   return (
-    <div className="rbx w-full min-h-screen bg-[#121316] text-white md:px-8 lg:px-12 px-4 pb-28 md:pb-12" data-testid="games-page">
-      {/* Top bar: back (laptop / computer), search in the middle, points and the small buttons on the right */}
-      <header className="sticky top-0 z-30 -mx-4 md:-mx-8 lg:-mx-12 px-4 md:px-8 lg:px-12 py-3 bg-[#121316] flex items-center gap-3">
+    <div className="gz w-full min-h-screen md:px-8 lg:px-12 px-4 pb-28 md:pb-12" data-testid="games-page">
+      {/* Top bar: back (laptop / computer), the name, then search, points and the small buttons on the right */}
+      <header className="gz-top sticky top-0 z-30 -mx-4 md:-mx-8 lg:-mx-12 px-4 md:px-8 lg:px-12 py-3 flex items-center gap-2.5">
         {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            data-testid="games-back"
-            className="hidden md:inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full bg-[#232527] hover:bg-[#2f3133] text-sm font-bold text-white cursor-pointer shrink-0 transition-colors"
-          >
+          <button type="button" onClick={onBack} data-testid="games-back" className="gz-ib max-md:!hidden !w-auto px-3 gap-1 text-sm font-bold">
             <ChevronLeft className="w-5 h-5" />
             Back
           </button>
         )}
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <span className="text-[22px] leading-none font-black italic tracking-tight">NOOB</span>
-          <span className="px-2 h-5 rounded-md bg-[#232527] text-[10px] font-extrabold tracking-wider inline-flex items-center">GAMES</span>
+          <span className="gz-word">NOOB</span>
+          <span className="gz-tag">GAMES</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setShowSearch((v) => !v)} aria-label="Search games" className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"><Search className="w-4 h-4" /></button>
-          <span className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-[#232527] text-sm font-bold" title="Your NOOBs">
-            <span className="w-4 h-4 rounded-full bg-amber-400 inline-block" />
+          <button onClick={() => setShowSearch((v) => !v)} aria-label="Search games" className="gz-ib"><Search className="w-4 h-4" /></button>
+          <span className="gz-pts hidden sm:inline-flex" title="Your NOOBs">
+            <span className="gz-coin" />
             {formatNoobPoints(userPoints)}
           </span>
           <button
             onClick={() => { const next = !musicOn; setMusicOn(next); setGameMusicOn(next); }}
             aria-label={musicOn ? 'Turn game music off' : 'Turn game music on'}
             title={musicOn ? 'Game music is on (tap to turn off)' : 'Game music is off (tap to turn on)'}
-            className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"
+            className="gz-ib"
           >
-            {musicOn ? <Music className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4 text-[#8d8e90]" />}
+            {musicOn ? <Music className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-60" />}
           </button>
           <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu((prev) => !prev)}
-              aria-label="Arena information"
-              className="w-10 h-10 rounded-full bg-[#232527] hover:bg-[#2f3133] flex items-center justify-center cursor-pointer transition-colors"
-            >
+            <button onClick={() => setShowMenu((prev) => !prev)} aria-label="Arena information" className="gz-ib">
               <MoreVertical className="w-4 h-4" />
             </button>
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setShowMenu(false)} />
-                <div className="fixed left-4 right-4 top-20 mx-auto max-w-sm z-40 p-4 rounded-2xl bg-[#232527] shadow-2xl text-left">
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-                    <Info className="w-4 h-4 text-white" />
-                    <h3 className="text-xs font-black text-white uppercase tracking-wider">Arena Info &amp; Rules</h3>
+                <div className="gz-pop fixed left-4 right-4 top-20 mx-auto max-w-sm z-40 p-4 text-left">
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b" style={{ borderColor: 'var(--gz-line)' }}>
+                    <Info className="w-4 h-4" style={{ color: 'var(--gz-red)' }} />
+                    <h3 className="text-xs font-black uppercase tracking-wider">Arena Info &amp; Rules</h3>
                   </div>
                   <div className="space-y-2.5 text-xs">
-                    <div className="bg-[#121316] p-2.5 rounded-xl">
-                      <span className="text-[11px] font-bold text-[#bdbebe] block mb-1">Scoring System</span>
+                    <div className="gz-pop-in">
+                      <span className="text-[11px] font-bold block mb-1" style={{ color: 'var(--gz-mute)' }}>Scoring System</span>
                       <div className="space-y-1 text-xs">
-                        <div className="flex items-center justify-between"><span className="text-zinc-300">🏆 Victory:</span><span className="text-white font-black">+10M NOOBs</span></div>
-                        <div className="flex items-center justify-between"><span className="text-zinc-300">🤝 Draw / Tie:</span><span className="text-blue-400 font-black">+5M NOOBs</span></div>
-                        <div className="flex items-center justify-between"><span className="text-zinc-300">💥 Loss / Defeat:</span><span className="text-zinc-500 font-bold">0 NOOBs</span></div>
+                        <div className="flex items-center justify-between gap-2"><span>Victory</span><span className="font-black" style={{ color: 'var(--gz-red)' }}>+10M NOOBs</span></div>
+                        <div className="flex items-center justify-between gap-2"><span>Draw / Tie</span><span className="font-black">+5M NOOBs</span></div>
+                        <div className="flex items-center justify-between gap-2"><span>Loss / Defeat</span><span className="font-bold" style={{ color: 'var(--gz-dim)' }}>0 NOOBs</span></div>
                       </div>
                     </div>
-                    <div className="bg-[#121316] p-2.5 rounded-xl">
-                      <span className="text-[11px] font-bold text-[#bdbebe] block mb-1">Game Modes</span>
-                      <ul className="text-[11px] text-zinc-300 space-y-1 list-disc list-inside">
+                    <div className="gz-pop-in">
+                      <span className="text-[11px] font-bold block mb-1" style={{ color: 'var(--gz-mute)' }}>Game Modes</span>
+                      <ul className="text-[11px] space-y-1 list-disc list-inside">
                         <li>Quick match with active online players</li>
                         <li>Instant practice matches against AI Bot</li>
                         <li>Direct invites to chat with friends</li>
@@ -290,23 +311,41 @@ export const GamesView: React.FC<GamesViewProps> = ({
       </header>
 
       {(showSearch || searchQuery) && (
-        <div className="relative mb-2">
-          <Search className="w-4 h-4 text-[#bdbebe] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input autoFocus type="text" placeholder="Search games" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-10 bg-[#232527] rounded-full pl-10 pr-4 text-sm text-white placeholder-[#8d8e90] focus:outline-none focus:ring-2 focus:ring-white/30" />
+        <div className="relative mb-3">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--gz-red)' }} />
+          <input autoFocus type="text" placeholder="Search games" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="gz-search" />
         </div>
       )}
 
+      {/* The welcome card: what the page is, the person's own numbers, and the game to start with */}
+      {activeTab === 'games' && !searching && (
+        <section className="gz-hero mb-5" data-testid="games-hero">
+          <p className="gz-hero-k">NOOB Games</p>
+          <h1 className="gz-hero-t">Play. Win.<br />Earn NOOBs.</h1>
+          <p className="gz-hero-s">{ALL_50_MINI_GAMES.length} games, one tap away. Every win adds to your NOOBs.</p>
+          <div className="gz-hero-row">
+            <span className="gz-hero-chip"><span className="gz-coin" /><span className="block min-w-0 truncate">{formatNoobPoints(userPoints)} NOOBs</span></span>
+            <span className="gz-hero-chip"><Trophy className="w-3.5 h-3.5 shrink-0" /><span className="block min-w-0 truncate">Rank #{userRank}</span></span>
+            {hot[0] && (
+              <button type="button" className="gz-hero-cta" onClick={() => setSelectedGameForPlay(hot[0])} data-testid="games-hero-play">
+                <Play className="w-3.5 h-3.5 shrink-0 fill-current" /><span className="block min-w-0 truncate">Play {hot[0].title}</span>
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* For You / Charts */}
-      <div className="flex items-center gap-6 mb-4 border-b border-white/10">
-        <button onClick={() => setActiveTab('games')} className={`pb-2.5 text-[15px] font-bold cursor-pointer border-b-2 transition-colors ${activeTab === 'games' ? 'text-white border-white' : 'text-[#8d8e90] border-transparent hover:text-white'}`}>For You</button>
-        <button onClick={() => setActiveTab('leaderboard')} className={`pb-2.5 text-[15px] font-bold cursor-pointer border-b-2 transition-colors ${activeTab === 'leaderboard' ? 'text-white border-white' : 'text-[#8d8e90] border-transparent hover:text-white'}`}>Charts</button>
+      <div className="gz-seg mb-5" role="tablist">
+        <button role="tab" aria-selected={activeTab === 'games'} onClick={() => setActiveTab('games')}>For You</button>
+        <button role="tab" aria-selected={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')}>Charts</button>
       </div>
 
       {activeTab === 'games' ? (
         <>
           {/* People who have played at least one game (their picture, then their name and how many games) */}
           {!searching && (
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0" data-testid="games-players">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-5 -mx-4 px-4 md:mx-0 md:px-0" data-testid="games-players">
               {[{ ...currentUser, __me: true } as any, ...players].map((u: any) => (
                 <button
                   key={u.id}
@@ -314,29 +353,34 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   onClick={() => { if (!u.__me && onNavigateToUserProfile) onNavigateToUserProfile(u); }}
                   className="shrink-0 w-[72px] text-center cursor-pointer"
                 >
-                  <span className="relative block w-[64px] h-[64px] mx-auto rounded-full overflow-hidden bg-[#232527] ring-1 ring-white/10">
-                    <img src={u.avatar || '/noob-logo-circle.png'} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <span className="gz-ava">
+                    <img src={u.avatar || '/noob-logo-circle.png'} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                   </span>
-                  <span className="block mt-1.5 text-[12px] font-semibold text-white truncate">{u.__me ? 'You' : (u.displayName || u.username)}</span>
-                  <span className="block text-[11px] text-[#8d8e90] truncate">{(u.gamesPlayedCount || 0).toLocaleString()} {(u.gamesPlayedCount || 0) === 1 ? 'game' : 'games'}</span>
+                  <span className="gz-pname block truncate">{u.__me ? 'You' : (u.displayName || u.username)}</span>
+                  <span className="gz-pnum block truncate">{(u.gamesPlayedCount || 0).toLocaleString()} {(u.gamesPlayedCount || 0) === 1 ? 'game' : 'games'}</span>
                 </button>
               ))}
             </div>
           )}
 
-          {/* The hottest games: our own big games, wide pictures */}
+          {/* The hottest games: our own big games, wide posters with their place */}
           {!searching && hot.length > 0 && (
-            <section className="mt-1 mb-6" data-testid="games-hottest">
-              <h2 className="text-[22px] leading-tight font-extrabold">The hottest games</h2>
-              <p className="text-[13px] text-[#bdbebe] mb-3">What's trending today on NOOB</p>
-              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x">
-                {hot.map((g) => (
-                  <button key={g.id} type="button" onClick={() => setSelectedGameForPlay(g)} className="group shrink-0 snap-start self-start flex flex-col items-stretch justify-start text-left cursor-pointer w-[86%] sm:w-[420px] lg:w-[520px]">
-                    <span className="block aspect-video overflow-hidden rounded-2xl bg-[#232527] ring-1 ring-white/5">
-                      <img src={g.posters![0]} alt="" loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+            <section className="mb-6" data-testid="games-hottest">
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="gz-h">The hottest games</h2>
+                <span className="gz-rule" />
+              </div>
+              <p className="gz-sub mb-3">What's trending today on NOOB</p>
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x scroll-pl-4 md:scroll-pl-0 pb-2">
+                {hot.map((g, i) => (
+                  <button key={g.id} type="button" onClick={() => setSelectedGameForPlay(g)} className="gz-tile group shrink-0 snap-start self-start text-left cursor-pointer w-[84%] sm:w-[420px] lg:w-[500px]">
+                    <span className="gz-card">
+                      {poster(g, i + 1)}
+                      <span className="gz-body block">
+                        <span className="gz-name block truncate !text-[15px]">{g.title}</span>
+                        <span className="gz-desc block line-clamp-2 min-h-[2.8em]">{g.description}</span>
+                      </span>
                     </span>
-                    <span className="block mt-2 text-[15px] font-bold truncate">{g.title}</span>
-                    <span className="hidden md:block text-[12px] text-[#bdbebe] line-clamp-2 min-h-[2.6em]">{g.description}</span>
                   </button>
                 ))}
               </div>
@@ -344,13 +388,9 @@ export const GamesView: React.FC<GamesViewProps> = ({
           )}
 
           {/* Category chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-3 no-scrollbar">
+          <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
             {CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setSelectedCategory(cat.key)}
-                className={`h-8 px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${selectedCategory === cat.key ? 'bg-white text-black' : 'bg-[#232527] text-white hover:bg-[#2f3133]'}`}
-              >
+              <button key={cat.key} onClick={() => setSelectedCategory(cat.key)} aria-pressed={selectedCategory === cat.key} className="gz-chip">
                 {cat.label}
               </button>
             ))}
@@ -358,26 +398,27 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
           {searching ? (
             <>
-              <h2 className="text-xl font-extrabold mt-3 mb-3">{searchQuery.trim() ? `Results for “${searchQuery.trim()}”` : CATEGORIES.find((c) => c.key === selectedCategory)?.label}</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-5">
+              <h2 className="gz-h mt-1 mb-3 break-words">{searchQuery.trim() ? `Results for “${searchQuery.trim()}”` : CATEGORIES.find((c) => c.key === selectedCategory)?.label}</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                 {filteredGames.map((g) => tile(g, true))}
               </div>
               {filteredGames.length === 0 && (
                 <div className="text-center py-16">
-                  <p className="text-[#bdbebe] text-sm">No games found matching "{searchQuery}".</p>
-                  <button onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }} className="mt-3 h-9 px-4 rounded-full bg-white text-black text-sm font-bold cursor-pointer">Reset filters</button>
+                  <p className="gz-sub !text-sm break-words">No games found matching "{searchQuery}".</p>
+                  <button onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }} className="gz-btn mt-3">Reset filters</button>
                 </div>
               )}
             </>
           ) : (
-            <div className="space-y-7 mt-2">
+            <div className="space-y-7 mt-1">
               {shelves.map((s) => (
                 <section key={s.id} data-testid={`games-shelf-${s.id}`}>
-                  <button type="button" onClick={() => { if (s.id !== 'new') setSelectedCategory(s.id as GameCategory); }} className="flex items-center gap-1 mb-3 cursor-pointer">
-                    <h2 className="text-xl font-extrabold">{s.title}</h2>
-                    {s.id !== 'new' && <ChevronRight className="w-5 h-5 text-[#bdbebe]" />}
+                  <button type="button" onClick={() => { if (s.id !== 'new') setSelectedCategory(s.id as GameCategory); }} className="w-full flex items-center gap-3 mb-3 cursor-pointer text-left">
+                    <h2 className="gz-h truncate">{s.title}</h2>
+                    <span className="gz-rule" />
+                    {s.id !== 'new' && <span className="gz-more">See all<ChevronRight className="w-4 h-4" /></span>}
                   </button>
-                  <div className="flex items-start gap-3 overflow-x-auto no-scrollbar pb-1 -mx-3 px-3 md:mx-0 md:px-0 snap-x">
+                  <div className="flex items-start gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0 snap-x scroll-pl-4 md:scroll-pl-0">
                     {s.games.map((g) => tile(g))}
                   </div>
                 </section>
@@ -388,23 +429,26 @@ export const GamesView: React.FC<GamesViewProps> = ({
       ) : (
         /* GLOBAL NOOBS LEADERBOARD TAB */
         <div className="max-w-3xl">
-          <h2 className="text-xl font-extrabold mb-3">Top 10</h2>
-          <div className="space-y-2">
+          <div className="flex items-center gap-3 mb-3">
+            <h2 className="gz-h">Top 10</h2>
+            <span className="gz-rule" />
+          </div>
+          <div className="space-y-2.5">
             {isLoadingLeaderboard && leaderboard.length === 0 ? (
-              <div className="py-10 flex flex-col items-center justify-center gap-2 text-[#bdbebe]">
+              <div className="py-10 flex flex-col items-center justify-center gap-2 gz-sub">
                 <Radio className="w-6 h-6 animate-pulse" />
                 <span className="text-xs">Loading rankings...</span>
               </div>
             ) : leaderboardError && leaderboard.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-2 text-center px-4">
-                <ShieldAlert className="w-6 h-6 text-amber-400" />
-                <span className="text-xs text-[#bdbebe]">Couldn't load the leaderboard right now.</span>
-                <button onClick={loadLeaderboardData} className="mt-1 text-xs text-white underline cursor-pointer font-semibold">Try again</button>
+                <ShieldAlert className="w-6 h-6" style={{ color: 'var(--gz-red)' }} />
+                <span className="text-xs gz-sub">Couldn't load the leaderboard right now.</span>
+                <button onClick={loadLeaderboardData} className="gz-btn mt-1">Try again</button>
               </div>
             ) : leaderboard.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-1.5 text-center px-4">
-                <Trophy className="w-6 h-6 text-[#6f7072]" />
-                <span className="text-xs text-[#bdbebe]">No rankings yet — be the first to play!</span>
+                <Trophy className="w-6 h-6" style={{ color: 'var(--gz-dim)' }} />
+                <span className="text-xs gz-sub">No rankings yet — be the first to play!</span>
               </div>
             ) : (
               leaderboard.slice(0, 10).map((player, idx) => {
@@ -413,12 +457,13 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <div
                     key={player.userId || player.username || idx}
                     onClick={() => { if (fullUser && onNavigateToUserProfile) onNavigateToUserProfile(fullUser); }}
-                    className={`p-3 rounded-xl flex items-center justify-between gap-3 transition-colors ${fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''} ${player.username === currentUser.username ? 'bg-[#2f3133]' : 'bg-[#232527] hover:bg-[#2a2c2e]'}`}
+                    data-me={player.username === currentUser.username ? '1' : undefined}
+                    className={`gz-lb ${fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={`w-7 shrink-0 text-center font-extrabold text-sm ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-[#8d8e90]'}`}>{idx + 1}</span>
+                      <span className="gz-medal" data-r={idx + 1}>{idx + 1}</span>
                       <img
-                        src={player.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                        src={player.avatar || '/noob-logo-circle.png'}
                         alt={player.username}
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                         referrerPolicy="no-referrer"
@@ -426,14 +471,14 @@ export const GamesView: React.FC<GamesViewProps> = ({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-sm font-bold text-white truncate">{player.displayName || player.username}</span>
-                          {player.username === currentUser.username && <span className="text-[10px] px-1.5 rounded bg-white text-black font-bold shrink-0">YOU</span>}
+                          {player.username === currentUser.username && <span className="gz-you">YOU</span>}
                         </div>
-                        <span className="text-[11px] text-[#bdbebe] block truncate">@{player.username} • {player.gamesWon || 0} Wins</span>
+                        <span className="text-[11px] gz-sub block truncate">@{player.username} • {player.gamesWon || 0} Wins</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0 ml-2">
-                      <span className="text-sm font-black text-white block">{formatNoobPoints(player.noobPoints || 0)}</span>
-                      <span className="text-[10px] text-[#8d8e90] block">NOOBs</span>
+                      <span className="gz-lbpts">{formatNoobPoints(player.noobPoints || 0)}</span>
+                      <span className="text-[10px] gz-sub block">NOOBs</span>
                     </div>
                   </div>
                 );

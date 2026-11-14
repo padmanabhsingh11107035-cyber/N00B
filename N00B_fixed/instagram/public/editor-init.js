@@ -4,6 +4,7 @@
   try {
     if (!/^editor\./i.test(location.hostname) && !/[?&]editor=1/.test(location.search)) return;
     window.__splashSeconds = 1;
+    if (window.__noobSplash && window.__noobSplash.cancel) window.__noobSplash.cancel();   // NOOB Studio keeps its own black screen, not the yellow one
     var splash = document.getElementById('noob-splash');
     if (splash) splash.className = 'logo';
     document.title = 'NOOB Studio';

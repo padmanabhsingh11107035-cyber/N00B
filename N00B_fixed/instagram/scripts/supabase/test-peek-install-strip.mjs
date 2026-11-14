@@ -14,13 +14,14 @@ check(/setStoryPeek\(peek && currentUser\?\.proTier === 'ultimate' && list\[inde
 console.log('\n2. Install button');
 const pwa = read('src/utils/pwaInstall.ts'), invite = read('src/components/Common/InstallInvite.tsx'), page = read('src/components/Profile/InstallAndPermissionsPage.tsx'), auth = read('src/components/Auth/AuthView.tsx');
 check(/noob_app_installed/.test(pwa) && /remember\(true\)/.test(pwa) && /installed = false; remember\(false\)/.test(pwa) && /rememberedInstall\(\) && !deferredPrompt/.test(pwa), 'an installed Android app is remembered (installed, or opened as an app) and forgotten when the browser offers the install again');
-check(/!isIos\(currentPushEnv\(\)\)\)/.test(invite), 'the install invitation never opens on an iPhone');
-check(/onIos \? " hidden" : ""/.test(page), 'the Install card in settings is hidden on an iPhone');
-check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\)\)/.test(auth), 'the login screen has no install button on an iPhone or when installed');
+check(/!isIos\(currentPushEnv\(\)\) && !isAndroidWeb\(\)\)/.test(invite), 'the install invitation never opens on an iPhone');
+check(/onIos \|\| isAndroidWeb\(\) \? " hidden" : ""/.test(page), 'the Install card in settings is hidden on an iPhone');
+check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\) \|\| isAndroidWeb\(\)\)/.test(auth), 'the login screen has no install button on an iPhone or when installed');
 console.log('\n3. Top strip and Messages colour');
 const strip = read('src/utils/statusStrip.ts'), main = read('src/main.tsx'), css = read('src/index.css') + read('src/components/Chat/messagesList.css'), chat = read('src/components/Chat/ChatView.tsx');
 check(/elementFromPoint\(Math\.floor\(window\.innerWidth \/ 2\), 3\)/.test(strip) && /setAttribute\('content', colour\)/.test(strip) && /style\.backgroundColor = colour/.test(strip) && /pointer: coarse/.test(strip), 'on a touch screen the strip behind the clock / Dynamic Island takes the colour drawn at the top edge of the open page');
 check(/MutationObserver/.test(strip) && /'scroll', queue/.test(strip) && /setStripColour/.test(strip) && /noob-top-edge/.test(strip) && /initStatusStrip\(\);/.test(main), 'it follows page changes and scrolling, lets Messages set its own colour (also drawn by a thin bar at the top edge), and starts with the app');
 check(/--head: #0E4B37;/.test(css) && /'#0E4B37'/.test(chat) && !/02351f/.test(css + chat), 'the Messages header green is #0E4B37 everywhere');
+check(/HIDE_ANDROID_INSTALL = true/.test(read('src/utils/pwaInstall.ts')) && /ANDROID_APP_OFFER_ON = false/.test(read('src/components/Common/AndroidAppPrompt.tsx')), 'no Install button or app-file card on Android phones until Google Play');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

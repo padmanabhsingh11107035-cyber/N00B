@@ -44,17 +44,17 @@ check(files.every((f) => /hardReload/.test(read(f)) && !/window\.location\.reloa
 check(/onClick=\{hardReload\}/.test(read('src/App.tsx')) && /cleanReloadMark\(\);/.test(read('src/main.tsx')), 'the chat "Reload NOOB" button does too, and the mark is removed at start-up');
 check(/\/version\.json[\s\S]{0,40}no-store/.test(read('public/_headers')) && /\/index\.html\s+Cache-Control: no-cache/.test(read('public/_headers').replace(/\r/g, '')) && !/\.put\(/.test(read('public/sw.js')) && /DOWN_FILES = \['\/app-down\.html', '\/boot-guard\.js', '\/noob-logo-circle\.png', '\/favicon-32\.png'\]/.test(read('public/sw.js')), 'the page, the version file and the service worker are never kept, and the service worker keeps no copies of its own pages (only the four small files of the "short break" page)');
 
-section('2. Burger while waiting, pages fetched ahead');
-const burger = read('src/components/Common/BurgerLoading.tsx');
-check(/export const BurgerLoading/.test(burger) && /export const TabBurgerLoading/.test(burger) && /export const BurgerSmall/.test(burger) && /<NoobStackLoader mode="quick"/.test(burger), 'one burger layer (full screen), one inside a page of the bottom bar, one small');
+section('2. Loading page while waiting, pages fetched ahead');
+const burger = read('src/components/Common/LoadingPages.tsx');
+check(/export const LoadingPage/.test(burger) && /export const TabLoading/.test(burger) && /export const LoadingSmall/.test(burger) && /<NoobStackLoader mode="quick"/.test(burger), 'one loading page (full screen), one small ring inside a page of the bottom bar, one small spot');
 const fallbackFiles = ['src/App.tsx', 'src/components/Feed/FeedView.tsx', 'src/components/Profile/ProfileView.tsx', 'src/components/NoobRooms/NoobRoomsLobbyView.tsx', 'src/components/Games/GamesView.tsx', 'src/components/Games/GamePlayModal.tsx', 'src/components/Reels/ReelsView.tsx', 'src/components/Draw/NoobDrawHost.tsx', 'src/components/Team/TeamJoinHost.tsx', 'src/components/Settings/kit.tsx'];
 const spinners = fallbackFiles.filter((f) => /border-2 border-(white\/20|zinc-700) border-t-/.test(read(f)));
 check(spinners.length === 0, 'no page or window waits behind the old plain spinner any more', spinners.join(', '));
 const app = read('src/App.tsx');
-check((app.match(/fallback=\{<TabBurgerLoading \/>\}/g) || []).length >= 6, 'the pages of the bottom bar wait inside their own area (the bar stays, the tap is seen to have worked)');
+check((app.match(/fallback=\{<TabLoading \/>\}/g) || []).length >= 6, 'the pages of the bottom bar wait inside their own area (the bar stays, the tap is seen to have worked)');
 check(/const queue: Array<\(\) => Promise<unknown>> = \[\.\.\.TAB_PRELOADS\.map\(\(\[, preload\]\) => preload\), \(\) => import\('\.\/components\/Settings\/SettingsHub'\)\];/.test(app) && /void worker\(\); void worker\(\);/.test(app) && /\}, 600\);/.test(app), 'every page of the bar and Settings and activity are fetched in the background two at a time, 0.6 seconds after sign-in');
 check(/onPressTab=\{\(tab\) => \{ const hit = TAB_PRELOADS/.test(app), 'and a page is asked for the moment its button is pressed');
-check(/BurgerLoading label="Connecting…"/.test(read('src/components/NoobRooms/NoobRoomsLobbyView.tsx')), 'a voice room says it is connecting, behind the burger');
+check(/LoadingPage label="Connecting…"/.test(read('src/components/NoobRooms/NoobRoomsLobbyView.tsx')), 'a voice room says it is connecting, behind the loading page');
 
 section('3. The page behind a full-screen page does not scroll');
 const vp = { width: 390, height: 844 };

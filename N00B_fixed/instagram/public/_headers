@@ -300,9 +300,9 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
   Cross-Origin-Resource-Policy: same-site
-# The opening animation (public/opening): its address carries a version number (?v=1 in index.html), so a changed file is fetched anew and the rest is kept for a year.
-/opening/*
-  Cache-Control: public, max-age=31536000, immutable
+# The launch pictures of iPhones and iPads (public/launch, yellow with the NOOB logo, linked in index.html): iOS keeps its own copy, a changed picture has a new name.
+/launch/*
+  Cache-Control: public, max-age=2592000
 /brand/*
   Cache-Control: public, max-age=604800
 /live-avatars/*

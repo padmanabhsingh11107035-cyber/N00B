@@ -83,6 +83,7 @@ const pageColour = (): string => (document.documentElement.getAttribute('data-th
 // `nudge`: a page with a colour of its own (Messages) has just come or gone, so the phone is asked to look at the top of the screen again. NEVER for a colour that was only read from the
 // screen (that can change while a page scrolls, and changing the viewport tag at that moment made the whole page flash white for a moment, most on Explore).
 function applyColour(colour: string, nudge: false | 'light' | 'full' = false): void {
+  if ((window as unknown as { __noobSplash?: { active?: boolean } }).__noobSplash?.active) { last = ''; return; }   // the yellow opening screen owns the strip and the page colour until it has faded out (it then sends noob-splash-end)
   if (edgeMode()) {
     // phones with the page under the clock: no bar and no page colour behind the clock, only the phone's own tint of that area (the theme colour) follows the page, so the fade the phone puts there matches
     document.getElementById('noob-top-edge')?.remove(); edge = null;
@@ -193,5 +194,6 @@ export function initStatusStrip(): void {
   window.addEventListener('resize', queue);
   window.addEventListener('popstate', queue);
   document.addEventListener('visibilitychange', queue);
+  window.addEventListener('noob-splash-end', repaintStrip);
   queue();
 }

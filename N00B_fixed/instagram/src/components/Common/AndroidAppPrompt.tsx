@@ -7,6 +7,8 @@ import { PROMPT_MAX_TIMES, shouldOfferAndroidApp, type PromptMemory } from '../.
 
 // The card itself. When it is offered is decided in utils/androidAppPrompt.ts.
 const KEY = 'noob.androidAppPrompt';
+// OFF until NOOB is on Google Play: then this card becomes a button that opens the Play Store listing.
+const ANDROID_APP_OFFER_ON = false;
 
 const load = (): PromptMemory | null => {
   try {
@@ -22,7 +24,7 @@ export const AndroidAppPrompt: React.FC = () => {
 
   useEffect(() => {
     const ok = shouldOfferAndroidApp({ userAgent: navigator.userAgent, native: isNativeApp(), installed: isInstalled(), memory: load(), now: Date.now() });
-    if (!ok) return;
+    if (!ok || !ANDROID_APP_OFFER_ON) return;
     const t = window.setTimeout(() => setShow(true), 25000);
     return () => window.clearTimeout(t);
   }, []);

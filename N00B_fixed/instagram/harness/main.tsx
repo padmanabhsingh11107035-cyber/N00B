@@ -180,6 +180,14 @@ async function boot() {
         h(ChatView, { currentUser, onMobileViewChange: noop, onUserUpdated: noop, onNavigateToProfile: (u) => console.info('[harness] profile', u?.username) })),
       // a stand-in for the bottom bar (the real one is fixed, z-40, --nav-h tall)
       h('nav', { id: 'floating-bottom-nav', className: 'fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:hidden', style: { color: '#888', textAlign: 'center', fontSize: 12, paddingTop: 20 } }, 'bottom bar (stand-in)'));
+  } else if (page === 'loader') {
+    // the loading page. &steps=0..5 = how many start-up requests are done, &steps=end = ready (100 %), &tracked=0 = the turning ring of a page being fetched
+    const { NoobStackLoader } = await import('../src/components/Common/NoobStackLoader.tsx');
+    const lp = await import('../src/utils/loadProgress.ts');
+    const st = q.get('steps') || '0';
+    lp.resetLoadProgress();
+    if (st === 'end') { lp.LOAD_STEPS.forEach((k) => lp.markLoadStep(k)); lp.finishLoadProgress(); } else lp.LOAD_STEPS.slice(0, Number(st) || 0).forEach((k) => lp.markLoadStep(k));
+    Page = () => h(NoobStackLoader, { mode: 'quick', tracked: q.get('tracked') !== '0', subtitle: q.get('sub') || undefined });
   } else if (page === 'userdata') {
     // the admin page "User's data" (green map). ?state=empty|error|loading, ?denied=1 = the database refuses
     const { AdminUserDataPage } = await import('../src/components/Modals/AdminUserDataPage.tsx');

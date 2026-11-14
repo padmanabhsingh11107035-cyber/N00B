@@ -19,7 +19,7 @@ import { formatCountdown } from '../../utils/countdown';
 import { holdSongs } from '../../utils/songSound';
 import { funShareUrl } from '../../utils/funRoutes';
 import { preloadStoryPictures, isStoryPictureLoaded } from '../../utils/preloadStoryMedia';
-import { BurgerSmall } from '../Common/BurgerLoading';
+import { LoadingSmall } from '../Common/LoadingPages';
 import { rotateClass, rotateModeOf } from '../../utils/rotatingStory';
 
 interface StoryViewerModalProps {
@@ -615,7 +615,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             onError={() => setReadyStoryId(story.id)}
           />
           {!mediaReady && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" data-testid="story-loading"><BurgerSmall /></div>
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" data-testid="story-loading"><LoadingSmall /></div>
           )}
 
           {/* Interactive Stickers Overlay */}

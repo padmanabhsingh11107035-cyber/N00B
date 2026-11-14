@@ -72,7 +72,7 @@ import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
 import { isAppleMobile } from '../../utils/platformDetect';
-import { canInstallNow, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
+import { canInstallNow, isAndroidWeb, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 import { isOnOtherNoobAddress, installAddress } from '../../utils/siteUrl';
@@ -388,7 +388,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // address with ?install=1 — there the same button glows harder and says what to tap.
   const installElsewhere = useMemo(() => isOnOtherNoobAddress(), []);
   // The install button is only for a device that can use it and has not installed NOOB yet: nothing at all once it is installed, and never on an iPhone or iPad (there it does nothing).
-  const hideInstall = !installElsewhere && (appInstalled || isAppleMobile());
+  const hideInstall = !installElsewhere && (appInstalled || isAppleMobile() || isAndroidWeb());
   const installBtnRef = useRef<HTMLButtonElement>(null);
   const [installAttn, setInstallAttn] = useState(false);
   useEffect(() => {
@@ -978,9 +978,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
   if (oauthChecking) {
     return (
-      <div className="doodle-wallpaper-feed min-h-screen w-full text-white flex flex-col items-center justify-center">
-        <NoobStackLoader mode="quick" subtitle="Signing you in…" />
-      </div>
+      <NoobStackLoader mode="quick" subtitle="Signing you in…" />
     );
   }
 

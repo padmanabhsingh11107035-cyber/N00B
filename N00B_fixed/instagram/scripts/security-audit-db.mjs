@@ -126,7 +126,7 @@ for (const r of anonWrites) if (noRlsSet.has(r.table_name)) flag('ANONYMOUS VISI
 
 // 8. profiles: what every logged-in person may read of everybody else. The Pro / shop columns are closed (only the database's own functions read them, so they only reach the person
 //    themselves and the admin); every other column stays readable, and a NEW column has to be granted on purpose (grant select (column) on public.profiles to authenticated) or listed here.
-const CLOSED_PROFILE_COLUMNS = ['pro_billing', 'pro_auto_renew', 'pro_renews_at', 'purchased_item_ids'];
+const CLOSED_PROFILE_COLUMNS = ['pro_billing', 'pro_auto_renew', 'pro_renews_at', 'purchased_item_ids', 'city', 'privacy_settings', 'extra', 'noob_points', 'is_suspended'];   // the last five: migration 20261114000009
 for (const c of (await q(`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'profiles'`)).map((r) => r.column_name)) {
   const can = (await q(`select has_column_privilege('authenticated', 'public.profiles', $1, 'select') as c`, [c]))[0].c;
   if (CLOSED_PROFILE_COLUMNS.includes(c) && can) flag('PRIVATE PROFILE COLUMN READABLE BY EVERY LOGGED-IN PERSON', c);

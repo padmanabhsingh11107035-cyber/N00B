@@ -26,6 +26,8 @@ const CHECKS = [
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],
   ['Top strip and install bar', ['node', 'scripts/supabase/test-peek-install-strip.mjs']],
+  ['Loading page (quotes, real progress, small ring, no old burger)', ['node', 'scripts/supabase/test-loading-page.mjs']],
+  ['Yellow opening screen (logo, full screen, iOS launch pictures, Android launch screen)', ['node', 'scripts/supabase/test-yellow-splash.mjs']],
   // features the administrator controls
   ['Calculator lock', ['node', 'scripts/supabase/test-calc-lock.mjs']],
   ['Birthday gifts', ['node', 'scripts/supabase/test-birthday-gifts.mjs']],
@@ -57,6 +59,8 @@ const CHECKS = [
   ['Public games site (hub, Worker mapping, headers)', ['node', 'scripts/supabase/test-games-site.mjs']],
   // chat privacy
   ['Locked chat pictures, videos and voice notes', ['node', 'scripts/supabase/test-e2ee-media.mjs']],
+  ['Privacy hardening: profile columns closed, private follows, contact lookup limits, visit retention, login unchanged', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-hardening.mjs']],
+  ['www.noobsocials.com redirects to the apex (Worker)', ['node', 'scripts/supabase/test-www-redirect.mjs']],
   ['Private chat media: Worker gate', ['node', 'scripts/supabase/test-chat-media-worker.mjs']],
   ['Private chat media: phone side', ['node', 'scripts/supabase/test-chat-media-client.mjs']],
   ['Private chat media: copy tool safety', ['node', 'scripts/supabase/test-chat-media-migration.mjs']],

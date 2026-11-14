@@ -63,6 +63,12 @@ export function chromeInstallUrl(href: string): string {
 }
 export const SAMSUNG_INSTALL_HINT = 'Samsung Internet’s installer is blocked by Google Play Protect. Opening Chrome, which installs NOOB safely. If Chrome does not open, install Chrome from the Play Store and open noobsocials.com there.';
 
+// No Install button on Android phones until NOOB is on Google Play (then the button opens the Play Store listing). Flip to false to bring the browser install back.
+export const HIDE_ANDROID_INSTALL = true;
+export function isAndroidWeb(ua: string = typeof navigator !== 'undefined' ? navigator.userAgent : ''): boolean {
+  return HIDE_ANDROID_INSTALL && /Android/i.test(ua);
+}
+
 export const canInstallNow = (): boolean => !!deferredPrompt;
 export const isInstalled = (): boolean => installed || isStandalone() || (rememberedInstall() && !deferredPrompt);
 

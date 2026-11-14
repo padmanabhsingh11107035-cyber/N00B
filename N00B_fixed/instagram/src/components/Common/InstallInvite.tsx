@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
-import { canInstallNow, chromeInstallUrl, isInstalled, isSamsungInternet, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
+import { canInstallNow, isAndroidWeb, chromeInstallUrl, isInstalled, isSamsungInternet, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
 import { currentPushEnv, isIos } from '../../utils/pushSupport';
 import { isNativeApp, isOnOtherNoobAddress } from '../../utils/siteUrl';
 
@@ -20,7 +20,7 @@ export function readInvite(search: string): { fromOld: boolean } | null {
 const INVITE = typeof window !== 'undefined' ? readInvite(window.location.search) : null;
 
 export const InstallInvite: React.FC = () => {
-  const [open, setOpen] = useState(() => !!INVITE && !isNativeApp() && !isOnOtherNoobAddress() && !isInstalled() && !isIos(currentPushEnv()));   // no invite on an iPhone: Apple has no install button
+  const [open, setOpen] = useState(() => !!INVITE && !isNativeApp() && !isOnOtherNoobAddress() && !isInstalled() && !isIos(currentPushEnv()) && !isAndroidWeb());   // no invite on an iPhone: Apple has no install button
   const [canInstall, setCanInstall] = useState(canInstallNow());
   const [state, setState] = useState<'idle' | 'busy' | 'accepted' | 'dismissed' | 'unavailable'>('idle');
   const [waited, setWaited] = useState(false);

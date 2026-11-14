@@ -32,6 +32,7 @@ Two ways to open every page (same query string):
 | `forms` | NOOB Forms, my forms. `&target=f1` = the editor of a form |
 | `chat` | Messages: the chat list and open chats (real ChatView in the App.tsx wrapper; `phone=1` for the notch layout) |
 | `form` | A public form as a visitor fills it (`/f/<address>`) |
+| `loader` | The loading page. `&steps=0..5` = start-up requests done (percentage 8..96), `&steps=end` = 100 %, `&tracked=0` = the plain turning ring (a page being fetched), `&sub=Text` = line under the ring |
 | `userdata` | Admin: the green hacker map "User's data" (64 made-up people, many in India). `state=empty` = NO DATA, `state=error` = CONNECTION ERROR, `denied=1` = ACCESS DENIED |
 
 Options on every link:

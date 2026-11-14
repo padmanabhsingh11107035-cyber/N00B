@@ -11,9 +11,27 @@
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" href="/noob-logo-circle.png" />
+    <!-- iOS shows its own launch picture before any code runs: yellow with the NOOB logo (made by scripts/gen-splash-assets.mjs, one per screen size) -->
+    <link rel="apple-touch-startup-image" href="/launch/launch-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1668x2224.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/launch/launch-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0a0a0a" />
     <script src="/theme-init.js"></script>
+    <style id="noob-splash-base">html.ns-on, html.ns-on body { background: #F8CB46 !important; }</style>
+    <script src="/splash.js?v=1"></script>
     <script src="/boot-guard.js"></script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -125,25 +143,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Grand+Hotel&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body class="bg-page text-white antialiased selection:bg-noob selection:text-black">
-    <!-- Opening splash: a full black screen, drawn by the page itself so it shows the very first moment the app is opened. public/opening/opening.js (loaded below)
-         takes it over and plays the 4-second opening animation on it (a pen draws NOOB, the camera dives into an eye, the app opens like an iris) and removes it at the end.
-         There is no logo on it: where that script does not run (reduced motion, a missing file) src/main.tsx fades the plain black screen away as soon as the app has started.
-         Only the editor address (NOOB Studio) shows its logo on it: editor-init.js adds the class "logo". -->
-    <div id="noob-splash" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483000;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease;">
+    <!-- Opening splash: a full yellow screen with the NOOB logo (no words), drawn by the page itself so it shows the very first moment the app is opened, behind the notch / camera /
+         status bar at the top and the home bar / navigation bar at the bottom (public/splash.js, loaded in the head, keeps the page and the browser's theme colour yellow while it shows).
+         It stays at least 1.1 s, until the app is ready (src/main.tsx and App.tsx call window.__noobSplash.ready()), and 1.8 s at most, then fades out in 0.25 s.
+         The logo is public/brand/noob-splash-logo.svg. Only the editor address (NOOB Studio) keeps a black screen with its round logo: editor-init.js adds the class "logo". -->
+    <div id="noob-splash" aria-hidden="true">
       <style>
-        @keyframes noob-splash-in { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
-        @keyframes noob-splash-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.0), 0 0 40px 6px rgba(255,255,255,.22); } 50% { box-shadow: 0 0 0 0 rgba(255,255,255,.0), 0 0 70px 14px rgba(255,255,255,.38); } }
+        #noob-splash { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100vh; height: 100lvh; z-index: 2147483000; background: #F8CB46; display: flex; align-items: center; justify-content: center; transition: opacity .25s ease; }
+        #noob-splash svg { display: block; width: min(62vw, 380px); height: auto; animation: ns-in .6s cubic-bezier(.2,.8,.2,1) both; }
+        #noob-splash .ns-eye { transform-box: fill-box; transform-origin: center; }
+        #noob-splash .ns-eye { animation: ns-glance 1.1s ease-in-out .3s both; }
         #noob-splash img { display: none; }
-        #noob-splash.logo img { display: block; width: 116px; height: 116px; border-radius: 24%; object-fit: cover; animation: noob-splash-in .55s cubic-bezier(.2,.8,.2,1) both, noob-splash-glow 1.8s ease-in-out .5s infinite; }
-        @media (prefers-reduced-motion: reduce) { #noob-splash.logo img { animation: none; } }
+        #noob-splash.logo { background: #000; }
+        #noob-splash.logo svg { display: none; }
+        #noob-splash.logo img { display: block; width: 116px; height: 116px; border-radius: 24%; object-fit: cover; animation: ns-in .55s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes ns-in { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: scale(1); } }
+        @keyframes ns-glance { 0% { transform: translate(0,0) scaleY(1); } 18% { transform: translate(0,0) scaleY(.12); } 30% { transform: translate(0,0) scaleY(1); } 55% { transform: translate(-16px,2px) scaleY(1); } 80% { transform: translate(-16px,2px) scaleY(1); } 100% { transform: translate(0,0) scaleY(1); } }
+        @media (prefers-reduced-motion: reduce) { #noob-splash svg, #noob-splash .ns-eye, #noob-splash.logo img { animation: none; } }
       </style>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="132 389 758 210" focusable="false"><path d="M163.5 571V417L291.5 571V417" fill="none" stroke="#000" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/><path fill="#000" fill-rule="evenodd" d="M726 398H820C856 398 874 418 874 446C874 465 866 477 855 485C872 492 882 508 882 532C882 570 862 592 826 592H726Q714 592 714 580V410Q714 398 726 398ZM758 438H812Q822 438 822 448V464Q822 474 812 474H758ZM758 510H822Q834 510 834 522V538Q834 550 822 550H758Z"/><circle cx="416" cy="494" r="98" fill="#000"/><circle cx="416" cy="494" r="84" fill="#fff"/><g class="ns-eye"><circle cx="428" cy="492" r="52" fill="#000"/><circle cx="445" cy="469" r="12.5" fill="#fff"/></g><circle cx="609" cy="494" r="98" fill="#000"/><circle cx="609" cy="494" r="84" fill="#fff"/><g class="ns-eye"><circle cx="621" cy="492" r="52" fill="#000"/><circle cx="638" cy="469" r="12.5" fill="#fff"/></g></svg>
       <img src="/noob-logo-circle.png" alt="" width="116" height="116" />
     </div>
-    <!-- The editor address (editor.noobsocials.com, or ?editor=1) is NOOB Studio: its own tab name and a short opening screen. Nothing changes elsewhere. -->
+    <!-- The editor address (editor.noobsocials.com, or ?editor=1) is NOOB Studio: its own tab name and a short black opening screen. Nothing changes elsewhere. -->
     <script src="/editor-init.js"></script>
-    <!-- The opening animation (it must come after the two scripts above: they tell it to stay out of the way). The version number is in the address because the files are kept for a year. -->
-    <script src="/opening/opening-data.js?v=2"></script>
-    <script src="/opening/opening.js?v=5"></script>
     <div id="root"></div>
     <noscript>
       <style>#noob-splash { display: none !important; }</style>

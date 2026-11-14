@@ -107,7 +107,7 @@ import { AndroidAppPrompt } from './components/Common/AndroidAppPrompt';
 import { RenditionStrip } from './components/Common/RenditionStrip';
 import { hardReload } from './utils/reloadApp';
 import { preloadStoryPictures } from './utils/preloadStoryMedia';
-import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
+import { LoadingPage, TabLoading } from './components/Common/LoadingPages';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
 import { useDevicePrefs } from './utils/devicePrefs';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
@@ -149,6 +149,7 @@ import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { SystemPage } from './components/Common/SystemPage';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
+import { finishLoadProgress, markLoadStep, resetLoadProgress, type LoadStep } from './utils/loadProgress';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
 import { AppLockGate } from './components/Common/AppLockGate';
@@ -212,7 +213,7 @@ const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVide
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
 // full loading screen, since by the time it appears the user already tapped something and expects
 // a response right away.
-const LazyFallback: React.FC = () => <BurgerLoading />;
+const LazyFallback: React.FC = () => <LoadingPage />;
 
 // While a profile's page is still arriving the person is shown straight away (their picture, name and @handle with the page's outline filling in), never an empty black screen.
 const ProfileSkeleton: React.FC<{ user: User }> = ({ user }) => (
@@ -478,7 +479,8 @@ export default function App() {
   const notificationSettingsRef = useRef(notificationSettings);
   notificationSettingsRef.current = notificationSettings;
   const [loading, setLoading] = useState(true);
-  // The loading screen (the burger, NoobStackLoader) shows only while the app is really loading: when the app is opened, the opening animation (public/opening) plays and the app opens straight out of it.
+  // The yellow opening screen (index.html, public/splash.js) stays until the app has loaded (at most 1.8 s), after that the loading screen (NoobStackLoader) shows by itself if the app is still loading.
+  useEffect(() => { if (!loading) { finishLoadProgress(); (window as unknown as { __noobSplash?: { ready: () => void } }).__noobSplash?.ready(); } }, [loading]);
   // /anonymous: the Anonymous Messages feed can be read by anyone, before logging in (it asks them to log in only to share or report).
   const [anonPublic, setAnonPublic] = useState(() => window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   // A Fun page opened from its own address (/polls/<id>, /ask/<username>, /mood ...): shown to a visitor who is not logged in (they can look; the page asks them to log in for the
@@ -1067,6 +1069,11 @@ export default function App() {
       const trayP = fetchHomeStoryTray();
       const reelsP = fetchReels();
       const notifP = fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }));
+      // the loading page's percentage: each request marks its step when it settles (side effects only: the promises themselves, their results and errors are untouched)
+      resetLoadProgress();
+      const stepDone = (step: LoadStep) => () => markLoadStep(step);
+      userP.then(stepDone('account'), stepDone('account')); postsP.then(stepDone('posts'), stepDone('posts')); trayP.then(stepDone('stories'), stepDone('stories'));
+      reelsP.then(stepDone('reels'), stepDone('reels')); notifP.then(stepDone('notifications'), stepDone('notifications'));
       for (const p of [postsP, trayP, reelsP, notifP]) p.catch(() => undefined);   // (so a failure of the user request below never leaves these unhandled)
       let shownCached = false;
       const earlyUser = await userP;
@@ -1777,9 +1784,7 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        <div className="doodle-wallpaper-feed w-full h-screen flex flex-col items-center justify-center text-white">
-          <NoobStackLoader mode="quick" />
-        </div>
+        <NoobStackLoader mode="quick" tracked />
       </>
     );
   }
@@ -2082,7 +2087,7 @@ export default function App() {
 
         {kept.has('explore') && (
           <KeepAliveTab hidden={activeTab !== 'explore'}>
-          <React.Suspense fallback={<TabBurgerLoading />}><ExploreView
+          <React.Suspense fallback={<TabLoading />}><ExploreView
             currentUser={currentUser}
             posts={visiblePosts}
             reels={reels}
@@ -2111,7 +2116,7 @@ export default function App() {
         {(activeTab === 'reels' || reelsVisited) && (
           <KeepAliveTab hidden={activeTab !== 'reels'}>
           <div className="py-2 px-2">
-            <React.Suspense fallback={<TabBurgerLoading />}><ReelsView
+            <React.Suspense fallback={<TabLoading />}><ReelsView
               reels={reels}
               currentUser={currentUser}
               initialReelId={selectedReelId}
@@ -2125,7 +2130,7 @@ export default function App() {
         )}
 
         {activeTab === 'videos' && (
-          <React.Suspense fallback={<TabBurgerLoading />}>
+          <React.Suspense fallback={<TabLoading />}>
             <HomeVideoFeedView
               currentUser={currentUser}
               onOpenUpload={() => setShowUploadVideoModal(true)}
@@ -2158,7 +2163,7 @@ export default function App() {
                 </div>
               }
             >
-              <React.Suspense fallback={<TabBurgerLoading />}>
+              <React.Suspense fallback={<TabLoading />}>
                 <ChatView
                   currentUser={currentUser}
                   pendingChatUser={pendingChatUser}
@@ -2192,7 +2197,7 @@ export default function App() {
         )}
 
         {activeTab === 'games' && (
-          <React.Suspense fallback={<TabBurgerLoading />}><GamesView
+          <React.Suspense fallback={<TabLoading />}><GamesView
             currentUser={currentUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
@@ -2202,7 +2207,7 @@ export default function App() {
         )}
 
         {activeTab === 'music' && !musicHidden && (
-          <React.Suspense fallback={<TabBurgerLoading />}><MusicHubView currentUser={currentUser} /></React.Suspense>
+          <React.Suspense fallback={<TabLoading />}><MusicHubView currentUser={currentUser} /></React.Suspense>
         )}
 
         {activeTab === 'profile' && renderProfileView(null)}

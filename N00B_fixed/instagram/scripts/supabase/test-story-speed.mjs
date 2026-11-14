@@ -40,7 +40,7 @@ check(/onLoad=\{\(\) => setReadyStoryId\(story\.id\)\}/.test(viewer) && /onError
 check(/el\.complete && el\.naturalWidth > 0/.test(viewer), 'a picture that was already in the phone counts as arrived at once');
 check(/const mediaReady = !!story && \(readyStoryId === story\.id \|\| isStoryPictureLoaded\(story\.mediaUrl\)\);/.test(viewer), 'a picture fetched ahead of time starts the story straight away');
 check(/\|\| !story \|\| !mediaReady \|\| showViewersSheet/.test(viewer) && /story, mediaReady, showViewersSheet/.test(viewer), 'the timer only runs once the picture is there');
-check(/\{!mediaReady && \(\s*<div[^>]*data-testid="story-loading"[^>]*><BurgerSmall \/><\/div>/.test(viewer), 'until then the burger shows (not a blank screen)');
+check(/\{!mediaReady && \(\s*<div[^>]*data-testid="story-loading"[^>]*><LoadingSmall \/><\/div>/.test(viewer), 'until then a small loading ring shows (not a blank screen)');
 check(/\{mediaReady && story\.stickers\?\.map\(/.test(viewer), 'the stickers appear together with the picture');
 check(/fetchPriority="high"/.test(viewer) && /decoding="async"/.test(viewer), 'the picture of the story on screen is fetched first');
 check(/stories\.slice\(currentIndex \+ 1, currentIndex \+ 5\)/.test(viewer) && /stories\[currentIndex - 1\]\?\.mediaUrl/.test(viewer), 'the next four stories (this person\'s, then the next person\'s) and the one before are fetched ahead of time');

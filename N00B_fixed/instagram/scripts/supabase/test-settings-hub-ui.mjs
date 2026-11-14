@@ -57,7 +57,7 @@ check(/fixed inset-0 z-\[45\]/.test(hub) && /useFullPage\(true\)/.test(hub), 'it
 check(/pushState\(\{ noobSettings/.test(hub) && /addEventListener\('popstate'/.test(hub) && /history\.go\(-/.test(hub), "the phone's Back button goes up one page, and leaving Settings takes its history entries off");
 check(/e\.key === 'Escape'/.test(hub), 'Escape goes back too');
 check(/searchRows\(rows, query\.trim\(\)\)/.test(hub) && /every word must be found|words\.every/.test(registry), 'the search finds rows by label, text and keywords');
-check(/<Suspense fallback=\{<PageLoading \/>\}>/.test(hub), 'if something has to be fetched, the burger shows while it is');
+check(/<Suspense fallback=\{<PageLoading \/>\}>/.test(hub), 'if something has to be fetched, the loading page shows while it is');
 
 section('4. The profile gives the hub what it asks for');
 for (const k of actionKeys) check(new RegExp(`\\b${k}: `).test(profile.slice(profile.indexOf('const settingsContext'))), `the profile does "${k}"`);
@@ -200,9 +200,9 @@ check(/var pref = saved === 'dark' \|\| saved === 'light' \|\| saved === 'system
 section('10. Quick, and never looking dead');
 const kit = read('src/components/Settings/kit.tsx');
 const stackLoader = read('src/components/Common/NoobStackLoader.tsx');
-check(/import \{ NoobStackLoader \} from '\.\.\/Common\/NoobStackLoader'/.test(kit) && /export const Spinner[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(kit) && /export const PageLoading[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(kit), 'waiting inside a page, and a whole page waiting, show the NOOB burger');
-check(/export const NoobStackLoader/.test(stackLoader) && /QUICK_LAYER_MS/.test(stackLoader) && !/setTimeout\([^)]*minimum|MIN_MS|minDuration/i.test(kit), 'the burger shows only for as long as the page really waits: no minimum and no maximum time');
-check(/const LazyFallback: React\.FC = \(\) => <BurgerLoading \/>;/.test(profile) && /import \{ BurgerLoading \} from '\.\.\/Common\/BurgerLoading'/.test(profile) && /<NoobStackLoader mode="quick"/.test(read('src/components/Common/BurgerLoading.tsx')), 'the windows the profile loads on demand wait behind the burger too');
+check(/import \{ NoobSpinner, NoobStackLoader \} from '\.\.\/Common\/NoobStackLoader'/.test(kit) && /export const Spinner[\s\S]{0,400}<NoobSpinner/.test(kit) && /export const PageLoading[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(kit), 'waiting inside a page, and a whole page waiting, show the new loading page (a small ring inside a page, the full page for a whole page)');
+check(/export const NoobStackLoader/.test(stackLoader) && /export const NoobSpinner/.test(stackLoader) && !/setTimeout\([^)]*minimum|MIN_MS|minDuration/i.test(kit), 'the loading page shows only for as long as the page really waits: no minimum and no maximum time');
+check(/const LazyFallback: React\.FC = \(\) => <LoadingPage \/>;/.test(profile) && /import \{ LoadingPage \} from '\.\.\/Common\/LoadingPages'/.test(profile) && /<NoobStackLoader mode="quick"/.test(read('src/components/Common/LoadingPages.tsx')), 'the windows the profile loads on demand wait behind the loading page too');
 check(!/lazy\(/.test(pagesIndex) && !/React\.lazy/.test(pagesIndex) && /import \{ AccountPage[^}]*\} from '\.\/account'/.test(pagesIndex), 'tapping a row opens its page at once: every page comes in the same file as the hub');
 check(/const preloadSettingsHub = \(\) => \{ void import\('\.\.\/Settings\/SettingsHub'\); \};/.test(profile) && /requestIdleCallback\(preloadSettingsHub\)/.test(profile) && /onPointerEnter=\{isOwnProfile \? preloadSettingsHub/.test(profile) && /onTouchStart=\{isOwnProfile \? preloadSettingsHub/.test(profile), 'the hub is fetched in the background while the profile is on screen, and again as a finger touches the three dots');
 check(/active:scale-90/.test(profile.slice(profile.indexOf('data-testid="profile-three-dots"') - 900, profile.indexOf('data-testid="profile-three-dots"') + 50)), 'the three dots visibly press down at the touch');

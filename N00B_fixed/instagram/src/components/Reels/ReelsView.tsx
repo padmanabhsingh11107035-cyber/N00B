@@ -8,7 +8,7 @@ import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import { flushSync } from 'react-dom';
-import { BurgerLoading } from '../Common/BurgerLoading';
+import { LoadingPage } from '../Common/LoadingPages';
 import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
@@ -1551,7 +1551,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     </div>
 
     {liveOverlay && (
-      <React.Suspense fallback={<BurgerLoading />}>
+      <React.Suspense fallback={<LoadingPage />}>
         <LiveStreamView
           currentUser={currentUser}
           mode="view"

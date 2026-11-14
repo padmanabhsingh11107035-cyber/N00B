@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronRight, Info, Loader2, Search, X } from 'lucide-react';
 import type { User } from '../../types';
 import { fetchUsers } from '../../services/api';
-import { NoobStackLoader } from '../Common/NoobStackLoader';
+import { NoobSpinner, NoobStackLoader } from '../Common/NoobStackLoader';
 import './settings.css';
 
 // The small building blocks every page of "Settings and activity" is made from, so all of them look and behave the same: a page with a Back button, sections
@@ -204,19 +204,15 @@ export const Note: React.FC<{ children: React.ReactNode; tone?: 'info' | 'good' 
   </div>
 );
 
-/** Loading inside a page: NOOB's burger, only for as long as the page is really waiting (no minimum, no maximum time). */
+/** Loading inside a page: a small thin ring, only for as long as the page is really waiting (no minimum, no maximum time). */
 export const Spinner: React.FC<{ label?: string }> = ({ label = 'Loading…' }) => (
-  <div role="status" aria-label={label} className="h-[190px] flex items-center justify-center overflow-hidden">
-    <div className="origin-center scale-[.62]"><NoobStackLoader mode="quick" subtitle={label} /></div>
+  <div className="h-[190px] flex items-center justify-center overflow-hidden">
+    <NoobSpinner size={30} label={label} showLabel />
   </div>
 );
 
-/** Loading a whole page (the hub itself, a page that has to be fetched): the burger, big, in the middle. */
-export const PageLoading: React.FC = () => (
-  <div role="status" aria-label="Loading" className="fixed inset-0 z-[45] bg-page doodle-wallpaper flex items-center justify-center text-white">
-    <NoobStackLoader mode="quick" subtitle="Loading…" />
-  </div>
-);
+/** Loading a whole page (the hub itself, a page that has to be fetched): the loading page, full screen. */
+export const PageLoading: React.FC = () => <NoobStackLoader mode="quick" subtitle="Loading…" z={45} />;
 
 export const Empty: React.FC<{ icon?: RowProps['icon']; title: string; text?: string }> = ({ icon: Icon, title, text }) => (
   <div className="px-6 py-10 text-center">

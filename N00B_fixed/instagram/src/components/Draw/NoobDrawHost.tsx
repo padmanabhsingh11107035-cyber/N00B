@@ -1,5 +1,5 @@
 import React from 'react';
-import { BurgerLoading } from '../Common/BurgerLoading';
+import { LoadingPage } from '../Common/LoadingPages';
 import type { User } from '../../types';
 import { closeNoobDraw, useNoobDrawOpen } from './drawStore';
 
@@ -12,7 +12,7 @@ export const NoobDrawHost: React.FC<{ currentUser: User | null; onUserUpdated: (
   const open = useNoobDrawOpen();
   if (!open || !currentUser) return null;
   return (
-    <React.Suspense fallback={<BurgerLoading z={210} />}>
+    <React.Suspense fallback={<LoadingPage z={210} />}>
       <NoobDrawPage currentUser={currentUser} onUserUpdated={onUserUpdated} onClose={closeNoobDraw} />
     </React.Suspense>
   );

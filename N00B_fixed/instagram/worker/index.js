@@ -331,6 +331,11 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // www.noobsocials.com is only a second name for the same site: a permanent redirect to the address without www, path and query kept (first of all, before anything else is looked at).
+    // Only reading requests are redirected; every other address (the games address, /__geo, /m/ ...) is untouched.
+    if (url.hostname === 'www.noobsocials.com' && (request.method === 'GET' || request.method === 'HEAD')) {
+      return new Response(null, { status: 301, headers: { Location: 'https://noobsocials.com' + url.pathname + url.search, 'Cache-Control': 'public, max-age=3600' } });
+    }
     // The separate games address (docs/GAMES-ORIGIN.md): a public games site. "/" is the games hub (plain files, no sign-in), /games/* are the games; everything else is a 404, so nothing of the app
     // (and no sign-in) can ever exist on it. On the app's address the hub's folder is a 404 too (worker/gamesSite.js).
     const route = routeFor(url.hostname, url.pathname);

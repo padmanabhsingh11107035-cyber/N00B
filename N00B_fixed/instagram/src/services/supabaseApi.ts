@@ -1117,7 +1117,18 @@ export async function checkSessionStatus(expectedUserId?: string): Promise<Sessi
     if (expectedUserId && sessionUserId !== expectedUserId) {
       return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: false, profileFound: false, isSuspended: false, sessionUserId, expectedUserId });
     }
-    const { data: row, error: qErr } = await supabase.from('profiles').select('is_suspended').eq('id', sessionUserId).maybeSingle();
+    // my own account status: a database function (the table's is_suspended column is closed to the API, migration 20261114000009). A database that does not have the function yet
+    // (the SQL not run) is asked the old way, so nothing changes in between.
+    let row: { is_suspended?: boolean } | null = null;
+    let qErr: unknown = null;
+    try {
+      const st = await rpc<{ found?: boolean; suspended?: boolean } | null>('my_suspension_status');
+      row = st?.found ? { is_suspended: !!st.suspended } : null;
+    } catch {
+      const old = await supabase.from('profiles').select('is_suspended').eq('id', sessionUserId).maybeSingle();
+      row = old.data as { is_suspended?: boolean } | null;
+      qErr = old.error;
+    }
     return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: !!qErr, profileFound: !!row, isSuspended: !!row?.is_suspended, sessionUserId, expectedUserId });
   } catch {
     return 'unknown';
@@ -3804,8 +3815,13 @@ export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: 
 // the numbers themselves are never sent back, only public profile fields for any matches found.
 export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
   try {
-    const list = await rpc<any[]>('match_contacts', { p_numbers: phoneNumbers });
-    return (list || []).map((u) => mapUser(u) as User);
+    // the database looks at 500 numbers per call (and allows a few calls an hour): send the list in pieces of 500, at most 4 pieces (2000 numbers, as before)
+    const found: any[] = [];
+    for (let i = 0; i < Math.min(phoneNumbers.length, 2000); i += 500) {
+      found.push(...((await rpc<any[]>('match_contacts', { p_numbers: phoneNumbers.slice(i, i + 500) })) || []));
+    }
+    const seen = new Set<string>();
+    return found.filter((u) => u && !seen.has(u.id) && seen.add(u.id)).map((u) => mapUser(u) as User);
   } catch {
     return [];
   }

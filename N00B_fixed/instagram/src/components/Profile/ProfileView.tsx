@@ -135,7 +135,7 @@ import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
 import type { SettingsContext } from '../Settings/types';
-import { BurgerLoading } from '../Common/BurgerLoading';
+import { LoadingPage } from '../Common/LoadingPages';
 import { LazyVideo } from '../Common/LazyVideo';
 import { openReportProblem } from '../Common/ReportProblemSheet';
 
@@ -148,7 +148,7 @@ const ScratchPage = React.lazy(() => import('../Scratch/ScratchPage').then((m) =
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 // While a window that is loaded on demand arrives: NOOB's burger, for exactly as long as it takes (no minimum, no maximum time).
-const LazyFallback: React.FC = () => <BurgerLoading />;
+const LazyFallback: React.FC = () => <LoadingPage />;
 // Settings and activity is fetched in the background while the profile is on screen, so the three dots open it at once.
 const preloadSettingsHub = () => { void import('../Settings/SettingsHub'); };
 

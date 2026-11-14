@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { BurgerLoading } from '../Common/BurgerLoading';
+import { LoadingPage } from '../Common/LoadingPages';
 import {
   Gamepad2,
   Trophy,
@@ -445,7 +445,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
       {/* Interactive Game Play Modal */}
       {selectedGameForPlay && (
-        <React.Suspense fallback={<BurgerLoading />}>
+        <React.Suspense fallback={<LoadingPage />}>
           <GamePlayModal
             game={selectedGameForPlay}
             currentUser={currentUser}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BurgerLoading } from '../Common/BurgerLoading';
+import { LoadingPage } from '../Common/LoadingPages';
 import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio, PowerOff } from 'lucide-react';
 import { NoobRoom, NoobRoomActivityType, User } from '../../types';
 import { listNoobRooms, startNoobRoom, fetchPublicPlatformSettings } from '../../services/api';
@@ -39,7 +39,7 @@ const SUGGESTED_CATEGORIES = ['Vibe', 'Gaming', 'Study', 'General'];
 // A visible spinner instead of a blank Suspense fallback — the room-view chunk (Agora + everything it
 // needs) can take a few seconds on a slow connection, and showing nothing during that made it look
 // like the tap did nothing at all.
-export const RoomLoadingSpinner: React.FC = () => <BurgerLoading label="Connecting…" />;
+export const RoomLoadingSpinner: React.FC = () => <LoadingPage label="Connecting…" />;
 
 export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentUser, onClose }) => {
   const [rooms, setRooms] = useState<NoobRoom[]>([]);
@@ -140,7 +140,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   }
 
   if (!lock.checked) {
-    return <BurgerLoading />;
+    return <LoadingPage />;
   }
 
   if (blocked) {

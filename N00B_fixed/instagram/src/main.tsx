@@ -116,12 +116,13 @@ if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
 registerServiceWorkerForInstallability();
 listenForNativeAuthReturn();   // the Android app: finishes "Continue with Google ..." when the phone's browser tab hands back to NOOB (services/nativeAuth.ts)
 
-// The opening splash (index.html): a black screen that the opening animation (public/opening/opening.js) takes over: it plays for 4 seconds, opens the app like an iris and removes
-// the splash itself, so there is nothing to do here. Where it does not run (reduced motion, a missing script) the plain black screen fades away as soon as the app has started; the
-// coaching and editor addresses keep their logo on it for 3 and 1 seconds. The app is already underneath the splash by then.
-const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 0.4;   // 3 seconds with the logo on the coaching address, 1 on the editor address (see index.html); on NOOB the plain black screen goes as soon as the app has started
+// The opening splash (index.html, public/splash.js): a full yellow screen with the NOOB logo. It times itself (at least 1.1 s, at most 1.8 s) and goes as soon as the app says it is ready:
+// App.tsx calls window.__noobSplash.ready() once it has loaded, and the stand-alone pages below do it right after they are drawn. The NOOB Studio address (editor-init.js) cancels it
+// and keeps a black screen with its round logo: that one is faded away here after 1 second (0.4 s when nothing sets a time).
+const noobSplash = (window as unknown as { __noobSplash?: { active: boolean; ready: () => void } }).__noobSplash;
+const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 0.4;
 const splash = document.getElementById('noob-splash');
-if (splash && !(window as unknown as { __noobOpening?: unknown }).__noobOpening) {
+if (splash && !noobSplash?.active) {
   const wait = Math.max(0, SPLASH_SECONDS * 1000 - (typeof performance !== 'undefined' ? performance.now() : 0));
   window.setTimeout(() => {
     splash.style.opacity = '0';
@@ -163,6 +164,9 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
+// The pages that are not the app itself (new-home card, Studio, login approval, page not found) are ready as soon as they are drawn; the app calls ready() itself when it has loaded.
+if (oldAddress || editorPage || approvalPage || pageNotFound) noobSplash?.ready();
 
 // Tells public/boot-guard.js that the app started (if it does not, that file shows the "NOOB is taking a short break" page by itself).
 (window as unknown as { __noobBooted?: boolean }).__noobBooted = true;

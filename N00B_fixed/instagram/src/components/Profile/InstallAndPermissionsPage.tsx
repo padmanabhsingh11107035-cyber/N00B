@@ -12,7 +12,7 @@ import {
   type PushDeviceState
 } from '../Common/PushNotificationPrompt';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
-import { canInstallNow, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
+import { canInstallNow, isAndroidWeb, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 
 interface InstallAndPermissionsPageProps {
   currentUser: User;
@@ -177,7 +177,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="w-full max-w-sm mx-auto space-y-5">
           {/* Install App */}
-          <div className={`rounded-3xl bg-white/[0.04] border border-white/10 p-5 space-y-4${onIos ? " hidden" : ""}`}>
+          <div className={`rounded-3xl bg-white/[0.04] border border-white/10 p-5 space-y-4${onIos || isAndroidWeb() ? " hidden" : ""}`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center shrink-0">
                 <Smartphone className="w-5 h-5 text-noob" />

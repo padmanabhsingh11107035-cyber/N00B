@@ -1,108 +1,147 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import './noobLoader.css';
+import { getLoadingQuote } from '../../data/loadingQuotes';
+import { getLoadProgress, nextPercent, subscribeLoadProgress } from '../../utils/loadProgress';
 
-// The loading screen: a "burger" made of social media that builds itself. A chat bar, a row of likes, a comment, a photo and a profile header drop onto each other one
-// by one and a NOOB bun lands on top. Drawn in the black-and-white doodle look (it follows the theme: white line art on black, black on white in Light mode).
-//
-// It is the loading page of the whole app, and it is quick: the burger appears in a fraction of a second and stays until the app is ready (nothing is held back, so when the
-// app is ready at once, nothing shows). When the app is opened, the opening animation (public/opening/opening.js) plays first and the app opens straight out of it: there is no
-// separate burger show any more. With "reduce motion" on, the finished burger is simply shown. The motion of each layer is in index.css (.nsl-*).
-
-const MESSAGES = ['Setting up your chats…', 'Counting the likes…', 'Writing the comments…', 'Hanging the photos…', 'Meeting your people…', 'Toasting the NOOB bun…'];
-export const QUICK_LAYER_MS = 55;       // the whole burger is up in about a third of a second
-
-const heart = (cx: number, cy: number, s: number) =>
-  `M${cx} ${cy + s * 0.9}C${cx - s * 1.9} ${cy - s * 0.2} ${cx - s * 0.8} ${cy - s * 1.5} ${cx} ${cy - s * 0.5}C${cx + s * 0.8} ${cy - s * 1.5} ${cx + s * 1.9} ${cy - s * 0.2} ${cx} ${cy + s * 0.9}Z`;
-const sparkle = (cx: number, cy: number, r: number) =>
-  `M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z`;
+// The loading page: a full-screen layer with a card in the middle. NOOB's own character hops on the spot (with its shadow and some drifting confetti), then a line to read
+// (a quote and its author), and a thin ring with a percentage at the bottom. When `tracked` (the start-up of the app) the percentage is the real progress of the five start-up
+// requests (src/utils/loadProgress.ts); everywhere else (a page being fetched) the ring simply turns, with no number, because nothing is known to count.
+// Nothing is seen for the first 400 ms (a quick load shows no page at all); at the end it jumps to 100 % and fades out in 250 ms. Look and motion: noobLoader.css.
 
 interface NoobStackLoaderProps {
+  /** kept for the call sites that pass it */
   title?: string;
+  /** a short line under the ring, e.g. "Signing you in…" (the plain "Loading…" is not shown) */
   subtitle?: string;
-  /** the only way to play it now (kept so every place that asks for the quick one still reads the same) */
   mode?: 'quick';
+  /** show the real start-up progress as a percentage (only the start-up of the app does) */
+  tracked?: boolean;
+  /** stacking order of the layer */
+  z?: number;
 }
 
-export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB', subtitle }) => {
-  const reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const [n, setN] = useState(reduce ? 6 : 0);          // how many layers have landed
+const CONFETTI: { x: number; y: number; s: number; c: string; ring?: boolean; d: number; dx: number }[] = [
+  { x: 6, y: 34, s: 8, c: '#FF5C8A', d: 0, dx: -10 },
+  { x: 24, y: 8, s: 6, c: '#8B5CF6', d: 0.5, dx: 6 },
+  { x: 128, y: 14, s: 9, c: '#FF8A3D', ring: true, d: 1.1, dx: 10 },
+  { x: 142, y: 62, s: 6, c: '#F8CB46', d: 0.3, dx: 8 },
+  { x: 0, y: 92, s: 10, c: '#F8CB46', ring: true, d: 1.7, dx: -8 },
+  { x: 146, y: 112, s: 7, c: '#FF5C8A', d: 0.9, dx: 12 },
+  { x: 12, y: 128, s: 6, c: '#FF8A3D', d: 2.1, dx: -6 },
+  { x: 70, y: -4, s: 7, c: '#8B5CF6', ring: true, d: 1.4, dx: 0 },
+  { x: 118, y: 140, s: 5, c: '#8B5CF6', d: 2.6, dx: 6 },
+  { x: 40, y: 146, s: 6, c: '#F8CB46', d: 0.7, dx: -4 },
+];
 
-  // build the burger
+const R = 19;
+const CIRC = 2 * Math.PI * R;
+const FADE_MS = 250;
+const SHOW_AFTER_MS = 400;
+const SLOW_AFTER_MS = 8000;
+
+/** A small thin ring for a spot inside a page (a list, a window) where the full loading page would be too much. */
+export const NoobSpinner: React.FC<{ size?: number; label?: string; showLabel?: boolean }> = ({ size = 28, label = 'Loading…', showLabel = false }) => (
+  <div role="status" aria-label={label} className="nl-spinbox">
+    <span className="nl-spinner" style={{ width: size, height: size }} aria-hidden="true" />
+    {showLabel && <span>{label}</span>}
+  </div>
+);
+
+export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB', subtitle, tracked = false, z = 50 }) => {
+  const quote = getLoadingQuote();
+  const progress = useSyncExternalStore(subscribeLoadProgress, getLoadProgress, getLoadProgress);
+  const [pct, setPct] = useState(() => (tracked ? nextPercent(0, progress, 0) : 0));
+  const [slow, setSlow] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const pctRef = useRef(pct);
+  pctRef.current = pct;
+
+  // the number: eases towards the real progress, creeps while it waits, never goes back
   useEffect(() => {
-    if (reduce) return;
-    let alive = true;
-    const timers: number[] = [];
-    for (let k = 1; k <= 6; k++) timers.push(window.setTimeout(() => { if (alive) setN(k); }, k * QUICK_LAYER_MS));
-    return () => { alive = false; timers.forEach((t) => window.clearTimeout(t)); };
-  }, [reduce]);
+    if (!tracked) return;
+    let last = performance.now();
+    const id = window.setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min(500, now - last);
+      last = now;
+      setPct((p) => Math.max(p, nextPercent(p, progressRef.current, dt)));
+    }, 120);
+    return () => window.clearInterval(id);
+  }, [tracked]);
 
-  const box = 'fill-zinc-900 stroke-current';
-  const L = (k: number, children: React.ReactNode) => (n >= k ? <g key={k} className="nsl-in">{children}</g> : null);
-  const message = subtitle ?? (n === 0 ? 'Warming up…' : MESSAGES[Math.min(n, 6) - 1]);
+  // a slow connection
+  useEffect(() => {
+    const t = window.setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // when the app is ready this page is removed at once: leave a copy at 100 % that fades out in 250 ms (only if the page was visible at all)
+  useEffect(() => {
+    const node = rootRef.current;
+    const born = Date.now();
+    return () => {
+      try {
+        if (!node || Date.now() - born < SHOW_AFTER_MS + 50) return;
+        const ghost = node.cloneNode(true) as HTMLElement;
+        ghost.removeAttribute('role');
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.classList.add('nl-fadeout');
+        if (tracked) {
+          const num = ghost.querySelector('.nl-pct');
+          if (num) num.textContent = '100%';
+          const arc = ghost.querySelector('.nl-arc');
+          if (arc) (arc as SVGElement).style.strokeDashoffset = '0';
+        }
+        document.body.appendChild(ghost);
+        window.setTimeout(() => { try { ghost.remove(); } catch { /* already gone */ } }, FADE_MS + 60);
+      } catch { /* the fade is only decoration */ }
+    };
+  }, [tracked]);
+
+  const shown = Math.round(Math.min(100, pct));
+  const size = quote.text.length <= 48 ? 'l' : quote.text.length <= 70 ? 'm' : 's';
+  const note = slow ? 'Slow connection… still loading' : subtitle && subtitle !== 'Loading…' ? subtitle : '';
+  const arcLen = tracked ? CIRC * (1 - Math.min(100, pct) / 100) : CIRC * 0.72;
 
   return (
-    <div role="status" aria-live="polite" aria-label="Loading NOOB" className="flex flex-col items-center text-zinc-50 select-none nsl-fast">
-      <svg viewBox="0 0 220 250" className="w-[210px] h-[238px] overflow-visible" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        {/* the shadow it lands on grows as the stack does */}
-        <ellipse cx="110" cy="234" rx="84" ry="7" fill="currentColor" stroke="none" className="nsl-shadow" style={{ transform: `scaleX(${0.45 + n * 0.092})`, opacity: n === 0 ? 0.04 : 0.13 }} />
-
-        {/* 1 - the chat bar (bottom bun) */}
-        {L(1, <>
-          <rect x="35" y="196" width="150" height="26" rx="13" className={box} />
-          <rect x="47" y="205" width="72" height="8" rx="4" fill="currentColor" stroke="none" opacity=".55" />
-          <path d="M160 209l16-8-4 16-4-6z" />
-        </>)}
-
-        {/* 2 - the likes */}
-        {L(2, <>
-          <rect x="35" y="168" width="150" height="24" rx="12" className={box} />
-          <path d={heart(72, 180, 5)} fill="currentColor" />
-          <path d={heart(110, 180, 5)} />
-          <path d={heart(148, 180, 5)} fill="currentColor" />
-        </>)}
-
-        {/* 3 - a comment */}
-        {L(3, <>
-          <rect x="35" y="134" width="150" height="30" rx="10" className={box} />
-          <path d="M52 164l-4 9 11-9" className={box} />
-          <circle cx="92" cy="149" r="2.6" fill="currentColor" stroke="none" />
-          <circle cx="110" cy="149" r="2.6" fill="currentColor" stroke="none" />
-          <circle cx="128" cy="149" r="2.6" fill="currentColor" stroke="none" />
-        </>)}
-
-        {/* 4 - the photo (the patty) */}
-        {L(4, <>
-          <rect x="35" y="74" width="150" height="56" rx="10" className={box} />
-          <circle cx="70" cy="92" r="7" />
-          <path d="M43 124l30-24 20 16 22-26 42 34" />
-        </>)}
-
-        {/* 5 - the profile header */}
-        {L(5, <>
-          <rect x="35" y="44" width="150" height="26" rx="13" className={box} />
-          <circle cx="53" cy="57" r="8" fill="currentColor" stroke="none" opacity=".85" />
-          <rect x="68" y="51" width="58" height="6" rx="3" fill="currentColor" stroke="none" opacity=".8" />
-          <rect x="68" y="60" width="38" height="5" rx="2.5" fill="currentColor" stroke="none" opacity=".45" />
-          <path d={sparkle(166, 57, 5)} />
-        </>)}
-
-        {/* 6 - the NOOB bun */}
-        {L(6, <>
-          <path d="M28 40Q28 6 110 6Q192 6 192 40Z" className={box} />
-          <text x="110" y="33" textAnchor="middle" fontSize="19" fontWeight="900" letterSpacing="3" fill="currentColor" stroke="none" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>NOOB</text>
-          <circle cx="62" cy="20" r="2" fill="currentColor" stroke="none" />
-          <circle cx="158" cy="20" r="2" fill="currentColor" stroke="none" />
-          <circle cx="76" cy="12" r="1.6" fill="currentColor" stroke="none" />
-          <circle cx="144" cy="12" r="1.6" fill="currentColor" stroke="none" />
-        </>)}
-
-        {/* doodles around it */}
-        <path d={sparkle(14, 40, 7)} className="nsl-spark" style={{ animationDelay: '0s' }} />
-        <path d="M206 96v12M200 102h12" className="nsl-spark" style={{ animationDelay: '.5s' }} />
-        <path d={sparkle(208, 178, 6)} className="nsl-spark" style={{ animationDelay: '1s' }} />
-        <path d="M6 150q4-7 8 0t8 0" className="nsl-spark" style={{ animationDelay: '1.5s' }} />
-      </svg>
-      <p className="mt-1 text-[15px] font-black tracking-[0.18em] pl-[0.18em]">{title}</p>
-      <p key={message} className="nsl-msg mt-1.5 text-[11px] text-zinc-400 h-4">{message}</p>
+    <div ref={rootRef} className="nl-layer edge-own" style={{ zIndex: z }} role="status" aria-live="polite" aria-label={subtitle ? `${title}: ${subtitle}` : `Loading ${title}`}>
+      <div className="nl-card">
+        <div className="nl-stage" aria-hidden="true">
+          <div className="nl-hero">
+            {CONFETTI.map((f, i) => (
+              <span key={i} className={`nl-dot${f.ring ? ' nl-ring' : ''}`}
+                style={{ left: f.x, top: f.y, width: f.s, height: f.s, background: f.c, color: f.c, animationDelay: `${f.d}s`, ['--dx' as string]: `${f.dx}px` } as React.CSSProperties} />
+            ))}
+            <div className="nl-shadow" />
+            <div className="nl-runner"><img src="/noob-support-character.png" alt="" width={150} height={150} draggable={false} decoding="async" /></div>
+          </div>
+        </div>
+        <div className="nl-text">
+          <p className="nl-quote" data-size={size}><span>{'“'}{quote.text}{'”'}</span></p>
+          <div className="nl-rule" aria-hidden="true" />
+          <p className="nl-author">{quote.author}</p>
+        </div>
+        <div className="nl-foot">
+          <div className="nl-ringbox" role={tracked ? 'progressbar' : undefined} aria-valuemin={tracked ? 0 : undefined} aria-valuemax={tracked ? 100 : undefined} aria-valuenow={tracked ? shown : undefined}>
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <defs>
+                <linearGradient id="nl-grad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#FF4D9A" />
+                  <stop offset="1" stopColor="#FF8A3D" />
+                </linearGradient>
+              </defs>
+              <circle className="nl-track" cx="22" cy="22" r={R} fill="none" strokeWidth="3" />
+              <g className={tracked ? undefined : 'nl-spin'}>
+                <circle className="nl-arc" cx="22" cy="22" r={R} fill="none" stroke="url(#nl-grad)" strokeWidth="3" strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={arcLen} />
+              </g>
+            </svg>
+            {tracked && <span className="nl-pct" aria-hidden="true">{shown}%</span>}
+          </div>
+          <p className="nl-note">{note}</p>
+        </div>
+      </div>
     </div>
   );
 };

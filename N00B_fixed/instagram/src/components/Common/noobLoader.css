@@ -1,0 +1,90 @@
+/* The loading page (NoobStackLoader.tsx). Dark by default, white card in Light mode (follows html[data-theme]). Motion is transform/opacity only. */
+.nl-layer {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--sat, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: #0A0A0A; color: #fff; box-sizing: border-box; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  animation: nl-appear .2s ease-out 400ms both;   /* never a flash: nothing is seen for the first 400 ms */
+}
+.nl-card {
+  position: relative; width: 100%; max-width: 360px; height: 100%; max-height: 600px; min-height: 0; box-sizing: border-box;
+  border-radius: 28px; border: 1px solid rgba(255, 255, 255, .08); background: linear-gradient(180deg, #1B1B1F, #0B0B0D);
+  display: flex; flex-direction: column; align-items: center; padding: 20px 22px 22px; overflow: hidden;
+}
+.nl-stage { position: relative; flex: 1 1 auto; min-height: 150px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.nl-hero { position: relative; width: 150px; height: 170px; }
+.nl-runner { position: absolute; left: 0; right: 0; top: 0; height: 150px; transform-origin: 50% 100%; animation: nl-run .56s ease-in-out infinite; will-change: transform; }
+.nl-runner img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.nl-shadow { position: absolute; left: 50%; bottom: 4px; width: 92px; height: 14px; margin-left: -46px; border-radius: 50%; background: rgba(0, 0, 0, .55); animation: nl-shadow .56s ease-in-out infinite; }
+.nl-dot { position: absolute; border-radius: 50%; opacity: 0; animation: nl-drift 3.2s ease-in-out infinite; will-change: transform, opacity; }
+.nl-dot.nl-ring { background: transparent !important; border: 2px solid currentColor; }
+.nl-text { width: 100%; text-align: center; flex: 0 0 auto; }
+.nl-quote { margin: 0; font-weight: 700; line-height: 1.25; color: #fff; letter-spacing: -.01em; overflow-wrap: anywhere; min-height: 3.75em; display: flex; align-items: center; justify-content: center; }
+.nl-quote[data-size="l"] { font-size: 24px; }
+.nl-quote[data-size="m"] { font-size: 22px; }
+.nl-quote[data-size="s"] { font-size: 20px; }
+.nl-rule { width: 28px; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .22); margin: 14px auto 12px; }
+.nl-author { margin: 0; font-size: 15px; color: #9A9AA5; }
+.nl-foot { flex: 0 0 auto; margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 66px; }
+.nl-ringbox { position: relative; width: 44px; height: 44px; }
+.nl-ringbox svg { display: block; width: 44px; height: 44px; transform: rotate(-90deg); }
+.nl-track { stroke: rgba(255, 255, 255, .12); }
+.nl-arc { transition: stroke-dashoffset .3s linear; }
+.nl-spin { animation: nl-turn 1s linear infinite; transform-origin: 50% 50%; will-change: transform; }
+.nl-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.nl-note { margin: 0; font-size: 12px; color: #9A9AA5; text-align: center; min-height: 14px; }
+.nl-fadeout { animation: nl-gone .25s ease-out both !important; pointer-events: none; }
+
+/* the small ring for a spot inside a page (a list, a window) */
+.nl-spinner { display: inline-block; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .12); border-top-color: #FF5C8A; animation: nl-turn .8s linear infinite; box-sizing: border-box; }
+.nl-spinbox { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #9A9AA5; font-size: 12px; }
+
+:root[data-theme="light"] .nl-layer { background: #F3F3F5; color: #111; }
+:root[data-theme="light"] .nl-card { background: #FFFFFF; border-color: rgba(0, 0, 0, .08); box-shadow: 0 10px 30px -18px rgba(0, 0, 0, .25); }
+:root[data-theme="light"] .nl-shadow { background: rgba(0, 0, 0, .16); }
+:root[data-theme="light"] .nl-quote, :root[data-theme="light"] .nl-pct { color: #111; }
+:root[data-theme="light"] .nl-rule { background: rgba(0, 0, 0, .18); }
+:root[data-theme="light"] .nl-author { color: #5B5B66; }
+:root[data-theme="light"] .nl-note, :root[data-theme="light"] .nl-spinbox { color: #5B5B66; }
+:root[data-theme="light"] .nl-track { stroke: rgba(0, 0, 0, .1); }
+:root[data-theme="light"] .nl-spinner { border-color: rgba(0, 0, 0, .1); border-top-color: #FF5C8A; }
+/* the mascot is white and black: on the white card it keeps a soft grey ground so it never melts into the page */
+
+@keyframes nl-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nl-gone { from { opacity: 1; } to { opacity: 0; } }
+@keyframes nl-turn { to { transform: rotate(360deg); } }
+/* a step: down (squash), up (stretch and lean), down again on the other foot */
+@keyframes nl-run {
+  0%   { transform: translateY(0) rotate(-4deg) scale(1.05, .94); }
+  25%  { transform: translateY(-16px) rotate(0deg) scale(.97, 1.04); }
+  50%  { transform: translateY(0) rotate(4deg) scale(1.05, .94); }
+  75%  { transform: translateY(-16px) rotate(0deg) scale(.97, 1.04); }
+  100% { transform: translateY(0) rotate(-4deg) scale(1.05, .94); }
+}
+@keyframes nl-shadow {
+  0%, 50%, 100% { transform: scale(1); opacity: .9; }
+  25%, 75% { transform: scale(.72); opacity: .5; }
+}
+@keyframes nl-drift {
+  0%   { opacity: 0; transform: translate3d(0, 10px, 0) scale(.6); }
+  25%  { opacity: 1; }
+  70%  { opacity: .9; }
+  100% { opacity: 0; transform: translate3d(var(--dx, 0px), -34px, 0) scale(1.1); }
+}
+
+@media (max-width: 359px) {
+  .nl-card { padding: 16px 16px 18px; }
+  .nl-quote[data-size="l"] { font-size: 21px; }
+  .nl-quote[data-size="m"] { font-size: 19px; }
+  .nl-quote[data-size="s"] { font-size: 17px; }
+}
+@media (max-height: 640px) {
+  .nl-stage { min-height: 110px; }
+  .nl-hero { transform: scale(.78); }
+  .nl-rule { margin: 8px auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nl-runner, .nl-shadow, .nl-dot, .nl-spin, .nl-spinner { animation: none; }
+  .nl-dot { opacity: .8; }
+  .nl-arc { transition: none; }
+  .nl-layer { animation-duration: 1ms; }
+}

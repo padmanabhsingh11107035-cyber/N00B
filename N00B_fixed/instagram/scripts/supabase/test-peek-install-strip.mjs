@@ -21,7 +21,7 @@ console.log('\n3. Top strip and Messages colour');
 const strip = read('src/utils/statusStrip.ts'), main = read('src/main.tsx'), css = read('src/index.css') + read('src/components/Chat/messagesList.css'), chat = read('src/components/Chat/ChatView.tsx');
 check(/elementFromPoint\(Math\.floor\(window\.innerWidth \/ 2\), 3\)/.test(strip) && /setAttribute\('content', colour\)/.test(strip) && /style\.backgroundColor = colour/.test(strip) && /pointer: coarse/.test(strip), 'on a touch screen the strip behind the clock / Dynamic Island takes the colour drawn at the top edge of the open page');
 check(/MutationObserver/.test(strip) && /'scroll', queue/.test(strip) && /setStripColour/.test(strip) && /noob-top-edge/.test(strip) && /initStatusStrip\(\);/.test(main), 'it follows page changes and scrolling, lets Messages set its own colour (also drawn by a thin bar at the top edge), and starts with the app');
-check(/--head: #0E4B37;/.test(css) && /'#0E4B37'/.test(chat) && !/02351f/.test(css + chat), 'the Messages header green is #0E4B37 everywhere');
+check(/--head: #F8CB46;/.test(css) && /'#F8CB46'/.test(chat) && !/02351f|0E4B37/.test(css + chat), 'the Messages header is the yellow of the opening screen (#F8CB46) everywhere, also the strip behind the clock');
 check(/HIDE_ANDROID_INSTALL = true/.test(read('src/utils/pwaInstall.ts')) && /ANDROID_APP_OFFER_ON = false/.test(read('src/components/Common/AndroidAppPrompt.tsx')), 'no Install button or app-file card on Android phones until Google Play');
 console.log('\n4. Google Play button (switched off until PLAY_STORE_URL is set)');
 const play = read('src/utils/pwaInstall.ts'), btn = read('src/components/Common/PlayStoreButton.tsx'), prompt = read('src/components/Common/AndroidAppPrompt.tsx');

@@ -77,8 +77,8 @@ export function MessagesList(p: MessagesListProps) {
     const left = box.querySelectorAll<HTMLElement>('.msg-row:not([data-in])');
     for (let i = 0; i < left.length; i++) if (left[i].getBoundingClientRect().top < bottom) left[i].setAttribute('data-in', '1');
   };
-  // The page must not stretch when it is pulled DOWN at its top (an iPhone's rubber band showed the black behind the green header). A downward pull that starts
-  // with the list at its top is stopped; scrolling up through the list, the stretch at the bottom and sideways swipes (the filter pills) are left alone.
+  // The page must not stretch when it is pulled DOWN at its top (an iPhone's rubber band showed the black behind the green header). A pull past the top or past the
+  // bottom is stopped (the page stays still); scrolling through the list and sideways swipes (the filter pills) are left alone.
   useEffect(() => {
     const box = listRef.current;
     if (!box) return undefined;
@@ -87,7 +87,9 @@ export function MessagesList(p: MessagesListProps) {
     const move = (e: TouchEvent) => {
       if (e.touches.length !== 1 || !e.cancelable) return;
       const dy = e.touches[0].clientY - y0, dx = e.touches[0].clientX - x0;
-      if (dy > 0 && Math.abs(dy) > Math.abs(dx) && box.scrollTop <= 0) e.preventDefault();
+      if (Math.abs(dy) <= Math.abs(dx)) return;   // a sideways swipe (the filter pills)
+      const atTop = box.scrollTop <= 0, atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 1;
+      if ((dy > 0 && atTop) || (dy < 0 && atEnd)) e.preventDefault();   // no stretch at the top and none at the bottom
     };
     box.addEventListener('touchstart', start, { passive: true });
     box.addEventListener('touchmove', move, { passive: false });

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './adminUserDetail.css';
+import { formatNoobPoints } from '../../utils/formatPoints';
 import {
   ShieldAlert,
   Send,
@@ -284,6 +286,35 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   // reaches the client (GET /api/admin/users returns sanitizeUser(), not
   // the raw record).
   const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
+  // the user details page: its list takes the keyboard as soon as it opens (arrows, Page Up / Down, Home / End, Space scroll it; Esc closes), and values can be copied
+  const userDetailBodyRef = useRef<HTMLDivElement>(null);
+  const [audCopied, setAudCopied] = useState('');
+  const audCopy = (key: string, value: string) => {
+    try { void navigator.clipboard?.writeText(value); } catch { /* no clipboard: nothing to do */ }
+    setAudCopied(key);
+    window.setTimeout(() => setAudCopied((k) => (k === key ? '' : k)), 1400);
+  };
+  const detailsOpenId = selectedUserForDetails?.id ?? null;
+  useEffect(() => {
+    if (!detailsOpenId) return undefined;
+    const box = userDetailBodyRef.current;
+    if (box) { box.scrollTop = 0; try { box.focus({ preventScroll: true }); } catch { box.focus(); } }
+    const onKey = (e: KeyboardEvent) => {
+      const el = userDetailBodyRef.current;
+      if (!el) return;
+      if (e.key === 'Escape') { e.preventDefault(); setSelectedUserForDetails(null); return; }
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const page = Math.max(120, el.clientHeight - 60);
+      const by = e.key === 'ArrowDown' ? 60 : e.key === 'ArrowUp' ? -60 : e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey && t?.tagName !== 'BUTTON') ? page
+        : e.key === 'PageUp' || (e.key === ' ' && e.shiftKey && t?.tagName !== 'BUTTON') ? -page : 0;
+      if (by) { e.preventDefault(); el.scrollBy({ top: by }); }
+      else if (e.key === 'Home') { e.preventDefault(); el.scrollTo({ top: 0 }); }
+      else if (e.key === 'End') { e.preventDefault(); el.scrollTo({ top: el.scrollHeight }); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detailsOpenId]);
 
   // Points-adjustment modal state
   const [selectedUserForPoints, setSelectedUserForPoints] = useState<User | null>(null);
@@ -3319,61 +3350,65 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           the first place (sanitizeUser strips it before this data leaves
           the server). */}
       {selectedUserForDetails && (
-        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-zinc-950 border border-sky-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
-            <div className="p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4" data-testid="admin-user-details">
+          <div className="aud w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden" role="dialog" aria-modal="true" aria-label="User details">
+            <div className="aud-head">
+              <div className="aud-top">
+                <button type="button" onClick={() => setSelectedUserForDetails(null)} className="aud-x" aria-label="Back" title="Back (Esc)">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
                 <img
                   src={selectedUserForDetails.avatar || '/noob-logo.svg.jpeg'}
                   alt={selectedUserForDetails.username}
-                  className="w-11 h-11 rounded-full object-cover border border-zinc-700 shrink-0"
+                  className="aud-ava"
                   referrerPolicy="no-referrer"
                 />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-black text-white truncate">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className="aud-name block truncate">
                       {selectedUserForDetails.displayName || selectedUserForDetails.username}
                     </h3>
                     {selectedUserForDetails.isVerified && <VerifiedBadge size="sm" />}
                   </div>
-                  <span className="text-xs text-zinc-400">@{selectedUserForDetails.username}</span>
+                  <span className="aud-user block truncate">@{selectedUserForDetails.username}</span>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedUserForDetails(null)}
-                className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="aud-tags">
+                <span className="aud-tag" data-k="acc">{selectedUserForDetails.accountType || 'public'}</span>
+                {selectedUserForDetails.isBusiness && <span className="aud-tag">Business</span>}
+                <span className="aud-tag">{selectedUserForDetails.proTier ? `Pro ${selectedUserForDetails.proTier}` : 'Free plan'}</span>
+                <span className="aud-tag">{selectedUserForDetails.isVerified ? 'Verified' : 'Not verified'}</span>
+                {selectedUserForDetails.isSuspended && <span className="aud-tag" data-k="bad">Suspended</span>}
+              </div>
+              <div className="aud-nums">
+                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.followersCount || 0).toLocaleString()}</b><span>Followers</span></div>
+                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.followingCount || 0).toLocaleString()}</b><span>Following</span></div>
+                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.postsCount || 0).toLocaleString()}</b><span>Posts</span></div>
+                <div className="aud-num"><b className="block truncate">{formatNoobPoints(selectedUserForDetails.noobPoints || 0)}</b><span>NOOBs</span></div>
+              </div>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto">
+            <div ref={userDetailBodyRef} tabIndex={0} className="aud-body" data-testid="admin-user-details-body" aria-label="User details, scrollable">
               {/* Contact Information */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="aud-h">
                   <Mail className="w-3.5 h-3.5" /> Contact Information
                 </span>
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                <div className="aud-box">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Email</span>
-                    <span className="text-xs text-white font-medium text-right break-all">
-                      {selectedUserForDetails.email || 'Not provided'}
-                    </span>
+                    <span className="aud-val"><span>{selectedUserForDetails.email || 'Not provided'}</span>{selectedUserForDetails.email ? <button type="button" className="aud-copy" data-done={audCopied === 'email' ? '1' : undefined} onClick={() => audCopy('email', String(selectedUserForDetails.email))} aria-label="Copy" title="Copy">{audCopied === 'email' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</button> : null}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</span>
-                    <span className="text-xs text-white font-medium">
-                      {selectedUserForDetails.mobileNumber
-                        ? `${selectedUserForDetails.countryCode || ''} ${selectedUserForDetails.mobileNumber}`.trim()
-                        : 'Not provided'}
-                    </span>
+                    <span className="aud-val"><span>{selectedUserForDetails.mobileNumber ? `${selectedUserForDetails.countryCode || ''} ${selectedUserForDetails.mobileNumber}`.trim() : 'Not provided'}</span>{selectedUserForDetails.mobileNumber ? <button type="button" className="aud-copy" data-done={audCopied === 'phone' ? '1' : undefined} onClick={() => audCopy('phone', String(selectedUserForDetails.mobileNumber))} aria-label="Copy" title="Copy">{audCopied === 'phone' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</button> : null}</span>
                   </div>
                   {(() => {
                     const pf = phoneFacts(selectedUserForDetails.countryCode, selectedUserForDetails.mobileNumber);
                     if (!pf) return null;
                     const signedUpAs = [selectedUserForDetails.firstName, selectedUserForDetails.lastName].filter(Boolean).join(' ') || selectedUserForDetails.displayName;
                     return (
-                      <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-2.5 space-y-1.5" data-testid="phone-lookup">
+                      <div className="aud-sub space-y-1.5" data-testid="phone-lookup">
                         <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Full number</span><span className="text-zinc-200 font-mono">{pf.e164}</span></div>
                         <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Country</span><span className="text-zinc-200">{pf.countryName || pf.iso || 'Unknown'}</span></div>
                         <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Name given at sign-up</span><span className="text-zinc-200 text-right" data-testid="phone-signup-name">{signedUpAs || 'Not provided'}</span></div>
@@ -3386,10 +3421,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
               {/* Personal Details */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="aud-h">
                   <Cake className="w-3.5 h-3.5" /> Personal Details
                 </span>
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                <div className="aud-box">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Date of Birth</span>
                     <span className="text-xs text-white font-medium">
@@ -3428,10 +3463,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               {/* Business Details (only if this is a business account) */}
               {selectedUserForDetails.isBusiness && (
                 <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="aud-h">
                     <Briefcase className="w-3.5 h-3.5" /> Business Details
                   </span>
-                  <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="aud-box">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[11px] text-zinc-500">Category</span>
                       <span className="text-xs text-white font-medium">{selectedUserForDetails.businessCategory || 'Not provided'}</span>
@@ -3454,13 +3489,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
               {/* Account Info */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="aud-h">
                   <Fingerprint className="w-3.5 h-3.5" /> Account Info
                 </span>
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                <div className="aud-box">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Account ID</span>
-                    <span className="text-[11px] text-zinc-300 font-mono break-all text-right">{selectedUserForDetails.id}</span>
+                    <span className="aud-val"><span>{selectedUserForDetails.id}</span>{selectedUserForDetails.id ? <button type="button" className="aud-copy" data-done={audCopied === 'id' ? '1' : undefined} onClick={() => audCopy('id', String(selectedUserForDetails.id))} aria-label="Copy" title="Copy">{audCopied === 'id' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</button> : null}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Account Type</span>
@@ -3511,7 +3546,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   {/* Exact join time and last known IP — kept together at the
                       bottom of the card since these two are the pieces an
                       admin actually pulls this panel up to check. */}
-                  <div className="pt-2 mt-1 border-t border-zinc-800 space-y-2">
+                  <div className="space-y-2.5">
                     {(selectedUserForDetails as any).createdAt && (
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[11px] text-zinc-500 shrink-0">Joined</span>
@@ -3524,9 +3559,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       <span className="text-[11px] text-zinc-500 shrink-0 flex items-center gap-1">
                         <Fingerprint className="w-3 h-3" /> IP Address
                       </span>
-                      <span className="text-[11px] text-zinc-300 font-mono text-right break-all">
-                        {(selectedUserForDetails as any).ipAddress || 'Not recorded'}
-                      </span>
+                      <span className="aud-val"><span>{(selectedUserForDetails as any).ipAddress || 'Not recorded'}</span>{(selectedUserForDetails as any).ipAddress ? <button type="button" className="aud-copy" data-done={audCopied === 'ip' ? '1' : undefined} onClick={() => audCopy('ip', String((selectedUserForDetails as any).ipAddress))} aria-label="Copy" title="Copy">{audCopied === 'ip' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}</button> : null}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[11px] text-zinc-500 shrink-0 flex items-center gap-1">
@@ -3545,31 +3578,31 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
               {/* Platform Activity Stats */}
               <div className="space-y-2">
-                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="aud-h">
                   <Users className="w-3.5 h-3.5" /> Platform Stats
                 </span>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-white block">{selectedUserForDetails.followersCount || 0}</span>
                     <span className="text-[10px] text-zinc-500">Followers</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-white block">{selectedUserForDetails.followingCount || 0}</span>
                     <span className="text-[10px] text-zinc-500">Following</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-white block">{selectedUserForDetails.postsCount || 0}</span>
                     <span className="text-[10px] text-zinc-500">Posts</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-amber-400 block">{(selectedUserForDetails.noobPoints || 0).toLocaleString()}</span>
                     <span className="text-[10px] text-zinc-500">NOOB Points</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-white block">{selectedUserForDetails.gamesPlayedCount || 0}</span>
                     <span className="text-[10px] text-zinc-500">Games Played</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                  <div className="aud-stat p-2.5 text-center">
                     <span className="text-sm font-black text-white block">{selectedUserForDetails.gamesWonCount || 0}</span>
                     <span className="text-[10px] text-zinc-500">Games Won</span>
                   </div>
@@ -3578,19 +3611,17 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
               {selectedUserForDetails.bio && (
                 <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">Bio</span>
-                  <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 leading-relaxed">
+                  <span className="aud-h">Bio</span>
+                  <div className="aud-box !py-3 text-[13px] leading-relaxed break-words">
                     {selectedUserForDetails.bio}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-4 border-t border-zinc-800 shrink-0">
-              <button
-                onClick={() => setSelectedUserForDetails(null)}
-                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl cursor-pointer"
-              >
+            <div className="aud-foot">
+              <span className="aud-hint block truncate">Scroll with the wheel, touchpad or the arrow keys. Esc closes.</span>
+              <button type="button" onClick={() => setSelectedUserForDetails(null)} className="aud-close">
                 Close
               </button>
             </div>

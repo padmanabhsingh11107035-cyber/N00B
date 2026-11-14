@@ -1,0 +1,47 @@
+/* The admin's "user details" page: a profile header with the key numbers, then one card per subject. Dark and light. Scrolls with wheel, touchpad, touch and keyboard. */
+.aud { --aud-bg: #0b0b0d; --aud-card: #141418; --aud-card2: #1b1b20; --aud-line: rgba(255, 255, 255, .08); --aud-fg: #ffffff; --aud-mute: #9a9aa4; --aud-dim: #6c6c76; --aud-acc: #F8CB46; --aud-on-acc: #0A0A0A; --aud-bad: #ff6b6b; --aud-ok: #38d39f; }
+:root[data-theme="light"] .aud { --aud-bg: #f5f5f7; --aud-card: #ffffff; --aud-card2: #f0f0f3; --aud-line: rgba(20, 20, 20, .1); --aud-fg: #15151a; --aud-mute: #5d5d66; --aud-dim: #8b8b94; --aud-acc: #F8CB46; --aud-on-acc: #0A0A0A; --aud-bad: #c92a2a; --aud-ok: #0a7a55; }
+.aud { background: var(--aud-bg) !important; color: var(--aud-fg); border: 1px solid var(--aud-line) !important; }
+.aud-head { position: relative; padding: 16px 16px 14px; border-bottom: 1px solid var(--aud-line); background: linear-gradient(180deg, color-mix(in srgb, var(--aud-acc) 16%, var(--aud-bg)), var(--aud-bg)); flex: none; }
+.aud-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.aud-x { width: 40px; height: 40px; border-radius: 14px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--aud-card); border: 1px solid var(--aud-line); color: var(--aud-fg); cursor: pointer; }
+.aud-x:focus-visible, .aud-body:focus-visible, .aud-copy:focus-visible, .aud-close:focus-visible { outline: 2px solid var(--aud-acc); outline-offset: 2px; }
+.aud-ava { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid var(--aud-acc); background: var(--aud-card); }
+.aud-name { font-size: 18px; line-height: 1.2; font-weight: 900; letter-spacing: -.01em; color: var(--aud-fg) !important; }
+.aud-user { font-size: 13px; color: var(--aud-mute) !important; }
+.aud-tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.aud-tag { height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; background: var(--aud-card); border: 1px solid var(--aud-line); color: var(--aud-fg); text-transform: capitalize; max-width: 100%; min-width: 0; }
+.aud-tag[data-k="acc"] { background: var(--aud-acc); border-color: var(--aud-acc); color: var(--aud-on-acc); }
+.aud-tag[data-k="bad"] { border-color: var(--aud-bad); color: var(--aud-bad); }
+.aud-nums { margin-top: 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.aud-num { background: var(--aud-card); border: 1px solid var(--aud-line); border-radius: 14px; padding: 9px 6px; text-align: center; min-width: 0; }
+.aud-num b { display: block; font-size: 15px; font-weight: 900; color: var(--aud-fg); }
+.aud-num span { display: block; font-size: 10px; color: var(--aud-mute); }
+.aud-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 16px; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--aud-dim) transparent; }
+.aud-body > * + * { margin-top: 18px; }
+/* a subject: the small heading, then its card */
+.aud-body .aud-h { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--aud-mute) !important; }
+.aud-body .aud-h > svg { width: 26px; height: 26px; padding: 6px; border-radius: 9px; background: var(--aud-acc); color: var(--aud-on-acc); flex: none; }
+.aud-body .aud-box { background: var(--aud-card) !important; border: 1px solid var(--aud-line) !important; border-radius: 18px !important; padding: 4px 14px !important; }
+.aud-body .aud-box > * + * { margin-top: 0 !important; }
+.aud-body .aud-box > div { padding: 11px 0; border-top: 1px solid var(--aud-line); min-width: 0; }
+.aud-body .aud-box > div:first-child { border-top: 0; }
+.aud-body .aud-box > div > span:first-child { font-size: 12.5px !important; color: var(--aud-mute) !important; flex: none; }
+.aud-body .aud-box > div > span:last-child { font-size: 13.5px !important; color: var(--aud-fg); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.aud-body .aud-box > button { margin: 10px 0 !important; }
+.aud-body .aud-sub { background: var(--aud-card2) !important; border: 1px solid var(--aud-line) !important; border-radius: 14px !important; padding: 10px 12px !important; margin: 4px 0 10px; }
+.aud-body .aud-sub > div { font-size: 12.5px !important; }
+.aud-body .aud-sub span:first-child, .aud-body .aud-sub p { color: var(--aud-mute) !important; }
+.aud-body .aud-sub span:last-child { color: var(--aud-fg) !important; overflow-wrap: anywhere; }
+.aud-val { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.aud-val > span { min-width: 0; overflow-wrap: anywhere; }
+.aud-copy { width: 28px; height: 28px; border-radius: 9px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--aud-card2); border: 1px solid var(--aud-line); color: var(--aud-mute); cursor: pointer; }
+.aud-copy[data-done="1"] { background: var(--aud-acc); border-color: var(--aud-acc); color: var(--aud-on-acc); }
+.aud-body .aud-stat { background: var(--aud-card) !important; border: 1px solid var(--aud-line) !important; border-radius: 14px !important; }
+.aud-body .aud-stat span:first-child { color: var(--aud-fg); }
+.aud-body .aud-stat span:last-child { color: var(--aud-mute) !important; }
+.aud-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--aud-line); flex: none; display: flex; align-items: center; gap: 12px; background: var(--aud-bg); }
+.aud-hint { font-size: 11px; color: var(--aud-dim); flex: 1; min-width: 0; }
+.aud-close { height: 42px; padding: 0 22px; border-radius: 14px; background: var(--aud-acc); color: var(--aud-on-acc); font-size: 13px; font-weight: 900; cursor: pointer; flex: none; }
+@media (max-width: 520px) { .aud-hint { display: none; } .aud-close { flex: 1; } .aud-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .aud-body { scroll-behavior: auto; } }

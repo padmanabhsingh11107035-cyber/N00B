@@ -26,7 +26,7 @@ expected(name, md5_before, md5_after) as (values
     ('story_json', 'cdaca5e9159b1554d162773b5d63769f', '15c26a681b0c008b02c71ea2b60c7157'),
     ('music_json', '652a3ac77740c7cd6877ade81dbe6861', '2678236951ff04a56358ade288c2b35e'),
     ('long_video_json', '178acdd88cfbad2e65a948e90219f489', 'dad48cc9ec283a2b48bacdaaa7b49aa0'),
-    ('message_json', 'cf5ccc3cc3f095cb8f3e3fdadd70ffcc', '299d9dc19b5fb9c46182e5233e6a0890'),
+    ('message_json', '76c21aae77a637d5c9240898391b3e62', '1c43579800498b779a9bdcf368288dfc'),
     ('chat_json', 'cfd2815f05053cf7eda5e95c7fa99521', '5a88ad1b839909e5f7ce131e1a229c50'),
     ('comment_json', '20b8373fb3130fcfd30894f87eaaf92e', '7e9ea8a5b5da398a8469896107c2c967'),
     ('team_application_json', '70dd40c1ce286c4790e94028ed2b2846', '8e3663bf77db480e1a6669fce0da8dfe'),
@@ -37,7 +37,7 @@ expected(name, md5_before, md5_after) as (values
     ('profile_noob_admin_ids', null, 'd9bfc070c23d7939b0ab768a23c28a23'),
     ('profile_row_visible', null, 'b55260b8def315557818827caf9f66a0'),
     ('profile_search_candidates', null, '10d7f53634ec5da085aa041ef604e009'),
-    ('is_hidden_from_me', '55cedca70a75c725ea04e21eae168042', '55cedca70a75c725ea04e21eae168042'),
+    ('is_hidden_from_me', '5338421ab66537f87e35916befb036fb', '5338421ab66537f87e35916befb036fb'),
     ('can_view_author', '67aa3f24ef8b732069170837c40cd9c2', '67aa3f24ef8b732069170837c40cd9c2'),
     ('is_admin', 'af565933219366fb8c1866de13bc2da8', 'af565933219366fb8c1866de13bc2da8'),
     ('user_public_json_by_id', 'fb6f4b2b1824a332af1c48be57698d38', 'fb6f4b2b1824a332af1c48be57698d38'),
@@ -46,7 +46,7 @@ expected(name, md5_before, md5_after) as (values
 ),
 fp as (
   select e.name,
-         (select md5(p.prosrc) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = e.name limit 1) as live,
+         (select md5(replace(p.prosrc, chr(13), '')) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = e.name limit 1) as live,
          e.md5_before, e.md5_after
   from expected e
 )

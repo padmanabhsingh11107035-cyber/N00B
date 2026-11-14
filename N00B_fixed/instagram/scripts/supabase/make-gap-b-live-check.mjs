@@ -12,7 +12,7 @@ const WATCH = ['search_users', 'user_by_id', 'mutual_followers', 'post_likers', 
   'is_hidden_from_me', 'can_view_author', 'is_admin', 'user_public_json_by_id', 'user_list_json_by_id', 'get_my_user'];
 const fingerprints = async (upTo) => {
   const db = await createTestDb({ upTo });
-  const rows = (await db.query(`select p.proname as name, md5(p.prosrc) as h from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any($1) order by 1`, [WATCH])).rows;
+  const rows = (await db.query(`select p.proname as name, md5(replace(p.prosrc, chr(13), '')) as h from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = any($1) order by 1`, [WATCH])).rows;
   return Object.fromEntries(rows.map((r) => [r.name, r.h]));
 };
 const before = await fingerprints('20261114000019_~');
@@ -40,7 +40,7 @@ ${lines}
 ),
 fp as (
   select e.name,
-         (select md5(p.prosrc) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = e.name limit 1) as live,
+         (select md5(replace(p.prosrc, chr(13), '')) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = e.name limit 1) as live,
          e.md5_before, e.md5_after
   from expected e
 )

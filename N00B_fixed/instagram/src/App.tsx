@@ -1039,7 +1039,7 @@ export default function App() {
     const meId = currentUserRef.current?.id;
     if (!meId) return;
     const now = Date.now();
-    if (!force && now - lastPeopleRefresh.current < 45000) return;
+    if (!force && now - lastPeopleRefresh.current < 180000) return;
     lastPeopleRefresh.current = now;
     const list = await fetchUsers();
     if (!list.length || currentUserRef.current?.id !== meId) return;   // a failed request never empties what is on screen
@@ -1051,7 +1051,7 @@ export default function App() {
     if (!currentUser?.id) return;
     const onShow = () => { if (document.visibilityState === 'visible') void refreshPeopleNow(); };
     const onOpen = () => { void refreshPeopleNow(true); };
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshPeopleNow(); }, 5 * 60 * 1000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshPeopleNow(); }, 10 * 60 * 1000);
     document.addEventListener('visibilitychange', onShow);
     window.addEventListener('online', onShow);
     window.addEventListener('noob:refresh-people', onOpen);

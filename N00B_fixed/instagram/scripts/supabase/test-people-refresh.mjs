@@ -13,5 +13,8 @@ check(/window\.addEventListener\('noob:refresh-people', onOpen\)/.test(app) && /
 check(/if \(!list\.length \|\| currentUserRef\.current\?\.id !== meId\) return;/.test(app), 'a failed or empty answer never empties the list on screen, and an answer for another account is ignored');
 check(/setRegisteredUsers\(list\)/.test(app.slice(app.indexOf('refreshPeopleNow'))) && /followersCount: me\.followersCount/.test(app) && /followingIds: me\.followingIds/.test(app), 'the list is replaced (people who left are gone) and my own follower / following numbers and ids are updated from the same answer');
 check(/180000/.test(app), "it is not asked more than once in 3 minutes unless a page forces it");
+// a private account you do not follow: the lists page says how to see them, not "No followers yet"
+{ const fl = fs.readFileSync(new URL('../../src/components/Profile/FollowListPage.tsx', import.meta.url), 'utf8');
+  check(/const listLocked = targetUser\.accountType === 'private' && targetUser\.id !== currentUser\.id && !currentUser\.isAdmin && !isFollowingTarget/.test(fl) && /Follow @\{targetUser\.username\} to see their followers and following\./.test(fl) && /data-testid="follow-list-locked-follow"/.test(fl) && /\{listLocked \? \(/.test(fl), 'private account not followed: a lock, the reason and a Follow button; own account, admin and followers see the lists'); }
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

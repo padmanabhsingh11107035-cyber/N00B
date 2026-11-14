@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus, MoreVertical, Ban, Flag, EyeOff, User as UserIcon, X } from 'lucide-react';
+import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus, MoreVertical, Ban, Flag, EyeOff, User as UserIcon, X, Lock } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { blockUser, unblockUser, hideProfileFrom, unhideProfileFrom, submitSafetyReport } from '../../services/api';
@@ -96,6 +96,12 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
       )
     : list;
 
+  // A private account you do not follow: its lists are closed (the database does not hand them out either). Say so, with the way in, instead of an empty "No followers yet".
+  const isFollowingTarget = !!currentUser.followingIds?.includes(targetUser.id);
+  const listLocked = targetUser.accountType === 'private' && targetUser.id !== currentUser.id && !currentUser.isAdmin && !isFollowingTarget;
+  const [askedNow, setAskedNow] = useState(false);
+  const requested = !isFollowingTarget && (askedNow || !!targetUser.isFollowRequested);
+
   const handleToggle = async (userId: string) => {
     if (!onToggleFollowUser) return;
     setPendingId(userId);
@@ -156,7 +162,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
         </div>
 
         {/* Search */}
-        <div className="px-4 pb-3">
+        <div className={listLocked ? "hidden" : "px-4 pb-3"}>
           <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
             <Search className="w-4 h-4 text-zinc-500 shrink-0" />
             <input
@@ -172,7 +178,25 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
 
       {/* List */}
       <div className="flex-1 overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        {filteredList.length === 0 ? (
+        {listLocked ? (
+          <div className="py-16 px-8 flex flex-col items-center text-center" data-testid="follow-list-locked">
+            <span className="w-14 h-14 rounded-full border border-zinc-700 flex items-center justify-center text-white"><Lock className="w-6 h-6" /></span>
+            <p className="mt-4 text-sm font-bold text-white">This account is private</p>
+            <p className="mt-1.5 text-xs text-zinc-400 leading-relaxed break-words max-w-full">Follow @{targetUser.username} to see their followers and following.</p>
+            {onToggleFollowUser && (
+              <button
+                type="button"
+                data-testid="follow-list-locked-follow"
+                disabled={pendingId === targetUser.id}
+                onClick={async () => { const was = requested; await handleToggle(targetUser.id); setAskedNow(!was); }}
+                className={`mt-5 max-w-full px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 ${requested ? 'bg-zinc-900 border border-zinc-700 text-white' : 'bg-white text-black'}`}
+              >
+                {requested ? <UserCheck className="w-4 h-4 shrink-0" /> : <UserPlus className="w-4 h-4 shrink-0" />}
+                <span className="truncate">{requested ? 'Requested' : `Follow @${targetUser.username}`}</span>
+              </button>
+            )}
+          </div>
+        ) : filteredList.length === 0 ? (
           <div className="py-16 text-center text-zinc-500 text-xs px-6">
             {query
               ? 'No one matches your search.'

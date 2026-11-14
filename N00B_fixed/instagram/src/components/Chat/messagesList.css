@@ -13,7 +13,7 @@ html.phone-edge .msg-page { --msg-top: 10px; }
 .msg-page {
   --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e;
   /* the green is the picture's (#02472b) taken a quarter darker; the round buttons and the gap inside a ring are lighter steps of it */
-  --head: #F8CB46; --head-btn: #0A0A0A; --head-btn-hover: #26231a; --head-gap: #F8CB46;
+  --head: #F8CB46; --head-ink: #0A0A0A; --head-btn: var(--head-ink); --head-btn-hover: color-mix(in srgb, var(--head-ink) 82%, var(--head)); --head-gap: var(--head);
   /* the big rounded top corners of the black sheet: 32 px on a phone, up to 52 px on a wide column; the green header goes exactly that far behind them */
   --msg-r: clamp(32px, 8vw, 52px);
   /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
@@ -48,16 +48,17 @@ html.phone-edge .msg-page { --msg-top: 10px; }
 .msg-page [data-testid="messages-people"] button:active { transform: scale(.95); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
 @layer base {
-  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #F8CB46 !important; background-image: none !important; }
-  /* the header is the yellow of the opening screen (#F8CB46), so everything on it is black: the title, the names, the round buttons (black with a yellow sign), the badges */
-  html .msg-page .msg-head { --mint: #0A0A0A; --mint-ring: #0A0A0A; }
-  html .msg-page .msg-head .text-white, html .msg-page .msg-head h1 { color: #0A0A0A !important; }
-  html .msg-page .msg-head [class*="text-white/"] { color: rgba(10, 10, 10, .78) !important; }
-  html .msg-page .msg-head [class*="bg-[var(--head-btn)]"], html .msg-page .msg-head [class*="bg-[var(--mint)]"] { color: #F8CB46 !important; }
-  html .msg-page .msg-head [class*="bg-black/25"] { background-color: rgba(10, 10, 10, .1) !important; border-color: rgba(10, 10, 10, .28) !important; }
-  html .msg-page .msg-head input { color: #0A0A0A !important; }
-  html .msg-page .msg-head input::placeholder { color: rgba(10, 10, 10, .55) !important; }
-  html .msg-page .msg-head [class*="hover:bg-white/10"]:hover, html .msg-page .msg-head [class*="bg-white/20"] { background-color: rgba(10, 10, 10, .12) !important; }
+  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: var(--head) !important; background-image: none !important; }
+  /* The header colour is the person's choice (yellow of the opening screen unless they picked another of the 30: Messages > three dots > Header colour). MessagesList puts
+     --head (the colour) and --head-ink (black on a light colour, white on a dark one) on .msg-page; everything on the header uses the ink, the round buttons are ink with a sign in the header colour. */
+  html .msg-page .msg-head { --mint: var(--head-ink); --mint-ring: var(--head-ink); }
+  html .msg-page .msg-head .text-white, html .msg-page .msg-head h1 { color: var(--head-ink) !important; }
+  html .msg-page .msg-head [class*="text-white/"] { color: color-mix(in srgb, var(--head-ink) 78%, transparent) !important; }
+  html .msg-page .msg-head [class*="bg-[var(--head-btn)]"], html .msg-page .msg-head [class*="bg-[var(--mint)]"] { color: var(--head) !important; }
+  html .msg-page .msg-head [class*="bg-black/25"] { background-color: color-mix(in srgb, var(--head-ink) 10%, transparent) !important; border-color: color-mix(in srgb, var(--head-ink) 28%, transparent) !important; }
+  html .msg-page .msg-head input { color: var(--head-ink) !important; }
+  html .msg-page .msg-head input::placeholder { color: color-mix(in srgb, var(--head-ink) 55%, transparent) !important; }
+  html .msg-page .msg-head [class*="hover:bg-white/10"]:hover, html .msg-page .msg-head [class*="bg-white/20"] { background-color: color-mix(in srgb, var(--head-ink) 12%, transparent) !important; }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
 }
 

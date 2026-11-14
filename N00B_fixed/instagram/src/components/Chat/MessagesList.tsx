@@ -7,7 +7,10 @@ import { Archive, ArrowDownLeft, BellOff, CheckCheck, ChevronLeft, Lock, MapPinn
 import { ChatConversation, User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { InstantsStack } from './InstantsStack';
+import { createPortal } from 'react-dom';
 import './messagesList.css';
+import { HeadColourPage } from './HeadColourPage';
+import { inkFor, useHeadColour } from '../../utils/chatHeadColour';
 
 export type MessagesFilterTab = 'all' | 'unread' | 'favourites' | 'groups';
 
@@ -68,6 +71,9 @@ export function MessagesList(p: MessagesListProps) {
 
   // The scroller: each chat row fades in (one after the other) as it comes into view.
   const listRef = useRef<HTMLDivElement>(null);
+  // the colour of the top of this page: the person's own choice of 30 (Messages > three dots > Header colour), yellow by default
+  const headColour = useHeadColour(currentUser.id);
+  const [showHeadColour, setShowHeadColour] = useState(false);
   const rowsKey = rows.map((c) => c.id).join(',');
   // Safety net for the fade-in: whatever an observer did or did not report, no row at or above the bottom edge of the list stays hidden.
   const sweepRows = () => {
@@ -168,7 +174,9 @@ export function MessagesList(p: MessagesListProps) {
     .slice(0, 12);
 
   return (
-    <aside className={`msg-page force-dark relative w-full shrink-0 flex-col z-20 ${mobileView === 'chat' ? 'hidden' : 'flex'}`}>
+    <aside className={`msg-page force-dark relative w-full shrink-0 flex-col z-20 ${mobileView === 'chat' ? 'hidden' : 'flex'}`} style={{ '--head': headColour, '--head-ink': inkFor(headColour) } as React.CSSProperties} data-head={headColour}>
+      {/* on the page itself (a portal), so it covers the bottom bar too */}
+      {showHeadColour && createPortal(<HeadColourPage userId={currentUser.id} chats={visibleConversations.length + friendsWithoutConversation.length} onClose={() => setShowHeadColour(false)} />, document.body)}
       {/* Instants: a small tab at the right edge of the list, it takes no room from the chats */}
       <InstantsStack onOpenCamera={p.onOpenInstantCamera} onOpenViewer={p.onOpenInstantViewer} refreshKey={p.instantsRefreshKey} />
 
@@ -500,6 +508,9 @@ export function MessagesList(p: MessagesListProps) {
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); p.onShowSettings(); }} className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Palette className="w-4 h-4 text-[var(--mint)]" /> Chat Bubble Theme
+                    </button>
+                    <button onClick={() => { setShowLeftMenu(false); setShowHeadColour(true); }} data-testid="messages-head-colour" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white cursor-pointer">
+                      <span className="w-4 h-4 rounded-full shrink-0 border border-white/40" style={{ backgroundColor: headColour }} /> Header colour
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); p.onShowInstantsArchive(); }} data-testid="instants-archive-open" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[14px] font-medium text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Archive className="w-4 h-4 text-amber-300" /> Your Instants

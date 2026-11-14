@@ -81,6 +81,7 @@ import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 import { forceStripColour } from '../../utils/statusStrip';
+import { useHeadColour } from '../../utils/chatHeadColour';
 import { MessagesList } from './MessagesList';
 
 const CURATED_GIFS = [
@@ -1740,6 +1741,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // The colour of the phone's own status bar (the browser theme colour). It is only a colour: nothing in the layout depends on it.
   // Green while the list or a chat is on screen (a chat in the light theme is white), and only while this page is really on screen (the page stays mounted, hidden, when another tab is open).
   const [stripOn, setStripOn] = useState(false);
+  const headColour = useHeadColour(currentUser.id);   // the top of the Messages list: the colour the person chose (yellow by default)
   useLayoutEffect(() => {
     const check = () => { const el = document.getElementById('chat-view-container'); setStripOn(!!el && el.getClientRects().length > 0 && !document.hidden); };
     check();
@@ -1749,8 +1751,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   }, []);
   useLayoutEffect(() => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
-    forceStripColour(stripOn ? (mobileView === 'chat' ? (light ? '#ffffff' : '#000000') : '#F8CB46') : null);   // an open chat: black (white in light); the Messages list keeps its green
-  }, [mobileView, stripOn]);
+    forceStripColour(stripOn ? (mobileView === 'chat' ? (light ? '#ffffff' : '#000000') : headColour) : null);   // an open chat: black (white in light); the Messages list keeps its green
+  }, [mobileView, stripOn, headColour]);
   useEffect(() => () => forceStripColour(null), []);
   // coming back from a chat on a phone: the page itself may have been left scrolled by the chat's keyboard
   useLayoutEffect(() => { if (mobileView === 'list') { try { window.scrollTo(0, 0); } catch { /* ignore */ } } }, [mobileView]);

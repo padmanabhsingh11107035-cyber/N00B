@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { linkify } from '../Common/Linkified';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
@@ -8,7 +8,7 @@ import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDo
 import { Post, PostComment, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
 import { applyLikes } from '../../utils/likeLedger';
-import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
+import { fetchCommentsPage, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from './CommentMediaComposer';
 import confetti from 'canvas-confetti';
@@ -41,6 +41,11 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const [expandedThreads, setExpandedThreads] = useState<string[]>([]);
   const [commentError, setCommentError] = useState('');
   const [attachment, setAttachment] = useState<CommentAttachment | null>(null);
+  // "Load more": comments come 100 at a time (newest first); loadedCount is how many the server has already handed over.
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState('');
+  const loadedCount = useRef(0);
 
   const isPostOwner = post.userId === currentUser.id || post.username === currentUser.username;
 
@@ -51,14 +56,33 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const loadComments = async () => {
     setLoading(true);
     try {
-      const data = await fetchComments(post.id);
-      setComments(Array.isArray(data) ? applyLikes(data, 'comment') : []);
+      const page = await fetchCommentsPage(post.id, 0);
+      const data = page.comments;
+      loadedCount.current = page.comments.length;
+      setHasMore(page.hasMore);
+      setMoreError('');
+      setComments(applyLikes(data, 'comment'));
     } catch (err) {
       console.error(err);
       setComments([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    setMoreError('');
+    const page = await fetchCommentsPage(post.id, loadedCount.current);
+    if (page.failed) setMoreError('Could not load more comments. Tap to try again.');
+    else {
+      loadedCount.current += page.comments.length;
+      setHasMore(page.hasMore);
+      // a comment can move between pages while people write: never show one twice
+      setComments((prev) => { const have = new Set(prev.map((c) => c.id)); return [...prev, ...applyLikes(page.comments.filter((c) => !have.has(c.id)), 'comment')]; });
+    }
+    setLoadingMore(false);
   };
 
   const handleSendComment = async (e: React.FormEvent) => {
@@ -329,6 +353,17 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
                 </div>
               );
             })
+          )}
+          {!loading && (hasMore || moreError) && (
+            <button
+              type="button"
+              data-testid="comments-load-more"
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full py-2.5 text-xs font-bold text-gray-300 hover:text-white cursor-pointer disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading...' : moreError || 'Load more comments'}
+            </button>
           )}
         </div>
 

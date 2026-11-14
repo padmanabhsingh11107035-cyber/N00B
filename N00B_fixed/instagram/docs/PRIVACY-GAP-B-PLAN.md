@@ -1,6 +1,7 @@
 # Privacy Gap B: staged plan (2026-11-14)
 
-Status: PLAN ONLY. Nothing was changed: no migration written, no app code touched, no live service touched, no git state changed.
+Status UPDATE 2026-11-14 (later): stages 0 to 4 are written and tested (migrations 20261114000020 to 24, harness, live-check SQL) and stage 5 is written as hand-run files, NOT registered; see `docs/PRIVACY-GAP-B-LIVE-CHECK.md` for what was built and the exact order. Decisions D1 to D3 were taken by the owner (nothing blanked, search unchanged).
+Original status: PLAN ONLY. Nothing was changed: no migration written, no app code touched, no live service touched, no git state changed.
 Everything below was read from the repository (242 files in `supabase/migrations`, `src/`, `supabase/functions/`, `worker/`, `scripts/`). The one local run was `node --liftoff-only scripts/audit-indexes.mjs` on a throwaway in-memory database.
 Start from `docs/PRIVACY-HARDENING-2026-11-14.md` ("Gaps closed") and `docs/SECURITY-AND-LOAD-REPORT.md`.
 

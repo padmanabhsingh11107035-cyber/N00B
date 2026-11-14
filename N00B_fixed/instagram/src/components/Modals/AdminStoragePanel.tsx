@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { HardDrive, Loader2, Eraser, Search, Ban, ShieldCheck } from 'lucide-react';
 import {
-  adminFetchStorageOverview, adminSetMediaCleanup, adminScanUnusedMedia, adminQueueUnusedMedia, adminCancelMediaQueue, adminRemoveDueMediaNow
+  adminFetchStorageOverview, adminFetchStorageByPerson, adminSetMediaCleanup, adminScanUnusedMedia, adminQueueUnusedMedia, adminCancelMediaQueue, adminRemoveDueMediaNow
 } from '../../services/api';
-import type { AdminStorageOverview, AdminUnusedScan } from '../../services/api';
+import type { AdminStorageOverview, AdminUnusedScan, AdminStoragePerson } from '../../services/api';
 
 // The admin's Storage page: what the server is holding, what is waiting to be deleted, and files that nothing uses any more (left behind by things that happened before the
 // automatic cleanup existed). Automatic cleanup removes the old file whenever a profile picture is replaced, a post / reel / video / message / entry is deleted or a Daily NOOB
@@ -25,11 +25,15 @@ export const AdminStoragePanel: React.FC = () => {
   const [busy, setBusy] = useState<'switch' | 'remove' | 'cancel' | 'scan' | 'queue' | null>(null);
   const [minAge, setMinAge] = useState(3);
   const [scan, setScan] = useState<AdminUnusedScan | null>(null);
+  const [people, setPeople] = useState<AdminStoragePerson[] | null>(null);   // null = not available (the update has not been run yet)
+  const [capBytes, setCapBytes] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await adminFetchStorageOverview();
     if (res.success && res.overview) setData(res.overview);
     else setNote({ text: res.error || 'Could not read the storage overview.', ok: false });
+    const per = await adminFetchStorageByPerson(30);
+    if (per.success) { setPeople(per.people || []); setCapBytes(per.capBytes ?? null); } else setPeople(null);
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -103,6 +107,29 @@ export const AdminStoragePanel: React.FC = () => {
               ))}
               {data.folders.length === 0 && <p className="text-[11px] text-zinc-500">Nothing is stored.</p>}
             </div>
+          </div>
+
+          <div className={card} data-testid="storage-by-person">
+            <span className="text-sm font-black text-white flex items-center gap-2"><HardDrive className="w-4 h-4 text-amber-400" /> Storage per person</span>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              {capBytes ? `The limit is ${formatBytes(capBytes)} per ordinary account (admins, AI accounts, Pro accounts and noob have none). People over it can not upload more until they delete something; nothing they already have is touched.` : "No per-person limit is switched on, so nobody is refused. To turn one on, run in the database: insert into public.internal_config (key, value) values ('storage_cap_mb', '50') on conflict (key) do update set value = excluded.value;"}
+            </p>
+            {people === null ? (
+              <p className="text-[11px] text-zinc-500">The per-person numbers are not available yet (the "storage per person" update has not been run in the database).</p>
+            ) : people.length === 0 ? (
+              <p className="text-[11px] text-zinc-500">No files with a known owner.</p>
+            ) : (
+              <div className="space-y-1">
+                {people.map((p) => (
+                  <div key={p.userId} className="flex items-center gap-2 text-[11px]">
+                    <span className="flex-1 min-w-0 truncate text-zinc-200 font-semibold">{p.displayName || p.username || p.userId.slice(0, 8)}{p.username ? <span className="text-zinc-500 font-normal"> @{p.username}</span> : null}</span>
+                    {p.exempt && <span className="px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 shrink-0">no limit</span>}
+                    {p.overLimit && <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-300 shrink-0">over the limit</span>}
+                    <span className="w-24 shrink-0 text-right text-zinc-400">{formatBytes(p.bytes)} · {p.files.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className={card}>

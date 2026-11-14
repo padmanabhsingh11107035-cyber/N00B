@@ -53,7 +53,7 @@ import {
   toggleLikeReel,
   toggleSaveReel,
   recordReelView,
-  fetchReelComments,
+  fetchReelCommentsPage,
   addReelComment,
   fetchReelLikers,
   fetchReelViewers,
@@ -149,6 +149,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
   const [reelComments, setReelComments] = useState<any[]>([]);
+  // "Load more": comments come 100 at a time (newest first)
+  const [reelCommentsMore, setReelCommentsMore] = useState(false);
+  const [loadingMoreReelComments, setLoadingMoreReelComments] = useState(false);
+  const [reelCommentsMoreError, setReelCommentsMoreError] = useState('');
+  const reelCommentsLoaded = useRef(0);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentInput, setCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
@@ -478,9 +483,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     if (!showComments || !currentReel) return;
     let cancelled = false;
     setIsLoadingComments(true);
-    fetchReelComments(currentReel.id)
-      .then((list) => {
-        if (!cancelled) setReelComments(list);
+    reelCommentsLoaded.current = 0;
+    setReelCommentsMore(false);
+    setReelCommentsMoreError('');
+    fetchReelCommentsPage(currentReel.id, 0)
+      .then((page) => {
+        if (cancelled) return;
+        reelCommentsLoaded.current = page.comments.length;
+        setReelCommentsMore(page.hasMore);
+        setReelComments(page.comments);
       })
       .finally(() => {
         if (!cancelled) setIsLoadingComments(false);
@@ -489,6 +500,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       cancelled = true;
     };
   }, [showComments, currentReel]);
+
+  const loadMoreReelComments = async () => {
+    if (!currentReel || loadingMoreReelComments) return;
+    const reelId = currentReel.id;
+    setLoadingMoreReelComments(true);
+    setReelCommentsMoreError('');
+    const page = await fetchReelCommentsPage(reelId, reelCommentsLoaded.current);
+    if (page.failed) setReelCommentsMoreError('Could not load more comments. Tap to try again.');
+    else {
+      reelCommentsLoaded.current += page.comments.length;
+      setReelCommentsMore(page.hasMore);
+      // a comment can move between pages while people write: never show one twice
+      setReelComments((prev) => { const have = new Set(prev.map((c) => c.id)); return [...prev, ...page.comments.filter((c) => !have.has(c.id))]; });
+    }
+    setLoadingMoreReelComments(false);
+  };
 
   const handleToggleLike = () => {
     if (!currentReel) return;
@@ -1482,6 +1509,17 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     </div>
                   );
                 })
+            )}
+            {!isLoadingComments && (reelCommentsMore || reelCommentsMoreError) && (
+              <button
+                type="button"
+                data-testid="reel-comments-load-more"
+                onClick={loadMoreReelComments}
+                disabled={loadingMoreReelComments}
+                className="w-full py-2.5 text-xs font-bold text-gray-300 hover:text-white cursor-pointer disabled:opacity-50"
+              >
+                {loadingMoreReelComments ? 'Loading...' : reelCommentsMoreError || 'Load more comments'}
+              </button>
             )}
           </div>
           {commentError && (

@@ -15,6 +15,7 @@ import { AD_MAX_PHOTOS, pagesOf, type ActiveAd, type AdApplication, type AdMedia
 import { uploadWithRetry } from '../utils/xhrUpload';
 import { factsOf } from '../utils/videoTranscode';
 import { MAX_UPLOAD_BYTES } from '../utils/videoPlan';
+import { storageRefusal } from '../utils/storageRoom';
 import type { UploadOptions } from '../utils/uploadProgress';
 import { uploadImageSettings } from '../utils/devicePrefs';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
@@ -59,6 +60,11 @@ async function rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise
   if (error) throw new ApiError(error.message, error.code, error.details);
   return data as T;
 }
+
+// Lists that load a page at a time (comments, music): the number shown first and added by each "Load more" (migration 20261114000012).
+export const LIST_PAGE_SIZE = 100;
+/** The paged database function is not installed yet (the migration has not been run): the caller falls back to the old, unpaged one. */
+const isMissingRpc = (err: unknown) => err instanceof ApiError && (err.code === 'PGRST202' || err.code === '42883' || /could not find the function|does not exist/i.test(err.message));
 
 /** Is this account suspended? (the profile page then shows "This account has been suspended" instead of the person's content) */
 export async function isAccountSuspended(userId: string): Promise<boolean> {
@@ -1576,6 +1582,29 @@ export async function fetchComments(postId: string) {
   }
 }
 
+export interface CommentsPage { comments: any[]; hasMore: boolean; failed?: boolean }
+
+/** One page of a post's comments (newest first). offset 0 is the first page; "Load more" asks for the next offset. Falls back to the whole (capped) list while the migration is not run. */
+export async function fetchCommentsPage(postId: string, offset = 0): Promise<CommentsPage> {
+  try {
+    const load = async (): Promise<CommentsPage> => {
+      try {
+        const res = await rpc<{ comments: any[] }>('post_comments_page', { p_post: postId, p_limit: LIST_PAGE_SIZE, p_offset: offset });
+        const comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+        return { comments, hasMore: comments.length >= LIST_PAGE_SIZE };
+      } catch (err) {
+        if (!isMissingRpc(err)) throw err;
+        if (offset > 0) return { comments: [], hasMore: false };
+        return { comments: await fetchComments(postId), hasMore: false };
+      }
+    };
+    return offset === 0 ? await cached(`comments-page:${postId}`, load) : await load();
+  } catch (err) {
+    console.error('Error fetching comments:', err);
+    return { comments: [], hasMore: false, failed: true };
+  }
+}
+
 export interface CommentMediaInput {
   url: string;
   type: 'image' | 'video' | 'voice' | 'gif' | 'sticker';
@@ -1592,7 +1621,7 @@ export async function addComment(postId: string, text: string, parentCommentId?:
       p_media_type: media?.type || null,
       p_media_duration: media?.duration || null
     });
-    invalidateCache(`comments:${postId}`);
+    invalidateCache(`comments:${postId}`); invalidateCache(`comments-page:${postId}`);
     return mapComment(res.comment);
   } catch (err) {
     // Thrown (not swallowed): a caller that clears its input / shows a success animation only on a
@@ -1603,7 +1632,7 @@ export async function addComment(postId: string, text: string, parentCommentId?:
 
 export async function deleteComment(postId: string, commentId: string) {
   const { data, error } = await supabase.from('comments').delete().eq('id', commentId).select('id');
-  invalidateCache(`comments:${postId}`);
+  invalidateCache(`comments:${postId}`); invalidateCache(`comments-page:${postId}`);
   if (error || !data || data.length === 0) return { success: false, error: 'You can only delete your own comments.' };
   return { success: true };
 }
@@ -1611,7 +1640,7 @@ export async function deleteComment(postId: string, commentId: string) {
 export async function togglePinComment(postId: string, commentId: string) {
   try {
     const res = await rpc('toggle_pin_comment', { p_comment: commentId });
-    invalidateCache(`comments:${postId}`);
+    invalidateCache(`comments:${postId}`); invalidateCache(`comments-page:${postId}`);
     return res;
   } catch (err) {
     return { success: false, isPinned: false, error: errorText(err, 'Could not pin the comment.') };
@@ -1624,7 +1653,7 @@ export async function togglePinComment(postId: string, commentId: string) {
 export async function toggleCommentLike(postId: string, commentId: string) {
   try {
     const res = await rpc<{ success: boolean; isLiked: boolean; likesCount: number }>('toggle_comment_like', { p_comment: commentId });
-    invalidateCache(`comments:${postId}`);
+    invalidateCache(`comments:${postId}`); invalidateCache(`comments-page:${postId}`);
     return res;
   } catch (err) {
     return { success: false, isLiked: false, likesCount: 0, error: errorText(err, 'Could not update the like.') };
@@ -1783,9 +1812,32 @@ function assertUploadable(file: File, extraBytes = 0): void {
   }
 }
 
+// The per-person storage limit (migration 20261114000013, OFF until the owner switches it on): asked once a minute at most, and any problem answers "go ahead".
+// Files this phone has sent since the last answer are added up, so several uploads in a row can not slip past it. Profile pictures are never refused (they replace the old one).
+let storageUsageAt = 0;
+let storageUsage: { usedBytes: number; capBytes: number | null } | null = null;
+async function assertStorageRoom(file: File, folder: MediaFolder): Promise<void> {
+  if (folder === 'avatars') return;
+  try {
+    if (Date.now() - storageUsageAt > 60000) {
+      storageUsageAt = Date.now();   // also on failure: a broken answer is not asked again for a minute
+      const res = await rpc<any>('my_storage_usage');
+      storageUsage = res && typeof res.usedBytes === 'number' ? { usedBytes: res.usedBytes, capBytes: typeof res.capBytes === 'number' ? res.capBytes : null } : null;
+    }
+  } catch {
+    storageUsage = null;
+  }
+  const refusal = storageRefusal(storageUsage, file.size);
+  if (refusal) throw new Error(refusal);
+}
+function countStorageSent(bytes: number) {
+  if (storageUsage) storageUsage = { ...storageUsage, usedBytes: storageUsage.usedBytes + bytes };
+}
+
 async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string; width?: number; height?: number; bytes?: number }> {
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'dat';
   assertUploadable(file);
+  await assertStorageRoom(file, folder);
 
   const key = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
   // Straight from the browser to storage — the file never passes through any server of ours. Sent as the storage library sends it (a form with the file), but with
@@ -1807,6 +1859,7 @@ async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOpti
     onRetry: (attempt, of, reason) => opts.onProgress?.({ stage: 'retrying', fraction: 0, attempt, of, reason }),
     signal: opts.signal
   });
+  countStorageSent(file.size);
   const shown = factsOf(file);
   return { success: true, objectKey: key, url: resolveMedia(key), bytes: file.size, ...(shown ? { width: shown.width, height: shown.height } : {}) };
 }
@@ -2659,6 +2712,16 @@ export async function adminFetchStorageOverview(): Promise<{ success: boolean; o
   }
 }
 
+export interface AdminStoragePerson { userId: string; username: string | null; displayName: string | null; files: number; bytes: number; exempt: boolean; overLimit: boolean }
+export async function adminFetchStorageByPerson(limit = 50): Promise<{ success: boolean; capBytes?: number | null; people?: AdminStoragePerson[]; error?: string }> {
+  try {
+    const res = await rpc<{ capBytes: number | null; people: AdminStoragePerson[] }>('admin_storage_by_person', { p_limit: limit });
+    return { success: true, capBytes: typeof res.capBytes === 'number' ? res.capBytes : null, people: Array.isArray(res.people) ? res.people : [] };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not read the storage use per person.') };
+  }
+}
+
 export interface AdminClientError {
   fingerprint: string; kind: 'error' | 'rejection' | 'boundary' | 'user_report'; totalCount: number; firstSeen: string; lastSeen: string;
   page: string; appVersion: string; platform: string; message: string; stack: string | null; note: string | null; users: number;
@@ -2863,6 +2926,27 @@ export async function fetchReelComments(reelId: string) {
   }
 }
 
+/** One page of a reel's comments (newest first); same rules as fetchCommentsPage. */
+export async function fetchReelCommentsPage(reelId: string, offset = 0): Promise<CommentsPage> {
+  try {
+    const load = async (): Promise<CommentsPage> => {
+      try {
+        const res = await rpc<{ comments: any[] }>('reel_comments_page', { p_reel: reelId, p_limit: LIST_PAGE_SIZE, p_offset: offset });
+        const comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+        return { comments, hasMore: comments.length >= LIST_PAGE_SIZE };
+      } catch (err) {
+        if (!isMissingRpc(err)) throw err;
+        if (offset > 0) return { comments: [], hasMore: false };
+        return { comments: await fetchReelComments(reelId), hasMore: false };
+      }
+    };
+    return offset === 0 ? await cached(`reel-comments-page:${reelId}`, load) : await load();
+  } catch (err) {
+    console.error('Error fetching reel comments:', err);
+    return { comments: [], hasMore: false, failed: true };
+  }
+}
+
 export async function addReelComment(reelId: string, text: string, parentCommentId?: string, media?: CommentMediaInput) {
   try {
     const res = await rpc<{ comment: any }>('add_reel_comment', {
@@ -2873,7 +2957,7 @@ export async function addReelComment(reelId: string, text: string, parentComment
       p_media_type: media?.type || null,
       p_media_duration: media?.duration || null
     });
-    invalidateCache(`reel-comments:${reelId}`);
+    invalidateCache(`reel-comments:${reelId}`); invalidateCache(`reel-comments-page:${reelId}`);
     return mapComment(res.comment);
   } catch (err) {
     throw new Error(errorText(err, 'Could not post the comment.'));
@@ -2912,6 +2996,23 @@ export async function fetchMusicTracks(): Promise<MusicTrack[]> {
     return ((await rpc<any[]>('list_music_tracks')) || []).map(mapTrack);
   } catch {
     return [];
+  }
+}
+
+/** One page of songs (newest first), `offset` songs skipped. Falls back to the whole (capped) list while the migration is not run. failed = the call did not work (the caller keeps what it has). */
+export async function fetchMusicTracksPage(offset = 0, limit = LIST_PAGE_SIZE): Promise<{ tracks: MusicTrack[]; hasMore: boolean; failed?: boolean }> {
+  try {
+    if (!(await currentSession())) return { tracks: [], hasMore: false };
+    try {
+      const rows = (await rpc<any[]>('list_music_tracks_page', { p_limit: limit, p_offset: offset })) || [];
+      return { tracks: rows.map(mapTrack), hasMore: rows.length >= limit };
+    } catch (err) {
+      if (!isMissingRpc(err)) throw err;
+      if (offset > 0) return { tracks: [], hasMore: false };
+      return { tracks: await fetchMusicTracks(), hasMore: false };
+    }
+  } catch {
+    return { tracks: [], hasMore: false, failed: true };
   }
 }
 

@@ -1,7 +1,7 @@
 import { setAppMusicPlaying } from '../utils/gameMusic';
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { MusicTrack } from '../types';
-import { fetchMusicTracks, toggleLikeMusicTrack } from '../services/api';
+import { fetchMusicTracksPage, toggleLikeMusicTrack, LIST_PAGE_SIZE } from '../services/api';
 
 interface MusicPlayerContextType {
   tracks: MusicTrack[];
@@ -25,6 +25,10 @@ interface MusicPlayerContextType {
   elapsedSec: number;
   totalSec: number;
   refreshTracks: () => Promise<void>;
+  // Songs come 100 at a time (newest first): more can be loaded with the "Load more" button.
+  hasMoreTracks: boolean;
+  loadingMoreTracks: boolean;
+  loadMoreTracks: () => Promise<void>;
   seekTo: (percentage: number) => void;
   // Like / unlike a track (saved in the database — one like per person per track).
   toggleLike: (trackId: string) => Promise<void>;
@@ -53,13 +57,36 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     loadTracks();
   }, []);
 
+  const [hasMoreTracks, setHasMoreTracks] = useState(false);
+  const [loadingMoreTracks, setLoadingMoreTracks] = useState(false);
+  const trackCount = useRef(0);
+
   const loadTracks = async () => {
     try {
-      const data = await fetchMusicTracks();
-      setTracks(data);
+      // a refresh (after a like, a rename, an upload) keeps the songs already loaded by "Load more" (up to 500)
+      const page = await fetchMusicTracksPage(0, Math.min(500, Math.max(LIST_PAGE_SIZE, trackCount.current)));
+      if (page.failed) return;   // the call did not work: keep the songs on screen
+      trackCount.current = page.tracks.length;
+      setHasMoreTracks(page.hasMore);
+      setTracks(page.tracks);
       // no song is picked for the person: nothing is ready until they tap one
     } catch (err) {
       console.error('Failed to fetch tracks in global player:', err);
+    }
+  };
+
+  const loadMoreTracks = async () => {
+    if (loadingMoreTracks) return;
+    setLoadingMoreTracks(true);
+    try {
+      const page = await fetchMusicTracksPage(trackCount.current);
+      if (!page.failed) {
+        trackCount.current += page.tracks.length;
+        setHasMoreTracks(page.hasMore);
+        setTracks((prev) => { const have = new Set(prev.map((t) => t.id)); return [...prev, ...page.tracks.filter((t) => !have.has(t.id))]; });
+      }
+    } finally {
+      setLoadingMoreTracks(false);
     }
   };
 
@@ -194,6 +221,9 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         elapsedSec,
         totalSec,
         refreshTracks: loadTracks,
+        hasMoreTracks,
+        loadingMoreTracks,
+        loadMoreTracks,
         seekTo,
         toggleLike
       }}

@@ -121,12 +121,12 @@ check(followersOf('A', 'C').includes('F') && followersOf('A', 'C').includes('B')
 check(followersOf('A', 'B').includes('G') && followersOf('A', 'B').includes('C'), 'followers of a public account: complete');
 check(ids('A', 'C2').includes(A), 'targetFollowsMe (ProfileView) stays true when the private account follows the reader');
 
-section('4. gap B left alone (no change to profiles or follows rules)');
+section('4. gap B left alone by THIS migration (no change to profiles or follows rules; gap B has its own staged plan, see test-privacy-gap-b.mjs)');
 check(JSON.stringify((await db.query(colsQ)).rows) === beforeRaw.profilesCols, 'readable profiles columns unchanged');
 check(JSON.stringify((await db.query(`select policyname, cmd, qual from pg_policies where tablename = 'profiles' order by 1`)).rows) === beforeRaw.profPolicies, 'profiles policies unchanged');
 check(JSON.stringify((await db.query(`select policyname, qual from pg_policies where tablename = 'follows' order by 1`)).rows) === beforeRaw.followPolicy, 'follows policy unchanged');
 const hiddenDirect = await call(A, `select username as r from public.profiles where id = $1`, [E]);
-check(hiddenDirect === 'eve', 'documented residual: a hidden account\'s username is still readable straight from the table (not closed, see the doc)');
+check(hiddenDirect === 'eve', 'documented residual: a hidden account\'s username is still readable straight from the table: the state of the REGISTERED migrations; closed only by supabase/one-off/apply-stage5.sql with the switch ON (proved in test-privacy-gap-b.mjs)');
 
 section('5. anonymous / no reader');
 const anon = await asAnon(db, async () => { try { await db.query('select public.user_by_id($1)', [B]); return 'ok'; } catch (e) { return 'denied'; } });

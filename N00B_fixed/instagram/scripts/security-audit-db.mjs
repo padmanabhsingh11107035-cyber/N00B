@@ -6,7 +6,9 @@
 //   4. a SECURITY DEFINER function a visitor who is NOT logged in can call and that never looks at who is calling, neither itself nor through a helper (auth.uid() ...),
 //   5. an admin_* function that a visitor who is not logged in can call,
 //   6. a function that a migration meant to lock (revoke ... from anon / authenticated) but that is still callable (the grant comes through PUBLIC, so the revoke did nothing),
-//   7. a table the anonymous role may write to while it has no row-level security.
+//   7. a table the anonymous role may write to while it has no row-level security,
+//   8. profile columns that are readable / closed against the plan, 9. (privacy gap B) a function that runs with the CALLER'S rights and reads the table profiles, a profiles select policy that is still `using (true)` once stage 5 is registered,
+//      and the helpers profile_brief / profile_row_visible / ... that are not security definer with a fixed search_path or are open to visitors.
 // Functions that were read by hand and are open on purpose are listed in OPEN_TO_VISITORS with the reason; anything new has to be read and added there on purpose.
 // Usage: node scripts/security-audit-db.mjs      (also run by .github/workflows/security.yml on every push and every week)
 import fs from 'node:fs';
@@ -131,6 +133,28 @@ for (const c of (await q(`select column_name from information_schema.columns whe
   const can = (await q(`select has_column_privilege('authenticated', 'public.profiles', $1, 'select') as c`, [c]))[0].c;
   if (CLOSED_PROFILE_COLUMNS.includes(c) && can) flag('PRIVATE PROFILE COLUMN READABLE BY EVERY LOGGED-IN PERSON', c);
   if (!CLOSED_PROFILE_COLUMNS.includes(c) && !can) flag('PROFILE COLUMN NOT READABLE BY LOGGED-IN PEOPLE', c, `a new column is closed until it is granted: grant select (${c}) on public.profiles to authenticated (or list it in CLOSED_PROFILE_COLUMNS if it must stay private)`);
+}
+
+
+// 9. privacy gap B (docs/PRIVACY-GAP-B-PLAN.md). After stage 2 no function that runs with the caller's rights may read the table profiles: the card comes from the definer helper profile_brief
+//    (so a row rule on profiles can never break a builder). A NEW invoker function that reads profiles has to use the helpers or be listed here on purpose, with the reason.
+const INVOKER_READS_PROFILES_OK = {};   // name -> reason (empty on purpose)
+// While stage 5 (supabase/one-off/apply-stage5.sql) is NOT a registered migration the select policy of profiles is still `using (true)`; flip this to true when stage 5 is registered.
+const PROFILES_ROW_RULE_REGISTERED = false;
+for (const f of fns.filter((x) => !x.prosecdef && x.ret !== 'trigger' && /(^|[^a-z0-9_])profiles([^a-z0-9_]|$)/i.test(x.prosrc || ''))) {
+  if (!INVOKER_READS_PROFILES_OK[f.proname]) flag('FUNCTION RUNNING WITH THE CALLERS RIGHTS READS profiles', `${f.proname}(${f.args})`, 'read the profile card through public.profile_brief(uuid) (security definer) so a row rule on profiles cannot break it, or list it in INVOKER_READS_PROFILES_OK with the reason');
+}
+for (const name of ['profile_brief', 'profile_row_visible', 'profile_is_private', 'profile_noob_admin_ids', 'profile_search_candidates']) {
+  const f = fns.find((x) => x.proname === name);
+  if (!f) { flag('PRIVACY GAP B HELPER MISSING', name); continue; }
+  if (!f.prosecdef) flag('PRIVACY GAP B HELPER IS NOT SECURITY DEFINER', name);
+  if (f.anon_can) flag('PRIVACY GAP B HELPER CALLABLE BY VISITORS', name);
+}
+for (const p of policies.filter((x) => x.tablename === 'profiles' && x.cmd === 'SELECT')) {
+  if ((p.qual || '').trim() === 'true') {
+    if (PROFILES_ROW_RULE_REGISTERED) flag('profiles SELECT POLICY IS STILL using (true)', p.policyname);
+    else notes.push('privacy gap B still open by design: profiles_select is using (true) until supabase/one-off/apply-stage5.sql is run live and the switch profiles_row_rule is turned on');
+  }
 }
 
 const tableCount = (await q(`select count(*)::int n from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p')`))[0].n;

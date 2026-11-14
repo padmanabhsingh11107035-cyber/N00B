@@ -44,6 +44,9 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     nextTrack,
     prevTrack,
     refreshTracks,
+    hasMoreTracks,
+    loadingMoreTracks,
+    loadMoreTracks,
     toggleLike,
     pauseTrack
   } = useMusicPlayer();
@@ -348,7 +351,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
           <p className="text-[9px] lg:text-[11px] font-semibold uppercase tracking-[0.28em] text-white/55">Spotlight</p>
           <h1 className="mt-1 text-[44px] lg:text-[76px] leading-[1.02] font-extrabold tracking-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.5)]">NOOB Music</h1>
           <p className="mt-1.5 text-[11px] lg:text-[13px] text-white/50">
-            {tracks.length.toLocaleString()} {tracks.length === 1 ? 'song' : 'songs'}{totalPlays > 0 ? ` · ${totalPlays.toLocaleString()} plays` : ''}
+            {tracks.length.toLocaleString()}{hasMoreTracks ? '+' : ''} {tracks.length === 1 ? 'song' : 'songs'}{totalPlays > 0 ? ` · ${totalPlays.toLocaleString()} plays` : ''}
           </p>
         </div>
       </section>
@@ -499,6 +502,17 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
               );
             })}
           </ul>
+        )}
+        {hasMoreTracks && (
+          <button
+            type="button"
+            data-testid="music-load-more"
+            onClick={loadMoreTracks}
+            disabled={loadingMoreTracks}
+            className="w-full mt-3 py-3 rounded-full bg-white/10 text-xs font-bold text-white hover:bg-white/15 cursor-pointer disabled:opacity-50"
+          >
+            {loadingMoreTracks ? 'Loading...' : 'Load more songs'}
+          </button>
         )}
         {isMasterAdmin && deleteError && (
           <p className="text-[11px] text-rose-300 text-center mt-2">{deleteError}</p>

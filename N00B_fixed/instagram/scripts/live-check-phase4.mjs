@@ -160,8 +160,9 @@ try {
   section('Staying logged in (the check the app runs every 30 seconds)');
   const row = await A.c.rpc('my_suspension_status');   // the column itself is closed to the API since migration 20261114000009
   check(!row.error && row.data && row.data.found === true && row.data.suspended === false, 'a signed-in person can read their own "suspended" flag, and it is false: the app has no reason to say "suspended"');
-  const someoneElse = await A.c.from('profiles').select('id').eq('id', B.id).maybeSingle();
-  check(!someoneElse.error && !!someoneElse.data, 'the account lookup works for other accounts too (so a missing row really means something)');
+  // privacy gap B (docs/PRIVACY-GAP-B-PLAN.md): another person's card is read through the app's own lookup (user_by_id), never straight from the table, because the table rule will hide hidden / suspended rows
+  const someoneElse = await A.c.rpc('user_by_id', { p_id: B.id });
+  check(!someoneElse.error && !!someoneElse.data && someoneElse.data.id === B.id, 'the account lookup (user_by_id) works for other accounts too (so a missing row really means something)');
 } catch (err) {
   failed++;
   console.log(`  FAIL unexpected error: ${err.message}`);

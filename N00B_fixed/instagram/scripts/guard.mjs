@@ -61,6 +61,12 @@ const CHECKS = [
   ['Locked chat pictures, videos and voice notes', ['node', 'scripts/supabase/test-e2ee-media.mjs']],
   ['Privacy hardening: profile columns closed, private follows, contact lookup limits, visit retention, login unchanged', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-hardening.mjs']],
   ['Privacy gaps: following lists of private accounts', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-gaps.mjs']],
+  ['Privacy gap B: profile reads moved behind definer helpers (before/after PGlite harness, 17 functions + 24 entry points, row rule tested OFF/ON, rollbacks)', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-gap-b.mjs']],
+  // growth preparation (docs/GROWTH-PREPARATION.md): lists with a limit and Load more, a per-person storage limit (off until switched on), clean-up of old read notifications
+  ['Growth: default row limits (feed 200, stories 300, notifications 150)', ['node', 'scripts/supabase/test-growth-limits.mjs']],
+  ['Growth: music, post comments, reel comments and chats capped, with Load more', ['node', '--liftoff-only', 'scripts/supabase/test-capped-lists.mjs']],
+  ['Growth: storage per person (measured, off until switched on, exempt accounts)', ['node', '--liftoff-only', 'scripts/supabase/test-storage-per-person.mjs']],
+  ['Growth: old read notifications cleaned up (90 days, 500 per run, nothing else)', ['node', '--liftoff-only', 'scripts/supabase/test-notification-cleanup.mjs']],
   ['www.noobsocials.com redirects to the apex (Worker)', ['node', 'scripts/supabase/test-www-redirect.mjs']],
   ['Private chat media: Worker gate', ['node', 'scripts/supabase/test-chat-media-worker.mjs']],
   ['Private chat media: phone side', ['node', 'scripts/supabase/test-chat-media-client.mjs']],

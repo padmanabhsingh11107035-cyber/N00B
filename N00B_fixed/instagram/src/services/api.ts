@@ -2,6 +2,7 @@
 // this file only lists them under the names the screens have always imported.
 export type { HelixBoard, HelixBoardEntry } from './supabaseApi';
 export type { AdminGrievance, AdminDailyOverview, AdminDailyDay, AdminStorageOverview, ModerationMode, ModerationSettings, ModerationOverview, ModerationLogRow, ModerationVerdict, ModerationHealth, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry, LoginApprovalTicket, LoginApprovalStatus } from './supabaseApi';
+export type { AdminStoragePerson } from './supabaseApi';
 export type { RepostKind, RepostEntry, FeedRepost } from './supabaseApi';
 export type { GuestSupportAnswer, BirthdayItem, BirthdayOverview, BirthdayHistoryRow } from './supabaseApi';
 export {
@@ -91,6 +92,10 @@ export {
   deletePost,
   deletePostSlide,
   fetchComments,
+  fetchCommentsPage,
+  fetchReelCommentsPage,
+  fetchMusicTracksPage,
+  LIST_PAGE_SIZE,
   addComment,
   deleteComment,
   togglePinComment,
@@ -185,6 +190,7 @@ export {
   adminSetDailyChallenge,
   adminFetchDailyOverview,
   adminFetchStorageOverview,
+  adminFetchStorageByPerson,
   adminFetchClientErrors,
   adminClearClientErrors,
   adminSetMediaCleanup,

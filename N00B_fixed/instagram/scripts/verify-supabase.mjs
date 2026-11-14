@@ -29,6 +29,8 @@ const dir = process.argv.slice(2).find((a) => !a.startsWith('--'))
 const plan = buildImportPlan(loadBackup(dir), { withChats: process.argv.includes('--with-chats'), withReels: process.argv.includes('--with-reels') });
 
 const admin = createClient(url, secret, { auth: { autoRefreshToken: false, persistSession: false } });
+const serviceClient = admin;   // the shadowed name `admin` below is a signed-in administrator session
+const adminClientRuleOn = async () => (await serviceClient.from('internal_config').select('value').eq('key', 'profiles_row_rule').maybeSingle()).data?.value || 'off';
 const adapter = {
   async fetchAll(table) {
     const out = [];
@@ -89,8 +91,12 @@ if (publishable) {
 
   if (ordinary) {
     const c = ordinary.client;
+    // privacy gap B (docs/PRIVACY-GAP-B-PLAN.md): while the row rule (supabase/one-off/apply-stage5.sql, switch ON) is off an ordinary user reads every card; once it is on they read all except accounts that
+    // are hidden from them or suspended, and always their own. Both states are correct, so the check is: own card present, never more than the import holds, and all of them while the rule is off.
     const cards = await c.from('profiles').select('id');
-    check(!cards.error && cards.data.length === plan.tables.profiles.length, `an ordinary user sees all ${plan.tables.profiles.length} profile cards`);
+    const ruleOn = (await adminClientRuleOn()) === 'on';
+    check(!cards.error && cards.data.length <= plan.tables.profiles.length && cards.data.some((r) => r.id === ordinary.a.id) && (ruleOn || cards.data.length === plan.tables.profiles.length),
+      ruleOn ? 'an ordinary user sees their own card and the allowed cards (the row rule is ON)' : `an ordinary user sees all ${plan.tables.profiles.length} profile cards (the row rule is OFF)`);
     const priv = await c.from('profile_private').select('user_id');
     check(!priv.error && priv.data.length === 1 && priv.data[0].user_id === ordinary.a.id, 'an ordinary user sees ONLY their own private details (email, phone, birthday)');
     const push = await c.from('push_subscriptions').select('user_id');

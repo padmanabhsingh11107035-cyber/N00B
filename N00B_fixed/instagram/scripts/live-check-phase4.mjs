@@ -158,8 +158,8 @@ try {
 
   // =====================================================================================
   section('Staying logged in (the check the app runs every 30 seconds)');
-  const row = await A.c.from('profiles').select('is_suspended').eq('id', A.id).maybeSingle();
-  check(!row.error && row.data && row.data.is_suspended === false, 'a signed-in person can read their own "suspended" flag, and it is false: the app has no reason to say "suspended"');
+  const row = await A.c.rpc('my_suspension_status');   // the column itself is closed to the API since migration 20261114000009
+  check(!row.error && row.data && row.data.found === true && row.data.suspended === false, 'a signed-in person can read their own "suspended" flag, and it is false: the app has no reason to say "suspended"');
   const someoneElse = await A.c.from('profiles').select('id').eq('id', B.id).maybeSingle();
   check(!someoneElse.error && !!someoneElse.data, 'the account lookup works for other accounts too (so a missing row really means something)');
 } catch (err) {

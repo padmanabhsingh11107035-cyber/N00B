@@ -76,7 +76,7 @@ check((await rpc(u, 'saved_posts')).length === raw.posts.filter((p) => (p.savedB
 check(await denied(() => rpc(u, 'award_points', { p_user: uid, p_amount: 999999, p_reason: 'gift' })), 'I can NOT give myself points');
 check(await denied(() => rpc(u, 'notify_user', { p_target: plan.authUsers[1].id, p_type: 'system', p_actor: uid, p_message: 'forged' })), 'I can NOT forge a notification');
 check(!!(await u.from('posts').insert({ user_id: uid, caption: 'sneaky' })).error, 'I can NOT publish by writing to the table directly');
-check(!!(await u.from('profiles').update({ noob_points: 999999 }).eq('id', uid)).error || (await u.from('profiles').select('noob_points').eq('id', uid).single()).data.noob_points === me.noobPoints, 'I can NOT change my own points');
+check(!!(await u.from('profiles').update({ noob_points: 999999 }).eq('id', uid)).error || (await rpc(u, 'get_my_user')).noobPoints === me.noobPoints, 'I can NOT change my own points');
 check(((await u.from('profile_private').select('user_id')).data || []).length === 1, 'I can see ONLY my own private details');
 await u.auth.signOut();
 

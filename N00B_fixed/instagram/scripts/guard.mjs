@@ -60,6 +60,7 @@ const CHECKS = [
   // chat privacy
   ['Locked chat pictures, videos and voice notes', ['node', 'scripts/supabase/test-e2ee-media.mjs']],
   ['Privacy hardening: profile columns closed, private follows, contact lookup limits, visit retention, login unchanged', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-hardening.mjs']],
+  ['Privacy gaps: following lists of private accounts', ['node', '--liftoff-only', 'scripts/supabase/test-privacy-gaps.mjs']],
   ['www.noobsocials.com redirects to the apex (Worker)', ['node', 'scripts/supabase/test-www-redirect.mjs']],
   ['Private chat media: Worker gate', ['node', 'scripts/supabase/test-chat-media-worker.mjs']],
   ['Private chat media: phone side', ['node', 'scripts/supabase/test-chat-media-client.mjs']],

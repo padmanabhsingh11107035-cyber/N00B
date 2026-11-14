@@ -119,6 +119,32 @@ jobs:
       - name: Sync web build into the native project
         run: npx cap sync android
 
+      # The yellow NOOB launch screen (colours, launch theme, logo drawables). Runs AFTER cap add, capacitor-assets and cap sync so nothing regenerates over it.
+      # Our values/styles.xml is the Capacitor 8 template styles.xml (same style names AppTheme, AppTheme.NoActionBar, AppTheme.NoActionBarLaunch that AndroidManifest.xml uses) plus the yellow items,
+      # so it is only copied over after checking the generated file really has those three styles (otherwise the template changed and the build stops instead of shipping a broken theme).
+      - name: Yellow launch screen (colours, launch theme, logo)
+        run: |
+          RES=android/app/src/main/res
+          for s in 'name="AppTheme"' 'name="AppTheme.NoActionBar"' 'name="AppTheme.NoActionBarLaunch"'; do grep -q "$s" $RES/values/styles.xml; done
+          grep -q 'android:theme="@style/AppTheme.NoActionBarLaunch"' android/app/src/main/AndroidManifest.xml
+          grep -q 'android:theme="@style/AppTheme"' android/app/src/main/AndroidManifest.xml
+          # no other generated styles file may redefine the launch theme (it would win over ours on some Android versions)
+          if grep -rl 'NoActionBarLaunch' $RES --include=*.xml | grep -v '/values/styles.xml$'; then echo "Another styles file defines the launch theme"; exit 1; fi
+          mkdir -p $RES/values $RES/values-v27 $RES/drawable
+          cp android-overrides/launch-res/values/colors_noob.xml $RES/values/colors_noob.xml
+          cp android-overrides/launch-res/values/styles.xml $RES/values/styles.xml
+          cp android-overrides/launch-res/values-v27/styles.xml $RES/values-v27/styles.xml
+          cp android-overrides/launch-res/drawable/splash_logo.xml $RES/drawable/splash_logo.xml
+          cp android-overrides/launch-res/drawable/splash_yellow.xml $RES/drawable/splash_yellow.xml
+          grep -q 'noob_yellow">#F8CB46' $RES/values/colors_noob.xml
+          grep -q 'name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen"' $RES/values/styles.xml
+          grep -q 'name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar"' $RES/values/styles.xml
+          grep -q 'name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar"' $RES/values/styles.xml
+          grep -q 'windowSplashScreenBackground">@color/noob_yellow' $RES/values/styles.xml
+          grep -q 'windowLayoutInDisplayCutoutMode">shortEdges' $RES/values-v27/styles.xml
+          grep -q 'vector' $RES/drawable/splash_logo.xml
+          grep -q 'layer-list' $RES/drawable/splash_yellow.xml
+
       # Family Map keeps sharing when the app is closed through the plugin @capacitor-community/background-geolocation; this stops it from silently going missing from the app
       - name: Check that the background location plugin is linked into the app
         run: grep -q "capacitor-community-background-geolocation" android/capacitor.settings.gradle

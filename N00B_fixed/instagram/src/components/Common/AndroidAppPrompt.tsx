@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { ANDROID_APK_URL } from '../../utils/appVersion';
 import { isNativeApp } from '../../utils/siteUrl';
-import { isInstalled } from '../../utils/pwaInstall';
+import { isInstalled, PLAY_STORE_URL, showPlayStoreButton } from '../../utils/pwaInstall';
 import { PROMPT_MAX_TIMES, shouldOfferAndroidApp, type PromptMemory } from '../../utils/androidAppPrompt';
 
 // The card itself. When it is offered is decided in utils/androidAppPrompt.ts.
@@ -24,7 +24,7 @@ export const AndroidAppPrompt: React.FC = () => {
 
   useEffect(() => {
     const ok = shouldOfferAndroidApp({ userAgent: navigator.userAgent, native: isNativeApp(), installed: isInstalled(), memory: load(), now: Date.now() });
-    if (!ok || !ANDROID_APP_OFFER_ON) return;
+    if (!ok || !(ANDROID_APP_OFFER_ON || showPlayStoreButton())) return;
     const t = window.setTimeout(() => setShow(true), 25000);
     return () => window.clearTimeout(t);
   }, []);
@@ -33,6 +33,7 @@ export const AndroidAppPrompt: React.FC = () => {
   const notNow = () => { const m = load(); save({ at: Date.now(), times: (m?.times ?? 0) + 1 }); setShow(false); };
   const get = () => {
     save({ at: Date.now(), times: PROMPT_MAX_TIMES, done: true });
+    if (showPlayStoreButton()) { window.open(PLAY_STORE_URL, '_blank', 'noopener'); setShow(false); return; }   // Google Play: no file to install by hand
     window.open(ANDROID_APK_URL, '_blank', 'noopener');
     setStep('hint');
   };
@@ -57,7 +58,7 @@ export const AndroidAppPrompt: React.FC = () => {
         </div>
         {step === 'offer' && (
           <div className="flex gap-2 mt-3.5">
-            <button type="button" onClick={get} className="flex-1 py-2 rounded-full bg-white text-black text-xs font-extrabold active:scale-95 transition-transform touch-manipulation cursor-pointer">Get the app</button>
+            <button type="button" onClick={get} className="flex-1 py-2 rounded-full bg-white text-black text-xs font-extrabold active:scale-95 transition-transform touch-manipulation cursor-pointer">{showPlayStoreButton() ? 'Get it on Google Play' : 'Get the app'}</button>
             <button type="button" onClick={notNow} className="px-5 py-2 rounded-full border border-white/30 text-white text-xs font-extrabold active:scale-95 transition-transform touch-manipulation cursor-pointer hover:border-white/70">Not now</button>
           </div>
         )}

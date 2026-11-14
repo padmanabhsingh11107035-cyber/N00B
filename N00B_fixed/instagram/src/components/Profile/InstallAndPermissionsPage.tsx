@@ -12,7 +12,8 @@ import {
   type PushDeviceState
 } from '../Common/PushNotificationPrompt';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
-import { canInstallNow, isAndroidWeb, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
+import { PlayStoreButton } from '../Common/PlayStoreButton';
+import { showPlayStoreButton, canInstallNow, isAndroidWeb, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 
 interface InstallAndPermissionsPageProps {
   currentUser: User;
@@ -176,6 +177,13 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
 
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="w-full max-w-sm mx-auto space-y-5">
+          {/* Get it on Google Play: only once PLAY_STORE_URL is set, only on an Android phone in a browser */}
+          {isAndroidWeb() && showPlayStoreButton() && !installed && (
+            <div className="rounded-3xl bg-white/[0.04] border border-white/10 p-5 space-y-4">
+              <h2 className="text-sm font-bold text-white">Get the app</h2>
+              <PlayStoreButton className="w-full py-3 bg-white text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 flex items-center justify-center" />
+            </div>
+          )}
           {/* Install App */}
           <div className={`rounded-3xl bg-white/[0.04] border border-white/10 p-5 space-y-4${onIos || isAndroidWeb() ? " hidden" : ""}`}>
             <div className="flex items-center gap-3">

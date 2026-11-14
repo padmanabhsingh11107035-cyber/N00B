@@ -73,6 +73,7 @@ import { findLanguage } from '../../i18n/languages.ts';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
 import { isAppleMobile } from '../../utils/platformDetect';
 import { canInstallNow, isAndroidWeb, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
+import { PlayStoreButton } from '../Common/PlayStoreButton';
 import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 import { isOnOtherNoobAddress, installAddress } from '../../utils/siteUrl';
@@ -1104,7 +1105,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
           finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the
           device asks for reduced motion); already installed = the small quiet pill. */}
-      {hideInstall ? null : appInstalled && !installElsewhere ? (
+      {hideInstall ? (!appInstalled && !installElsewhere && isAndroidWeb() ? <div className="w-full max-w-lg flex justify-center z-10 pt-5 pb-2"><PlayStoreButton /></div> : null) : appInstalled && !installElsewhere ? (
         <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
           <button
             type="button"

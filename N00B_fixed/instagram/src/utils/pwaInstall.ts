@@ -69,6 +69,18 @@ export function isAndroidWeb(ua: string = typeof navigator !== 'undefined' ? nav
   return HIDE_ANDROID_INSTALL && /Android/i.test(ua);
 }
 
+// The Google Play listing of NOOB. EMPTY for now: set it to the Play listing URL when the app is published. While it is empty nothing changes (no Android install button anywhere);
+// once it is set, an Android phone in a browser gets a single "Get it on Google Play" button wherever the install button is hidden.
+export const PLAY_STORE_URL = '';
+export function showPlayStoreButton(ua: string = typeof navigator !== 'undefined' ? navigator.userAgent : '', url: string = PLAY_STORE_URL): boolean {
+  let native = false;
+  try { native = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.() === true; } catch { /* not native */ }
+  return url !== '' && /Android/i.test(ua) && !isStandalone() && !native;   // never inside the app itself
+}
+export function openPlayStore(): void {
+  if (PLAY_STORE_URL) window.open(PLAY_STORE_URL, '_blank', 'noopener');
+}
+
 export const canInstallNow = (): boolean => !!deferredPrompt;
 export const isInstalled = (): boolean => installed || isStandalone() || (rememberedInstall() && !deferredPrompt);
 

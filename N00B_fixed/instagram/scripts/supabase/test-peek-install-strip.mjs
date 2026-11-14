@@ -14,7 +14,7 @@ check(/setStoryPeek\(peek && currentUser\?\.proTier === 'ultimate' && list\[inde
 console.log('\n2. Install button');
 const pwa = read('src/utils/pwaInstall.ts'), invite = read('src/components/Common/InstallInvite.tsx'), page = read('src/components/Profile/InstallAndPermissionsPage.tsx'), auth = read('src/components/Auth/AuthView.tsx');
 check(/noob_app_installed/.test(pwa) && /remember\(true\)/.test(pwa) && /installed = false; remember\(false\)/.test(pwa) && /rememberedInstall\(\) && !deferredPrompt/.test(pwa), 'an installed Android app is remembered (installed, or opened as an app) and forgotten when the browser offers the install again');
-check(/!isIos\(currentPushEnv\(\)\) && !isAndroidWeb\(\)\)/.test(invite), 'the install invitation never opens on an iPhone');
+check(/!isIos\(currentPushEnv\(\)\) && \(!isAndroidWeb\(\) \|\| showPlayStoreButton\(\)\)\)/.test(invite), 'the install invitation never opens on an iPhone');
 check(/onIos \|\| isAndroidWeb\(\) \? " hidden" : ""/.test(page), 'the Install card in settings is hidden on an iPhone');
 check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\) \|\| isAndroidWeb\(\)\)/.test(auth), 'the login screen has no install button on an iPhone or when installed');
 console.log('\n3. Top strip and Messages colour');
@@ -23,5 +23,16 @@ check(/elementFromPoint\(Math\.floor\(window\.innerWidth \/ 2\), 3\)/.test(strip
 check(/MutationObserver/.test(strip) && /'scroll', queue/.test(strip) && /setStripColour/.test(strip) && /noob-top-edge/.test(strip) && /initStatusStrip\(\);/.test(main), 'it follows page changes and scrolling, lets Messages set its own colour (also drawn by a thin bar at the top edge), and starts with the app');
 check(/--head: #0E4B37;/.test(css) && /'#0E4B37'/.test(chat) && !/02351f/.test(css + chat), 'the Messages header green is #0E4B37 everywhere');
 check(/HIDE_ANDROID_INSTALL = true/.test(read('src/utils/pwaInstall.ts')) && /ANDROID_APP_OFFER_ON = false/.test(read('src/components/Common/AndroidAppPrompt.tsx')), 'no Install button or app-file card on Android phones until Google Play');
+console.log('\n4. Google Play button (switched off until PLAY_STORE_URL is set)');
+const play = read('src/utils/pwaInstall.ts'), btn = read('src/components/Common/PlayStoreButton.tsx'), prompt = read('src/components/Common/AndroidAppPrompt.tsx');
+check(/export const PLAY_STORE_URL = '';/.test(play), 'PLAY_STORE_URL exists and is empty for now');
+check(/return url !== '' && \/Android\/i\.test\(ua\)/.test(play) && /!native/.test(play), 'the button shows only when the URL is set, on Android web, never inside the app');
+check(/if \(!showPlayStoreButton\(\)\) return null;/.test(btn) && /Get it on Google Play/.test(btn) && /openPlayStore/.test(btn), 'the button renders nothing when off, says "Get it on Google Play", opens the listing');
+check(/hideInstall \? \(!appInstalled && !installElsewhere && isAndroidWeb\(\) \? <div[^>]*><PlayStoreButton \/><\/div> : null\)/.test(auth), 'login screen: Play button only in the hidden-install case, nothing else changes');
+check(/\(!isAndroidWeb\(\) \|\| showPlayStoreButton\(\)\)/.test(invite) && /<PlayStoreButton/.test(invite), 'install invitation: opens on Android only with the Play button');
+check(/isAndroidWeb\(\) && showPlayStoreButton\(\) && !installed/.test(page) && /onIos \|\| isAndroidWeb\(\) \? " hidden"/.test(page), 'settings page: Install card stays hidden on Android, Play card only when on');
+check(/ANDROID_APP_OFFER_ON = false/.test(prompt) && /ANDROID_APP_OFFER_ON \|\| showPlayStoreButton\(\)/.test(prompt) && /showPlayStoreButton\(\)\) \{ window\.open\(PLAY_STORE_URL/.test(prompt), 'app card: off unless the Play URL is set, then it opens Google Play');
+const showPlay = (ua, url) => url !== '' && /Android/i.test(ua);
+check(!showPlay('Mozilla/5.0 (Linux; Android 14)', '') && showPlay('Mozilla/5.0 (Linux; Android 14)', 'https://play.google.com/x') && !showPlay('Mozilla/5.0 (iPhone)', 'https://play.google.com/x'), 'empty URL: no button anywhere; URL set: Android only');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

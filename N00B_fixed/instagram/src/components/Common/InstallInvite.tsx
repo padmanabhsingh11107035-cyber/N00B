@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
-import { canInstallNow, isAndroidWeb, chromeInstallUrl, isInstalled, isSamsungInternet, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
+import { showPlayStoreButton, canInstallNow, isAndroidWeb, chromeInstallUrl, isInstalled, isSamsungInternet, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
 import { currentPushEnv, isIos } from '../../utils/pushSupport';
 import { isNativeApp, isOnOtherNoobAddress } from '../../utils/siteUrl';
+import { PlayStoreButton } from './PlayStoreButton';
 
 // The "Install NOOB" card of the new address: it opens full screen when a page is opened with ?install=1 (the Install button of the old address's
 // "new home" card, the Install button of the reminder email), so the person does not have to look for a button. A browser only shows its install dialog after a
@@ -20,7 +21,7 @@ export function readInvite(search: string): { fromOld: boolean } | null {
 const INVITE = typeof window !== 'undefined' ? readInvite(window.location.search) : null;
 
 export const InstallInvite: React.FC = () => {
-  const [open, setOpen] = useState(() => !!INVITE && !isNativeApp() && !isOnOtherNoobAddress() && !isInstalled() && !isIos(currentPushEnv()) && !isAndroidWeb());   // no invite on an iPhone: Apple has no install button
+  const [open, setOpen] = useState(() => !!INVITE && !isNativeApp() && !isOnOtherNoobAddress() && !isInstalled() && !isIos(currentPushEnv()) && (!isAndroidWeb() || showPlayStoreButton()));   // no invite on an iPhone: Apple has no install button
   const [canInstall, setCanInstall] = useState(canInstallNow());
   const [state, setState] = useState<'idle' | 'busy' | 'accepted' | 'dismissed' | 'unavailable'>('idle');
   const [waited, setWaited] = useState(false);
@@ -42,6 +43,20 @@ export const InstallInvite: React.FC = () => {
   }, []);
 
   if (!open || !INVITE) return null;
+
+  // Android phone and NOOB is on Google Play (PLAY_STORE_URL set): one button to the listing, no browser install
+  if (isAndroidWeb()) {
+    return (
+      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Get NOOB" data-testid="install-invite">
+        <div className="force-white-text relative w-[min(92vw,380px)] rounded-[30px] ring-1 ring-white/60 px-7 pt-8 pb-6 text-center" style={{ backgroundColor: '#000000', color: '#ffffff' }}>
+          <img src="/noob-logo-circle.png" alt="" width={72} height={72} className="mx-auto w-[72px] h-[72px] rounded-[24%]" />
+          <h2 className="mt-4 text-[22px] font-extrabold tracking-tight">Get NOOB</h2>
+          <div className="mt-5"><PlayStoreButton className="w-full inline-flex items-center justify-center rounded-full bg-white py-3.5 text-[15px] font-extrabold text-black cursor-pointer active:scale-[.98]" /></div>
+          <button type="button" onClick={() => setOpen(false)} className="mt-4 text-xs text-white/55 underline underline-offset-4 cursor-pointer">Not now</button>
+        </div>
+      </div>
+    );
+  }
 
   const install = async () => {
     if (onSamsung) { window.location.href = chromeInstallUrl(window.location.origin + '/'); return; }

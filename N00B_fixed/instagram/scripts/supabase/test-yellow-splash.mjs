@@ -56,6 +56,15 @@ const styles = read(res + 'values/styles.xml') + read(res + 'values-v27/styles.x
 check(/windowSplashScreenBackground">@color\/noob_yellow/.test(styles) && /windowSplashScreenAnimatedIcon">@drawable\/splash_logo/.test(styles) && /windowLayoutInDisplayCutoutMode">shortEdges/.test(styles), 'Android 12+ launch screen: yellow, logo icon, drawn under the cut-out');
 check(fs.existsSync(res + 'drawable/splash_logo.xml') && fs.existsSync(res + 'drawable/splash_yellow.xml') && !/<text/.test(read(res + 'drawable/splash_logo.xml')), 'launch drawables exist, no text');
 
+const wf = read('../../.github/workflows/android-build.yml');
+const step = wf.slice(wf.indexOf('- name: Yellow launch screen'), wf.indexOf('Check that the background location plugin'));
+check(step.length > 100 && wf.indexOf('- name: Yellow launch screen') > wf.indexOf('npx cap sync android'), 'the workflow copies the launch files in a step AFTER cap add / capacitor-assets / cap sync');
+check(['values/colors_noob.xml', 'values/styles.xml', 'values-v27/styles.xml', 'drawable/splash_logo.xml', 'drawable/splash_yellow.xml'].every((f) => step.includes('launch-res/' + f)), 'it copies all five launch-res files');
+check(step.includes('android:theme="@style/AppTheme.NoActionBarLaunch"') && step.includes('name="AppTheme.NoActionBarLaunch"'), 'it checks the manifest still uses the launch theme and the generated styles have the three Capacitor style names');
+check((step.match(/grep -q/g) || []).length >= 10, 'the result is verified with grep -q');
+const oneStyles = read(res + 'values/styles.xml');
+check(['name="AppTheme"', 'name="AppTheme.NoActionBar"', 'name="AppTheme.NoActionBarLaunch"'].every((n) => oneStyles.includes(n)) && /AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar"/.test(oneStyles) && /colorPrimaryDark">@color\/colorPrimaryDark/.test(oneStyles), 'our styles.xml keeps all three Capacitor style names and the template items (merge, not a replacement)');
+
 console.log('Timing and hand-over (public/splash.js)');
 const code = read('public/splash.js');
 check(/MIN_MS = 1100, MAX_MS = 1800, FADE_MS = 60/.test(code) && /#F8CB46/.test(code), 'at least 1.1 s, at most 1.8 s, fade 60 ms');

@@ -45,3 +45,22 @@
 .aud-close { height: 42px; padding: 0 22px; border-radius: 14px; background: var(--aud-acc); color: var(--aud-on-acc); font-size: 13px; font-weight: 900; cursor: pointer; flex: none; }
 @media (max-width: 520px) { .aud-hint { display: none; } .aud-close { flex: 1; } .aud-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .aud-body { scroll-behavior: auto; } }
+/* the three numbers in the header are buttons: each opens its list in place of the details */
+button.aud-num { cursor: pointer; font: inherit; color: inherit; transition: transform .15s ease, border-color .15s ease; position: relative; }
+button.aud-num::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 5px; height: 2px; border-radius: 2px; background: var(--aud-acc); opacity: .75; }
+button.aud-num:active { transform: scale(.96); }
+button.aud-num[data-on="1"] { border-color: var(--aud-acc); background: color-mix(in srgb, var(--aud-acc) 16%, var(--aud-card)); }
+button.aud-num:focus-visible, .aud-person:focus-visible { outline: 2px solid var(--aud-acc); outline-offset: 2px; }
+.aud-listhead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.aud-empty { font-size: 13px; color: var(--aud-mute); text-align: center; padding: 28px 8px; }
+.aud-body .aud-box > div > .aud-person { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; cursor: pointer; color: var(--aud-fg); }
+.aud-pn { font-size: 14px; font-weight: 700; color: var(--aud-fg); }
+.aud-pu { font-size: 12px; color: var(--aud-mute); }
+.aud-posts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.aud-post { min-width: 0; background: var(--aud-card); border: 1px solid var(--aud-line); border-radius: 16px; overflow: hidden; padding-bottom: 10px; }
+.aud-post-m { position: relative; display: block; aspect-ratio: 1; background: var(--aud-card2); }
+.aud-post-m > img, .aud-post-m > video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.aud-post-t { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; text-align: center; font-size: 12.5px; line-height: 1.4; color: var(--aud-fg); overflow: hidden; overflow-wrap: anywhere; }
+.aud-post-n { position: absolute; top: 8px; right: 8px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.aud-post-c { margin: 9px 10px 0; font-size: 12.5px; font-weight: 600; color: var(--aud-fg); }
+.aud-post-s { margin: 2px 10px 0; font-size: 11px; color: var(--aud-mute); }

@@ -294,6 +294,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setAudCopied(key);
     window.setTimeout(() => setAudCopied((k) => (k === key ? '' : k)), 1400);
   };
+  // tapping Followers / Following / Posts in the header shows that list in place of the details (Back returns)
+  const [audList, setAudList] = useState<'followers' | 'following' | 'posts' | null>(null);
+  const [audPosts, setAudPosts] = useState<{ loading: boolean; error: boolean; items: any[] }>({ loading: false, error: false, items: [] });
+  const [audPostsKey, setAudPostsKey] = useState(0);
   const detailsOpenId = selectedUserForDetails?.id ?? null;
   useEffect(() => {
     if (!detailsOpenId) return undefined;
@@ -315,6 +319,29 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [detailsOpenId]);
+  useEffect(() => { setAudList(null); setAudPosts({ loading: false, error: false, items: [] }); }, [detailsOpenId]);
+  useEffect(() => { const box = userDetailBodyRef.current; if (box) { box.scrollTop = 0; try { box.focus({ preventScroll: true }); } catch { box.focus(); } } }, [audList]);
+  // this person's posts: the admin's own list of every post is read page by page (newest first) and this person's are kept; it stops at the end, or after 1,000 posts
+  useEffect(() => {
+    if (audList !== 'posts' || !detailsOpenId) return undefined;
+    let off = false;
+    setAudPosts({ loading: true, error: false, items: [] });
+    (async () => {
+      const mine: any[] = [];
+      let cursor: any = null;
+      for (let page = 0; page < 10 && !off; page++) {
+        const res = await fetchAdminContentPage('posts', cursor, 100);
+        if (off) return;
+        if (!res.success) { setAudPosts({ loading: false, error: true, items: mine }); return; }
+        for (const it of res.items as any[]) if (it.userId === detailsOpenId) mine.push(it);
+        setAudPosts({ loading: !!res.next, error: false, items: [...mine] });
+        if (!res.next) break;
+        cursor = res.next;
+      }
+      if (!off) setAudPosts((v) => ({ ...v, loading: false }));
+    })();
+    return () => { off = true; };
+  }, [audList, detailsOpenId, audPostsKey]);
 
   // Points-adjustment modal state
   const [selectedUserForPoints, setSelectedUserForPoints] = useState<User | null>(null);
@@ -3381,14 +3408,72 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 {selectedUserForDetails.isSuspended && <span className="aud-tag" data-k="bad">Suspended</span>}
               </div>
               <div className="aud-nums">
-                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.followersCount || 0).toLocaleString()}</b><span>Followers</span></div>
-                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.followingCount || 0).toLocaleString()}</b><span>Following</span></div>
-                <div className="aud-num"><b className="block truncate">{(selectedUserForDetails.postsCount || 0).toLocaleString()}</b><span>Posts</span></div>
+                {([['followers', 'Followers', selectedUserForDetails.followersCount], ['following', 'Following', selectedUserForDetails.followingCount], ['posts', 'Posts', selectedUserForDetails.postsCount]] as const).map(([k, label, n]) => (
+                  <button key={k} type="button" className="aud-num" data-on={audList === k ? '1' : undefined} aria-pressed={audList === k} onClick={() => setAudList(audList === k ? null : k)} data-testid={`aud-open-${k}`} title={`See ${label.toLowerCase()}`}>
+                    <b className="block truncate">{(n || 0).toLocaleString()}</b><span>{label}</span>
+                  </button>
+                ))}
                 <div className="aud-num"><b className="block truncate">{formatNoobPoints(selectedUserForDetails.noobPoints || 0)}</b><span>NOOBs</span></div>
               </div>
             </div>
 
-            <div ref={userDetailBodyRef} tabIndex={0} className="aud-body" data-testid="admin-user-details-body" aria-label="User details, scrollable">
+            {audList && (() => {
+              const u = selectedUserForDetails;
+              const people = audList === 'followers' ? usersList.filter((x) => x.id !== u.id && (x.followingIds || []).includes(u.id))
+                : audList === 'following' ? (u.followingIds || []).map((id) => usersList.find((x) => x.id === id)).filter((x): x is User => !!x) : [];
+              const title = audList === 'followers' ? 'Followers' : audList === 'following' ? 'Following' : 'Posts';
+              const count = audList === 'posts' ? audPosts.items.length : people.length;
+              return (
+                <div ref={userDetailBodyRef} tabIndex={0} className="aud-body" data-testid="admin-user-details-list" aria-label={`${title}, scrollable`}>
+                  <div className="aud-listhead">
+                    <button type="button" className="aud-x" onClick={() => setAudList(null)} aria-label="Back to the details" title="Back to the details"><ChevronLeft className="w-5 h-5" /></button>
+                    <div className="min-w-0 flex-1">
+                      <p className="aud-name block truncate !text-[16px]">{title} of @{u.username}</p>
+                      <p className="aud-user block truncate">{audList === 'posts' && audPosts.loading ? 'Loading…' : `${count.toLocaleString()} shown`}</p>
+                    </div>
+                  </div>
+                  {audList !== 'posts' ? (
+                    people.length === 0 ? <p className="aud-empty">{audList === 'followers' ? 'Nobody follows this account yet.' : 'This account does not follow anyone yet.'}</p> : (
+                      <div className="aud-box">
+                        {people.map((x) => (
+                          <div key={x.id} className="flex items-center gap-3">
+                            <button type="button" className="aud-person" onClick={() => { setAudList(null); setSelectedUserForDetails(x); }} title="Open this person's details">
+                              <img src={x.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" loading="lazy" />
+                              <span className="min-w-0 flex-1 text-left">
+                                <span className="flex items-center gap-1 min-w-0"><span className="aud-pn block truncate">{x.displayName || x.username}</span>{x.isVerified && <VerifiedBadge size="sm" />}</span>
+                                <span className="aud-pu block truncate">@{x.username}</span>
+                              </span>
+                              <ChevronRight className="w-4 h-4 shrink-0 opacity-50" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : audPosts.loading && audPosts.items.length === 0 ? <p className="aud-empty">Loading the posts…</p>
+                    : audPosts.error ? <p className="aud-empty">Could not load the posts. <button type="button" className="underline cursor-pointer" onClick={() => setAudPostsKey((k) => k + 1)}>Try again</button></p>
+                    : audPosts.items.length === 0 ? <p className="aud-empty">This account has no posts.</p> : (
+                      <div className="aud-posts">
+                        {audPosts.items.map((post) => {
+                          const first = post.slides?.[0];
+                          return (
+                            <div key={post.id} className="aud-post">
+                              <span className="aud-post-m">
+                                {first && first.mediaType === 'image' ? <img src={first.mediaUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                                  : first && first.mediaType === 'video' ? <video src={first.mediaUrl} muted playsInline preload="metadata" />
+                                  : <span className="aud-post-t">{(post.caption || 'Text post').slice(0, 80)}</span>}
+                                {(post.slides?.length || 0) > 1 && <span className="aud-post-n">{post.slides.length}</span>}
+                              </span>
+                              <span className="aud-post-c block truncate">{post.caption || 'No caption'}</span>
+                              <span className="aud-post-s block truncate">{(post.likesCount || 0).toLocaleString()} likes · {(post.commentsCount || 0).toLocaleString()} comments · {formatRelativeTime(post.createdAt)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                </div>
+              );
+            })()}
+            <div ref={audList ? undefined : userDetailBodyRef} tabIndex={0} className={audList ? "hidden" : "aud-body"} data-testid="admin-user-details-body" aria-label="User details, scrollable">
               {/* Contact Information */}
               <div className="space-y-2">
                 <span className="aud-h">

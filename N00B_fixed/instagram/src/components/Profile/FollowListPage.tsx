@@ -119,10 +119,10 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col animate-in fade-in duration-150">
+    <div className="fixed inset-0 edge-own z-50 bg-zinc-950 flex flex-col animate-in fade-in duration-150" data-noob-keep="1" data-testid="follow-list-page">
       {/* Header */}
       <div className="shrink-0 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 px-4 pb-3" style={{ paddingTop: 'calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 12px)' }}>
           <button
             onClick={onClose}
             aria-label="Go back"
@@ -171,7 +171,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {filteredList.length === 0 ? (
           <div className="py-16 text-center text-zinc-500 text-xs px-6">
             {query

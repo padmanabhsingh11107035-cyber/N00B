@@ -243,8 +243,9 @@ jobs:
           if [ -f "app/release.keystore" ]; then
             # Google Play does not allow an app to install apps or update itself outside Google Play (and keeps REQUEST_INSTALL_PACKAGES for installer apps only): the bundle for Play is built without them
             sed -i 's# <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />##; s# <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />##' app/src/main/AndroidManifest.xml
-            if grep -q "REQUEST_INSTALL_PACKAGES\|UPDATE_PACKAGES_WITHOUT_USER_ACTION" app/src/main/AndroidManifest.xml; then echo "The Play bundle must not ask to install apps"; exit 1; fi
-            ./gradlew bundleRelease --no-daemon
+            if grep -q "REQUEST_INSTALL_PACKAGES\|UPDATE_PACKAGES_WITHOUT_USER_ACTION" app/src/main/AndroidManifest.xml; then echo "::error title=Play bundle::the manifest still asks to install apps: $(grep -n 'REQUEST_INSTALL_PACKAGES\|UPDATE_PACKAGES_WITHOUT_USER_ACTION' app/src/main/AndroidManifest.xml | tr '\n' ' ')"; echo "The Play bundle must not ask to install apps"; exit 1; fi
+            # why it failed is written as an annotation (job logs need admin rights to read)
+            if ! ./gradlew bundleRelease --no-daemon > /tmp/aab.log 2>&1; then echo "::error title=Play bundle failed::$(grep -E 'FAILED|error:|What went wrong|Execution failed|Caused by|keystore|assword' /tmp/aab.log | head -15 | tr '\n' ' ' | cut -c1-900)"; exit 1; fi
           else
             echo "No release keystore configured yet (ANDROID_KEYSTORE_BASE64 secret not set) — skipping signed AAB build."
           fi

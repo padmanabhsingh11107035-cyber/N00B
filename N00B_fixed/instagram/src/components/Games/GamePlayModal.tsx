@@ -102,6 +102,23 @@ type PlayMode = 'select_mode' | 'select_difficulty' | 'matchmaking' | 'play_bot'
 type RoundResult = 'win' | 'tie' | 'loss';
 type BotDifficulty = 'easy' | 'normal' | 'hard';
 
+// One person in an invite list (a game's "play a friend" steps).
+const InviteRow: React.FC<{ friend: { id: string; username: string; displayName: string; avatar?: string }; sent: boolean; onSend: () => void }> = ({ friend, sent, onSend }) => (
+  <div className="gp-person">
+    <span className="gp-av" aria-hidden="true">
+      {friend.avatar ? <img src={friend.avatar} alt="" referrerPolicy="no-referrer" /> : (friend.displayName || friend.username || '?').slice(0, 1).toUpperCase()}
+    </span>
+    <span className="block min-w-0 flex-1">
+      <span className="gp-pn block min-w-0 truncate">{friend.displayName}</span>
+      <span className="gp-pu block min-w-0 truncate">@{friend.username}</span>
+    </span>
+    <button type="button" onClick={onSend} disabled={sent} className="gp-mini" data-red={sent ? '0' : '1'} data-done={sent ? '1' : '0'}>
+      {sent ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+      <span>{sent ? 'Sent' : 'Invite'}</span>
+    </button>
+  </div>
+);
+
 // Pure-luck games with zero decision points (nothing but dice rolls) — a
 // difficulty selector would be cosmetic only, so these skip straight to the
 // bot match like before instead of showing a selector that can't do anything.
@@ -1237,129 +1254,98 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
           {/* 1b. SELECT BOT DIFFICULTY */}
           {currentMode === 'select_difficulty' && (
-            <div className="space-y-4 py-2">
-              <div className="text-center px-2">
-                <div className="w-12 h-12 mx-auto rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-3">
-                  <Bot className="w-6 h-6" />
-                </div>
-                <span className="text-sm font-bold text-white block">Choose Bot Difficulty</span>
-                <p className="text-[11px] text-zinc-400 mt-1">This changes how the bot actually plays</p>
+            <div className="gp-step" data-testid="game-step-difficulty">
+              <div>
+                <span className="gp-sec">Play the bot</span>
+                <h3 className="gp-h mt-1.5">How hard should it play?</h3>
+                <p className="gp-sub">This changes how the bot really plays, not just the label.</p>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="gp-list">
                 {([
-                  { level: 'easy' as const, label: 'Easy', desc: 'Bot makes frequent mistakes', color: 'emerald' },
-                  { level: 'normal' as const, label: 'Normal', desc: 'Bot plays a fair, balanced game', color: 'amber' },
-                  { level: 'hard' as const, label: 'Hard', desc: 'Bot plays to win, few mistakes', color: 'red' }
-                ]).map(({ level, label, desc, color }) => (
-                  <button
-                    key={level}
-                    onClick={() => handlePickDifficulty(level)}
-                    className={`w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border flex items-center justify-between transition-all group cursor-pointer ${
-                      color === 'emerald'
-                        ? 'border-zinc-800 hover:border-emerald-500/50'
-                        : color === 'amber'
-                          ? 'border-zinc-800 hover:border-amber-500/50'
-                          : 'border-zinc-800 hover:border-red-500/50'
-                    }`}
-                  >
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white block">{label}</span>
-                      <span className="text-[11px] text-zinc-400 block">{desc}</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:translate-x-0.5 transition-all" />
+                  { level: 'easy' as const, label: 'Easy', desc: 'Makes mistakes often. Good for a first try.', bars: 1 },
+                  { level: 'normal' as const, label: 'Normal', desc: 'A fair, balanced game.', bars: 2 },
+                  { level: 'hard' as const, label: 'Hard', desc: 'Plays to win and rarely slips.', bars: 3 }
+                ]).map(({ level, label, desc, bars }) => (
+                  <button key={level} type="button" onClick={() => handlePickDifficulty(level)} className="gp-opt" data-testid={`game-difficulty-${level}`}>
+                    <span className="gp-opt-ico" aria-hidden="true">
+                      <span className="gp-lvl">{[1, 2, 3].map((n) => <i key={n} data-on={n <= bars ? '1' : '0'} />)}</span>
+                    </span>
+                    <span className="block min-w-0 flex-1">
+                      <span className="gp-opt-t">{label}</span>
+                      <span className="gp-opt-s">{desc}</span>
+                    </span>
+                    <ArrowRight className="gp-opt-go w-4 h-4" />
                   </button>
                 ))}
               </div>
 
-              <button
-                onClick={() => setCurrentMode('select_mode')}
-                className="w-full py-2 text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-              >
-                Back
-              </button>
+              <button type="button" onClick={() => setCurrentMode('select_mode')} className="gp-quiet">Back</button>
             </div>
           )}
 
-          {/* 2. MATCHMAKING QUEUE (30s Search with Radar Animation) */}
+          {/* 2. MATCHMAKING QUEUE (30 s search) */}
           {currentMode === 'matchmaking' && (
-            <div className="py-6 flex flex-col items-center text-center space-y-5">
+            <div className="gp-step" data-mid="1" data-testid="game-step-matchmaking">
               {!matchmakingFailed ? (
                 <>
-                  {/* Radar Wave Animation */}
-                  <div className="relative w-36 h-36 flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full border border-noob/20 animate-ping" />
-                    <div className="absolute inset-3 rounded-full border border-noob/40 animate-pulse" />
-                    <div className="w-20 h-20 rounded-full bg-noob/10 border-2 border-noob shadow-[0_0_25px_rgba(255,255,255,0.3)] flex flex-col items-center justify-center z-10">
-                      <Radio className="w-6 h-6 text-noob animate-spin-slow" />
-                      <span className="text-xs font-mono font-bold text-noob mt-0.5">{matchmakingTimeLeft}s</span>
+                  <div className="gp-radar" aria-hidden="true">
+                    <s />
+                    <div className="gp-radar-core">
+                      <span className="gp-radar-n">{matchmakingTimeLeft}</span>
+                      <span className="gp-radar-u">seconds</span>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-white">Searching for Available Players...</h3>
-                    <p className="text-xs text-zinc-400 mt-1 max-w-xs">
-                      Scanning active users on NOOB server playing <span className="text-noob font-semibold">{game.title}</span>
+                    <h3 className="gp-h">Finding a player</h3>
+                    <p className="gp-sub max-w-xs mx-auto">
+                      Looking for someone who is playing <b>{game.title}</b> right now.
                     </p>
                   </div>
 
-                  <div className="w-full max-w-xs bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-noob h-full transition-all duration-1000 ease-linear"
-                      style={{ width: `${((30 - matchmakingTimeLeft) / 30) * 100}%` }}
-                    />
+                  <div className="gp-prog" role="progressbar" aria-valuemin={0} aria-valuemax={30} aria-valuenow={30 - matchmakingTimeLeft}>
+                    <i style={{ width: `${((30 - matchmakingTimeLeft) / 30) * 100}%` }} />
                   </div>
 
-                  <button
-                    onClick={handleCancelMatchmaking}
-                    className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
-                  >
-                    Cancel Search
-                  </button>
+                  <button type="button" onClick={handleCancelMatchmaking} className="gp-quiet">Cancel search</button>
                 </>
               ) : (
-                /* Matchmaking Timeout: Show 2 requested options */
-                <div className="space-y-4 w-full">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto text-xl font-bold">
-                    ⏱️
-                  </div>
+                <>
+                  <div className="gp-medal" data-r="tie" aria-hidden="true"><Clock className="w-10 h-10" /></div>
 
                   <div>
-                    <h3 className="text-base font-bold text-white">No Live Players Found Right Now</h3>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      No other user joined within 30 seconds. Choose an option to proceed:
-                    </p>
+                    <h3 className="gp-h">Nobody is free right now</h3>
+                    <p className="gp-sub max-w-xs mx-auto">No one joined within 30 seconds. Pick what to do next.</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    {/* Option A: Search Again */}
-                    <button
-                      onClick={startMatchmaking}
-                      className="p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-noob/50 flex items-center justify-center gap-2 text-xs font-bold text-white hover:text-noob transition-all cursor-pointer"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Search Again</span>
+                  <div className="gp-list text-left">
+                    <button type="button" onClick={startMatchmaking} className="gp-opt">
+                      <span className="gp-opt-ico" aria-hidden="true"><RotateCcw className="w-5 h-5" /></span>
+                      <span className="block min-w-0 flex-1">
+                        <span className="gp-opt-t">Search again</span>
+                        <span className="gp-opt-s">Look for a player for 30 more seconds.</span>
+                      </span>
+                      <ArrowRight className="gp-opt-go w-4 h-4" />
                     </button>
-
-                    {/* Option B: Play with Bot */}
-                    <button
-                      onClick={handleStartBotGame}
-                      className="p-3.5 rounded-2xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 flex items-center justify-center gap-2 text-xs font-bold text-purple-300 transition-all cursor-pointer"
-                    >
-                      <Bot className="w-4 h-4" />
-                      <span>Play with Bot</span>
+                    <button type="button" onClick={handleStartBotGame} className="gp-opt">
+                      <span className="gp-opt-ico" aria-hidden="true"><Bot className="w-5 h-5" /></span>
+                      <span className="block min-w-0 flex-1">
+                        <span className="gp-opt-t">Play the bot</span>
+                        <span className="gp-opt-s">Start now, no waiting.</span>
+                      </span>
+                      <ArrowRight className="gp-opt-go w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={openPlayFriend} className="gp-opt">
+                      <span className="gp-opt-ico" aria-hidden="true"><UserPlus className="w-5 h-5" /></span>
+                      <span className="block min-w-0 flex-1">
+                        <span className="gp-opt-t">Invite a friend</span>
+                        <span className="gp-opt-s">Send a challenge in chat.</span>
+                      </span>
+                      <ArrowRight className="gp-opt-go w-4 h-4" />
                     </button>
                   </div>
-
-                  {/* Option C: Invite Friend */}
-                  <button
-                    onClick={openPlayFriend}
-                    className="w-full p-3 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 transition-all cursor-pointer"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Or Invite a Friend</span>
-                  </button>
-                </div>
+                </>
               )}
             </div>
           )}
@@ -1367,137 +1353,76 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           {/* 3a. PLAY WITH FRIEND — board games: ask total player count first,
               then send one invite per open seat (not just one friend) */}
           {currentMode === 'play_friend' && isBoardGame && (
-            <div className="space-y-4">
+            <div className="gp-step" data-testid="game-step-friends">
               {boardInviteStep === 'count' ? (
                 <>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Play {game.title} with Friends</h3>
-                    <p className="text-xs text-zinc-400 mt-0.5">How many total players, including you?</p>
+                    <span className="gp-sec">Play with friends</span>
+                    <h3 className="gp-h mt-1.5">How many players?</h3>
+                    <p className="gp-sub">Count yourself too.</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap justify-center py-2">
+                  <div className="gp-seats">
                     {Array.from({ length: boardGameMaxPlayers - 1 }, (_, i) => i + 2).map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setBoardInviteCount(n)}
-                        className={`w-10 h-10 rounded-xl font-bold text-sm cursor-pointer transition-all ${
-                          boardInviteCount === n ? 'bg-noob text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                        }`}
-                      >
+                      <button key={n} type="button" onClick={() => setBoardInviteCount(n)} aria-pressed={boardInviteCount === n} className="gp-seat">
                         {n}
                       </button>
                     ))}
                   </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setInvitedFriendIds(new Set());
                       setBoardInviteStep('invite');
                     }}
-                    className="w-full py-2.5 rounded-xl bg-noob text-black text-xs font-bold cursor-pointer hover:bg-noob/90"
+                    className="gp-play"
                   >
-                    Next — Invite {seatsNeeded} Friend{seatsNeeded === 1 ? '' : 's'}
+                    <span className="block min-w-0 truncate">Next: invite {seatsNeeded} friend{seatsNeeded === 1 ? '' : 's'}</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                   </button>
-                  <button
-                    onClick={() => setCurrentMode('select_mode')}
-                    className="w-full py-2.5 rounded-xl bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Back to Modes
-                  </button>
+                  <button type="button" onClick={() => setCurrentMode('select_mode')} className="gp-quiet">Back</button>
                 </>
               ) : (
                 <>
                   <div>
-                    <h3 className="text-sm font-bold text-white">
-                      Invite {seatsNeeded} Friend{seatsNeeded === 1 ? '' : 's'} to {game.title}
-                    </h3>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Sends a request to each friend in Direct Chat. Any seat you don't fill starts with a bot.
-                    </p>
+                    <span className="gp-sec">Play with friends</span>
+                    <h3 className="gp-h mt-1.5">Invite {seatsNeeded} friend{seatsNeeded === 1 ? '' : 's'}</h3>
+                    <p className="gp-sub">Each friend gets a request in chat. A seat you do not fill starts with a bot.</p>
                   </div>
 
-                  <div className="p-2.5 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
-                    <span className="text-[11px] text-zinc-400 font-semibold">Requests Sent</span>
-                    <span className="text-xs font-bold text-noob">
-                      {invitedFriendIds.size} / {seatsNeeded}
-                    </span>
+                  <div className="gp-tally">
+                    <span>Requests sent</span>
+                    <b>{invitedFriendIds.size} / {seatsNeeded}</b>
+                    <div className="gp-prog" aria-hidden="true"><i style={{ width: `${seatsNeeded ? Math.min(100, (invitedFriendIds.size / seatsNeeded) * 100) : 0}%` }} /></div>
                   </div>
 
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search registered friends..."
-                      value={friendSearchQuery}
-                      onChange={(e) => setFriendSearchQuery(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
-                    />
-                  </div>
+                  <label className="gp-search">
+                    <Search className="w-4 h-4" aria-hidden="true" />
+                    <input type="text" placeholder="Search friends" aria-label="Search friends" value={friendSearchQuery} onChange={(e) => setFriendSearchQuery(e.target.value)} />
+                  </label>
 
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="gp-people">
                     {filteredFriends.length === 0 ? (
-                      <p className="text-xs text-zinc-500 text-center py-4">No users found matching query.</p>
+                      <p className="gp-none">{friendSearchQuery.trim() ? 'Nobody matches that search.' : 'Nobody to invite yet.'}</p>
                     ) : (
-                      filteredFriends.map((friend) => {
-                        const alreadyInvited = invitedFriendIds.has(friend.id);
-                        return (
-                          <div
-                            key={friend.id}
-                            className="p-2.5 rounded-2xl bg-zinc-900/70 border border-zinc-800 flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <img
-                                src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                                alt={friend.username}
-                                className="w-8 h-8 rounded-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div>
-                                <span className="text-xs font-bold text-white block">{friend.displayName}</span>
-                                <span className="text-[10px] text-zinc-400 block">@{friend.username}</span>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => handleSendBoardInvite(friend)}
-                              disabled={alreadyInvited}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                alreadyInvited
-                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                  : 'bg-noob hover:bg-noob/90 text-black shadow-sm'
-                              }`}
-                            >
-                              {alreadyInvited ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Sent!</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-3.5 h-3.5" />
-                                  <span>Send Request</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        );
-                      })
+                      filteredFriends.map((friend) => (
+                        <InviteRow key={friend.id} friend={friend} sent={invitedFriendIds.has(friend.id)} onSend={() => handleSendBoardInvite(friend)} />
+                      ))
                     )}
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setBoardPlayerCount(boardInviteCount);
                       startBotGameNow();
                     }}
-                    className="w-full py-2.5 rounded-2xl bg-noob text-black font-bold text-xs cursor-pointer hover:bg-noob/90"
+                    className="gp-play"
                   >
-                    Start Game{invitedFriendIds.size < seatsNeeded ? ' (Bots Fill Remaining Seats)' : ''}
+                    <Play className="w-4 h-4 shrink-0 fill-current" />
+                    <span className="block min-w-0 truncate">Start game</span>
                   </button>
-                  <button
-                    onClick={() => setBoardInviteStep('count')}
-                    className="w-full py-2 rounded-xl bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    Back
-                  </button>
+                  {invitedFriendIds.size < seatsNeeded && <p className="gp-hint">Bots fill the seats that are still empty.</p>}
+                  <button type="button" onClick={() => setBoardInviteStep('count')} className="gp-quiet">Back</button>
                 </>
               )}
             </div>
@@ -1505,154 +1430,95 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
           {/* 3. PLAY WITH FRIEND (Search list + Send Request + Copy Link) */}
           {currentMode === 'play_friend' && !isBoardGame && (
-            <div className="space-y-4">
+            <div className="gp-step" data-testid="game-step-friends">
               <div>
-                <h3 className="text-sm font-bold text-white">Play {game.title} with a Friend</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Select a user from the list to send a direct challenge in chat, or copy your match link.
-                </p>
+                <span className="gp-sec">Play a friend</span>
+                <h3 className="gp-h mt-1.5">Challenge someone</h3>
+                <p className="gp-sub">Send a challenge in chat, or share your room link.</p>
               </div>
 
-              {/* Match Link Box */}
-              <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between gap-2">
-                <div className="truncate">
-                  <span className="text-[10px] text-zinc-500 block">Game Room Code</span>
-                  <span className="text-xs font-mono font-bold text-noob">{generatedRoomCode}</span>
-                </div>
-                <button
-                  onClick={handleCopyLink}
-                  className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white transition-colors cursor-pointer shrink-0"
-                >
-                  {copiedLink ? 'Copied!' : 'Copy Link'}
+              <div className="gp-code">
+                <span className="block min-w-0 flex-1">
+                  <span className="gp-code-l">Room code</span>
+                  <span className="gp-code-v block min-w-0 truncate">{generatedRoomCode}</span>
+                </span>
+                <button type="button" onClick={handleCopyLink} className="gp-mini" data-done={copiedLink ? '1' : '0'}>
+                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : null}
+                  <span>{copiedLink ? 'Copied' : 'Copy link'}</span>
                 </button>
               </div>
 
-              {/* Friend Search Box */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search registered friends..."
-                  value={friendSearchQuery}
-                  onChange={(e) => setFriendSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
-                />
-              </div>
+              <label className="gp-search">
+                <Search className="w-4 h-4" aria-hidden="true" />
+                <input type="text" placeholder="Search friends" aria-label="Search friends" value={friendSearchQuery} onChange={(e) => setFriendSearchQuery(e.target.value)} />
+              </label>
 
-              {/* Users List */}
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="gp-people">
                 {filteredFriends.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-4">No users found matching query.</p>
+                  <p className="gp-none">{friendSearchQuery.trim() ? 'Nobody matches that search.' : 'Nobody to invite yet.'}</p>
                 ) : (
                   filteredFriends.map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="p-2.5 rounded-2xl bg-zinc-900/70 border border-zinc-800 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                          alt={friend.username}
-                          className="w-8 h-8 rounded-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div>
-                          <span className="text-xs font-bold text-white block">{friend.displayName}</span>
-                          <span className="text-[10px] text-zinc-400 block">@{friend.username}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleSendFriendInvite(friend)}
-                        disabled={inviteSent && selectedFriend?.id === friend.id}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                          inviteSent && selectedFriend?.id === friend.id
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-noob hover:bg-noob/90 text-black shadow-sm'
-                        }`}
-                      >
-                        {inviteSent && selectedFriend?.id === friend.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Sent!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Send Request</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    <InviteRow key={friend.id} friend={friend} sent={inviteSent && selectedFriend?.id === friend.id} onSend={() => handleSendFriendInvite(friend)} />
                   ))
                 )}
               </div>
 
               {inviteSent && (
-                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
-                  <span>Challenge sent to @{selectedFriend?.username} in Direct Chat!</span>
-                  <button
-                    onClick={handleStartBotGame}
-                    className="font-bold underline cursor-pointer hover:text-white"
-                  >
-                    Play Practice Bot While Waiting
-                  </button>
+                <div className="gp-note flex items-center gap-3">
+                  <span className="block min-w-0 flex-1">Challenge sent to @{selectedFriend?.username} in chat.</span>
+                  <button type="button" onClick={handleStartBotGame} className="gp-mini" data-red="1">Practise meanwhile</button>
                 </div>
               )}
 
-              <button
-                onClick={() => setCurrentMode('select_mode')}
-                className="w-full py-2.5 rounded-xl bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                Back to Modes
-              </button>
+              <button type="button" onClick={() => setCurrentMode('select_mode')} className="gp-quiet">Back</button>
             </div>
           )}
 
           {/* REAL 2-PLAYER MATCH: waiting for the opponent to join, or
               waiting for them to finish their round, once we've finished ours */}
           {currentMode === 'play_match' && (
-            <div className="py-8 flex flex-col items-center text-center space-y-5">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border border-cyan-400/20 animate-ping" />
-                <div className="w-16 h-16 rounded-full bg-cyan-500/10 border-2 border-cyan-400 flex items-center justify-center">
-                  <Users className="w-7 h-7 text-cyan-400" />
-                </div>
+            <div className="gp-step" data-mid="1" data-testid="game-step-waiting">
+              <div className="gp-radar" aria-hidden="true">
+                <s />
+                <div className="gp-radar-core"><Users className="w-9 h-9" /></div>
               </div>
 
               {onlineMatch?.phase === 'waiting_opponent_result' ? (
                 <div>
-                  <h3 className="text-base font-bold text-white">You're Done — Waiting on the Other Player</h3>
-                  <p className="text-xs text-zinc-400 mt-1 max-w-xs">
+                  <h3 className="gp-h">You are done</h3>
+                  <p className="gp-sub max-w-xs mx-auto">
                     {onlineMatch.opponent
-                      ? `Waiting for @${onlineMatch.opponent.username} to finish their round of ${game.title}...`
-                      : `Waiting for your opponent to finish their round of ${game.title}...`}
+                      ? `Waiting for @${onlineMatch.opponent.username} to finish their round of ${game.title}.`
+                      : `Waiting for the other player to finish their round of ${game.title}.`}
                   </p>
                 </div>
               ) : (
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    {rematchRequested ? 'Rematch Request Sent' : 'Waiting for Your Opponent to Join'}
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-1 max-w-xs">
-                    {(selectedFriend || lastOpponent)
-                      ? `@${(selectedFriend || lastOpponent)!.username} needs to accept your ${rematchRequested ? 'rematch request' : 'challenge'} from Direct Chat.`
-                      : 'Share your room code or wait for them to accept the invite.'}
-                  </p>
-                  <div className="mt-3 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 inline-block">
-                    <span className="text-[10px] text-zinc-500 block">Room Code</span>
-                    <span className="text-xs font-mono font-bold text-cyan-400">{onlineMatch?.roomCode}</span>
+                <>
+                  <div>
+                    <h3 className="gp-h">{rematchRequested ? 'Rematch request sent' : 'Waiting for the other player'}</h3>
+                    <p className="gp-sub max-w-xs mx-auto">
+                      {(selectedFriend || lastOpponent)
+                        ? `@${(selectedFriend || lastOpponent)!.username} needs to accept your ${rematchRequested ? 'rematch request' : 'challenge'} in chat.`
+                        : 'Share your room code, or wait for them to accept the invite.'}
+                    </p>
                   </div>
-                </div>
+                  <div className="gp-code" style={{ maxWidth: 300, width: '100%' }}>
+                    <span className="block min-w-0 flex-1 text-left">
+                      <span className="gp-code-l">Room code</span>
+                      <span className="gp-code-v block min-w-0 truncate">{onlineMatch?.roomCode}</span>
+                    </span>
+                  </div>
+                </>
               )}
 
               <button
+                type="button"
                 onClick={() => {
                   setOnlineMatch(null);
                   setRematchRequested(false);
                   setCurrentMode('select_mode');
                 }}
-                className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
+                className="gp-quiet"
               >
                 Cancel
               </button>
@@ -1661,27 +1527,21 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
           {/* PASS AND PLAY HANDOFF (between Round 1 and Round 2) */}
           {currentMode === 'pass_play_handoff' && (
-            <div className="py-8 flex flex-col items-center text-center space-y-5">
-              <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-3xl">
-                🔄
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-lg font-black text-white">Round 1 Complete!</h3>
-                <p className="text-xs text-zinc-400">
-                  Player 1 result:{' '}
-                  <span className="font-bold text-white capitalize">{passPlayP1Result}</span>
+            <div className="gp-step" data-mid="1" data-testid="game-step-handoff">
+              <div className="gp-medal" data-r="tie" aria-hidden="true"><RotateCcw className="w-10 h-10" /></div>
+              <div>
+                <span className="gp-sec">Round 1 is over</span>
+                <h3 className="gp-h mt-1.5">Pass the phone to player 2</h3>
+                <p className="gp-sub">
+                  Player 1 result: <b className="capitalize">{passPlayP1Result}</b>
                 </p>
               </div>
-              <p className="text-sm font-bold text-amber-300">📱 Pass the device to Player 2</p>
-              <button
-                onClick={handleStartPassAndPlayRound2}
-                className="px-6 py-2.5 rounded-2xl bg-noob text-black text-sm font-bold hover:scale-105 transition-transform cursor-pointer"
-              >
-                Player 2 Ready — Start Round 2
+              <button type="button" onClick={handleStartPassAndPlayRound2} className="gp-play" style={{ maxWidth: 420 }}>
+                <Play className="w-4 h-4 shrink-0 fill-current" />
+                <span className="block min-w-0 truncate">Player 2 is ready</span>
               </button>
             </div>
           )}
-
           {/* 4. ACTIVE GAMEPLAY */}
           {currentMode === 'play_bot' && (
             <React.Suspense fallback={<GameLoading />}>
@@ -1857,77 +1717,52 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
           {/* 5. GAME OVER / RESULT & POINTS SCREEN */}
           {currentMode === 'game_over' && (
-            <div className="py-6 text-center space-y-5">
-              {gameResult === 'win' ? (
-                <div className="space-y-3">
-                  <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center mx-auto text-3xl shadow-[0_0_25px_rgba(251,191,36,0.3)] animate-bounce">
-                    🏆
-                  </div>
-                  <h3 className="text-xl font-black text-white">
-                    {onlineMatch?.opponent
-                      ? `You Beat @${onlineMatch.opponent.username}!`
-                      : isPassAndPlay
-                      ? 'Player 1 Wins!'
-                      : 'Victory! You Won!'}
-                  </h3>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-sm">
-                    <Sparkles className="w-4 h-4" />
-                    <span>+{pointsEarned.toLocaleString()} NOOB Points Awarded!</span>
-                  </div>
-                </div>
-              ) : gameResult === 'tie' ? (
-                <div className="space-y-3">
-                  <div className="w-20 h-20 rounded-full bg-blue-500/20 border-2 border-blue-400 text-blue-300 flex items-center justify-center mx-auto text-3xl">
-                    🤝
-                  </div>
-                  <h3 className="text-xl font-black text-white">
-                    {onlineMatch?.opponent
-                      ? `You and @${onlineMatch.opponent.username} Tied!`
-                      : isPassAndPlay
-                      ? "It's a Tie!"
-                      : "Well Played! It's a Tie!"}
-                  </h3>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-300 font-extrabold text-sm">
-                    <Sparkles className="w-4 h-4" />
-                    <span>+{pointsEarned.toLocaleString()} NOOB Points Awarded!</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="w-20 h-20 rounded-full bg-rose-500/20 border-2 border-rose-400 text-rose-300 flex items-center justify-center mx-auto text-3xl">
-                    💥
-                  </div>
-                  <h3 className="text-xl font-black text-white">
-                    {onlineMatch?.opponent
-                      ? `@${onlineMatch.opponent.username} Won This One`
-                      : isPassAndPlay
-                      ? 'Player 2 Wins!'
-                      : game.id === 'chess_blitz'
-                      ? 'Checkmated! Your Balance Is Wiped.'
-                      : 'Defeat! Better Luck Next Time!'}
-                  </h3>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-zinc-800 text-zinc-400 font-bold text-sm">
-                    <span>{pointsEarned < 0 ? `${pointsEarned.toLocaleString()} NOOB Points` : '+0 NOOB Points'}</span>
-                  </div>
-                </div>
-              )}
+            <div className="gp-step" data-mid="1" data-testid="game-step-result" data-result={gameResult || 'loss'}>
+              <div className="gp-medal" data-r={gameResult === 'win' ? 'win' : gameResult === 'tie' ? 'tie' : 'loss'} aria-hidden="true">
+                {gameResult === 'win' ? <Trophy className="w-11 h-11" /> : gameResult === 'tie' ? <Users className="w-11 h-11" /> : <Flame className="w-11 h-11" />}
+              </div>
 
-              <p className="text-xs text-zinc-400">
-                Your new balance is saved to your account and updated on the Global Leaderboard.
-              </p>
+              <div>
+                <span className="gp-sec">{gameResult === 'win' ? 'Victory' : gameResult === 'tie' ? 'Draw' : 'Defeat'}</span>
+                <h3 className="gp-h mt-1.5">
+                  {gameResult === 'win'
+                    ? onlineMatch?.opponent
+                      ? `You beat @${onlineMatch.opponent.username}`
+                      : isPassAndPlay
+                      ? 'Player 1 wins'
+                      : 'You won'
+                    : gameResult === 'tie'
+                    ? onlineMatch?.opponent
+                      ? `You and @${onlineMatch.opponent.username} tied`
+                      : "It's a tie"
+                    : onlineMatch?.opponent
+                    ? `@${onlineMatch.opponent.username} won this one`
+                    : isPassAndPlay
+                    ? 'Player 2 wins'
+                    : game.id === 'chess_blitz'
+                    ? 'Checkmate. Your balance is wiped.'
+                    : 'Better luck next time'}
+                </h3>
+              </div>
 
-              <div className="flex gap-3 justify-center pt-2">
-                <button
-                  onClick={handlePlayAgain}
-                  className="px-5 py-2.5 rounded-2xl bg-noob hover:bg-noob/90 text-black font-bold text-xs transition-colors cursor-pointer"
-                >
-                  {lastPlayMode === 'matchmaking' ? 'Find Another Match' : lastPlayMode === 'friend' && !isBoardGame ? 'Rematch' : 'Play Again'}
+              <div className="gp-pts" data-r={gameResult === 'win' ? 'win' : gameResult === 'tie' ? 'tie' : 'loss'}>
+                {gameResult !== 'loss' && <Sparkles className="w-4 h-4 shrink-0" />}
+                <span>
+                  {gameResult === 'loss'
+                    ? pointsEarned < 0 ? `${pointsEarned.toLocaleString()} NOOB points` : '+0 NOOB points'
+                    : `+${pointsEarned.toLocaleString()} NOOB points`}
+                </span>
+              </div>
+
+              <p className="gp-hint max-w-xs">Your new balance is saved to your account and shown on the leaderboard.</p>
+
+              <div className="gp-row2">
+                <button type="button" onClick={handlePlayAgain} className="gp-play">
+                  <RotateCcw className="w-4 h-4 shrink-0" />
+                  <span className="block min-w-0 truncate">{lastPlayMode === 'matchmaking' ? 'New match' : lastPlayMode === 'friend' && !isBoardGame ? 'Rematch' : 'Play again'}</span>
                 </button>
-                <button
-                  onClick={handleModalClose}
-                  className="px-5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors cursor-pointer"
-                >
-                  Close Game
+                <button type="button" onClick={handleModalClose} className="gp-ghost">
+                  <span className="block min-w-0 truncate">Close</span>
                 </button>
               </div>
             </div>
@@ -1939,38 +1774,32 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
       {/* Chess High-Stakes Confirmation */}
       {showChessStakesConfirm && (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-zinc-950 border border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 text-center">
-            <div className="w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center mx-auto text-2xl">
-              ♟️
+        <div className="gz fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="gz-pop w-full max-w-sm p-5 space-y-4 text-center" role="alertdialog" aria-label="High-stakes chess match">
+            <div className="gp-medal mx-auto" data-r="win" data-s="1" aria-hidden="true"><Trophy className="w-7 h-7" /></div>
+            <div>
+              <h3 className="gp-h" style={{ fontSize: 19 }}>High-stakes chess</h3>
+              <p className="gp-sub">You are about to play a strong chess bot. High risk, high reward.</p>
             </div>
-            <h3 className="text-base font-black text-white">High-Stakes Chess Match</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              You're about to play a genuinely strong chess bot. This match is high risk, high reward:
-            </p>
-            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-left flex items-center gap-2.5">
-              <span className="text-lg">🏆</span>
-              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000,000 NOOB Points</span>
+            <div className="gp-stake" data-r="win">
+              <span className="gp-code-l">If you win</span>
+              <b>+50,000,000 NOOB points</b>
             </div>
-            <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-left flex items-center gap-2.5">
-              <span className="text-lg">💀</span>
-              <span className="text-xs font-bold text-rose-300">If you LOSE: Your entire balance resets to 0</span>
+            <div className="gp-stake" data-r="loss">
+              <span className="gp-code-l">If you lose</span>
+              <b>Your whole balance resets to 0</b>
             </div>
-            <div className="flex gap-3 pt-1">
+            <div className="gp-row2">
+              <button type="button" onClick={() => setShowChessStakesConfirm(false)} className="gp-ghost">Cancel</button>
               <button
-                onClick={() => setShowChessStakesConfirm(false)}
-                className="flex-1 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
+                type="button"
                 onClick={() => {
                   setShowChessStakesConfirm(false);
                   startBotGameNow();
                 }}
-                className="flex-1 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors cursor-pointer"
+                className="gp-play"
               >
-                I'm Ready, Play
+                <span className="block min-w-0 truncate">I'm ready</span>
               </button>
             </div>
           </div>

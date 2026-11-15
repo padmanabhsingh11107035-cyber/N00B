@@ -13,9 +13,14 @@ check(/@media \(prefers-reduced-motion: reduce\)/.test(css), 'still when the pho
 // a game's own page (opened from a card)
 const modal = read('src/components/Games/GamePlayModal.tsx'), frame = read('src/components/Games/minigames/HostedGameFrame.tsx');
 check(/className="gz gp edge-own" data-noob-keep="1"/.test(modal) && /data-testid="game-page-back"/.test(modal) && !/backdrop-blur-md flex items-center justify-center \$\{/.test(modal) && /\.gp \{ position: fixed; inset: 0;/.test(css), 'a game opens as a full page with a back button, not as a small window over a dimmed page');
-check((modal.match(/className="gp-opt"/g) || []).length === 4 && !/1\. Play with Available Users/.test(modal) && /className="gp-play"/.test(modal), 'the four ways to play are plain cards and Play is one big button');
+check((modal.match(/className="gp-opt"/g) || []).length >= 4 && !/1\. Play with Available Users/.test(modal) && /className="gp-play"/.test(modal), 'the four ways to play are plain cards and Play is one big button');
 check(/data-testid="game-page-art"/.test(modal) && /game\.posters && game\.posters\.length > 0 \? <GamePosterCarousel/.test(modal), 'a game without a picture shows the drawn poster here too, not the old banner');
 check(/calc\(100dvh - 148px/.test(frame) && /className="gp-tools"/.test(frame) && /className="gp-load"/.test(frame) && !/pink-/.test(frame), 'a game in its own frame takes the whole page under the bar; no pink left');
 check(/:root\[data-theme="light"\] \.gp \{/.test(css) && /--color-noob: #e23744/.test(css), 'every step inside the page uses the page colours, in dark and in light');
+// the deeper steps (bot level, finding a player, invites, waiting, the result)
+check(['game-step-difficulty', 'game-step-matchmaking', 'game-step-friends', 'game-step-waiting', 'game-step-handoff', 'game-step-result'].every((t) => modal.includes(`data-testid="${t}"`)), 'every deeper step of a game is built from the page parts');
+const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+check(!emoji.test(modal.slice(modal.indexOf('SELECT BOT DIFFICULTY'), modal.indexOf('ACTIVE GAMEPLAY'))) && !emoji.test(modal.slice(modal.indexOf('GAME OVER / RESULT'))) && !/images\.unsplash\.com/.test(modal), 'no emoji pictures and no stock photo in the steps: drawn icons and the letter of the name');
+check(/\.gp-radar/.test(css) && /\.gp-medal\[data-r="win"\]/.test(css) && /\.gp-person/.test(css) && /\.gp-search input \{[^}]*font-size: 16px/.test(css), 'the parts exist: rings while waiting, a medal for the result, the people list, a search box an iPhone does not zoom into');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -94,3 +94,9 @@ html.phone-edge .msg-page { --msg-top: 10px; }
   html body.light .msg-page [data-testid="messages-rows"] [class*="bg-[#1f2428]"] svg { color: #3b4148 !important; }
 }
 
+
+/* Older iPhones (iOS 15 and below) ignore overscroll-behavior, so a fast fling can still stretch the list for a moment. The stretch shows the scroller's own background:
+   header colour in the top half, sheet colour in the bottom half, so a stretch at either end shows nothing different (no black band). */
+@layer base {
+  html .msg-page .msg-scroll { background: linear-gradient(to bottom, var(--head) 0, var(--head) 50%, var(--panel) 50%, var(--panel) 100%) !important; }
+}

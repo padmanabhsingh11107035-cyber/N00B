@@ -12,7 +12,7 @@ const app = read('src/App.tsx');
 const css = read('src/index.css');
 
 section('1. The menu touches the left edge');
-const page = /<div className=\{`(min-h-screen (?:bg-(?:black|page) )?text-white[^`]*)`\}>/.exec(app)?.[1] || '';
+const page = /<div className=\{`(min-h-screen (?:bg-(?:black|page) )?text-white[^`]*)`\}(?: data-shell="1")?>/.exec(app)?.[1] || '';
 check(/md:justify-start/.test(page) && /md:pl-0/.test(page) && /xl:justify-start/.test(page) && /xl:pl-0/.test(page), 'from 768 px wide the page starts at the left edge (no centring, no left padding), as the long strip is there', page);
 const side = /<aside\s+className=\{`(hidden md:block[^`]*)`\}\s+data-testid="desktop-side-menu"/.exec(app)?.[1] || '';
 check(/h-dvh/.test(side) && /top-0/.test(side) && /lg:-my-6/.test(side) && /sticky/.test(side), 'the strip is as tall as the window and stuck to its top', side);

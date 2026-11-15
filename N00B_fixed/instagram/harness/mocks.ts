@@ -259,6 +259,18 @@ const udRows = () => UD_PLACES.map(([city, region, country], i) => {
 });
 // ---------------------------------------------------------------- the table of rpc answers
 export const rpcMocks = {
+  // Daily NOOB (?page=daily): ?state=empty = no entries, ?submitted=1 = you already entered
+  get_daily_challenge: () => ({ challengeDate: new Date().toISOString().slice(0, 10), prompt: 'Show us the best view from where you are right now', hasSubmitted: new URLSearchParams(location.search).get('submitted') === '1', myVoteEntryId: 'e2' }),
+  fetch_daily_challenge_entries: (a, ctx) => (ctx.state === 'empty' ? [] : [
+    { id: 'e1', userId: 'u-a', username: 'priya.nair', userAvatar: '', isVerified: true, mediaUrl: 'https://picsum.photos/seed/dn1/800/600', mediaType: 'image', caption: 'Roof at golden hour', votesCount: 12, createdAt: new Date().toISOString() },
+    { id: 'e2', userId: 'u-b', username: 'kabir.xo', userAvatar: '', isVerified: false, mediaUrl: 'https://picsum.photos/seed/dn2/800/600', mediaType: 'image', caption: '', votesCount: 31, createdAt: new Date().toISOString() },
+    { id: 'e3', userId: 'u-c', username: 'a_very_long_username_for_testing_the_fit', userAvatar: '', isVerified: true, mediaUrl: 'https://picsum.photos/seed/dn3/800/600', mediaType: 'image', caption: 'A really long caption that has to be cut so it never pushes the vote button out of the card', votesCount: 4, createdAt: new Date().toISOString() },
+  ]),
+  fetch_daily_champions: () => [
+    { challengeDate: '2026-11-14', userId: 'u-a', username: 'priya.nair', userAvatar: '', isVerified: true, prompt: 'Your favourite corner of the city', votesCount: 58, podium: [{ rank: 1, username: 'priya.nair' }, { rank: 2, username: 'kabir.xo' }, { rank: 3, username: 'tanishka' }] },
+    { challengeDate: '2026-11-13', userId: 'u-b', username: 'kabir.xo', userAvatar: '', isVerified: false, prompt: 'Something blue', votesCount: 40, podium: [{ rank: 1, username: 'kabir.xo' }] },
+    { challengeDate: '2026-11-12', userId: 'u-c', username: 'tanishka', userAvatar: '', isVerified: false, prompt: 'Breakfast, no filter', votesCount: 33 },
+  ],
   admin_user_locations: (a, ctx) => {
     if (new URLSearchParams(location.search).get('denied') === '1') throw new Error('Access denied. Administrator privileges required.');
     const rows = ctx.state === 'empty' ? [] : udRows();

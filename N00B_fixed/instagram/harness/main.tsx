@@ -184,6 +184,9 @@ async function boot() {
     // the Games page (the people list is the harness user only; the leaderboard comes from the mocks, or is empty)
     const { GamesView } = await import('../src/components/Games/GamesView.tsx');
     Page = () => h(GamesView, { currentUser, allUsers: [currentUser], onUserUpdated: noop, onNavigateToUserProfile: noop, onBack: () => console.info('[harness] onBack') });
+  } else if (page === 'daily') {
+    const { DailyNoobView } = await import('../src/components/Daily/DailyNoobView.tsx');
+    Page = () => h(DailyNoobView, { currentUser, onClose: () => console.info('[harness] onClose') });
   } else if (page === 'loader') {
     // the loading page. &steps=0..5 = how many start-up requests are done, &steps=end = ready (100 %), &tracked=0 = the turning ring of a page being fetched
     const { NoobStackLoader } = await import('../src/components/Common/NoobStackLoader.tsx');

@@ -82,3 +82,26 @@
 .cs-go { color: var(--nz-acc); flex: none; opacity: .85; }
 
 .cs-sheet .scroll-more-hint { z-index: 2; }
+
+/* ---- Create, on a laptop or computer (1024 px and wider, with a mouse): a wide window with the ways to create laid out as cards in two columns. A phone and a tablet keep the list above, unchanged. */
+@media (min-width: 1024px) and (pointer: fine) {
+  .cs-sheet { max-width: 780px; height: auto; max-height: min(86dvh, 760px); border-radius: 28px; border-bottom: 1px solid var(--nz-line); padding: 8px 0 26px; box-shadow: 0 50px 120px -30px rgba(0, 0, 0, .85), 0 0 0 1px rgba(10, 10, 10, .35); animation-name: cs-pop; }
+  @keyframes cs-pop { from { transform: translate3d(0, 18px, 0) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+  .cs-title { padding: 18px 32px 18px; justify-content: flex-start; }
+  .cs-title h2 { font-size: 26px; font-weight: 900; letter-spacing: -.02em; }
+  .cs-title h2::after { margin: 9px 0 0; width: 40px; }
+  .cs-x { right: 22px; top: 18px; width: 42px; height: 42px; border-radius: 14px; transition: background-color .18s ease, transform .18s ease; }
+  .cs-x:hover { background: rgba(10, 10, 10, .16); transform: rotate(90deg); }
+  .cs-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 32px 6px; align-content: start; }
+  .cs-row { height: 100%; padding: 16px 16px; border-radius: 20px; background: rgba(10, 10, 10, .07); border: 1px solid rgba(10, 10, 10, .16); box-shadow: 0 1px 0 rgba(255, 255, 255, .3) inset; transition: background-color .2s ease, border-color .2s ease, transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease; }
+  .cs-row:hover { background: rgba(10, 10, 10, .13); border-color: rgba(10, 10, 10, .45); transform: translateY(-2px); box-shadow: 0 16px 28px -16px rgba(10, 10, 10, .6); }
+  .cs-row:active { transform: translateY(0) scale(.99); }
+  .cs-row:focus-visible, .cs-x:focus-visible { outline: 3px solid #0A0A0A; outline-offset: 2px; }
+  .cs-ico { width: 54px; height: 54px; border-radius: 18px; }
+  .cs-t { font-size: 17px; }
+  .cs-b { font-size: 13px; }
+  .cs-go { transition: transform .2s ease; }
+  .cs-row:hover .cs-go { transform: translateX(3px); opacity: 1; }
+  .cs-wrap .scroll-more-hint { display: none; }
+}
+@media (min-width: 1024px) and (pointer: fine) and (prefers-reduced-motion: reduce) { .cs-row, .cs-x, .cs-go { transition: none; } .cs-row:hover { transform: none; } }

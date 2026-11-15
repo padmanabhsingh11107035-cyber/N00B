@@ -25,6 +25,7 @@ const CHECKS = [
   ['Reels page', ['node', 'scripts/supabase/test-reels-pager.mjs']],
   ['Messages header colour (30 colours, readable text, top part only)', ['node', 'scripts/supabase/test-head-colour.mjs']],
   ['Games page look (red theme, dark and light, drawn posters)', ['node', 'scripts/supabase/test-games-page-look.mjs']],
+  ['Laptop pages and Daily NOOB (doodle column, Create, chat, notifications, wallet, subscriptions)', ['node', 'scripts/supabase/test-desktop-pages.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],
   ['Top strip and install bar', ['node', 'scripts/supabase/test-peek-install-strip.mjs']],

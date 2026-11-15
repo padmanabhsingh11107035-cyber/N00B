@@ -190,7 +190,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
   return (
     <div id="accounts-statistics-modal" data-noob-keep="1" data-testid="wallet-page" className="wl fixed inset-0 z-50 flex items-stretch justify-center p-0 animate-in fade-in duration-200">
       <div className="wl-scroll w-full h-full overflow-y-auto pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto w-full max-w-xl px-4 space-y-5">
+        <div className="wl-wrap mx-auto w-full max-w-xl px-4 space-y-5">
           {/* Header: back, title, QR */}
           <div className="relative flex items-center justify-between h-12">
             <button type="button" onClick={onClose} aria-label="Close" data-testid="wallet-back" className="wl-round">
@@ -202,6 +202,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </button>
           </div>
 
+          <div className="wl-col-a">
           {/* The card */}
           <div data-testid="wallet-card" className="wl-card-main">
             <span aria-hidden="true" className="wl-shine" />
@@ -242,6 +243,8 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
           )}
 
+          </div>
+          <div className="wl-col-b">
           {/* Actions, one row each */}
           <div className="wl-panel divide-y divide-[var(--wl-line)]" data-testid="wallet-actions">
             {actions.map((x) => (
@@ -341,6 +344,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 

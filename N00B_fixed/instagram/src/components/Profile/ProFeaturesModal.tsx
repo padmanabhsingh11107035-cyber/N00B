@@ -273,7 +273,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
         </div>
 
         {/* Monthly / Yearly toggle */}
-        <div className="flex items-center justify-center gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1">
+        <div className="pro-d-narrow flex items-center justify-center gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1">
           <button
             onClick={() => setBilling('monthly')}
             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
@@ -302,7 +302,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           const per = billing === 'yearly' ? 'year' : 'month';
           const on = reloadOn;
           return (
-            <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
+            <div className="pro-d-narrow p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className={`p-2 rounded-xl ${on ? 'bg-noob/15 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
                   <RefreshCw className="w-4 h-4" />

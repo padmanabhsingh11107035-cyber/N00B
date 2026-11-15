@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Crown, Upload, Image as ImageIcon, Video as VideoIcon, Heart, RefreshCw, Clock, Trophy, Trash2 } from 'lucide-react';
+import { ChevronLeft, Flame, CheckCircle2, Crown, Upload, Heart, RefreshCw, Clock, Trophy, Trash2 } from 'lucide-react';
 import { User, DailyChallenge, DailyChallengeEntry, DailyChampion } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { can, isMainAdmin } from '../../adminAccess';
 import { useResumeState } from '../../utils/useResumeState';
+import { forceStripColour } from '../../utils/statusStrip';
+import './dailyNoob.css';
 import {
   fetchDailyChallenge,
   submitDailyChallengeEntry,
@@ -26,8 +28,9 @@ interface DailyNoobViewProps {
 
 // Counts down to the next UTC midnight — the server settles "today" by its own current_date, which
 // is UTC, so the countdown has to match that or it would lie about when voting actually closes.
-const useMidnightCountdown = (): string => {
+const useMidnightCountdown = (): { label: string; frac: number } => {
   const [label, setLabel] = useState('');
+  const [frac, setFrac] = useState(0);
   useEffect(() => {
     const tick = () => {
       const now = new Date();
@@ -36,12 +39,13 @@ const useMidnightCountdown = (): string => {
       const h = Math.floor(ms / 3600000);
       const m = Math.floor((ms % 3600000) / 60000);
       setLabel(`${h}h ${m}m left`);
+      setFrac(Math.min(1, Math.max(0, 1 - ms / 86400000)));
     };
     tick();
     const interval = setInterval(tick, 30000);
     return () => clearInterval(interval);
   }, []);
-  return label;
+  return { label, frac };
 };
 
 export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClose, onNavigateToProfile }) => {
@@ -56,7 +60,15 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const countdown = useMidnightCountdown();
+  const { label: countdown, frac: dayFrac } = useMidnightCountdown();
+  // the strip behind the phone's clock takes the page colour (dark or light), and is given back when the page is left
+  useEffect(() => {
+    const paint = () => forceStripColour(document.documentElement.getAttribute('data-theme') === 'light' ? '#fbf5ec' : '#0e0b0a');
+    paint();
+    const mo = new MutationObserver(paint);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => { mo.disconnect(); forceStripColour(null); };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -165,240 +177,178 @@ This cannot be undone.`)) return;
     else setError(res.error || 'Could not delete your entry.');
   };
 
+  const leadId = entries.reduce<DailyChallengeEntry | null>((best, e) => (e.votesCount > 0 && (!best || e.votesCount > best.votesCount) ? e : best), null)?.id;
+  const ringLen = 2 * Math.PI * 26;
+
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <h1 className="text-base font-black italic tracking-tighter text-white">🔥 Daily NOOB</h1>
+    <div className="dn edge-own" data-noob-keep="1" role="dialog" aria-label="Daily NOOB" data-testid="daily-noob-page">
+      <header className="dn-bar">
+        <div className="dn-bar-in">
+          <button type="button" onClick={onClose} className="dn-back" aria-label="Back" data-testid="daily-back"><ChevronLeft className="w-5 h-5" /></button>
+          <div className="dn-brand">
+            <span className="dn-flame" aria-hidden="true"><Flame className="w-5 h-5" /></span>
+            <h1 className="dn-name min-w-0">Daily NOOB<small>One challenge a day</small></h1>
+          </div>
         </div>
-        <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer">
-          <X className="w-5 h-5" />
-        </button>
+      </header>
+
+      <div className="dn-segrow">
+        <div>
+          <div className="dn-seg" role="tablist" data-on={tab === 'hallOfFame' ? 'hall' : 'today'}>
+            <i aria-hidden="true" />
+            {([['today', 'Today'], ['hallOfFame', 'Hall of Fame']] as [typeof tab, string][]).map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{label}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="shrink-0 flex gap-2 px-4 py-2.5 border-b border-zinc-800/80">
-        {([
-          ['today', "Today's Challenge"],
-          ['hallOfFame', 'Hall of Fame']
-        ] as [typeof tab, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
-              tab === key ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
+      <div className="dn-scroll">
         {tab === 'today' ? (
           loading ? (
-            <div className="py-16 flex items-center justify-center text-zinc-500 text-xs">Loading today's challenge…</div>
+            <div className="dn-msg"><span className="dn-spin" aria-hidden="true" />Loading today's challenge</div>
           ) : !challenge ? (
-            <div className="py-16 flex items-center justify-center text-zinc-500 text-xs">Could not load today's challenge. Try again shortly.</div>
+            <div className="dn-msg">Could not load today's challenge. Try again shortly.</div>
           ) : (
-            <div className="max-w-2xl mx-auto px-4 py-4 space-y-5">
-              <div className="rounded-2xl bg-gradient-to-br from-noob/15 via-zinc-900/80 to-zinc-950 border border-noob/40 p-4">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-extrabold text-noob tracking-widest uppercase">Today's NOOB</span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-semibold">
-                    <Clock className="w-3 h-3" /> {countdown}
-                  </span>
+            <div className="dn-col">
+              <section className="dn-hero">
+                <div className="dn-hero-top">
+                  <span className="dn-kick">Today's NOOB</span>
+                  <div className="dn-ring" role="img" aria-label={countdown}>
+                    <svg viewBox="0 0 64 64" aria-hidden="true"><circle className="t" cx="32" cy="32" r="26" /><circle className="v" cx="32" cy="32" r="26" strokeDasharray={`${ringLen * (1 - dayFrac)} ${ringLen}`} /></svg>
+                    <span>{countdown.replace(' left', '').replace(' ', '\n')}</span>
+                  </div>
                 </div>
-                <p className="text-white text-sm font-bold leading-snug">{challenge.prompt}</p>
-                <p className="text-[11px] text-zinc-400 mt-2">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} so far</p>
+                <p className="dn-prompt">{challenge.prompt}</p>
+                <div className="dn-hero-foot">
+                  <span className="dn-chip"><Clock className="w-3.5 h-3.5 shrink-0" /> {countdown}</span>
+                  <span className="dn-chip"><b>{entries.length}</b> {entries.length === 1 ? 'entry' : 'entries'}</span>
+                </div>
+              </section>
+
+              <div className="dn-prizes" aria-label="Prizes">
+                {([[1, '10,000', '1st'], [2, '5,000', '2nd'], [3, '2,500', '3rd']] as const).map(([r, pts, w]) => (
+                  <div key={r} className="dn-prize"><span className="dn-medal" data-r={r} aria-hidden="true">{r}</span><b>{pts}</b><span>{w} place</span></div>
+                ))}
               </div>
 
-              {error && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{error}</div>}
+              {error && <div className="dn-err" role="alert">{error}</div>}
 
-              {!challenge.hasSubmitted && (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,video/*"
-                    className="sr-only"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePickFile(f); e.target.value = ''; }}
-                  />
+              {!challenge.hasSubmitted ? (
+                <div className="dn-form">
+                  <input ref={fileInputRef} type="file" accept="image/*,video/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePickFile(f); e.target.value = ''; }} />
                   {previewUrl ? (
-                    <div className="relative rounded-xl overflow-hidden bg-black border border-zinc-800">
-                      {pickedFile?.type.startsWith('video/') ? (
-                        <video src={previewUrl} controls className="w-full max-h-64" />
-                      ) : (
-                        <img src={previewUrl} alt="Your entry" className="w-full max-h-64 object-cover" />
-                      )}
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute top-2 right-2 text-[11px] font-bold text-white bg-black/70 px-2.5 py-1 rounded-full cursor-pointer"
-                      >
-                        Change
-                      </button>
+                    <div className="dn-pre">
+                      {pickedFile?.type.startsWith('video/') ? <video src={previewUrl} controls /> : <img src={previewUrl} alt="Your entry" />}
+                      <button type="button" onClick={() => fileInputRef.current?.click()}>Change</button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed border-zinc-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer"
-                    >
-                      <Upload className="w-6 h-6" />
-                      <span className="text-xs font-semibold">Tap to enter a photo or video</span>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="dn-drop" data-testid="daily-pick">
+                      <span className="dn-drop-ico" aria-hidden="true"><Upload className="w-6 h-6" /></span>
+                      <b>Enter today's challenge</b>
+                      <span>Pick a photo or a video</span>
                     </button>
                   )}
+                  {pickedFile && <input value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={200} placeholder="Add a caption (optional)" aria-label="Caption" className="dn-input" />}
                   {pickedFile && (
-                    <input
-                      value={caption}
-                      onChange={(e) => setCaption(e.target.value)}
-                      maxLength={200}
-                      placeholder="Add a caption (optional)"
-                      className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
-                    />
-                  )}
-                  {pickedFile && (
-                    <button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                      {submitting ? 'Entering…' : 'Enter the Challenge'}
+                    <button type="button" onClick={handleSubmit} disabled={submitting} className="dn-go">
+                      {submitting ? <RefreshCw className="w-4 h-4 animate-spin shrink-0" /> : null}
+                      <span className="block min-w-0 truncate">{submitting ? 'Entering' : 'Enter the challenge'}</span>
                     </button>
                   )}
                 </div>
+              ) : (
+                <div className="dn-done"><CheckCircle2 className="w-6 h-6" /><span className="block min-w-0">You are in. Share the page, and let people vote before the day ends.</span></div>
               )}
 
               {canCrown && (picks.first || picks.second || picks.third) && (
-                <div className="sticky top-2 z-10 rounded-2xl border border-amber-400/50 bg-zinc-950/95 backdrop-blur p-3 space-y-2 shadow-xl">
-                  <p className="text-[11px] font-bold text-amber-300">
-                    {picks.first ? `1st @${nameOf(picks.first)}` : '1st — not chosen yet'}
+                <div className="dn-crown">
+                  <p>
+                    {picks.first ? `1st @${nameOf(picks.first)}` : '1st: not chosen yet'}
                     {picks.second ? ` · 2nd @${nameOf(picks.second)}` : ''}
                     {picks.third ? ` · 3rd @${nameOf(picks.third)}` : ''}
                   </p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setPicks({})} className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-200 text-xs font-bold cursor-pointer">Clear</button>
-                    <button
-                      onClick={handleCrown}
-                      disabled={!picks.first || crowning}
-                      className="flex-1 py-2 rounded-xl bg-amber-500 text-black text-xs font-extrabold disabled:opacity-40 cursor-pointer"
-                    >
-                      {crowning ? 'Paying out…' : 'Assign & pay out'}
-                    </button>
+                  <div className="dn-crown-row">
+                    <button type="button" onClick={() => setPicks({})} className="dn-ghost">Clear</button>
+                    <button type="button" onClick={handleCrown} disabled={!picks.first || crowning} className="dn-pay">{crowning ? 'Paying out' : 'Assign and pay out'}</button>
                   </div>
-                  {!picks.first && <p className="text-[10px] text-zinc-500">Choose a 1st place first — 2nd and 3rd are optional.</p>}
+                  {!picks.first && <small>Choose a 1st place first. 2nd and 3rd are optional.</small>}
                 </div>
               )}
 
-              <div className="space-y-3">
-                {entries.length === 0 ? (
-                  <div className="py-10 text-center text-zinc-500 text-xs">No entries yet — be the first!</div>
-                ) : (
-                  entries.map((entry) => {
+              <div className="dn-h"><h2>Entries</h2><span>{entries.length}</span></div>
+              {entries.length === 0 ? (
+                <div className="dn-empty"><Flame className="w-7 h-7" />No entries yet. Be the first.</div>
+              ) : (
+                <div className="dn-grid">
+                  {entries.map((entry) => {
                     const isMine = entry.userId === currentUser.id;
                     const didVote = challenge.myVoteEntryId === entry.id;
+                    const pickRank = rankOf(entry.userId);
                     return (
-                      <div key={entry.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
-                        <div className="relative w-full aspect-video bg-black">
-                          {entry.mediaType === 'video' ? (
-                            <video src={entry.mediaUrl} controls preload="metadata" className="w-full h-full object-cover" />
-                          ) : (
-                            <img src={entry.mediaUrl} alt={entry.caption} className="w-full h-full object-cover" />
-                          )}
+                      <article key={entry.id} className="dn-entry" data-lead={leadId === entry.id ? '1' : undefined}>
+                        <div className="dn-media">
+                          {entry.mediaType === 'video' ? <video src={entry.mediaUrl} controls preload="metadata" /> : <img src={entry.mediaUrl} alt={entry.caption || `Entry by @${entry.username}`} loading="lazy" decoding="async" />}
+                          {leadId === entry.id && <span className="dn-lead"><Crown className="w-3.5 h-3.5" /> Leading</span>}
+                          {pickRank && <span className="dn-rank" data-r={pickRank}>{pickRank}</span>}
                         </div>
-                        <div className="p-3 flex items-center justify-between gap-2">
-                          <button
-                            onClick={() => { void fetchUserById(entry.userId).then((u) => u && onNavigateToProfile?.(u)); }}
-                            className="flex items-center gap-2 min-w-0 cursor-pointer"
-                          >
-                            <AvatarMedia src={entry.userAvatar} alt={entry.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                            <div className="min-w-0 text-left">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs font-bold text-white truncate">@{entry.username}</span>
-                                {entry.isVerified && <VerifiedBadge size="xs" />}
-                              </div>
-                              {entry.caption && <p className="text-[11px] text-zinc-400 truncate">{entry.caption}</p>}
-                            </div>
+                        <div className="dn-meta">
+                          <button type="button" onClick={() => { void fetchUserById(entry.userId).then((u) => u && onNavigateToProfile?.(u)); }} className="dn-who">
+                            <AvatarMedia src={entry.userAvatar} alt={entry.username} className="dn-av" />
+                            <span className="block min-w-0">
+                              <span className="dn-un"><span className="block min-w-0 truncate">@{entry.username}</span>{entry.isVerified && <VerifiedBadge size="xs" />}</span>
+                              {entry.caption && <span className="dn-cap block min-w-0 truncate">{entry.caption}</span>}
+                            </span>
                           </button>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {(isMine || isMasterAdmin) && (
-                              <button
-                                onClick={() => handleDelete(entry)}
-                                title="Delete this entry"
-                                className="p-1.5 text-zinc-500 hover:text-red-400 rounded-full hover:bg-zinc-900 cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleVote(entry)}
-                              disabled={isMine}
-                              title={isMine ? "You can't vote for your own entry" : 'Vote for this entry'}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
-                                didVote ? 'bg-red-500/15 text-red-400 border border-red-500/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
-                              }`}
-                            >
-                              <Heart className={`w-3.5 h-3.5 ${didVote ? 'fill-current' : ''}`} /> {entry.votesCount}
-                            </button>
-                          </div>
+                          {(isMine || isMasterAdmin) && (
+                            <button type="button" onClick={() => handleDelete(entry)} title="Delete this entry" aria-label="Delete this entry" className="dn-del"><Trash2 className="w-4 h-4" /></button>
+                          )}
+                          <button type="button" onClick={() => handleVote(entry)} disabled={isMine} aria-pressed={didVote} aria-label={`Vote, ${entry.votesCount} votes`} title={isMine ? "You can't vote for your own entry" : 'Vote for this entry'} className="dn-vote">
+                            <Heart className={`w-4 h-4 ${didVote ? 'fill-current' : ''}`} /> {entry.votesCount}
+                          </button>
                         </div>
                         {canCrown && (
-                          <div className="px-3 pb-3 flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mr-1">Make</span>
+                          <div className="dn-make">
+                            <span>Make</span>
                             {([1, 2, 3] as const).map((rank) => (
-                              <button
-                                key={rank}
-                                onClick={() => togglePick(entry.userId, rank)}
-                                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold cursor-pointer border transition-colors ${
-                                  rankOf(entry.userId) === rank
-                                    ? rank === 1 ? 'bg-amber-400 text-black border-amber-300' : rank === 2 ? 'bg-zinc-300 text-black border-zinc-200' : 'bg-orange-500 text-black border-orange-400'
-                                    : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-zinc-500'
-                                }`}
-                              >
-                                {rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd'}
-                              </button>
+                              <button key={rank} type="button" data-r={rank} aria-pressed={pickRank === rank} onClick={() => togglePick(entry.userId, rank)}>{rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd'}</button>
                             ))}
                           </div>
                         )}
-                      </div>
+                      </article>
                     );
-                  })
-                )}
-              </div>
+                  })}
+                </div>
+              )}
             </div>
           )
         ) : (
-          <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+          <div className="dn-col">
             {champions.length === 0 ? (
-              <div className="py-16 flex flex-col items-center gap-2 text-center text-zinc-500">
-                <Trophy className="w-8 h-8 text-zinc-700" />
-                <p className="text-xs">No champions crowned yet — check back after today's challenge ends.</p>
-              </div>
+              <div className="dn-empty"><Trophy className="w-8 h-8" />No champions yet. Check back after today's challenge ends.</div>
             ) : (
-              champions.map((c) => (
-                <div key={c.challengeDate} className="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
-                  <div className="relative shrink-0">
-                    <AvatarMedia src={c.userAvatar} alt={c.username} className="w-11 h-11 rounded-full object-cover border-2 border-amber-400/60" />
-                    <Crown className="w-4 h-4 text-amber-400 absolute -top-1.5 -right-1.5 fill-amber-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-bold text-white truncate">@{c.username}</span>
-                      {c.isVerified && <VerifiedBadge size="xs" />}
+              <div className="dn-champs">
+                {champions.map((c, i) => (
+                  <div key={c.challengeDate} className="dn-champ" data-first={i === 0 ? '1' : undefined}>
+                    <div className="dn-champ-av">
+                      <AvatarMedia src={c.userAvatar} alt={c.username} className="" />
+                      <Crown className="dn-crownico w-5 h-5 fill-current" />
                     </div>
-                    <p className="text-[11px] text-zinc-400 truncate">{c.prompt}</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">{formatRelativeTime(c.challengeDate)} • {c.votesCount} votes</p>
-                    {c.podium && c.podium.length > 1 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {c.podium.filter((p) => p.rank > 1).map((p) => (
-                          <span key={p.rank} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800/80 text-zinc-300">
-                            {p.rank === 2 ? '🥈' : '🥉'} @{p.username}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="dn-champ-t">
+                      <div className="dn-un"><span className="block min-w-0 truncate">@{c.username}</span>{c.isVerified && <VerifiedBadge size="xs" />}</div>
+                      <p className="dn-champ-p">{c.prompt}</p>
+                      <p className="dn-champ-m">{formatRelativeTime(c.challengeDate)} · {c.votesCount} votes</p>
+                      {c.podium && c.podium.length > 1 && (
+                        <div className="dn-pod">
+                          {c.podium.filter((p) => p.rank > 1).map((p) => (
+                            <span key={p.rank}><i data-r={p.rank}>{p.rank}</i><span className="block min-w-0 truncate">@{p.username}</span></span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}

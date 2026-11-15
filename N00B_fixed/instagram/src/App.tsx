@@ -278,9 +278,10 @@ export default function App() {
       const right = document.querySelector('[data-testid="desktop-people-panel"]') as HTMLElement | null;
       let l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
       let r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
-      if (root.getAttribute('data-page') === 'feed') {
+      // the doodle shows only inside the middle column itself (the box of the open page), never in the empty space beside it
+      {
         const box = document.querySelector('main') as HTMLElement | null;
-        if (box && box.getClientRects().length) { const b = box.getBoundingClientRect(); l = Math.round(b.left); r = Math.max(0, Math.round(window.innerWidth - b.right)); }
+        if (box && box.getClientRects().length) { const bb = box.getBoundingClientRect(); l = Math.round(bb.left); r = Math.max(0, Math.round(window.innerWidth - bb.right)); }
       }
       root.style.setProperty('--doodle-l', `${l}px`);
       root.style.setProperty('--doodle-r', `${r}px`);
@@ -1988,7 +1989,7 @@ export default function App() {
 
   return (
     <FeatureFlagsContext.Provider value={featuresOff}>
-    <div className={`min-h-screen text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 md:justify-start md:pl-0 lg:pl-0 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} ${pageTab === 'games' ? 'md:!p-0 lg:!p-0 lg:!gap-0' : ''} overflow-x-clip`}>
+    <div className={`min-h-screen text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 md:justify-start md:pl-0 lg:pl-0 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} ${pageTab === 'games' ? 'md:!p-0 lg:!p-0 lg:!gap-0' : ''} overflow-x-clip`} data-shell="1">
       {isUpdateAvailable && <UpdateAvailableBanner />}
       <SignupSourceCard userId={currentUser.id} />
       {incomingCall && featOn('calls') && (

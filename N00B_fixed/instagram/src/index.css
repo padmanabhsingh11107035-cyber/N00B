@@ -455,7 +455,26 @@ body { min-height: 100vh; min-height: 100dvh; }
 .nt-row-title { font-size: 13px; font-weight: 700; }
 .nt-row-sub { margin-top: 2px; font-size: 11.5px; color: var(--nt-sub); }
 .nt-check { width: 20px; height: 20px; accent-color: var(--nt-accent); cursor: pointer; flex: none; }
-@media (min-width: 768px) { .nt-body { padding-left: max(16px, calc((100% - 640px) / 2)); padding-right: max(16px, calc((100% - 640px) / 2)); } .nt-chips { padding-left: max(14px, calc((100% - 640px) / 2)); } }
+/* A tablet, laptop or computer: everything sits in one centred column (the header, the filters and the list share the same width), the filters wrap into a tidy centred block instead of running off to the right, and the cards are a little roomier. A phone is not touched. */
+@media (min-width: 768px) {
+  .nt { --nt-col: min(760px, calc(100% - 48px)); }
+  .nt-head { width: var(--nt-col); margin: 0 auto; padding: 18px 0 10px; }
+  .nt-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .nt-iconbtn { width: 44px; height: 44px; transition: background-color .18s ease; }
+  .nt-chips { width: var(--nt-col); margin: 0 auto; padding: 6px 0 16px; flex-wrap: wrap; justify-content: center; overflow: visible; gap: 8px 8px; border-bottom: 1px solid var(--nt-line); }
+  .nt-chip { padding: 8px 15px; font-size: 13px; transition: background-color .18s ease, color .18s ease, transform .18s ease; }
+  .nt-chip:hover:not(.is-on) { background: var(--nt-card-hi); color: var(--nt-text); }
+  .nt-body { padding: 18px 0 40px; }
+  .nt-body > * { width: var(--nt-col); margin-left: auto; margin-right: auto; }
+  .nt-date { margin: 10px 4px 0; font-size: 16px; }
+  .nt-group { gap: 12px; margin-bottom: 24px; }
+  .nt-card { padding: 16px 18px; gap: 14px; transition: background-color .18s ease, transform .2s ease; }
+  .nt-card.is-tappable:hover { background: var(--nt-card-hi); }
+  .nt-ava { width: 46px; height: 46px; }
+  .nt-text { font-size: 14px; }
+  .nt-card-title { font-size: 13px; }
+  .nt-menu { top: 50px; }
+}
 
 /* The Wallet page: a green card on a soft page, rows with a round icon and a green pill button, a segmented tab bar. Dark and light colours are variables, set here. */
 .wl {
@@ -498,6 +517,62 @@ body { min-height: 100vh; min-height: 100dvh; }
 .wl-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 6px; background: var(--wl-tile); color: var(--wl-tile-ink); font-size: 9px; font-weight: 800; }
 .wl-pos { color: var(--wl-pos); }
 .wl-neg { color: var(--wl-neg); }
+
+/* The Wallet, on a tablet, laptop or computer (768 px and wider): not a tall phone column but two columns under one header. On the left the card and the plan stay in view while the right side
+   (what you can do, the tabs and what is in them) scrolls. A phone keeps the one column. */
+.wl-col-a, .wl-col-b { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+@media (min-width: 768px) {
+  .wl-wrap { max-width: 1080px !important; padding-left: 36px !important; padding-right: 36px !important; display: grid !important; grid-template-columns: minmax(330px, 410px) minmax(0, 1fr); column-gap: 32px; row-gap: 8px; align-items: start; padding-top: 10px; padding-bottom: 40px; }
+  .wl-wrap > * { margin: 0 !important; }
+  .wl-wrap > :first-child { grid-column: 1 / -1; height: 64px; }
+  .wl-col-a { position: sticky; top: 12px; }
+  .wl-title { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+  .wl-round { width: 44px; height: 44px; transition: background-color .18s ease, transform .18s ease; }
+  .wl-round:hover { transform: scale(1.06); }
+  .wl-card-main { padding: 26px; border-radius: 30px; }
+  .wl-name { font-size: 23px; }
+  .wl-balance { font-size: 48px; }
+  .wl-panel { padding: 22px; border-radius: 24px; }
+  .wl-row-title { font-size: 15px; }
+  .wl-row-sub { font-size: 13px; }
+  .wl-tile { width: 48px; height: 48px; border-radius: 16px; }
+  .wl-pill { padding: 10px 24px; font-size: 13.5px; transition: filter .18s ease, transform .15s ease; }
+  .wl-pill:hover { filter: brightness(1.1); }
+  .wl-seg { padding: 5px; }
+  .wl-seg button { padding: 11px 8px; font-size: 14px; transition: background-color .2s ease, color .2s ease; }
+  .wl-seg button:not(.is-on):hover { color: var(--wl-text); }
+  .wl-stat { font-size: 30px; }
+  .wl-note { font-size: 12px; }
+  .wl-lab-dim { font-size: 11px; }
+  .wl-col-b [data-testid="wallet-transactions"] { margin: 0 !important; border: 1px solid var(--wl-line); border-radius: 24px; background: var(--wl-surface); box-shadow: var(--wl-shadow); overflow: hidden; padding-top: 16px; }
+  .wl-col-b [data-testid="wallet-transactions"] > div { border-top: 0; }
+  .wl-col-b [data-testid="wallet-transactions"] > div > div:last-child { border-bottom: 0; }
+  .wl-col-b [data-testid="wallet-transactions"] > div > div { padding-left: 22px; padding-right: 22px; transition: background-color .15s ease; }
+  .wl-col-b [data-testid="wallet-transactions"] > div > div:hover { background: var(--wl-surface2); }
+  .wl-col-b [data-testid="wallet-transactions"] > h4 { padding-left: 22px; padding-right: 22px; }
+  .wl-col-b .grid.grid-cols-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .wl-col-b .wl-panel[class*="cursor-pointer"] { transition: transform .2s ease, border-color .2s ease; }
+  .wl-col-b .wl-panel[class*="cursor-pointer"]:hover { transform: translateY(-2px); border-color: var(--wl-accent); }
+}
+@media (min-width: 768px) and (max-width: 1023px) { .wl-col-b .grid.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .wl-round, .wl-pill, .wl-seg button, .wl-col-b .wl-panel { transition: none !important; } }
+
+/* Subscriptions (the Pro plans), on a tablet, laptop or computer (768 px and wider): the plan cards stand side by side, all in view at once, instead of a rail you swipe; what you get and the Choose button sit centred under them; the switches above are one calm centred column. A phone keeps the rail. */
+@media (min-width: 768px) {
+  .pro-light { padding-left: max(2rem, calc((100vw - 1040px) / 2)) !important; padding-right: max(2rem, calc((100vw - 1040px) / 2)) !important; padding-top: 28px !important; }
+  .pro-light > :first-child h2 { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
+  .pro-light > :first-child button { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; transition: background-color .18s ease; }
+  .pro-light > :first-child button:hover { background: rgba(0, 0, 0, .07); }
+  .pro-light .pro-d-narrow { max-width: 600px; width: 100%; margin-left: auto; margin-right: auto; }
+  .pro-light [data-testid="pro-cards"] > div:first-child { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 380px); justify-content: center; gap: 28px; overflow: visible; margin-left: 0; margin-right: 0; padding: 14px 0 22px; }
+  .pro-light [data-testid="pro-cards"] > div:first-child > * { width: 100% !important; transition: transform .28s cubic-bezier(.22, 1, .36, 1), opacity .28s ease, box-shadow .28s ease; }
+  .pro-light [data-testid="pro-cards"] > div:first-child > *:hover { transform: translateY(-6px) scale(1.01) !important; opacity: 1 !important; box-shadow: 0 30px 40px -24px rgba(0, 0, 0, .55); }
+  .pro-light [data-testid="pro-cards"] > div:nth-child(2) { display: none; }
+  .pro-light [data-testid="pro-card-detail"] { max-width: 640px; margin: 0 auto; }
+  .pro-light [data-testid="pro-choose"] { transition: transform .15s ease, opacity .2s ease; }
+  .pro-light [data-testid="pro-choose"]:not(:disabled):hover { transform: translateY(-1px); }
+}
+@media (prefers-reduced-motion: reduce) { .pro-light [data-testid="pro-cards"] > div:first-child > * { transition: none; } }
 
 /* ============================================
    Liquid Glass — Apple-style translucent glass:
@@ -1745,7 +1820,8 @@ html body .auth-v2[data-stage="form"] .auth-orbs i { background: rgba(255, 255, 
 @media (min-width: 1024px) and (pointer: fine) {
   html[data-page="chat"]:not([data-nodeskchat]) [data-testid="desktop-people-panel"] { display: none !important; }
   html[data-page="chat"]:not([data-nodeskchat]) body main { max-width: none !important; width: auto !important; flex: 1 1 0% !important; min-width: 0 !important; margin: 0 !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
-  html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container { position: relative !important; inset: auto !important; z-index: auto !important; height: calc(100dvh - 24px) !important; max-width: none !important; margin: 12px 0 !important; border-radius: 30px !important; border: 1px solid rgba(255, 255, 255, .12) !important; background: #0b0b0e !important; box-shadow: 0 30px 80px -30px rgba(124, 77, 255, .55) !important; }
+  html[data-page="chat"]:not([data-nodeskchat]) [data-shell] { padding: 0 !important; gap: 0 !important; }
+  html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container { position: relative !important; inset: auto !important; z-index: auto !important; height: 100dvh !important; max-width: none !important; margin: 0 !important; border-radius: 0 !important; border: 0 !important; border-left: 1px solid rgba(255, 255, 255, .10) !important; background: #0b0b0e !important; box-shadow: none !important; }
   html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container > div > aside.msg-page { display: flex !important; flex: 0 0 clamp(340px, 30%, 420px) !important; width: clamp(340px, 30%, 420px) !important; border-right: 1px solid rgba(255, 255, 255, .10); }
   html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container > div > section { display: flex !important; flex: 1 1 0% !important; min-width: 0; }
   html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container section [aria-label="Back"], html[data-page="chat"]:not([data-nodeskchat]) #chat-view-container section .chat-top > div:first-child > button:first-child { display: none; }
@@ -1757,10 +1833,8 @@ html body .auth-v2[data-stage="form"] .auth-orbs i { background: rgba(255, 255, 
   .chat-desk-empty h2 { margin: 6px 0 0; font-size: 28px; font-weight: 900; letter-spacing: -.02em; background: linear-gradient(90deg, #ffd60a, #ff7a1a, #ff3d81, #a259ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
   .chat-desk-empty p { margin: 0; max-width: 360px; color: #a8a6b3; font-size: 14.5px; font-weight: 600; line-height: 1.5; }
   /* the list: a violet, pink and orange header, a coloured ring around the people, the open chat marked */
-  html[data-page="chat"]:not([data-nodeskchat]) .msg-page { --head: #7c4dff; --head-btn: rgba(255, 255, 255, .22); --head-btn-hover: rgba(255, 255, 255, .34); --head-gap: #a259ff; --mint: #ffd60a; --mint-ring: #ffd60a; }
   @layer base {
-    html[data-page="chat"]:not([data-nodeskchat]) .msg-page .msg-head.force-dark, html[data-page="chat"]:not([data-nodeskchat]) .msg-page .msg-head { background: linear-gradient(135deg, #7c4dff 0%, #c13cff 40%, #ff3d81 78%, #ff9a1a 115%) !important; background-color: #a259ff !important; }
-    html[data-page="chat"]:not([data-nodeskchat]) .msg-page .msg-row[data-active="1"] { background: linear-gradient(90deg, rgba(124, 77, 255, .28), rgba(255, 61, 129, .12)) !important; box-shadow: inset 4px 0 0 #ffd60a; }
+    html[data-page="chat"]:not([data-nodeskchat]) .msg-page .msg-row[data-active="1"] { background: rgba(255, 255, 255, .07) !important; box-shadow: inset 4px 0 0 var(--head); }
     html[data-page="chat"]:not([data-nodeskchat]) .msg-page .msg-row:hover { background: rgba(255, 255, 255, .06); }
   }
   /* the open chat: a lively top bar and a gradient send button */

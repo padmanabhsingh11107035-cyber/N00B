@@ -317,7 +317,9 @@ export default function App() {
   const restoredTabRef = useRef(false);
   if (currentUser && !restoredTabRef.current) {
     restoredTabRef.current = true;
-    if (takeRestorePage(currentUser.id) === 'games') setActiveTab('games');
+    // ...but never over an address that names another page (/music, /me, a shared link): the address wins
+    const openedAt = typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '').toLowerCase() : '';
+    if (takeRestorePage(currentUser.id) === 'games' && (openedAt === '' || openedAt === '/games')) setActiveTab('games');
   }
   // Mounted app-wide (not inside ChatView) so an incoming call reaches someone no matter which tab
   // they're currently on — a hook, so it must be called unconditionally, before any early return
@@ -1322,7 +1324,7 @@ export default function App() {
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       const tab = tabFromHistoryEntry(e.state, window.location.pathname);
-      if (!tab || tab === activeTabRef.current) return;
+      if (!tab || tab === 'post' || tab === activeTabRef.current) return;
       cameByHistory.current = true;
       setActiveTabState(tab);
     };

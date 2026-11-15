@@ -685,7 +685,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     <div id="profile-view-container" className="w-full max-w-4xl mx-auto px-4 pt-4 pb-28">
       {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
       <div className={`relative mb-4 ${isOwnProfile ? '' : 'flow-root'}`}>
-        <div className={isOwnProfile ? "flex items-center gap-2 mb-3 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" : "pf-float absolute top-0 inset-x-0 z-20 flex items-center gap-2 py-1"} data-testid="profile-topbar">
+        <div className={isOwnProfile ? "flex items-center gap-2 max-[420px]:gap-1 mb-3 rounded-2xl bg-black/70 px-2 py-1.5 [text-shadow:none]" : "pf-float absolute top-0 inset-x-0 z-20 flex items-center gap-2 py-1"} data-testid="profile-topbar">
           {isOwnProfile && onOpenCreate && (
             <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
           )}
@@ -693,7 +693,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button type="button" onClick={onGoBack} aria-label="Go to previous page" data-testid="profile-back" className="pf-btn shrink-0 cursor-pointer active:scale-90 transition-transform"><ArrowLeft className="w-5 h-5" /></button>
           )}
           <div className="flex items-center gap-1 min-w-0 flex-1">
-            <h1 className={`text-xl font-extrabold text-white tracking-tight truncate min-w-0 ${isOwnProfile ? '' : 'sr-only'}`} data-testid="profile-username">{targetUser.username}</h1>
+            <h1 className={`text-xl max-[420px]:text-base font-extrabold text-white tracking-tight truncate min-w-0 ${isOwnProfile ? '' : 'sr-only'}`} data-testid="profile-username">{targetUser.username}</h1>
             {isOwnProfile && (
               <button
                 type="button"
@@ -715,7 +715,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-buddy-booth"
             title="Buddy Booth"
             aria-label="Buddy Booth: take a photo with a buddy"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-600 via-purple-600 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
+            className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-600 via-purple-600 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <BoothIcon size={26} />
           </button>
@@ -727,7 +727,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-lenses"
             title="NOOB Lenses"
             aria-label="NOOB Lenses: face filters"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
+            className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <LensesIcon size={26} />
           </button>
@@ -739,7 +739,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-scratch"
             title="Scratch Reveal"
             aria-label="Scratch Reveal: scratch the foil to unveil secret photos"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
+            className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <ScratchIcon size={26} />
           </button>
@@ -751,7 +751,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             data-testid="profile-avatars"
             title="Choose avatar"
             aria-label="Choose avatar: pick a character as your profile picture"
-            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
+            className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <AvatarsIcon size={26} />
           </button>

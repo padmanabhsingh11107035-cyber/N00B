@@ -1,5 +1,5 @@
 name: Build Android APK
-# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB).
+# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15.)
 
 on:
   workflow_dispatch: {}

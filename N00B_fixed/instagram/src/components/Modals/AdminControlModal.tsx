@@ -3437,7 +3437,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       <div className="aud-box">
                         {people.map((x) => (
                           <div key={x.id} className="flex items-center gap-3">
-                            <button type="button" className="aud-person" onClick={() => { setAudList(null); setSelectedUserForDetails(x); }} title="Open this person's details">
+                            <button type="button" className="aud-person min-w-0" onClick={() => { setAudList(null); setSelectedUserForDetails(x); }} title="Open this person's details">
                               <img src={x.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" loading="lazy" />
                               <span className="min-w-0 flex-1 text-left">
                                 <span className="flex items-center gap-1 min-w-0"><span className="aud-pn block truncate">{x.displayName || x.username}</span>{x.isVerified && <VerifiedBadge size="sm" />}</span>

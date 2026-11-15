@@ -191,11 +191,11 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     ? rotated
       ? { position: 'fixed', top: 0, left: 0, width: '100dvh', height: '100dvw', transformOrigin: 'top left', transform: 'translateX(100dvw) rotate(90deg)', zIndex: 80 }
       : { position: 'fixed', inset: 0, zIndex: 80 }
-    : { height: 'clamp(300px, calc(100dvh - 230px), 720px)' };
+    : { height: 'max(300px, calc(100dvh - 148px - max(var(--sat, 0px), env(safe-area-inset-top, 0px)) - env(safe-area-inset-bottom, 0px)))' };   // the whole page under the bar, down to the small row of buttons
 
   return (
     <div className={visible ? 'space-y-2' : 'fixed left-[-10000px] top-0 w-[800px] h-[450px] opacity-0 pointer-events-none'} aria-hidden={!visible}>
-      <div className="relative w-full overflow-hidden rounded-2xl bg-black" style={boxStyle}>
+      <div className={visible && !full ? "gp-stage" : "relative w-full overflow-hidden bg-black"} style={boxStyle}>
         {(visible || (!lazy && !wasShown)) && <iframe
           ref={frameRef}
           title={title}
@@ -209,9 +209,9 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
           className="block w-full h-full border-0 bg-black"
         />}
         {visible && !loaded && (
-          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3 text-center px-6 pointer-events-none">
-            <div className="w-9 h-9 rounded-full border-4 border-pink-400/30 border-t-pink-400 animate-spin" />
-            <span className="text-sm font-black text-pink-300">Loading {title}…</span>
+          <div className="gp-load" data-testid="game-loading">
+            <i aria-hidden="true" />
+            <span className="block max-w-full truncate">Loading {title}…</span>
           </div>
         )}
         {visible && full && (
@@ -225,16 +225,13 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
         )}
       </div>
       {visible && !full && (
-        <div className="flex items-center justify-between gap-2 px-1">
-          <p className="text-[10px] text-zinc-500">
+        <div className="gp-tools">
+          <p className="block truncate">
             Stuck on loading?{' '}
-            <a href={plan.separate ? plan.src : url} target="_blank" rel="noopener noreferrer" className="underline text-zinc-300">Open the game on its own</a>
+            <a href={plan.separate ? plan.src : url} target="_blank" rel="noopener noreferrer">Open the game on its own</a>
           </p>
-          <button
-            onClick={enterFull}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/20 border border-pink-400/40 text-pink-200 text-[11px] font-bold cursor-pointer"
-          >
-            <Maximize2 className="w-3.5 h-3.5" /> Full screen
+          <button type="button" onClick={enterFull} className="gp-full">
+            <Maximize2 className="w-4 h-4" /> Full screen
           </button>
         </div>
       )}

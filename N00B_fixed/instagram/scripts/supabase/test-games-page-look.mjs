@@ -10,5 +10,12 @@ check(/forceStripColour\(document\.documentElement\.getAttribute\('data-theme'\)
 check(/data-testid="game-art"/.test(view) && /const artOf = /.test(view) && [0, 1, 2, 3, 4, 5].every((n) => css.includes(`.gz-art[data-c="${n}"]`)), 'a game without a picture gets a drawn poster: six colourways, always the same one for the same game');
 check(/max-md:!hidden/.test(view) && /scroll-pl-4/.test(view), 'no Back button on a phone; the rows start at the page margin');
 check(/@media \(prefers-reduced-motion: reduce\)/.test(css), 'still when the phone asks for less motion');
+// a game's own page (opened from a card)
+const modal = read('src/components/Games/GamePlayModal.tsx'), frame = read('src/components/Games/minigames/HostedGameFrame.tsx');
+check(/className="gz gp edge-own" data-noob-keep="1"/.test(modal) && /data-testid="game-page-back"/.test(modal) && !/backdrop-blur-md flex items-center justify-center \$\{/.test(modal) && /\.gp \{ position: fixed; inset: 0;/.test(css), 'a game opens as a full page with a back button, not as a small window over a dimmed page');
+check((modal.match(/className="gp-opt"/g) || []).length === 4 && !/1\. Play with Available Users/.test(modal) && /className="gp-play"/.test(modal), 'the four ways to play are plain cards and Play is one big button');
+check(/data-testid="game-page-art"/.test(modal) && /game\.posters && game\.posters\.length > 0 \? <GamePosterCarousel/.test(modal), 'a game without a picture shows the drawn poster here too, not the old banner');
+check(/calc\(100dvh - 148px/.test(frame) && /className="gp-tools"/.test(frame) && /className="gp-load"/.test(frame) && !/pink-/.test(frame), 'a game in its own frame takes the whole page under the bar; no pink left');
+check(/:root\[data-theme="light"\] \.gp \{/.test(css) && /--color-noob: #e23744/.test(css), 'every step inside the page uses the page colours, in dark and in light');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

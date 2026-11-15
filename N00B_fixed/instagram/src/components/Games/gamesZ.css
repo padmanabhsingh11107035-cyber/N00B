@@ -100,3 +100,56 @@
 
 @media (prefers-reduced-motion: reduce) { .gz-card, .gz-ib, .gz-hero-cta { transition: none; } }
 .gz .gz-lb .text-white { color: var(--gz-fg) !important; }
+
+/* ---- A game's own page (opened from a card): full screen, the same red look, one calm set of colours for every step inside it (choose how to play, waiting, playing, result). */
+.gp { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: var(--gz-bg); color: var(--gz-fg); animation: gp-in .24s cubic-bezier(.2, .8, .2, 1) both;
+  /* the many small parts inside (boards, lists, waiting screens) are written with the app's grey and accent names: here those names give this page's colours */
+  --color-zinc-950: #0c0c0e; --color-zinc-900: #17171b; --color-zinc-800: #232329; --color-zinc-700: #34343c; --color-noob: #e23744; --color-noob-strong: #c92a38;
+  --color-fuchsia-300: #ff8a94; --color-fuchsia-400: #ff5a66; --color-fuchsia-500: #e23744; --color-pink-200: #ffc2c7; --color-pink-300: #ff8a94; --color-pink-400: #ff5a66; --color-pink-500: #e23744;
+  --color-purple-300: #ff8a94; --color-purple-400: #ff5a66; --color-purple-500: #e23744; --color-cyan-300: #ff8a94; --color-cyan-400: #ff5a66; --color-cyan-500: #e23744; }
+:root[data-theme="light"] .gp { --color-zinc-950: #f4f4f6; --color-zinc-900: #ffffff; --color-zinc-800: #ececf0; --color-zinc-700: #d7d7de;
+  --color-fuchsia-300: #c92a38; --color-fuchsia-400: #e23744; --color-pink-200: #b5152b; --color-pink-300: #c92a38; --color-pink-400: #e23744;
+  --color-purple-300: #c92a38; --color-purple-400: #e23744; --color-cyan-300: #c92a38; --color-cyan-400: #e23744; }
+@keyframes gp-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.gp-bar { flex: none; display: flex; align-items: center; gap: 12px; padding: calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 10px) 16px 10px; border-bottom: 1px solid var(--gz-line); background: var(--gz-bg); }
+.gp-bar-in, .gp-body-in { width: 100%; margin: 0 auto; }
+.gp-bar-in { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gp-thumb { width: 44px; height: 44px; border-radius: 14px; flex: none; overflow: hidden; background: linear-gradient(135deg, #f04958, var(--gz-deep)); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 15px; font-weight: 900; font-style: italic; border: 1px solid var(--gz-line); }
+.gp-thumb > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gp-title { font-size: 17px; line-height: 1.2; font-weight: 900; letter-spacing: -.01em; color: var(--gz-fg); }
+.gp-meta { margin-top: 3px; display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 11.5px; color: var(--gz-mute); }
+.gp-meta b { color: var(--gz-red); font-weight: 800; }
+:root:not([data-theme="light"]) .gp-meta b { color: var(--gz-red2); }
+.gp-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.gp-body[data-stage="1"] { padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+/* the first step: the pictures, what the game is, and the ways to play */
+.gp-about { font-size: 14px; line-height: 1.5; color: var(--gz-fg); }
+.gp-chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.gp-chipx { height: 26px; padding: 0 11px; border-radius: 999px; background: var(--gz-card); border: 1px solid var(--gz-line); color: var(--gz-mute); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; display: inline-flex; align-items: center; max-width: 100%; min-width: 0; }
+.gp-note { padding: 11px 14px; border-radius: 16px; background: color-mix(in srgb, var(--gz-red) 10%, var(--gz-card)); border: 1px solid color-mix(in srgb, var(--gz-red) 32%, transparent); color: var(--gz-fg); font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+.gp-play { width: 100%; min-height: 54px; padding: 0 20px; border-radius: 18px; background: linear-gradient(135deg, #f04958, var(--gz-red) 55%, var(--gz-deep)); color: #ffffff; font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 18px 30px -16px rgba(226, 55, 68, .9); transition: transform .15s ease; }
+.gp-play:active { transform: scale(.98); }
+.gp-hint { font-size: 12px; line-height: 1.45; color: var(--gz-mute); text-align: center; }
+.gp-sec { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--gz-mute); }
+.gp-opt { width: 100%; display: flex; align-items: center; gap: 14px; padding: 13px 14px; border-radius: 18px; background: var(--gz-card); border: 1px solid var(--gz-line); color: var(--gz-fg); text-align: left; cursor: pointer; box-shadow: var(--gz-shadow); transition: transform .15s ease, border-color .15s ease; }
+.gp-opt:active { transform: scale(.985); }
+@media (hover: hover) { .gp-opt:hover { border-color: var(--gz-red); } }
+.gp-opt-ico { width: 44px; height: 44px; border-radius: 14px; flex: none; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--gz-red) 14%, var(--gz-card)); color: var(--gz-red); }
+:root:not([data-theme="light"]) .gp-opt-ico { color: var(--gz-red2); }
+.gp-opt-t { display: block; font-size: 15px; font-weight: 800; color: var(--gz-fg); }
+.gp-opt-s { display: block; margin-top: 2px; font-size: 12px; line-height: 1.35; color: var(--gz-mute); }
+.gp-opt-go { flex: none; color: var(--gz-dim); }
+/* a game that runs in its own frame: the frame takes the whole page under the bar */
+.gp-stage { position: relative; width: 100%; overflow: hidden; border-radius: 18px; background: #000000; border: 1px solid var(--gz-line); }
+.gp-load { position: absolute; inset: 0; background: #000000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 24px; pointer-events: none; color: #ffffff; font-size: 14px; font-weight: 800; }
+.gp-load i { width: 38px; height: 38px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .18); border-top-color: #e23744; animation: gp-spin .8s linear infinite; }
+@keyframes gp-spin { to { transform: rotate(360deg); } }
+.gp-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px 0; }
+.gp-tools p { font-size: 11.5px; color: var(--gz-mute); min-width: 0; }
+.gp-tools a { color: var(--gz-fg); text-decoration: underline; text-underline-offset: 3px; }
+.gp-full { height: 38px; padding: 0 14px; border-radius: 12px; background: var(--gz-card); border: 1px solid var(--gz-line); color: var(--gz-fg); font-size: 12.5px; font-weight: 800; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; flex: none; }
+@media (prefers-reduced-motion: reduce) { .gp { animation: none; } .gp-load i { animation-duration: 2s; } .gp-play, .gp-opt { transition: none; } }
+.gp-hero { border-radius: 22px; border: 1px solid var(--gz-line); box-shadow: var(--gz-shadow); }
+.gp-hero .gz-art { padding: 18px 18px 20px; }
+.gp-hero .gz-mono { font-size: 132px; right: 14px; top: -10px; }
+.gp-hero .gz-art-t { font-size: 26px; }

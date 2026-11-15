@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { listenRoom, pingRoom } from '../../utils/roomPing';
 import { listenLive, sendLive } from '../../utils/liveScore';
 import { LoadingSmall } from '../Common/LoadingPages';
+import './gamesZ.css';
 import {
   X,
+  ChevronLeft,
   Users,
   Bot,
   UserPlus,
@@ -1080,44 +1082,32 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const useLargeBoard = (isBoardGame || game.id === 'chess_blitz' || game.id === 'helix_fall' || !!game.embedUrl) && currentMode === 'play_bot';
 
   return (
-    <div className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center ${
-      useLargeBoard ? 'p-0 sm:p-4' : 'p-4'
-    }`}>
-      <div className={`bg-zinc-950 border border-zinc-800 overflow-hidden shadow-2xl flex flex-col relative animate-in fade-in zoom-in duration-200 ${
-        useLargeBoard
-          ? 'w-full h-full sm:h-auto sm:max-w-3xl rounded-none sm:rounded-3xl'
-          : 'w-full max-w-lg rounded-3xl'
-      }`}>
-        {/* Top Header */}
-        <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-noob/20 border border-noob/40 flex items-center justify-center text-sm font-bold text-noob">
-              🎮
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
-              <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                <span className="text-amber-400 font-semibold">{game.pointsReward > 0 ? `${game.pointsReward.toLocaleString()} NOOBs ${game.rewardNote ?? 'on Win'}` : game.rewardNote}</span>
-                <span>•</span>
-                <span className="text-zinc-400">
-                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' || game.embedUrl ? 'Solo' : '5,000,000 NOOBs on Tie'}
-                </span>
-              </div>
+    <div className="gz gp edge-own" data-noob-keep="1" role="dialog" aria-modal="true" aria-label={game.title} data-testid="game-page">
+      {/* the bar: back, the game's picture and name, what a win gives */}
+      <div className="gp-bar">
+        <div className={`gp-bar-in ${useLargeBoard ? 'max-w-6xl' : 'max-w-2xl'}`}>
+          <button type="button" onClick={handleModalClose} className="gz-ib" aria-label="Back to the games" data-testid="game-page-back">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="gp-thumb" aria-hidden="true">
+            {game.posters && game.posters[0] ? <img src={game.posters[0]} alt="" loading="lazy" decoding="async" /> : game.title.slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="gp-title block truncate">{game.title}</h2>
+            <div className="gp-meta">
+              <b className="block min-w-0 max-w-[68%] shrink-0 truncate">{game.pointsReward > 0 ? `${game.pointsReward.toLocaleString()} NOOBs ${game.rewardNote ?? 'on Win'}` : game.rewardNote}</b>
+              <span className="shrink-0">·</span>
+              <span className="block min-w-0 flex-1 truncate">
+                {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' || game.embedUrl ? 'Solo' : '5,000,000 NOOBs on Tie'}
+              </span>
             </div>
           </div>
-
-          <button
-            onClick={handleModalClose}
-            className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
+      </div>
 
-        {/* Modal Body */}
-        <div className={`flex-1 overflow-y-auto ${
-          useLargeBoard ? 'p-2 sm:p-5 max-h-[calc(100vh-73px)] sm:max-h-[85vh]' : 'p-5 max-h-[75vh]'
-        }`}>
+      {/* the page under the bar */}
+      <div className="gp-body" data-stage={useLargeBoard ? '1' : undefined}>
+        <div className={`gp-body-in ${useLargeBoard ? 'max-w-6xl' : 'max-w-2xl'}`}>
           {!chessLimitChecked ? (
             <LoadingSmall label="Checking availability…" />
           ) : chessLimitBlocked ? (
@@ -1155,134 +1145,90 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           {currentMode === 'select_mode' && (
             <div className="space-y-4">
               {/* Game Artwork Preview: auto-advancing, swipeable poster carousel */}
-              <GamePosterCarousel game={game} tall />
+              {game.posters && game.posters.length > 0 ? <GamePosterCarousel game={game} tall /> : (() => {
+                // no picture of its own: the same drawn poster as on the Games page (same colourway for the same game)
+                let h = 0; for (let i = 0; i < game.id.length; i++) h = (h * 31 + game.id.charCodeAt(i)) >>> 0;
+                const words = game.title.replace(/[^A-Za-z0-9 ]/g, ' ').split(' ').filter(Boolean);
+                return (
+                  <span className="gz-poster gp-hero" data-testid="game-page-art">
+                    <span className="gz-art" data-c={h % 6}>
+                      <span className="gz-mono" aria-hidden="true">{((words[0]?.[0] || 'N') + (words[1]?.[0] || '')).toUpperCase()}</span>
+                      <span className="gz-art-t line-clamp-2">{game.title}</span>
+                    </span>
+                  </span>
+                );
+              })()}
 
-              <div className="text-center px-2">
-                <p className="text-xs text-zinc-300">{game.description}</p>
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700">
-                    {game.category.toUpperCase()}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700">
-                    {game.difficulty}
-                  </span>
+              <div>
+                <p className="gp-about break-words">{game.description}</p>
+                <div className="gp-chips">
+                  <span className="gp-chipx"><span className="block min-w-0 truncate">{game.category}</span></span>
+                  <span className="gp-chipx"><span className="block min-w-0 truncate">{game.difficulty}</span></span>
+                  <span className="gp-chipx"><span className="block min-w-0 truncate">{game.players}</span></span>
                 </div>
               </div>
 
               {game.embedUrl ? (
                 <div className="pt-2 space-y-2.5">
-                  <div className="px-3 py-2 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-center text-[11px] font-bold text-fuchsia-300">
+                  <div className="gp-note">
                     {game.embedPortrait && !game.embedLazy ? 'It is already loading (it is a small game), so it is ready when you press Play.' : game.embedPortrait ? 'It starts loading now, so it is ready when you press Play.' : 'It starts loading now, so it is ready when you press Play. The first time it is a big download.'}
                   </div>
                   <button
                     onClick={startBotGameNow}
-                    className="w-full py-3.5 rounded-2xl bg-noob hover:bg-noob/90 text-black text-sm font-black transition-colors cursor-pointer"
+                    className="gp-play" data-testid="game-page-play"
                   >
-                    Play {game.title}
+                    <Play className="w-5 h-5 shrink-0 fill-current" /><span className="block min-w-0 truncate">Play {game.title}</span>
                   </button>
-                  <p className="text-[10px] text-zinc-500 text-center">{game.embedControls ?? 'Keyboard: arrows to move, the on-screen buttons on a phone. It has its own music; no NOOBs for this one, it is just for fun.'}</p>
+                  <p className="gp-hint">{game.embedControls ?? 'Keyboard: arrows to move, the on-screen buttons on a phone. It has its own music; no NOOBs for this one, it is just for fun.'}</p>
                 </div>
               ) : game.id === 'helix_fall' ? (
                 <div className="pt-2 space-y-2.5">
-                  <div className="px-3 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center text-[11px] font-bold text-amber-300">
+                  <div className="gp-note">
                     Clear 90 floors = a level: +{game.pointsReward.toLocaleString()} NOOBs, paid at once, level after level. Your best score is on the leaderboard.
                   </div>
                   <button
                     onClick={startBotGameNow}
-                    className="w-full py-3.5 rounded-2xl bg-noob hover:bg-noob/90 text-black text-sm font-black transition-colors cursor-pointer"
+                    className="gp-play" data-testid="game-page-play"
                   >
-                    Play Helix Fall
+                    <Play className="w-5 h-5 shrink-0 fill-current" /><span className="block min-w-0 truncate">Play Helix Fall</span>
                   </button>
-                  <p className="text-[10px] text-zinc-500 text-center">Rotate with A / D, the arrow keys, or by dragging. One shield per level forgives your first hazard.</p>
+                  <p className="gp-hint">Rotate with A / D, the arrow keys, or by dragging. One shield per level forgives your first hazard.</p>
                 </div>
               ) : (
               <div className="pt-2 space-y-2.5">
-                <span className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase block px-1">
-                  Choose How To Play:
-                </span>
+                <span className="gp-sec block">How do you want to play?</span>
 
-                {/* Option 1: Play with Available Users */}
-                <button
-                  onClick={startMatchmaking}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-noob/50 flex items-center justify-between transition-all group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-noob group-hover:scale-105 transition-transform">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white block group-hover:text-noob transition-colors">
-                        1. Play with Available Users
-                      </span>
-                      <span className="text-[11px] text-zinc-400 block">
-                        Quick match with active online players (30s queue)
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-noob group-hover:translate-x-0.5 transition-all" />
+                <button type="button" onClick={startMatchmaking} className="gp-opt">
+                  <span className="gp-opt-ico"><Users className="w-5 h-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="gp-opt-t block truncate">Play online</span>
+                    <span className="gp-opt-s">A quick match with someone who is online now (30 second wait)</span>
+                  </span>
+                  <ArrowRight className="gp-opt-go w-4 h-4" />
                 </button>
-
-                {/* Option 2: Play with Bot */}
-                <button
-                  onClick={handlePlayBotClick}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-purple-500/50 flex items-center justify-between transition-all group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
-                      <Bot className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white block group-hover:text-purple-300 transition-colors">
-                        2. Play with Bot
-                      </span>
-                      <span className="text-[11px] text-zinc-400 block">
-                        Instant single-player match against smart AI
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all" />
+                <button type="button" onClick={handlePlayBotClick} className="gp-opt">
+                  <span className="gp-opt-ico"><Bot className="w-5 h-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="gp-opt-t block truncate">Play the bot</span>
+                    <span className="gp-opt-s">Start at once against the computer; you pick how hard</span>
+                  </span>
+                  <ArrowRight className="gp-opt-go w-4 h-4" />
                 </button>
-
-                {/* Option 3: Play with Friend */}
-                <button
-                  onClick={openPlayFriend}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-cyan-500/50 flex items-center justify-between transition-all group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
-                      <UserPlus className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white block group-hover:text-cyan-300 transition-colors">
-                        3. Play with Friend
-                      </span>
-                      <span className="text-[11px] text-zinc-400 block">
-                        Send game invite directly to chat or share match link
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
+                <button type="button" onClick={openPlayFriend} className="gp-opt">
+                  <span className="gp-opt-ico"><UserPlus className="w-5 h-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="gp-opt-t block truncate">Play a friend</span>
+                    <span className="gp-opt-s">Send an invite in chat, or share the match link</span>
+                  </span>
+                  <ArrowRight className="gp-opt-go w-4 h-4" />
                 </button>
-
-                {/* Option 4: Pass and Play */}
-                <button
-                  onClick={handleStartPassAndPlay}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-amber-500/50 flex items-center justify-between transition-all group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white block group-hover:text-amber-300 transition-colors">
-                        4. Pass and Play
-                      </span>
-                      <span className="text-[11px] text-zinc-400 block">
-                        Two players take turns on this one device
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                <button type="button" onClick={handleStartPassAndPlay} className="gp-opt">
+                  <span className="gp-opt-ico"><Users className="w-5 h-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="gp-opt-t block truncate">Pass and play</span>
+                    <span className="gp-opt-s">Two players take turns on this one phone</span>
+                  </span>
+                  <ArrowRight className="gp-opt-go w-4 h-4" />
                 </button>
               </div>
               )}

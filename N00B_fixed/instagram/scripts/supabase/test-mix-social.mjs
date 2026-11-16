@@ -1,0 +1,19 @@
+// Likes, comments and share on the anonymous thoughts and polls of the Home page (migration 20261116000005).
+import fs from 'node:fs';
+const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf8').split(String.fromCharCode(13)).join('');
+let passed = 0, failed = 0;
+const check = (ok, name) => { if (ok) { passed++; console.log('  ok   ' + name); } else { failed++; console.log('  FAIL ' + name); } };
+const sql = read('supabase/migrations/20261116000005_home_mix_likes_comments.sql'), mix = read('src/components/Feed/HomeMix.tsx'), api = read('src/services/supabaseApi.ts'), css = read('src/components/Feed/home.css');
+check(/revoke all on public\.mix_likes, public\.mix_comments from public, anon, authenticated/.test(sql) && /enable row level security/.test(sql), 'the like and comment tables can not be read or written by the app directly');
+check(/primary key \(kind, target_id, user_id\)/.test(sql) && /mix_target_ok\(p_kind, p_id\)/.test(sql), 'one like per person per item, and only on an item that exists and is not hidden or removed');
+check(/between 1 and 500/.test(sql) && /interval '5 seconds'/.test(sql) && /n >= 40/.test(sql) && /is_suspended/.test(sql), 'comments are 1-500 characters, rate limited, and a suspended account can not comment');
+check(/c\.user_id is distinct from me and not public\.fun_can_manage\(\)/.test(sql), 'a comment can be removed only by its writer or by a moderator');
+check(!/author_id/.test(sql.replace(/--.*$/gm, '')), 'nothing here reads who wrote an anonymous thought (author_id is never touched)');
+for (const fn of ['mix_stats', 'mix_like', 'mix_comments_list', 'mix_comment_add', 'mix_comment_remove']) check(api.includes(`'${fn}'`), `the app calls ${fn}`);
+check(/data-testid="home-mix-like"/.test(mix) && /data-testid="home-mix-comment"/.test(mix) && /data-testid="home-mix-share"/.test(mix), 'every card has Like, Comment and Share buttons');
+check((mix.match(/<MixBar /g) || []).length === 2 && /kind="anon"/.test(mix) && /kind="poll"/.test(mix), 'both the anonymous thought card and the poll card use the bar');
+check(/navigator\.share/.test(mix) && /clipboard\.writeText\(url\)/.test(mix), 'Share opens the phone share sheet, and copies the link where there is none');
+check(/createPortal\(<MixComments/.test(mix) && /MIX_COMMENT_MAX/.test(mix), 'the comments sheet is drawn over the whole page, with the length limit');
+check(/\.hm-ab \{/.test(css) && /\.hm-cm-input \{/.test(css), 'styles for the bar and the comments sheet');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

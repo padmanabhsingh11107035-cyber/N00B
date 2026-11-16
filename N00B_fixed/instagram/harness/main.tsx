@@ -184,6 +184,14 @@ async function boot() {
     // the Games page (the people list is the harness user only; the leaderboard comes from the mocks, or is empty)
     const { GamesView } = await import('../src/components/Games/GamesView.tsx');
     Page = () => h(GamesView, { currentUser, allUsers: [currentUser], onUserUpdated: noop, onNavigateToUserProfile: noop, onBack: () => console.info('[harness] onBack') });
+  } else if (page === 'homemix') {
+    // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
+    await import('../src/components/Feed/home.css');
+    const hm = await import('../src/components/Feed/HomeMix.tsx');
+    Page = () => {
+      const mix = hm.useHomeMix(true, true, 0);
+      return h('div', { style: { maxWidth: 480, margin: '0 auto', padding: '16px 0' } }, ...mix.items.slice(0, 4).map((it) => h(hm.HomeMixCard, { key: hm.mixKey(it), item: it, currentUser, canManage: false, onRemoved: mix.remove, onPollChanged: mix.updatePoll })));
+    };
   } else if (page === 'feedvideo') {
     // Videos in the posts of Home: three video posts in a column that scrolls; the one that fills the screen plays by itself. The test videos are made here, in the page.
     const { FeedVideoSlot } = await import('../src/components/Feed/FeedVideoSlot.tsx');

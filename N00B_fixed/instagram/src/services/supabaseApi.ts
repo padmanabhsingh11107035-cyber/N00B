@@ -6899,6 +6899,30 @@ export async function fetchPollReports(): Promise<PollReport[]> {
 }
 export async function dismissPollReports(pollId: string): Promise<void> { await rpc('poll_admin_dismiss', { p_poll: pollId }); }
 
+// ---- Likes and comments on the anonymous thoughts and polls of the Home page (migration 20261116000005) ----
+export type MixKind = 'anon' | 'poll';
+export interface MixStat { likes: number; comments: number; liked: boolean }
+export interface MixComment { id: string; body: string; createdAt: string; mine: boolean; user: PollCreator }
+export const MIX_COMMENT_MAX = 500;
+const mapMixComment = (c: MixComment): MixComment => ({ ...c, user: { ...c.user, avatar: resolveMedia(c.user.avatar) } });
+export async function fetchMixStats(kind: MixKind, ids: string[]): Promise<Record<string, MixStat>> {
+  if (ids.length === 0) return {};
+  const res = await rpc<Record<string, MixStat> | null>('mix_stats', { p_kind: kind, p_ids: ids.slice(0, 60) });
+  return res && typeof res === 'object' ? res : {};
+}
+export async function setMixLike(kind: MixKind, id: string, on: boolean): Promise<{ liked: boolean; likes: number }> {
+  const res = await rpc<{ liked: boolean; likes: number }>('mix_like', { p_kind: kind, p_id: id, p_on: on });
+  return { liked: !!res?.liked, likes: Number(res?.likes) || 0 };
+}
+export async function fetchMixComments(kind: MixKind, id: string, after?: { at: string; id: string }): Promise<{ comments: MixComment[]; hasMore: boolean }> {
+  const res = await rpc<{ comments: MixComment[]; hasMore: boolean }>('mix_comments_list', { p_kind: kind, p_id: id, p_limit: 30, p_after: after?.at ?? null, p_after_id: after?.id ?? null });
+  return { comments: Array.isArray(res?.comments) ? res.comments.map(mapMixComment) : [], hasMore: !!res?.hasMore };
+}
+export async function addMixComment(kind: MixKind, id: string, body: string): Promise<MixComment> {
+  return mapMixComment(await rpc<MixComment>('mix_comment_add', { p_kind: kind, p_id: id, p_body: body }));
+}
+export async function removeMixComment(commentId: string): Promise<void> { await rpc('mix_comment_remove', { p_comment: commentId }); }
+
 // ----------------------------------------------------------------------------- NOOB Ads
 // A business account sends a request (free): the picture or video is uploaded first, then the request itself. The NOOB admin approves it, chooses the pages and the ad is shown
 // at the top of those pages. See supabase/migrations/20261022000006_ads.sql.

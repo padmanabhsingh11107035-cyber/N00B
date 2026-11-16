@@ -1,5 +1,6 @@
+import { createPortal } from 'react-dom';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Link2, Loader2, Send, X, ImagePlus } from 'lucide-react';
+import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Loader2, Send, X, ImagePlus, Heart, MessageCircle, Share2 } from 'lucide-react';
 import type { User } from '../../types';
 import { isMainAdmin } from '../../adminAccess';
 import {
@@ -16,11 +17,21 @@ import {
   removePoll,
   reportPoll,
   fetchFunCanManage,
+  MIX_COMMENT_MAX,
+  fetchMixStats,
+  setMixLike,
+  fetchMixComments,
+  addMixComment,
+  removeMixComment,
   type AnonMessage,
-  type Poll
+  type Poll,
+  type MixKind,
+  type MixStat,
+  type MixComment
 } from '../../services/api';
 import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
+import { siteOrigin } from '../../utils/siteUrl';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
@@ -54,6 +65,21 @@ const timeLeft = (endsAt: string, now: number): string => {
 };
 const votesLabel = (n: number): string => `${n.toLocaleString()} ${n === 1 ? 'vote' : 'votes'}`;
 
+// Likes, comment counts and whether I liked it: fetched once for all the cards (one call per kind) and kept here, so every card draws from the same numbers.
+const NO_STAT: MixStat = { likes: 0, comments: 0, liked: false };
+const statStore = new Map<string, MixStat>();
+const statListeners = new Set<() => void>();
+const statKey = (k: MixKind, id: string): string => `${k}:${id}`;
+function putStat(k: MixKind, id: string, s: MixStat): void { statStore.set(statKey(k, id), s); statListeners.forEach((l) => l()); }
+function useStat(k: MixKind, id: string): MixStat {
+  const [, tick] = useState(0);
+  useEffect(() => { const l = () => tick((n) => n + 1); statListeners.add(l); return () => { statListeners.delete(l); }; }, []);
+  return statStore.get(statKey(k, id)) ?? NO_STAT;
+}
+function loadStats(k: MixKind, ids: string[]): void {
+  void fetchMixStats(k, ids).then((m) => { Object.entries(m).forEach(([id, s]) => statStore.set(statKey(k, id), s)); statListeners.forEach((l) => l()); }).catch(() => undefined);
+}
+
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
 export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number) {
   const [items, setItems] = useState<MixItem[]>([]);
@@ -65,6 +91,8 @@ export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number
     ]).then(([anon, polls]) => {
       if (!alive) return;
       setItems([...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })), ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p }))].sort(newestFirst));
+      loadStats('anon', anon.map((m) => m.id));
+      loadStats('poll', polls.map((p) => p.id));
     });
     return () => { alive = false; };
   }, [anonOn, pollsOn, refreshKey]);
@@ -124,7 +152,124 @@ const AnonPics: React.FC<{ keys: string[] }> = ({ keys }) => {
   );
 };
 
-const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => void }> = ({ m, currentUser, onRemoved }) => {
+// ---- like / comment / share (the bar under every thought and poll) ---------------------------------------------------------------------------------------
+const countText = (n: number): string => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K` : String(n));
+
+/** Share through the phone's own share sheet; where there is none, copy the link. Returns a short message for the card. */
+async function shareItem(title: string, text: string, url: string): Promise<string> {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') { await navigator.share({ title, text, url }); return ''; }
+  } catch (e) { if (e instanceof Error && e.name === 'AbortError') return ''; }
+  try { await navigator.clipboard.writeText(url); return 'Link copied.'; } catch { return 'Could not share or copy the link.'; }
+}
+
+const MixBar: React.FC<{ kind: MixKind; id: string; title: string; text: string; url: string; canManage: boolean; onNote: (s: string) => void }> = ({ kind, id, title, text, url, canManage, onNote }) => {
+  const stat = useStat(kind, id);
+  const [open, setOpen] = useState(false);
+  const busy = useRef(false);
+  const toggleLike = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    const before = stat;
+    const on = !before.liked;
+    putStat(kind, id, { ...before, liked: on, likes: Math.max(0, before.likes + (on ? 1 : -1)) });   // shows at once; put back if it fails
+    try { const r = await setMixLike(kind, id, on); putStat(kind, id, { ...statStore.get(statKey(kind, id)) ?? before, liked: r.liked, likes: r.likes }); }
+    catch (e) { putStat(kind, id, before); onNote(friendly(e, 'Could not like it. Please try again.')); }
+    finally { busy.current = false; }
+  };
+  return (
+    <>
+      <div className="hm-bar-row" data-testid="home-mix-bar">
+        <button type="button" onClick={() => void toggleLike()} aria-pressed={stat.liked} aria-label={stat.liked ? 'Unlike' : 'Like'} className={`hm-ab ${stat.liked ? 'is-liked' : ''}`} data-testid="home-mix-like">
+          <Heart className="w-[19px] h-[19px]" fill={stat.liked ? 'currentColor' : 'none'} aria-hidden="true" /><span>{countText(stat.likes)}</span>
+        </button>
+        <button type="button" onClick={() => setOpen(true)} aria-label="Comments" className="hm-ab" data-testid="home-mix-comment">
+          <MessageCircle className="w-[19px] h-[19px]" aria-hidden="true" /><span>{countText(stat.comments)}</span>
+        </button>
+        <button type="button" onClick={() => void shareItem(title, text, url).then((m) => { if (m) onNote(m); })} aria-label="Share" className="hm-ab" data-testid="home-mix-share">
+          <Share2 className="w-[19px] h-[19px]" aria-hidden="true" /><span>Share</span>
+        </button>
+      </div>
+      {open && createPortal(<MixComments kind={kind} id={id} title={title} canManage={canManage} onClose={() => setOpen(false)} />, document.body)}
+    </>
+  );
+};
+
+const MixComments: React.FC<{ kind: MixKind; id: string; title: string; canManage: boolean; onClose: () => void }> = ({ kind, id, title, canManage, onClose }) => {
+  const [list, setList] = useState<MixComment[]>([]);
+  const [more, setMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const sendingRef = useRef(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const bump = (d: number) => { const s = statStore.get(statKey(kind, id)) ?? NO_STAT; putStat(kind, id, { ...s, comments: Math.max(0, s.comments + d) }); };
+  useEffect(() => {
+    let alive = true;
+    void fetchMixComments(kind, id).then((r) => { if (alive) { setList(r.comments); setMore(r.hasMore); } }).catch((e) => { if (alive) setError(friendly(e, 'Could not load the comments.')); }).finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [kind, id]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const loadMore = async () => {
+    const last = list[list.length - 1];
+    if (!last) return;
+    try { const r = await fetchMixComments(kind, id, { at: last.createdAt, id: last.id }); setList((p) => [...p, ...r.comments.filter((c) => !p.some((x) => x.id === c.id))]); setMore(r.hasMore); }
+    catch (e) { setError(friendly(e, 'Could not load more.')); }
+  };
+  const send = async () => {
+    const body = text.trim();
+    if (!body || sendingRef.current) return;
+    sendingRef.current = true; setSending(true); setError('');
+    try {
+      const c = await addMixComment(kind, id, body);
+      setList((p) => [...p, c]); setText(''); bump(1);
+      window.setTimeout(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, 30);
+    } catch (e) { setError(friendly(e, 'Could not send your comment. Please try again.')); }
+    finally { sendingRef.current = false; setSending(false); }
+  };
+  const del = async (c: MixComment) => {
+    try { await removeMixComment(c.id); setList((p) => p.filter((x) => x.id !== c.id)); bump(-1); }
+    catch (e) { setError(friendly(e, 'Could not remove the comment.')); }
+  };
+  return (
+    <div className="hm-scrim" data-noob-keep="1" role="dialog" aria-modal="true" aria-label={`Comments on ${title}`} onClick={onClose}>
+      <div className="hm-sheet hm-cm" data-testid="home-mix-comments" onClick={(e) => e.stopPropagation()}>
+        <div className="hm-sheet-head">
+          <h2><MessageCircle className="w-5 h-5" aria-hidden="true" />Comments</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="hm-ib" data-no-hit="1"><X className="w-5 h-5" /></button>
+        </div>
+        <div ref={listRef} className="hm-cm-list">
+          {loading && <p className="hm-sub"><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Loading…</p>}
+          {!loading && list.length === 0 && <p className="hm-sub" data-testid="home-mix-no-comments">No comments yet. Be the first.</p>}
+          {list.map((c) => (
+            <div key={c.id} className="hm-c" data-testid="home-mix-comment-row">
+              {c.user.avatar ? <img src={c.user.avatar} alt="" referrerPolicy="no-referrer" className="hm-ava is-pic hm-c-ava" /> : <span className="hm-ava hm-c-ava" aria-hidden="true" />}
+              <div className="min-w-0 flex-1">
+                <p className="hm-c-who"><span>{c.user.displayName}</span>{c.user.isVerified && <VerifiedBadge size="xs" />}<span className="hm-sub">{ago(c.createdAt)}</span></p>
+                <p className="hm-c-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{c.body}</p>
+              </div>
+              {(c.mine || canManage) && <button type="button" onClick={() => void del(c)} aria-label="Remove this comment" className="hm-ib" data-no-hit="1"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}
+          {more && <button type="button" onClick={() => void loadMore()} className="hm-act">Show more comments</button>}
+        </div>
+        <p role="alert" className="hm-err">{error}</p>
+        <form className="hm-cm-form" onSubmit={(e) => { e.preventDefault(); void send(); }}>
+          <label htmlFor="hm-cm-text" className="sr-only">Write a comment</label>
+          <input id="hm-cm-text" value={text} onChange={(e) => { setText(Array.from(e.target.value).slice(0, MIX_COMMENT_MAX).join('')); if (error) setError(''); }} placeholder="Add a comment…" autoComplete="off" enterKeyHint="send" className="hm-cm-input" data-testid="home-mix-comment-input" />
+          <button type="submit" disabled={sending || !text.trim()} aria-label="Send the comment" className="hm-cm-send" data-testid="home-mix-comment-send">{sending ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; canManage: boolean; onRemoved: () => void }> = ({ m, currentUser, canManage, onRemoved }) => {
   const admin = isMainAdmin(currentUser);
   const pics = anonPicKeys(m);
   const [reporting, setReporting] = useState(false);
@@ -162,6 +307,7 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => v
       {/* drawn as plain text: nothing in it can run as HTML or script */}
       {pics.length > 0 && <AnonPics keys={pics} />}
       {m.body && <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>}
+      <MixBar kind="anon" id={m.id} title="An anonymous thought on NOOB" text={m.body ? m.body.slice(0, 140) : 'An anonymous post on NOOB'} url={siteOrigin()} canManage={admin || canManage} onNote={setNote} />
       {reporting && (
         <div className="hm-panel" role="group" aria-label="Why are you reporting this thought?">
           <p className="hm-sub">Why is it a problem?</p>
@@ -209,7 +355,6 @@ const PollCard: React.FC<{ poll: Poll; canManage: boolean; onChanged: (p: Poll) 
     try { const r = await reportPoll(poll.id, reason); setReporting(false); setNote('Reported. Thank you: the NOOB team will take a look.'); if (r.hidden) onRemoved(); }
     catch (e) { setNote(friendly(e, 'Could not send the report.')); } finally { setBusy(false); }
   };
-  const copy = async () => { try { await navigator.clipboard.writeText(link); setNote('Link copied.'); } catch { setNote('Could not copy the link.'); } };
   const c = poll.creator;
 
   return (
@@ -250,6 +395,7 @@ const PollCard: React.FC<{ poll: Poll; canManage: boolean; onChanged: (p: Poll) 
           {voting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}Vote
         </button>
       )}
+      <MixBar kind="poll" id={poll.id} title={`Poll: ${poll.question}`} text={poll.question} url={link} canManage={poll.isMine || canManage} onNote={setNote} />
       <div className="hm-foot">
         <p className="hm-sub" aria-live="polite">
           {poll.resultsShown && poll.totalVotes !== null
@@ -259,7 +405,6 @@ const PollCard: React.FC<{ poll: Poll; canManage: boolean; onChanged: (p: Poll) 
               : poll.resultsVisibility === 'after_end' ? 'Results appear when the poll ends.' : 'Vote to see the results.'}
         </p>
         <div className="hm-acts">
-          <button type="button" onClick={() => void copy()} className="hm-act"><Link2 className="w-3.5 h-3.5" aria-hidden="true" />Copy link</button>
           {(poll.isMine || canManage) && <button type="button" onClick={() => void remove()} disabled={busy} className={`hm-act ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed ? 'Tap again' : 'Remove'}</button>}
           {!poll.isMine && <button type="button" onClick={() => setReporting((v) => !v)} aria-expanded={reporting} className="hm-act"><Flag className="w-3.5 h-3.5" aria-hidden="true" />Report</button>}
         </div>
@@ -291,7 +436,7 @@ export function useCanManagePolls(enabled: boolean): boolean {
 
 export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile }) =>
   item.kind === 'anon'
-    ? <AnonCard m={item.anon} currentUser={currentUser} onRemoved={() => onRemoved(mixKey(item))} />
+    ? <AnonCard m={item.anon} currentUser={currentUser} canManage={canManage} onRemoved={() => onRemoved(mixKey(item))} />
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;
 
 // ---- writing an anonymous thought (opened from the Create sheet) ----------------------------------------------------------------------------------------

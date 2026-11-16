@@ -28,6 +28,7 @@ const CHECKS = [
   ['Laptop pages and Daily NOOB (doodle column, Create, chat, notifications, wallet, subscriptions)', ['node', 'scripts/supabase/test-desktop-pages.mjs']],
   ['Home mix (anonymous thoughts and polls between the posts, Feed button in the top bar)', ['node', 'scripts/supabase/test-home-mix.mjs']],
   ['Video posts (3 minutes, auto-play with sound as you scroll, Photos / Video choice, scroll hints)', ['node', 'scripts/supabase/test-video-posts.mjs']],
+  ['Likes, comments and share on anonymous thoughts and polls', ['node', 'scripts/supabase/test-mix-social.mjs']],
   ['Admin account type + no full-screen button on posts', ['node', 'scripts/supabase/test-account-type-and-no-fullscreen.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],

@@ -536,6 +536,12 @@ export {
   reportPoll,
   fetchPollReports,
   dismissPollReports,
+  MIX_COMMENT_MAX,
+  fetchMixStats,
+  setMixLike,
+  fetchMixComments,
+  addMixComment,
+  removeMixComment,
   fetchAnonMessages,
   postAnonMessage,
   postAnonPost,
@@ -547,6 +553,9 @@ export {
 } from './supabaseApi';
 
 export type {
+  MixKind,
+  MixStat,
+  MixComment,
   Poll,
   PollOption,
   PollCreator,

@@ -313,6 +313,14 @@ export const rpcMocks = {
   poll_create: (a, ctx) => ({ ...pollOf(POLL_DEFS[5], ctx), question: a.p_question }),
   poll_admin_reports: () => ({ reports: [] }), poll_report: () => ({ ok: true, hidden: false }), poll_remove: () => null,
 
+  mix_stats: (a) => Object.fromEntries((a.p_ids || []).map((id, i) => [id, { likes: 12 + i * 1200, comments: 3 + i, liked: i === 1 }])),
+  mix_like: (a) => ({ liked: !!a.p_on, likes: a.p_on ? 13 : 12 }),
+  mix_comments_list: () => ({ comments: [
+    { id: 'c1', body: 'Honestly this is so true, I felt it.', createdAt: ago(40 * 60000), mine: false, user: { userId: 'p1', username: 'amara', displayName: 'Amara Okafor', avatar: '/avatars/amara.webp', isVerified: true } },
+    { id: 'c2', body: 'A much longer comment that has to wrap onto several lines without pushing the remove button or the name off the edge of the sheet, even on a very narrow phone.', createdAt: ago(5 * 60000), mine: true, user: { userId: 'me', username: 'me', displayName: 'Me', avatar: '', isVerified: false } }
+  ], hasMore: false }),
+  mix_comment_add: (a) => ({ id: 'c' + Date.now(), body: a.p_body, createdAt: new Date().toISOString(), mine: true, user: { userId: 'me', username: 'me', displayName: 'Me', avatar: '', isVerified: false } }),
+  mix_comment_remove: () => ({ ok: true }),
   anon_messages_feed: (a, ctx) => anonFeed(ctx),
   anon_messages_admin_feed: (a, ctx) => anonAdmin(ctx),
   anon_message_post: (a) => ({ id: 'an_new', body: a.p_body, createdAt: new Date().toISOString() }),

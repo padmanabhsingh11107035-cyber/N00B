@@ -141,3 +141,5 @@ header.hv-top .hv-feed-btn { width: 34px; height: 36px; padding: 0; background: 
 @keyframes hm-fade { from { opacity: 0; } }
 @keyframes hm-up { from { transform: translateY(24px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .hm-scrim, .hm-sheet { animation: none; } .hm-bar { transition: none; } }
+/* the poll form opened from the Create sheet lies over the whole page, the bottom bar included */
+.fx-root[data-testid="poll-composer"] .fx-sheet-wrap { z-index: 97; }

@@ -156,3 +156,16 @@ header.hv-top .hv-feed-dot { fill: #ff4d8d; stroke: var(--hv-ring-gap); stroke-w
 .hm-prev img { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; }
 .hm-prev .hm-ib { position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, .65); color: #fff; }
 .hm-add { margin-top: 10px; }
+
+/* ---- a video post on Home (Feed/FeedVideoSlot.tsx): plays by itself while it fills the screen ---- */
+.feed-video-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.fv-tap { background: transparent; border: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+.fv-play { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 9999px; color: #fff; background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: fv-pop .22s cubic-bezier(.2, 1.3, .4, 1) both; }
+.fv-play svg { margin-left: 3px; }
+.fv-sound { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 9999px; color: #fff; background: rgba(0, 0, 0, .5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: transform .12s ease, background-color .15s ease; }
+.fv-sound:active { transform: scale(.9); }
+.fv-needs-tap { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 9999px; color: #fff; font-size: 12px; font-weight: 800; background: rgba(0, 0, 0, .6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fv-pop .22s cubic-bezier(.2, 1.3, .4, 1) both; }
+.fv-track { height: 3px; background: rgba(255, 255, 255, .22); }
+.fv-fill { height: 100%; width: 100%; background: #fff; transform-origin: left center; transform: scaleX(0); transition: transform .3s linear; will-change: transform; }
+@keyframes fv-pop { from { opacity: 0; scale: .8; } }
+@media (prefers-reduced-motion: reduce) { .fv-play, .fv-needs-tap { animation: none; } .fv-fill { transition: none; } }

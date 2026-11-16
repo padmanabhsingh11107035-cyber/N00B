@@ -44,7 +44,7 @@ import { analyzeMediaFile } from '../../utils/mediaAnalyzer';
 import { captureVideoThumbnail, captureVideoFrames } from '../../utils/videoThumbnail';
 import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook, ALT_LIMIT } from '../../utils/slideLook';
 import { siteOrigin } from '../../utils/siteUrl';
-import { readVideoDuration, describeLength, REEL_MAX_SECONDS } from '../../utils/videoDuration';
+import { readVideoDuration, describeLength, REEL_MAX_SECONDS, POST_VIDEO_MAX_SECONDS } from '../../utils/videoDuration';
 import { explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
@@ -186,6 +186,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const postVideoInputRef = useRef<HTMLInputElement>(null);   // a video for a post (not a reel)
 
   const activeSlide = slides[activeSlideIndex] || slides[0];
 
@@ -395,14 +396,56 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     setTaggedUser(null);
   };
 
-  const handleDeviceMediaUpload = (e: React.ChangeEvent<HTMLInputElement>, forceType?: 'image' | 'video') => {
+  const handleDeviceMediaUpload = (e: React.ChangeEvent<HTMLInputElement>, forceType?: 'image' | 'video' | 'postvideo') => {
     const picked: File[] = e.target.files ? Array.from(e.target.files as FileList) : [];
     e.target.value = '';   // so the same file can be picked again
     if (picked.length > 0) void uploadPicked(picked, forceType);
   };
 
-  const uploadPicked = async (files: File[], forceType?: 'image' | 'video') => {
+  const uploadPicked = async (files: File[], forceType?: 'image' | 'video' | 'postvideo') => {
     if (files.length === 0) return;
+
+    // A VIDEO FOR A POST (not a reel): on the Post tab a video becomes the post itself, up to 3 minutes, and it plays by itself, with sound, as people scroll Home.
+    // A post is either pictures or one video.
+    const postVideoFile = creationType === 'post' && forceType !== 'video'
+      ? (forceType === 'postvideo' ? files[0] : files.find((f) => f.type.startsWith('video/')))
+      : undefined;
+    if (postVideoFile) {
+      if (slides.length > 0 && slides[0].mediaType !== 'video') { setUploadStatusMsg('A post is either pictures or one video. Remove the pictures first to share a video.'); return; }
+      if (files.length > 1 && files.some((f) => !f.type.startsWith('video/'))) { setUploadStatusMsg('A post is either pictures or one video: pick the pictures, or pick one video.'); return; }
+      setIsUploadingMedia(true);
+      setUploadStatusMsg('Checking the video...');
+      try {
+        const analysis = analyzeMediaFile(postVideoFile);
+        if (!analysis.isValid && !postVideoFile.type.startsWith('video/')) { setUploadStatusMsg('That file is not a video.'); return; }
+        const length = await readVideoDuration(postVideoFile);   // checked on this phone, before anything is uploaded
+        if (Number.isFinite(length) && length > POST_VIDEO_MAX_SECONDS) {
+          setUploadStatusMsg(`A video in a post can be up to ${describeLength(POST_VIDEO_MAX_SECONDS)}. This video is ${describeLength(length)} long: pick a shorter one, or share it as a Video instead.`);
+          return;
+        }
+        setCreationType('post');
+        setMediaMode('photos');
+        setUploadStatusMsg(null);
+        const abort = new AbortController();
+        uploadAbortRef.current = abort;
+        setUploadProgress({ stage: 'uploading', fraction: 0 });
+        const res = await uploadMediaFile(postVideoFile, 'posts', { signal: abort.signal, onProgress: setUploadProgress });
+        if (res.url) {
+          setSlides([{ id: `slide_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`, mediaUrl: res.url, objectKey: res.objectKey, mediaType: 'video', caption: '' }]);
+          setActiveSlideIndex(0);
+          setStep('edit');
+        }
+      } catch (err) {
+        console.error('Failed to upload the video:', err);
+        setUploadStatusMsg(explainUploadError(err));
+      } finally {
+        setIsUploadingMedia(false);
+        setUploadProgress(null);
+        uploadAbortRef.current = null;
+      }
+      return;
+    }
+    if (slides[0]?.mediaType === 'video') { setUploadStatusMsg('This post is one video. Remove it first to add pictures.'); return; }
 
     setIsUploadingMedia(true);
     setUploadStatusMsg('Processing media file...');
@@ -734,7 +777,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     category.trim().length > 0 &&
     (creationType === 'reel' ? !!videoUrl : caption.trim().length > 0 || slides.length > 0);
 
-  const kindWord = creationType === 'reel' ? 'reel' : mediaMode === 'text' ? 'thought' : 'post';
+  const kindWord = creationType === 'reel' ? 'reel' : mediaMode === 'text' ? 'thought' : slides[0]?.mediaType === 'video' ? 'video post' : 'post';
   const stepTitle = step === 'select' ? `Create new ${kindWord}` : step === 'edit' ? 'Edit' : step === 'done' ? 'Shared' : `New ${kindWord}`;
 
   const insertCaptionEmoji = (emoji: string) => {
@@ -841,9 +884,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 <Film className="absolute right-0 bottom-0 w-16 h-16 text-zinc-300 rotate-6" strokeWidth={1.2} />
               </div>
               <div>
-                <p className="text-xl font-light text-white">{creationType === 'reel' ? 'Select a video for your reel' : 'Drag photos and videos here'}</p>
+                <p className="text-xl font-light text-white">{creationType === 'reel' ? 'Select a video for your reel' : 'Drag photos or a video here'}</p>
                 <p className="text-xs text-zinc-500 mt-1.5">
-                  {creationType === 'reel' ? 'Up to 70 seconds. It plays full screen, with music and a cover you choose.' : 'Up to 20 pictures in one post. A video you pick becomes a reel (up to 70 seconds).'}
+                  {creationType === 'reel' ? 'Up to 70 seconds. It plays full screen, with music and a cover you choose.' : 'Up to 20 pictures, or one video of up to 3 minutes. A video plays by itself, with sound, as people scroll Home.'}
                 </p>
               </div>
 
@@ -851,13 +894,38 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 <div className="flex items-center gap-2 text-sm text-zinc-300"><Loader2 className="w-5 h-5 animate-spin shrink-0" /> {uploadStatusMsg || 'Uploading...'}</div>
               ) : (
                 <div className="flex flex-col items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => (creationType === 'reel' ? videoInputRef : fileInputRef).current?.click()}
-                    className="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold cursor-pointer transition-colors"
-                  >
-                    Select from device
-                  </button>
+                  {creationType === 'reel' ? (
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      className="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold cursor-pointer transition-colors"
+                    >
+                      Select from device
+                    </button>
+                  ) : (
+                    <div className="flex items-stretch gap-2.5" data-testid="create-pick-kind">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        data-testid="create-pick-photos"
+                        className="min-w-[132px] px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold cursor-pointer transition-colors flex flex-col items-center gap-1.5"
+                      >
+                        <ImageIcon className="w-6 h-6" aria-hidden="true" />
+                        Photos
+                        <span className="text-[10px] font-medium opacity-80">up to 20</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => postVideoInputRef.current?.click()}
+                        data-testid="create-pick-video"
+                        className="min-w-[132px] px-4 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white text-sm font-semibold cursor-pointer transition-colors flex flex-col items-center gap-1.5"
+                      >
+                        <Film className="w-6 h-6" aria-hidden="true" />
+                        Video
+                        <span className="text-[10px] font-medium text-zinc-400">up to 3 minutes</span>
+                      </button>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
@@ -880,7 +948,26 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           )}
 
           {/* Step 2 — edit the pictures */}
-          {step === 'edit' && mediaMode === 'photos' && slides.length > 0 && (
+          {/* Step 2 — a video post: watch it (it will play by itself in the feed) */}
+          {step === 'edit' && mediaMode === 'photos' && slides[0]?.mediaType === 'video' && (
+            <div className="p-4 space-y-4" data-testid="create-edit-post-video">
+              <div className="relative mx-auto w-full max-w-[360px] rounded-xl overflow-hidden bg-black border border-neutral-800 shadow-lg">
+                <video src={slides[0].mediaUrl} controls autoPlay loop muted playsInline className="w-full max-h-[56vh] object-contain bg-black" />
+                <button
+                  type="button"
+                  onClick={handleRemoveVideo}
+                  className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-500 text-white rounded-lg transition-colors cursor-pointer"
+                  title="Remove this video"
+                  aria-label="Remove this video"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p className="text-center text-[11px] text-zinc-500">In the feed this video plays by itself, with sound, while it is on the screen. Next: write a caption and share.</p>
+            </div>
+          )}
+
+          {step === 'edit' && mediaMode === 'photos' && slides.length > 0 && slides[0]?.mediaType !== 'video' && (
             <div className="pb-4" data-testid="create-edit">
               <div className="relative bg-black">
               {/* Active Image Preview with Filter */}
@@ -1556,7 +1643,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 <div className="flex gap-3">
                   {mediaMode !== 'text' && (
                     <div className="w-20 h-20 rounded-lg overflow-hidden bg-black shrink-0 border border-neutral-800">
-                      {mediaMode === 'photos' && slides[0] ? (
+                      {mediaMode === 'photos' && slides[0]?.mediaType === 'video' ? (
+                        <video src={slides[0].mediaUrl} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                      ) : mediaMode === 'photos' && slides[0] ? (
                         <img src={slides[0].mediaUrl} alt="" className="w-full h-full object-cover" style={lookStyle(slides[0].filter)} />
                       ) : coverPick === 'custom' && coverPreview ? (
                         <img src={coverPreview} alt="" className="w-full h-full object-cover" />
@@ -1909,9 +1998,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
         </div>
 
-        {/* Hidden file inputs: pictures (a video picked here becomes a reel), a video, the camera, a reel's own cover */}
+        {/* Hidden file inputs: pictures (a video picked here becomes the post), a video for a post, a video for a reel, the camera, a reel's own cover */}
         <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={(e) => handleDeviceMediaUpload(e, 'image')} className="hidden" />
         <input ref={videoInputRef} type="file" accept="video/*" onChange={(e) => handleDeviceMediaUpload(e, 'video')} className="hidden" />
+        <input ref={postVideoInputRef} type="file" accept="video/*" onChange={(e) => handleDeviceMediaUpload(e, 'postvideo')} className="hidden" data-testid="create-post-video-input" />
         <input
           ref={cameraInputRef}
           type="file"

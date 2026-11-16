@@ -1,6 +1,8 @@
 // How long a video is, read from the file on the phone before anything is uploaded (a throwaway <video> reads just its header).
 // The limits live here so the creators and their tests agree: a reel is at most 70 seconds, a video for the Videos page at most 5 hours.
 export const REEL_MAX_SECONDS = 70;
+/** A video shared as a post on the Home page (it plays by itself in the feed): at most 3 minutes. */
+export const POST_VIDEO_MAX_SECONDS = 180;
 export const LONG_VIDEO_MAX_SECONDS = 5 * 60 * 60;
 
 /** Seconds, or NaN when the file's length can not be read (some recordings do not carry it: they are let through). */

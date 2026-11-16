@@ -75,6 +75,7 @@ import {
   startInFrontHeartbeat
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
+import { HintedScroll } from './components/Feed/ScrollMoreHint';
 import { FeedView } from './components/Feed/FeedView';
 // Statically imported before, which meant every single page load of the whole app (not just opening
 // Chat) paid for its full weight upfront — E2EE crypto setup, the Instants camera/viewer, encryption
@@ -2024,9 +2025,9 @@ export default function App() {
             </button>
           </div>
           {/* the pages scroll inside the strip on a short screen; the profile and Log out under them stay in view */}
-          <div className="nmenu-scroll no-scrollbar" data-testid="desktop-side-menu-scroll">
+          <HintedScroll wrapClassName="nmenu-scrollwrap" className="nmenu-scroll no-scrollbar" testId="desktop-side-menu-scroll" fade="var(--nm-bg, #000)" compact={!sideExtended} label="Scroll down for more pages">
             <MenuList groups={sideGroups} compact={!sideExtended} />
-          </div>
+          </HintedScroll>
           <div className="nmenu-foot" data-testid="desktop-side-profile">
             <MenuList groups={sideFootGroups} compact={!sideExtended} />
           </div>
@@ -2270,7 +2271,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar pr-1">
+          <HintedScroll wrapClassName="flex-1 min-h-0 flex flex-col" className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar pr-1" testId="desktop-people-scroll" fade="var(--page, #000)" compact label="Scroll down for more people">
             {otherUsers.length === 0 ? (
               <div className="text-center py-4 text-xs text-zinc-500">
                 You are the first member! Invite friends to sign up.
@@ -2317,7 +2318,7 @@ export default function App() {
                 </div>
               ))
             )}
-          </div>
+          </HintedScroll>
         </div>
 
         {/* Minimal Sophisticated Footer Links */}

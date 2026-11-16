@@ -3,6 +3,7 @@ import { RepostButton } from '../Common/RepostButton';
 import { linkify } from '../Common/Linkified';
 import { flushSync } from 'react-dom';
 import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
+import { FeedVideoSlot } from './FeedVideoSlot';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
@@ -416,24 +417,14 @@ export const PostCard: React.FC<PostCardProps> = ({
       <>
         {slide.mediaType === 'video' ? (
           isCur ? (
-            <video
+            <FeedVideoSlot
               key="live"
+              id={`${post.id}:${slide.id || currentSlideIndex}`}
               src={slide.mediaUrl}
-              className="w-full h-full object-cover"
-              style={look}
-              controls
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              autoPlay={isInView && videoMayAutoplay}
-              onPlay={(e) => setVideoUnmuted(!e.currentTarget.muted)}
-              onPause={() => setVideoUnmuted(false)}
-              onVolumeChange={(e) => setVideoUnmuted(!e.currentTarget.muted && !e.currentTarget.paused)}
-              onLoadedMetadata={(e) => {
-                const video = e.currentTarget;
-                if (video.videoWidth && video.videoHeight) setSlideAspect(video.videoWidth / video.videoHeight);
-              }}
+              look={look}
+              autoplay={videoMayAutoplay}
+              onAspect={setSlideAspect}
+              onSound={setVideoUnmuted}
             />
           ) : (
             <video key="peek" src={slide.mediaUrl} className="w-full h-full object-cover" style={look} muted playsInline preload="metadata" />

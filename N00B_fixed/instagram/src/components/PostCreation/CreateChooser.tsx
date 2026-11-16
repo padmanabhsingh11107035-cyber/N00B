@@ -19,7 +19,7 @@ interface CreateChooserProps {
 // What to make — the first screen of "+" (like Instagram's Create sheet): a sheet that slides up on a phone and sits in the middle on a bigger screen.
 // Each row opens its own creator; nothing is chosen for the person.
 const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.ElementType; tint: string }[] = [
-  { kind: 'post', title: 'Post', blurb: 'Photos with a caption, music, tags and filters', Icon: LayoutGrid, tint: 'text-white' },
+  { kind: 'post', title: 'Post', blurb: 'Photos or a video, with a caption, music and tags', Icon: LayoutGrid, tint: 'text-white' },
   { kind: 'reel', title: 'Reel', blurb: 'A short video with music and a cover', Icon: Clapperboard, tint: 'text-white' },
   { kind: 'story', title: 'Story', blurb: 'Gone after 24 hours', Icon: CirclePlus, tint: 'text-white' },
   { kind: 'video', title: 'Video', blurb: 'A long video for the Videos page', Icon: MonitorPlay, tint: 'text-white' },

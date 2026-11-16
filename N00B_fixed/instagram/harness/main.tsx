@@ -184,6 +184,32 @@ async function boot() {
     // the Games page (the people list is the harness user only; the leaderboard comes from the mocks, or is empty)
     const { GamesView } = await import('../src/components/Games/GamesView.tsx');
     Page = () => h(GamesView, { currentUser, allUsers: [currentUser], onUserUpdated: noop, onNavigateToUserProfile: noop, onBack: () => console.info('[harness] onBack') });
+  } else if (page === 'feedvideo') {
+    // Videos in the posts of Home: three video posts in a column that scrolls; the one that fills the screen plays by itself. The test videos are made here, in the page.
+    const { FeedVideoSlot } = await import('../src/components/Feed/FeedVideoSlot.tsx');
+    const makeVideo = (label: string, hue: number): Promise<string> => new Promise((resolve) => {
+      const c = document.createElement('canvas'); c.width = 320; c.height = 400;
+      const g = c.getContext('2d')!;
+      const stream = (c as any).captureStream(15);
+      const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => chunks.push(e.data);
+      rec.onstop = () => resolve(URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })));
+      let t = 0;
+      const timer = setInterval(() => { t++; g.fillStyle = `hsl(${(hue + t * 4) % 360} 70% 45%)`; g.fillRect(0, 0, 320, 400); g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText(label, 24, 120); g.fillRect(24, 200 + Math.sin(t / 4) * 60, 80, 80); }, 66);
+      rec.start();
+      setTimeout(() => { clearInterval(timer); rec.stop(); }, 6000);
+    });
+    Page = () => {
+      const [urls, setUrls] = React.useState<string[]>([]);
+      React.useEffect(() => { void Promise.all([makeVideo('ONE', 10), makeVideo('TWO', 120), makeVideo('THREE', 220)]).then(setUrls); }, []);
+      if (urls.length === 0) return h('p', { style: { color: '#fff', padding: 24 } }, 'making three test videos (6 seconds)...');
+      return h('div', { 'data-testid': 'fv-scroll', style: { height: '100dvh', overflowY: 'auto', background: '#0a0a0a', padding: '0 12px' } },
+        h('div', { style: { height: 120 } }),
+        ...urls.map((u, i) => h('div', { key: i, style: { position: 'relative', width: '100%', aspectRatio: '4 / 5', margin: '0 0 80px', borderRadius: 24, overflow: 'hidden' } },
+          h(FeedVideoSlot, { id: 'post-' + i, src: u, autoplay: q.get('autoplay') !== '0' }))),
+        h('div', { style: { height: 400 } }));
+    };
   } else if (page === 'daily') {
     const { DailyNoobView } = await import('../src/components/Daily/DailyNoobView.tsx');
     Page = () => h(DailyNoobView, { currentUser, onClose: () => console.info('[harness] onClose') });

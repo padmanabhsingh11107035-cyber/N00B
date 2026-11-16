@@ -37,24 +37,69 @@ export function useScrollMore(active: boolean) {
 }
 
 // A little doodle (a smiley and an arrow that bobs downwards) in a pill, on a soft fade at the bottom edge of the list. Pressing it scrolls the list down.
-export const ScrollMoreHint: React.FC<{ onClick: () => void; label?: string }> = ({ onClick, label = 'Scroll for more' }) => (
-  <div className="scroll-more-hint pointer-events-none absolute inset-x-0 bottom-0 pt-12 pb-2 flex justify-center bg-gradient-to-t from-zinc-950 via-zinc-950/85 to-transparent">
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Scroll down for more features"
-      className="pointer-events-auto flex items-center gap-1.5 pl-2 pr-3 py-1.5 rounded-full bg-noob text-black text-[11px] font-black shadow-lg cursor-pointer active:scale-95 transition-transform"
-    >
-      <svg viewBox="0 0 20 20" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="10" cy="10" r="8" />
-        <path d="M7 8.2v.6M13 8.2v.6" />
-        <path d="M6.6 12c1 1.6 2.1 2.2 3.4 2.2s2.4-.6 3.4-2.2" />
-      </svg>
-      <span>{label}</span>
-      <svg viewBox="0 0 16 16" className="scroll-more-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M8 2.2c-.7 2.2.6 4.2 0 7" />
-        <path d="M4 7.6 8 12l4-4.4" />
-      </svg>
-    </button>
+// compact: only a round button with the bobbing arrow (for a narrow strip, like the icon-only menu of a laptop). themed: the fade takes the colour of --smh-bg
+// (the panel it sits on) instead of black, so it also looks right on a white panel in the light theme.
+export const ScrollMoreHint: React.FC<{ onClick: () => void; label?: string; compact?: boolean; themed?: boolean }> = ({ onClick, label = 'Scroll for more', compact = false, themed = false }) => (
+  <div
+    className={`scroll-more-hint pointer-events-none absolute inset-x-0 bottom-0 ${compact ? 'pt-8 pb-1.5' : 'pt-12 pb-2'} flex justify-center ${themed ? '' : 'bg-gradient-to-t from-zinc-950 via-zinc-950/85 to-transparent'}`}
+    style={themed ? { background: 'linear-gradient(to top, var(--smh-bg, #09090b) 28%, transparent)' } : undefined}
+  >
+    {compact ? (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        data-testid="scroll-more-hint"
+        className="pointer-events-auto w-9 h-9 flex items-center justify-center rounded-full bg-noob text-black shadow-lg cursor-pointer active:scale-90 transition-transform"
+      >
+        <svg viewBox="0 0 16 16" className="scroll-more-arrow w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M8 2.2c-.7 2.2.6 4.2 0 7" />
+          <path d="M4 7.6 8 12l4-4.4" />
+        </svg>
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label="Scroll down for more features"
+        data-testid="scroll-more-hint"
+        className="pointer-events-auto flex items-center gap-1.5 pl-2 pr-3 py-1.5 rounded-full bg-noob text-black text-[11px] font-black shadow-lg cursor-pointer active:scale-95 transition-transform"
+      >
+        <svg viewBox="0 0 20 20" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="10" cy="10" r="8" />
+          <path d="M7 8.2v.6M13 8.2v.6" />
+          <path d="M6.6 12c1 1.6 2.1 2.2 3.4 2.2s2.4-.6 3.4-2.2" />
+        </svg>
+        <span>{label}</span>
+        <svg viewBox="0 0 16 16" className="scroll-more-arrow w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M8 2.2c-.7 2.2.6 4.2 0 7" />
+          <path d="M4 7.6 8 12l4-4.4" />
+        </svg>
+      </button>
+    )}
   </div>
 );
+
+/**
+ * A scrolling area that tells people it scrolls: while it is cut off at the bottom, a bobbing arrow shows at its lower edge (press it to scroll down), and it goes away
+ * at the end. The wrapper takes `wrapClassName` (give it the flex / height classes the area had), the scrolling element takes `className`.
+ */
+export const HintedScroll: React.FC<{
+  className?: string;
+  wrapClassName?: string;
+  testId?: string;
+  label?: string;
+  compact?: boolean;
+  /** the colour the fade at the bottom fades into (the colour of the panel behind) */
+  fade?: string;
+  children: React.ReactNode;
+}> = ({ className = '', wrapClassName = '', testId, label, compact, fade, children }) => {
+  const { ref, more, scrollDown } = useScrollMore(true);
+  return (
+    <div className={`relative ${wrapClassName}`} style={fade ? ({ '--smh-bg': fade } as React.CSSProperties) : undefined}>
+      <div ref={ref} className={className} data-testid={testId}>{children}</div>
+      {more && <ScrollMoreHint onClick={scrollDown} label={label} compact={compact} themed />}
+    </div>
+  );
+};

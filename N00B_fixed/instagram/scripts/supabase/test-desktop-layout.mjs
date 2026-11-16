@@ -17,7 +17,7 @@ check(/md:justify-start/.test(page) && /md:pl-0/.test(page) && /xl:justify-start
 const side = /<aside\s+className=\{`(hidden md:block[^`]*)`\}\s+data-testid="desktop-side-menu"/.exec(app)?.[1] || '';
 check(/h-dvh/.test(side) && /top-0/.test(side) && /lg:-my-6/.test(side) && /sticky/.test(side), 'the strip is as tall as the window and stuck to its top', side);
 check(/w-\[80px\] xl:w-\[272px\]/.test(side) && /: 'w-\[80px\]'/.test(side), 'it takes 80 px (icons only) and, extended, 272 px on a screen from 1280 px wide (narrower: it opens over the page)');
-check(/className="nmenu-scroll no-scrollbar" data-testid="desktop-side-menu-scroll"/.test(app) && /\.nmenu-scroll \{[^}]*overflow-y: auto/.test(css), 'the list inside it scrolls when the window is short, the profile box under it stays in view');
+check(/className="nmenu-scroll no-scrollbar" testId="desktop-side-menu-scroll"/.test(app) && /\.nmenu-scroll \{[^}]*overflow-y: auto/.test(css), 'the list inside it scrolls when the window is short, the profile box under it stays in view');
 
 section('2. The feed and the people list share the rest');
 const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?lg:rounded-t-\[40px\]/.exec(app)?.[0] || '';   // up to the rounded top: the Music page has its own colour and width in the middle

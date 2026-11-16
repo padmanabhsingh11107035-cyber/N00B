@@ -359,6 +359,7 @@ export {
   suspendUserAccount,
   adjustUserPoints,
   adminSetVerification,
+  adminSetAccountType,
   deleteUserAccount,
   bulkDeleteUserAccounts,
   fetchAdminActionRequests,

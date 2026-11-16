@@ -4937,6 +4937,15 @@ export async function adminSetVerification(targetUserId: string, verified: boole
   }
 }
 
+// The NOOB administrator changes the type of any account (public / private / business). The person is NOT told. Needs migration 20261116000004.
+export async function adminSetAccountType(targetUserId: string, accountType: 'public' | 'private' | 'business'): Promise<{ success: boolean; accountType?: string; message?: string; error?: string }> {
+  try {
+    return await rpc('admin_set_account_type', { p_target: targetUserId, p_type: accountType });
+  } catch (err) {
+    return failWith(err, 'Could not change the account type.');
+  }
+}
+
 // The main admin's own delete needs their NOOB account password; a delegate's tap files a request instead
 // (see AccountActionRequest below) and never needs one, since they never actually delete anything themselves.
 export async function deleteUserAccount(targetUserId: string, password?: string): Promise<{ success: boolean; pending?: boolean; message?: string; error?: string }> {

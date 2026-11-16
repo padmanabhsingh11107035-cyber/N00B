@@ -27,8 +27,7 @@ import {
   Pencil,
   Link2,
   VolumeX,
-  Music,
-  Maximize2
+  Music
 } from 'lucide-react';
 import { Post, PostSlide, User } from '../../types';
 import confetti from 'canvas-confetti';
@@ -92,8 +91,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleFollowUser,
   onSelectCategory,
   onNavigateToProfile,
-  allUsers = [],
-  onOpenVideoWatch
+  allUsers = []
 }) => {
   const devicePrefs = useDevicePrefs();
   const videoMayAutoplay = shouldAutoplayVideo(devicePrefs);   // Settings > Media quality: Wi-Fi only / never / data saver
@@ -778,22 +776,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
             >
               {speakerOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
-          )}
-
-          {/* Opens the full YouTube-style watch page (like/dislike/comments/share/save/playlist/
-              download/up next) — the inline player above still works exactly as before; this is an
-              explicit, separate affordance so it never conflicts with double-tap-to-like. */}
-          {currentSlide.mediaType === 'video' && onOpenVideoWatch && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenVideoWatch(post);
-              }}
-              title="Open full video"
-              className="absolute bottom-3 right-3 z-20 p-2 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
-            >
-              <Maximize2 className="w-4 h-4" />
             </button>
           )}
 

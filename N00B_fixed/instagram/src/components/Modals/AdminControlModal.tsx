@@ -98,7 +98,7 @@ import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import { AdminGrievancesPanel } from './AdminGrievancesPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
-  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification,
+  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification, adminSetAccountType,
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentPage, deletePost, deleteReel, deleteStory, deleteLongVideo,
@@ -1073,6 +1073,24 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       void loadUsers();
     } else {
       setStatusMessage({ text: res.error || 'Could not change the badge.', type: 'error' });
+    }
+  };
+
+  // Change the type of an account (public / private / business). The person is NOT told: no notification, no e-mail.
+  const handleSetAccountType = async (target: User, type: 'public' | 'private' | 'business') => {
+    if ((target.accountType || 'public') === type) return;
+    if (!confirm(`Change @${target.username} from ${target.accountType || 'public'} to ${type}?
+
+They will not be told.`)) return;
+    setActionLoading(target.id);
+    const res = await adminSetAccountType(target.id, type);
+    setActionLoading(null);
+    if (res.success) {
+      setStatusMessage({ text: res.message || 'Account type changed.', type: 'success' });
+      setSelectedUserForDetails((cur) => (cur && cur.id === target.id ? { ...cur, accountType: type, isBusiness: type === 'business' } : cur));
+      void loadUsers();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not change the account type.', type: 'error' });
     }
   };
 
@@ -3586,6 +3604,29 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     <span className="text-[11px] text-zinc-500">Account Type</span>
                     <span className="text-xs text-white font-medium capitalize">{selectedUserForDetails.accountType}</span>
                   </div>
+                  {main && (
+                    <div className="space-y-1.5" data-testid="admin-account-type">
+                      <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Change the account type">
+                        {(['public', 'private', 'business'] as const).map((t) => {
+                          const on = (selectedUserForDetails.accountType || 'public') === t;
+                          return (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => void handleSetAccountType(selectedUserForDetails, t)}
+                              disabled={on || actionLoading === selectedUserForDetails.id}
+                              aria-pressed={on}
+                              data-testid={`admin-set-type-${t}`}
+                              className={`py-1.5 rounded-lg text-[11px] font-bold capitalize cursor-pointer transition-colors ${on ? 'bg-white text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'} disabled:cursor-default disabled:opacity-60`}
+                            >
+                              {t}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-zinc-500">Changing the type does not notify the person.</p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Verification</span>
                     <span className="text-xs text-white font-medium capitalize">

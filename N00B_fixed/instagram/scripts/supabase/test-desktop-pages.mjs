@@ -5,7 +5,7 @@ const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf
 let passed = 0, failed = 0;
 const check = (ok, name) => { if (ok) { passed++; console.log('  ok   ' + name); } else { failed++; console.log('  FAIL ' + name); } };
 const app = read('src/App.tsx'), css = read('src/index.css'), nz = read('src/components/Common/nzPage.css');
-check(/the doodle shows only inside the middle column itself/.test(app) && !/data-page'\) === 'feed'\) \{\s*const box/.test(app), 'the doodle is measured from the middle column of every page, not only Home');
+check(/the doodle also fills the empty space beside the box of the open page/.test(app) && !/const box = document\.querySelector\('main'\)/.test(app), 'the doodle fills the space between the side menu and the members panel on every page (also beside the box), not only inside the box');
 check(/@media \(min-width: 1024px\) and \(pointer: fine\) \{\s*\.cs-sheet \{ max-width: 780px;/.test(nz) && /\.cs-list \{ display: grid; grid-template-columns: 1fr 1fr;/.test(nz), 'Create is a wide window with two columns on a laptop; the phone list is not inside that block');
 check(/data-shell="1"/.test(app) && /\[data-shell\] \{ padding: 0 !important; gap: 0 !important; \}/.test(css) && /#chat-view-container \{[^}]*height: 100dvh !important;[^}]*border-radius: 0 !important/.test(css), 'chat on a laptop fills the screen (only the left menu stays)');
 check(!/\.msg-page \{ --head: #7c4dff;/.test(css) && !/msg-head\.force-dark, html\[data-page="chat"\]:not\(\[data-nodeskchat\]\) \.msg-page \.msg-head \{ background: linear-gradient/.test(css), 'the chat top on a laptop follows the colour the person picked (no fixed violet)');

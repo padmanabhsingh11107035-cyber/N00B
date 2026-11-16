@@ -281,11 +281,7 @@ export default function App() {
       const right = document.querySelector('[data-testid="desktop-people-panel"]') as HTMLElement | null;
       let l = left && left.getClientRects().length ? Math.round(left.getBoundingClientRect().right) : 0;
       let r = right && right.getClientRects().length ? Math.max(0, Math.round(window.innerWidth - right.getBoundingClientRect().left + 16)) : 0;
-      // the doodle shows only inside the middle column itself (the box of the open page), never in the empty space beside it
-      {
-        const box = document.querySelector('main') as HTMLElement | null;
-        if (box && box.getClientRects().length) { const bb = box.getBoundingClientRect(); l = Math.round(bb.left); r = Math.max(0, Math.round(window.innerWidth - bb.right)); }
-      }
+      // the doodle also fills the empty space beside the box of the open page (between the side menu and the members panel), not only the box itself
       root.style.setProperty('--doodle-l', `${l}px`);
       root.style.setProperty('--doodle-r', `${r}px`);
       root.setAttribute('data-doodle-mid', '1');

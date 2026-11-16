@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf8').split(String.fromCharCode(13)).join('');
 let passed = 0, failed = 0;
 const check = (ok, name) => { if (ok) { passed++; console.log('  ok   ' + name); } else { failed++; console.log('  FAIL ' + name); } };
-const dur = read('src/utils/videoDuration.ts'), modal = read('src/components/PostCreation/PostCreationModal.tsx'), fv = read('src/utils/feedVideo.ts'), slot = read('src/components/Feed/FeedVideoSlot.tsx'), card = read('src/components/Feed/PostCard.tsx'), css = read('src/components/Feed/home.css'), hint = read('src/components/Feed/ScrollMoreHint.tsx'), app = read('src/App.tsx');
+const dur = read('src/utils/videoDuration.ts'), modal = read('src/components/PostCreation/PostCreationModal.tsx'), fv = read('src/utils/feedVideo.ts'), slot = read('src/components/Feed/FeedVideoSlot.tsx'), card = read('src/components/Feed/PostCard.tsx'), css = read('src/components/Feed/feedVideo.css'), hint = read('src/components/Feed/ScrollMoreHint.tsx'), app = read('src/App.tsx');
 check(/POST_VIDEO_MAX_SECONDS = 180;/.test(dur), 'a video in a post can be 3 minutes at most (180 seconds)');
 check(/creationType === 'post' && forceType !== 'video'/.test(modal) && /length > POST_VIDEO_MAX_SECONDS/.test(modal) && /uploadMediaFile\(postVideoFile, 'posts'/.test(modal) && /mediaType: 'video'/.test(modal), 'on the Post tab a video becomes the post: its length is checked on the phone before it is uploaded, and it is a video slide');
 check(/data-testid="create-pick-photos"/.test(modal) && /data-testid="create-pick-video"/.test(modal) && /up to 3 minutes/.test(modal), 'the first step offers Photos and Video as two clear choices');
@@ -18,5 +18,6 @@ check(/data-testid="feed-video-sound"/.test(slot) && /data-testid="feed-video-ta
 check(/@media \(prefers-reduced-motion: reduce\) \{ \.fv-play, \.fv-needs-tap/.test(css) && /\.feed-video-el \{ position: absolute; inset: 0;/.test(css), 'the player fills its box; still when the phone asks for less motion');
 check(/export const HintedScroll/.test(hint) && /compact \?/.test(hint) && /themed/.test(hint), 'a scroll hint that also works in a narrow strip and on a white panel');
 check(/<HintedScroll[^>]*testId="desktop-side-menu-scroll"[^>]*compact=\{!sideExtended\}/.test(app) && /<HintedScroll[^>]*testId="desktop-people-scroll"/.test(app), 'the laptop menu strip and the members list show the bobbing arrow while there is more below');
+check(/data-testid="feed-video-scrub"/.test(slot) && /role="slider"/.test(slot) && /onPointerMove=/.test(slot) && /requestAnimationFrame/.test(slot) && /ArrowRight/.test(slot) && /\.fv-scrub \{ position: absolute; left: 0; right: 0; bottom: 0; height: 22px;[^}]*touch-action: none/.test(css) && /\.fv-time \{/.test(css), 'the progress line can be dragged or pressed to go to any moment (the time shows above it), and arrow keys skip 5 seconds');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

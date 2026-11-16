@@ -1,0 +1,20 @@
+/* ---- a video post on Home (Feed/FeedVideoSlot.tsx): plays by itself while it fills the screen ---- */
+.feed-video-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.fv-tap { background: transparent; border: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+.fv-play { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 9999px; color: #fff; background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: fv-pop .22s cubic-bezier(.2, 1.3, .4, 1) both; }
+.fv-play svg { margin-left: 3px; }
+.fv-sound { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 9999px; color: #fff; background: rgba(0, 0, 0, .5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: transform .12s ease, background-color .15s ease; }
+.fv-sound:active { transform: scale(.9); }
+.fv-needs-tap { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: 9999px; color: #fff; font-size: 12px; font-weight: 800; background: rgba(0, 0, 0, .6); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fv-pop .22s cubic-bezier(.2, 1.3, .4, 1) both; }
+.fv-scrub { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; z-index: 4; touch-action: none; pointer-events: none; cursor: pointer; outline: none; }
+.fv-scrub[data-live="1"] { pointer-events: auto; }
+.fv-track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .22); transition: height .15s ease; }
+.fv-fill { height: 100%; width: 100%; background: #fff; transform-origin: left center; transform: scaleX(0); transition: transform .3s linear; will-change: transform; }
+.fv-thumb { position: absolute; left: 0; top: 50%; width: 14px; height: 14px; border-radius: 9999px; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, .5); transform: translate(-50%, -50%) scale(0); transition: transform .15s cubic-bezier(.3, 1.4, .5, 1); pointer-events: none; }
+.fv-scrub[data-live="1"]:hover .fv-track, .fv-scrub[data-drag="1"] .fv-track, .fv-scrub:focus-visible .fv-track { height: 6px; }
+.fv-scrub[data-live="1"]:hover .fv-thumb, .fv-scrub[data-drag="1"] .fv-thumb, .fv-scrub:focus-visible .fv-thumb { transform: translate(-50%, -50%) scale(1); }
+.fv-scrub[data-drag="1"] .fv-fill { transition: none; }
+@media (pointer: coarse) { .fv-scrub[data-live="1"] .fv-track { height: 4px; } .fv-scrub[data-live="1"] .fv-thumb { transform: translate(-50%, -50%) scale(.7); } .fv-scrub[data-drag="1"] .fv-track { height: 7px; } .fv-scrub[data-drag="1"] .fv-thumb { transform: translate(-50%, -50%) scale(1.15); } }
+.fv-time { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); padding: 4px 11px; border-radius: 9999px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; pointer-events: none; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+@keyframes fv-pop { from { opacity: 0; scale: .8; } }
+@media (prefers-reduced-motion: reduce) { .fv-play, .fv-needs-tap { animation: none; } .fv-fill, .fv-track, .fv-thumb { transition: none; } }

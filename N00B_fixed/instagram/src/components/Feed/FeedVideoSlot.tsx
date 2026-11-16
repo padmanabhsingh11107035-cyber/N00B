@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Play, Volume2, VolumeX } from 'lucide-react';
+import './feedVideo.css';
 import {
   armFeedVideo,
   enableFeedVideoSound,
@@ -17,6 +18,11 @@ import {
 // What is drawn here: the first moment of the video (a quiet <video> that only loads its header), then, while it is the one that plays, the shared player on top of it,
 // a thin progress line, the speaker button, and "Tap for sound" when the phone refuses sound until a tap. A tap on the video pauses and plays it.
 
+const fmt = (s: number): string => {
+  const n = Math.max(0, Math.floor(Number.isFinite(s) ? s : 0));
+  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+};
+
 const THRESHOLDS = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 
 export const FeedVideoSlot: React.FC<{
@@ -32,6 +38,15 @@ export const FeedVideoSlot: React.FC<{
 }> = ({ id, src, look, autoplay, onAspect, onSound }) => {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLSpanElement | null>(null);
+  const zoneRef = useRef<HTMLDivElement | null>(null);
+  // dragging the line: the video follows the finger (one seek per screen frame), the time shows above the line, the line does not jump back while the finger is down
+  const drag = useRef({ active: false, raf: 0, target: 0 });
+  const [scrub, setScrub] = useState<{ t: number; d: number } | null>(null);
+  const paint = (p: number) => {
+    if (barRef.current) barRef.current.style.transform = `scaleX(${p})`;
+    if (thumbRef.current) thumbRef.current.style.left = `${p * 100}%`;
+  };
   const view = useSyncExternalStore(subscribeFeedVideo, getFeedVideoView, getFeedVideoView);
   const mine = view.activeId === id;
   const playing = mine && view.playing;
@@ -60,10 +75,9 @@ export const FeedVideoSlot: React.FC<{
 
   // the progress line follows the shared player while this is the one that plays
   useEffect(() => {
-    if (!mine) { if (barRef.current) barRef.current.style.transform = 'scaleX(0)'; return; }
+    if (!mine) { paint(0); return; }
     const v = getFeedVideoPlayer();
-    const bar = barRef.current;
-    const tick = () => { if (bar && v.duration > 0) bar.style.transform = `scaleX(${Math.min(1, v.currentTime / v.duration)})`; };
+    const tick = () => { if (!drag.current.active && v.duration > 0) paint(Math.min(1, v.currentTime / v.duration)); };
     const meta = () => { if (v.videoWidth && v.videoHeight) onAspect?.(v.videoWidth / v.videoHeight); tick(); };
     v.addEventListener('timeupdate', tick);
     v.addEventListener('loadedmetadata', meta);
@@ -74,6 +88,35 @@ export const FeedVideoSlot: React.FC<{
   }, [mine]);
 
   useEffect(() => { onSound?.(heard); return () => onSound?.(false); }, [heard]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const seekTo = (clientX: number) => {
+    const v = getFeedVideoPlayer();
+    const zone = zoneRef.current;
+    if (!zone || !(v.duration > 0)) return;
+    const r = zone.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+    paint(p);
+    drag.current.target = p * v.duration;
+    setScrub({ t: drag.current.target, d: v.duration });
+    if (!drag.current.raf) drag.current.raf = requestAnimationFrame(() => { drag.current.raf = 0; v.currentTime = drag.current.target; });
+  };
+  const endScrub = () => {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    if (drag.current.raf) { cancelAnimationFrame(drag.current.raf); drag.current.raf = 0; }
+    const v = getFeedVideoPlayer();
+    if (v.duration > 0) v.currentTime = drag.current.target;
+    setScrub(null);
+  };
+  const keySeek = (e: React.KeyboardEvent) => {
+    const v = getFeedVideoPlayer();
+    if (!(v.duration > 0)) return;
+    const step = e.key === 'ArrowRight' ? 5 : e.key === 'ArrowLeft' ? -5 : 0;
+    if (!step) return;
+    e.preventDefault();
+    v.currentTime = Math.min(v.duration, Math.max(0, v.currentTime + step));
+  };
+  const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
     <div ref={boxRef} className="fv-box absolute inset-0 overflow-hidden bg-black" data-testid="feed-video" data-playing={playing ? '1' : '0'}>
@@ -112,18 +155,51 @@ export const FeedVideoSlot: React.FC<{
         aria-pressed={view.wantSound}
         data-testid="feed-video-sound"
         data-no-hit="1"
-        className="fv-sound absolute right-3 bottom-4 z-[4] cursor-pointer"
+        className="fv-sound absolute right-3 bottom-6 z-[4] cursor-pointer"
       >
         {view.wantSound && !(mine && view.blocked) ? <Volume2 className="w-[18px] h-[18px]" /> : <VolumeX className="w-[18px] h-[18px]" />}
       </button>
       {mine && view.blocked && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); enableFeedVideoSound(); }} className="fv-needs-tap absolute left-3 bottom-4 z-[4] cursor-pointer" data-testid="feed-video-tap-for-sound">
+        <button type="button" onClick={(e) => { e.stopPropagation(); enableFeedVideoSound(); }} className="fv-needs-tap absolute left-3 bottom-6 z-[4] cursor-pointer" data-testid="feed-video-tap-for-sound">
           <VolumeX className="w-4 h-4" aria-hidden="true" />Tap for sound
         </button>
       )}
 
-      <div className="fv-track absolute inset-x-0 bottom-0 z-[4] pointer-events-none" aria-hidden="true">
-        <div ref={barRef} className="fv-fill" />
+      {/* the line: shows how much is played, and can be dragged (or pressed) to go to any moment; arrow keys skip 5 seconds */}
+      <div
+        ref={zoneRef}
+        className="fv-scrub"
+        data-live={mine ? '1' : '0'}
+        data-drag={scrub ? '1' : '0'}
+        data-testid="feed-video-scrub"
+        role="slider"
+        tabIndex={mine ? 0 : -1}
+        aria-label="Video position"
+        aria-valuemin={0}
+        aria-valuemax={scrub ? Math.round(scrub.d) : undefined}
+        aria-valuenow={scrub ? Math.round(scrub.t) : undefined}
+        onPointerDown={(e) => {
+          if (!mine) return;
+          e.stopPropagation();
+          try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* the finger is followed anyway */ }
+          drag.current.active = true;
+          seekTo(e.clientX);
+        }}
+        onPointerMove={(e) => { if (drag.current.active) { e.stopPropagation(); seekTo(e.clientX); } }}
+        onPointerUp={(e) => { e.stopPropagation(); endScrub(); }}
+        onPointerCancel={endScrub}
+        onLostPointerCapture={endScrub}
+        onClick={swallow}
+        onDoubleClick={swallow}
+        onTouchStart={swallow}
+        onTouchEnd={swallow}
+        onKeyDown={keySeek}
+      >
+        {scrub && <span className="fv-time" aria-hidden="true">{fmt(scrub.t)} / {fmt(scrub.d)}</span>}
+        <div className="fv-track" aria-hidden="true">
+          <div ref={barRef} className="fv-fill" />
+          <span ref={thumbRef} className="fv-thumb" />
+        </div>
       </div>
     </div>
   );

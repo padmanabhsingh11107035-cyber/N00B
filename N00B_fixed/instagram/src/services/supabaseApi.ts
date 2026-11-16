@@ -6652,6 +6652,12 @@ export async function fetchAnonMessages(opts: { limit?: number; before?: { creat
   return { messages: Array.isArray(res?.messages) ? res.messages : [], hasMore: !!res?.hasMore };
 }
 
+/** One thought by its id (its own page); null when it is gone or hidden. */
+export async function fetchAnonMessage(id: string): Promise<AnonMessage | null> {
+  const m = await rpc<AnonMessage | null>('anon_message_get', { p_id: id });
+  return m && typeof m === 'object' ? m : null;
+}
+
 /** Publishes a message. `clientKey` makes a double tap or a retry of the SAME composer post only once. Throws the server's own sentence (limits, blocked, ...). */
 export async function postAnonMessage(body: string, clientKey: string): Promise<AnonMessage> {
   const res = await rpc<AnonMessage & { duplicate?: boolean }>('anon_message_post', { p_body: body, p_client_key: clientKey });

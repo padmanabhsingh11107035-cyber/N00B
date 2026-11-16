@@ -2619,6 +2619,7 @@ export default function App() {
           onDeleteOne={handleDeleteNotification}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}
+          onOpenMix={(kind, id) => { setShowNotificationsModal(false); openFun(kind === 'poll' ? { feature: 'polls', target: id.toLowerCase() } : { feature: 'thought', target: id.toLowerCase() }); }}
           onOpenChat={(chatId) => {
             setPendingChatId(chatId);
             setActiveTab('chat');

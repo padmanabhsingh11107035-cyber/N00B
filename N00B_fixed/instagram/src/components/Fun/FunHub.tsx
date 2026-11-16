@@ -15,6 +15,7 @@ const AskPage = React.lazy(() => import('./AskPage'));
 const MoodPage = React.lazy(() => import('./MoodPage'));
 const FormsHub = React.lazy(() => import('../Forms/FormsHub'));
 const PollsPage = React.lazy(() => import('./PollsPage'));
+const ThoughtPage = React.lazy(() => import('./ThoughtPage'));
 
 const ICONS: Record<FunFeature, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>> = {
   'this-or-that': Zap,
@@ -55,6 +56,14 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
     return (
       <React.Suspense fallback={<div className="fixed inset-0 z-[96] bg-black" />}>
         <FormsHub currentUser={currentUser} location={location} onNavigate={onNavigate} onBack={onBack} onHome={onHome} onLogin={onLogin} />
+      </React.Suspense>
+    );
+  }
+  // One anonymous thought on its own page (the link its Share button sends)
+  if (location.feature === 'thought' && location.target) {
+    return (
+      <React.Suspense fallback={<div className="fixed inset-0 z-[96] bg-page" />}>
+        <ThoughtPage currentUser={currentUser} id={location.target} onBack={onBack} onHome={onHome} />
       </React.Suspense>
     );
   }

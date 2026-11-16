@@ -15,5 +15,12 @@ check((mix.match(/<MixBar /g) || []).length === 2 && /kind="anon"/.test(mix) && 
 check(/navigator\.share/.test(mix) && /clipboard\.writeText\(url\)/.test(mix), 'Share opens the phone share sheet, and copies the link where there is none');
 check(/createPortal\(<MixComments/.test(mix) && /MIX_COMMENT_MAX/.test(mix), 'the comments sheet is drawn over the whole page, with the length limit');
 check(/\.hm-ab \{/.test(css) && /\.hm-cm-input \{/.test(css), 'styles for the bar and the comments sheet');
+const sql2 = read('supabase/migrations/20261116000006_thought_page_and_mix_notifications.sql'), routes = read('src/utils/funRoutes.ts'), hub = read('src/components/Fun/FunHub.tsx'), nm = read('src/components/Modals/NotificationsModal.tsx'), app = read('src/App.tsx');
+check(/function public\.anon_message_get/.test(sql2) && /removed_at is null and not hidden/.test(sql2) && !/'authorId'/.test(sql2), 'one thought can be read by its id, hidden / removed ones are not, and it never carries an author');
+check(/revoke execute on function public\.mix_owner/.test(sql2), 'who owns a thought is a private helper the app can not call');
+check(/total in \(1, 5, 10, 25, 50, 100, 250, 500, 1000\)/.test(sql2) && /'mixKind', x\.data->>'mixKind'/.test(sql2) && /owner <> me/.test(sql2), 'the owner is told about comments, and about likes only at milestones (never about their own)');
+check(/\/thought\/\$\{loc\.target\}/.test(routes) && /head === 'thought'/.test(routes) && /location\.feature === 'thought'/.test(hub), 'a thought has its own address /thought/<id> that opens its page');
+check(/funShareUrl\(\{ feature: 'thought'/.test(mix), 'Share on a thought sends that link');
+check(/onOpenMix/.test(nm) && /onOpenMix=\{\(kind, id\)/.test(app), 'tapping such a notification opens the poll or the thought');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

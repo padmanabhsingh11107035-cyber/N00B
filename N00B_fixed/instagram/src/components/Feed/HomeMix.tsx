@@ -31,7 +31,6 @@ import {
 } from '../../services/api';
 import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
-import { siteOrigin } from '../../utils/siteUrl';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
@@ -76,7 +75,7 @@ function useStat(k: MixKind, id: string): MixStat {
   useEffect(() => { const l = () => tick((n) => n + 1); statListeners.add(l); return () => { statListeners.delete(l); }; }, []);
   return statStore.get(statKey(k, id)) ?? NO_STAT;
 }
-function loadStats(k: MixKind, ids: string[]): void {
+export function loadStats(k: MixKind, ids: string[]): void {
   void fetchMixStats(k, ids).then((m) => { Object.entries(m).forEach(([id, s]) => statStore.set(statKey(k, id), s)); statListeners.forEach((l) => l()); }).catch(() => undefined);
 }
 
@@ -269,7 +268,7 @@ const MixComments: React.FC<{ kind: MixKind; id: string; title: string; canManag
   );
 };
 
-const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; canManage: boolean; onRemoved: () => void }> = ({ m, currentUser, canManage, onRemoved }) => {
+export const AnonCard: React.FC<{ m: AnonMessage; currentUser: User | null; canManage: boolean; onRemoved: () => void }> = ({ m, currentUser, canManage, onRemoved }) => {
   const admin = isMainAdmin(currentUser);
   const pics = anonPicKeys(m);
   const [reporting, setReporting] = useState(false);
@@ -307,7 +306,7 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; canManage: boolean
       {/* drawn as plain text: nothing in it can run as HTML or script */}
       {pics.length > 0 && <AnonPics keys={pics} />}
       {m.body && <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>}
-      <MixBar kind="anon" id={m.id} title="An anonymous thought on NOOB" text={m.body ? m.body.slice(0, 140) : 'An anonymous post on NOOB'} url={siteOrigin()} canManage={admin || canManage} onNote={setNote} />
+      <MixBar kind="anon" id={m.id} title="An anonymous thought on NOOB" text={m.body ? m.body.slice(0, 140) : 'An anonymous post on NOOB'} url={funShareUrl({ feature: 'thought', target: m.id })} canManage={admin || canManage} onNote={setNote} />
       {reporting && (
         <div className="hm-panel" role="group" aria-label="Why are you reporting this thought?">
           <p className="hm-sub">Why is it a problem?</p>

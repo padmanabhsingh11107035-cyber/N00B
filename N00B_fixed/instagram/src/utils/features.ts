@@ -57,7 +57,7 @@ export const FEATURE_GROUPS: ReadonlyArray<FeatureDef['group']> = ['Main pages',
 export const TAB_FEATURE: Readonly<Record<string, string>> = { explore: 'explore', reels: 'reels', videos: 'videos', post: 'create', chat: 'chat', games: 'games' };
 
 /** the name of the fun page (this-or-that, ask, mood, polls) as a page key */
-export const funFeatureKey = (id: string): string => (id === 'forms' || id === 'form' ? 'forms' : 'fun-' + id);   // NOOB Forms live beside the Fun pages but have their own page key
+export const funFeatureKey = (id: string): string => (id === 'forms' || id === 'form' ? 'forms' : id === 'thought' ? 'anonymous' : 'fun-' + id);   // NOOB Forms live beside the Fun pages but have their own page key
 
 /** the list of switched-off pages out of the settings (an old server that does not know the list means: everything is on) */
 export function disabledFeatureSet(list: unknown): ReadonlySet<string> {

@@ -194,6 +194,9 @@ export interface AppNotification {
   isRead?: boolean;
   actionStatus?: 'pending' | 'accepted' | 'declined';
   scratchCardId?: string;
+  /** a like / comment on a poll ('poll') or an anonymous thought ('anon'): the one it is about */
+  mixKind?: 'anon' | 'poll';
+  mixId?: string;
   chatId?: string;
 }
 

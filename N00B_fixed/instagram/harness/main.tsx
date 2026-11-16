@@ -156,6 +156,9 @@ async function boot() {
   if (page === 'draw') {
     const { NoobDrawPage } = await import('../src/components/Draw/NoobDrawPage.tsx');
     Page = () => { const [me, setMe] = React.useState(currentUser); return h(NoobDrawPage, { currentUser: me, onUserUpdated: setMe, onClose: () => console.info('[harness] onClose') }); };
+  } else if (page === 'thought') {
+    const { FunHub } = await import('../src/components/Fun/FunHub.tsx');
+    Page = () => h(FunHub, { currentUser, location: { feature: 'thought', target: '1ea66c31-37d3-4ece-997c-40ab11c856ee' }, onNavigate: () => undefined, onBack: () => console.info('[harness] onBack'), onHome: () => console.info('[harness] onHome') });
   } else if (['tot', 'ask', 'polls', 'mood', 'forms', 'form'].includes(page)) {
     const { FunHub } = await import('../src/components/Fun/FunHub.tsx');
     const feature = { tot: 'this-or-that', ask: 'ask', polls: 'polls', mood: 'mood', forms: 'forms', form: 'form' }[page];

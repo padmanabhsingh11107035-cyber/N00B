@@ -321,6 +321,7 @@ export const rpcMocks = {
   ], hasMore: false }),
   mix_comment_add: (a) => ({ id: 'c' + Date.now(), body: a.p_body, createdAt: new Date().toISOString(), mine: true, user: { userId: 'me', username: 'me', displayName: 'Me', avatar: '', isVerified: false } }),
   mix_comment_remove: () => ({ ok: true }),
+  anon_message_get: (a, ctx) => (ctx.state === 'empty' ? null : ANON[0]),
   anon_messages_feed: (a, ctx) => anonFeed(ctx),
   anon_messages_admin_feed: (a, ctx) => anonAdmin(ctx),
   anon_message_post: (a) => ({ id: 'an_new', body: a.p_body, createdAt: new Date().toISOString() }),

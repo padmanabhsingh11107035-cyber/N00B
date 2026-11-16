@@ -543,6 +543,7 @@ export {
   addMixComment,
   removeMixComment,
   fetchAnonMessages,
+  fetchAnonMessage,
   postAnonMessage,
   postAnonPost,
   reportAnonMessage,

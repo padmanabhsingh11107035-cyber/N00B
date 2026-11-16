@@ -54,6 +54,8 @@ interface NotificationsModalProps {
   // remove ONE notification from this person's list (the red bin that a swipe to the left shows)
   onDeleteOne?: (notifId: string) => void;
   onNavigateToUser?: (username: string) => void;
+  /** a like / comment on a poll or an anonymous thought: open it */
+  onOpenMix?: (kind: 'anon' | 'poll', id: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
   onOpenChat?: (chatId: string) => void;
   onOpenLiveLoungeInvite?: (roomId: string) => void;
@@ -141,6 +143,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onClearAll,
   onDeleteOne,
   onNavigateToUser,
+  onOpenMix,
   onOpenScratchCard,
   onOpenChat,
   onOpenLiveLoungeInvite,
@@ -322,12 +325,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 <section key={group.label + group.items[0].id} className="nt-group" data-testid="notif-group">
                   <h2 className="nt-date" data-testid="notif-date">{group.label}</h2>
                   {group.items.map((notif) => {
-                    const opens = notif.type === 'noob_draw_ready' || ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername;
+                    const opens = (notif.mixKind && notif.mixId) || notif.type === 'noob_draw_ready' || ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername;
                     return (
                       <SwipeRow key={notif.id} canDelete={!!onDeleteOne} onDelete={() => onDeleteOne?.(notif.id)}>
                         <div
                           onClick={() => {
-                            if (notif.type === 'noob_draw_ready') {
+                            if (notif.mixKind && notif.mixId) {
+                              onOpenMix?.(notif.mixKind, notif.mixId);
+                            } else if (notif.type === 'noob_draw_ready') {
                               onClose();
                               openNoobDraw();
                             } else if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {

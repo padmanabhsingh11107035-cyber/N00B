@@ -90,10 +90,11 @@ header.hv-top .hv-feed-dot { fill: #ff4d8d; stroke: var(--hv-ring-gap); stroke-w
 @media (prefers-reduced-motion: no-preference) { header.hv-top .hv-feed-dot { animation: hv-feed-pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } }
 @keyframes hv-feed-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.28); } }
 @media (max-width: 430px) {
-  header.hv-top .hv-feed-btn { width: 34px; height: 34px; }
-  header.hv-top .hv-feed-ico { width: 29px; height: 29px; }
-  header.hv-top [data-testid="feed-music-button"], header.hv-top #notifications-bar-trigger { width: 32px; height: 32px; border-radius: 11px; }
-  header.hv-top [data-testid="noob-menu-button"] { width: 30px; height: 30px; border-radius: 10px; }
+  header.hv-top { gap: 3px !important; padding-left: 6px !important; padding-right: 6px !important; }
+  header.hv-top .hv-feed-btn { width: 32px; height: 34px; }
+  header.hv-top .hv-feed-ico { width: 28px; height: 28px; }
+  header.hv-top [data-testid="feed-music-button"], header.hv-top #notifications-bar-trigger { width: 30px; height: 30px; border-radius: 10px; }
+  header.hv-top [data-testid="noob-menu-button"] { width: 28px; height: 28px; border-radius: 10px; }
 }
 
 /* ---- anonymous thoughts and polls between the posts (Feed/HomeMix.tsx): quiet cards in the page's own colours, dark and light ---- */

@@ -257,7 +257,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
         )}
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className="gz-word">NOOB</span>
-          <span className="gz-tag">GAMES</span>
+          <span className="gz-tag max-[440px]:!hidden">GAMES</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => setShowSearch((v) => !v)} aria-label="Search games" className="gz-ib"><Search className="w-4 h-4" /></button>

@@ -1889,3 +1889,17 @@ html[data-page="feed"] body::after, html[data-page="feed"] body::before, html[da
 
 /* Android app (page under the clock): the middle box clips sideways only, so a profile cover can reach the very top of the screen instead of stopping below the clock */
 html.phone-edge[data-page="profile"] body main { overflow-x: clip; overflow-y: visible; }
+
+/* ---- Own profile in Light: the numbers box and the "Public / Private account" row were half-black boxes on a white page (grey, with white and grey text that was hard to read). In Light they are light cards with dark text. ---- */
+@layer base {
+html[data-theme="light"] body #profile-view-container [data-testid="profile-stats"], html[data-theme="light"] body #profile-view-container [data-testid="profile-account-type"] { background: #f4f4f5 !important; border-color: #e4e4e7 !important; }
+html[data-theme="light"] body #profile-view-container [data-testid="profile-stats"] > * { border-color: #e4e4e7 !important; }
+html[data-theme="light"] body #profile-view-container [data-testid="profile-stats"] .text-white, html[data-theme="light"] body #profile-view-container [data-testid="profile-account-type"] .text-white { color: #0a0a0a !important; }
+html[data-theme="light"] body #profile-view-container [data-testid="profile-stats"] .text-zinc-400, html[data-theme="light"] body #profile-view-container [data-testid="profile-account-type"] :where(.text-zinc-400, .text-zinc-500, svg) { color: #52525b !important; }
+}
+
+/* ---- Group chat: the name above a message sits on the chat wallpaper, where thin grey letters were hard to read. It gets a small plate of its own, in Dark and in Light. ---- */
+@layer base {
+html body .msg-who { width: fit-content; max-width: 100%; padding: 2px 8px !important; border-radius: 999px; background: rgba(0, 0, 0, .58) !important; color: #f4f4f5 !important; }
+html[data-theme="light"] body .msg-who { background: rgba(255, 255, 255, .9) !important; color: #27272a !important; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+}

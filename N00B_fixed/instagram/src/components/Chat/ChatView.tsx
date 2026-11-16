@@ -2183,7 +2183,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   >
                   {/* In Group Chats: Show sender name for incoming messages */}
                   {activeChat?.isGroup && !isMine && (
-                    <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-zinc-400 font-semibold">
+                    <div className="msg-who flex items-center gap-1.5 mb-1 px-1 text-[10px] text-zinc-400 font-semibold">
                       <img
                         src={senderAvatar}
                         alt={senderName}

@@ -87,6 +87,8 @@ import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
 import { armSongPlayer } from './utils/songSound';
 import { takeRestorePage } from './utils/pageResume';
+const AnonComposer = React.lazy(() => import('./components/Feed/HomeMix').then((m) => ({ default: m.AnonComposer })));
+const PollComposer = React.lazy(() => import('./components/Feed/PollComposer'));
 import { predictFollowToggle, predictFollowersCount } from './utils/followPredict';
 import { buildStoryTray, topUpSuggestions, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -515,6 +517,7 @@ export default function App() {
   // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
+  const [homeCompose, setHomeCompose] = useState<null | 'anon' | 'poll'>(null);
   // A picture or video finished in NOOB Studio: the Post / Reel / Story creator opens with it (it is only published when the person does that there)
   const [studioFile, setStudioFile] = useState<File | null>(null);
   const [studioStoryFile, setStudioStoryFile] = useState<File | null>(null);
@@ -2469,6 +2472,8 @@ export default function App() {
         /></React.Suspense>
       )}
 
+      {homeCompose === 'anon' && <React.Suspense fallback={null}><AnonComposer onClose={() => setHomeCompose(null)} /></React.Suspense>}
+      {homeCompose === 'poll' && <React.Suspense fallback={null}><PollComposer onClose={() => setHomeCompose(null)} /></React.Suspense>}
       {/* 3. Create: what to make (like Instagram's Create sheet) ... */}
       {showPostCreationModal && (
         <React.Suspense fallback={null}><CreateChooser
@@ -2482,6 +2487,7 @@ export default function App() {
             else if (kind === 'lenses') { if (featOn('lenses')) openLenses(); }
             else if (kind === 'video') setShowUploadVideoModal(true);
             else if (kind === 'live') handleGoLiveTap();
+            else if (kind === 'anon' || kind === 'poll') { setActiveTab('feed'); setHomeCompose(kind); }   // an anonymous thought or a poll: written here, shown on Home
           }}
         /></React.Suspense>
       )}

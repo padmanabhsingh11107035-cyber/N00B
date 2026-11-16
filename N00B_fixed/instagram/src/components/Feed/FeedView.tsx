@@ -65,6 +65,7 @@ import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
 import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
 import { PostCard } from './PostCard';
+import { HomeMixCard, useHomeMix, useCanManagePolls, mixKey } from './HomeMix';
 import { holdSongs } from '../../utils/songSound';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { CommentsSheet } from './CommentsSheet';
@@ -240,7 +241,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showOurTeam, setShowOurTeam] = useState(false);
   const [showCreations, setShowCreations] = useState(false);
   // Anonymous Messages has its own address (/anonymous) so it can be opened and shared directly; the menu entry opens it, closing goes back to the home address.
-  const [showAnonymous, setShowAnonymous] = useState(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/anonymous');
+  const [showAnonymous, setShowAnonymous] = useState(() => {
+    if (typeof window === 'undefined' || window.location.pathname.replace(/\/+$/, '') !== '/anonymous') return false;
+    if (isMainAdmin(currentUser)) return true;
+    try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* Home opens anyway */ }   // the thoughts are on Home now
+    return false;
+  });
   const openAnonymous = () => {
     try { window.history.replaceState(null, '', '/anonymous' + window.location.search); } catch { /* the page still opens */ }
     setShowAnonymous(true);
@@ -298,6 +304,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // pull-to-refresh rebuilds it from scratch, which is also what moves just-viewed posts back into the mix.
   const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, currentUser.id));
   const [refreshNonce, setRefreshNonce] = useState(0);
+  // Anonymous thoughts and public polls are part of Home: they sit between the posts of the plain "For You" feed (not in a topic, Following or Favourites)
+  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce);
+  const canManagePolls = useCanManagePolls(featOn('fun-polls'));
+  const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
   const lastRefreshNonceRef = useRef(0);
   const postIdsKey = posts.map((p) => p.id).join(',');
   const appendedPostIdsRef = useRef(appendedPostIds);
@@ -650,7 +660,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
     {
       id: 'more-pages',
       title: 'More pages',
-      items: menuItems([onOpenTab && featOn('videos') && { id: 'videos', label: 'Feed', icon: <Youtube />, hint: 'Long videos and live streams', testId: 'menu-videos', onClick: () => { setShowNoobMenu(false); onOpenTab('videos'); } }]),
+      items: menuItems([]),   // "Feed" (the Videos page) is a button in the top bar of Home now
     },
     {
       id: 'noob',
@@ -662,14 +672,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
         featOn('team') && { id: 'team', entryId: 'team', label: 'Our Team', icon: <Users />, hint: 'Meet the people behind NOOB', onPointerDown: preloadOurTeam, onClick: go('team', () => setShowOurTeam(true)) },
         joinTeamOpen && { id: 'join', entryId: 'join', label: 'Join the NOOB team', icon: <Handshake />, hint: 'Apply to help build NOOB', onClick: go('join', () => setShowJoinUsModal(true)) },
         { id: 'spark', entryId: 'spark', label: 'Join our SparkX team', icon: <Rocket />, hint: 'IIT Bombay Techfest', onClick: go('spark', () => setShowSparkXModal(true)) },
-        featOn('anonymous') && { id: 'anonymous', entryId: 'anonymous', label: 'Anonymous Messages', icon: <VenetianMask />, hint: 'Your words, without your name', onPointerDown: () => { void loadAnonymousPage(); }, onClick: go('anonymous', openAnonymous) },
+        featOn('anonymous') && isMainAdmin(currentUser) && { id: 'anonymous', entryId: 'anonymous', label: 'Anonymous thoughts (moderate)', icon: <VenetianMask />, hint: 'Your words, without your name', onPointerDown: () => { void loadAnonymousPage(); }, onClick: go('anonymous', openAnonymous) },
       ]),
     },
     {
       id: 'fun',
       title: 'Fun & community',
       items: menuItems([
-        ...(onOpenFunPage ? FUN_FEATURES.filter((f) => featOn(funFeatureKey(f.id))).map((f): MenuItemSpec => {
+        ...(onOpenFunPage ? FUN_FEATURES.filter((f) => featOn(funFeatureKey(f.id)) && (f.id !== 'polls' || isMainAdmin(currentUser))).map((f): MenuItemSpec => {
           const Icon = FUN_MENU_ICONS[f.id];
           return { id: 'fun-' + f.id, entryId: 'fun-' + f.id, label: f.label, icon: <Icon aria-hidden={true} />, hint: f.blurb, onPointerDown: preloadFunHub, onClick: go('fun-' + f.id, () => onOpenFunPage({ feature: f.id })) };
         }) : []),
@@ -816,6 +826,20 @@ export const FeedView: React.FC<FeedViewProps> = ({
           >
             <Rocket className="w-4 h-4" />
           </button>
+
+          {/* The Feed page (long videos and live streams): a plain white icon, no plate. It used to be a row of the three-line menu. */}
+          {onOpenTab && featOn('videos') && (
+            <button
+              onClick={() => onOpenTab('videos')}
+              data-testid="feed-videos-button"
+              data-no-hit="1"
+              className="hv-feed-btn shrink-0 flex items-center justify-center text-white cursor-pointer active:scale-90 transition-transform"
+              title="Feed"
+              aria-label="Feed: long videos and live streams"
+            >
+              <Youtube className="w-[22px] h-[22px]" strokeWidth={1.9} />
+            </button>
+          )}
 
           {/* The Music page (Create is the circled plus in the middle of the bottom bar); not drawn while the administrator has the page hidden */}
           {onOpenTab && !musicHidden && (
@@ -975,7 +999,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
       {/* 4. Feed Posts Stack */}
       <main ref={postListRef} className="w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
-        {filteredPosts.length === 0 ? (
+        {filteredPosts.length === 0 && mixOn && mix.items.length > 0 ? (
+          <>{mix.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} />)}</>
+        ) : filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
             <h3 className="text-sm font-bold text-white">No Posts in this feed</h3>
@@ -992,7 +1018,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
         ) : (
           <>
             {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={(p) => renderPostCard(postsById.get(p.id) ?? p)} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
-            {paginatedPosts.map((post) => renderPostCard(post))}
+            {paginatedPosts.map((post, i) => {
+              const extra = mixOn && i % 3 === 0 ? mix.items[i / 3] : undefined;   // one after the first post, then one after every third
+              return (
+                <React.Fragment key={post.id}>
+                  {renderPostCard(post)}
+                  {extra && <HomeMixCard key={mixKey(extra)} item={extra} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} />}
+                </React.Fragment>
+              );
+            })}
 
             {/* Infinite Scroll Load More Sentinel */}
             <div ref={loadMoreSentinelRef} className="w-full py-4 flex items-center justify-center">

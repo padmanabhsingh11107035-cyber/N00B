@@ -18,7 +18,7 @@ const feed = read('src/components/Feed/FeedView.tsx');
 check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && !/nav-item-videos/.test(nav), 'the bottom bar carries neither Music nor Videos (the bar has 3 pages, Create, then 3 pages)');
 check(/musicHidden\?: boolean/.test(feed) && /\{onOpenTab && !musicHidden && \(\s*<button\s+onClick=\{\(\) => onOpenTab\('music'\)\}/.test(feed), 'the Music button at the top of Home is drawn only while the page is shown');
 check(!/setShowNoobMenu\(false\); onOpenTab\('music'\)/.test(feed), 'the three-line menu no longer lists Music (the top button is the way in)');
-check(/onOpenTab\('videos'\)/.test(feed) && /id: 'more-pages'/.test(feed) && /testId: 'menu-videos'/.test(feed), 'the same menu lists the Videos feed');
+check(/onOpenTab\('videos'\)/.test(feed) && /data-testid="feed-videos-button"/.test(feed) && !/testId: 'menu-videos'/.test(feed), 'the Videos feed is a button in the top bar of Home (no longer a row of the menu)');
 
 section('2. Everywhere else the page shows up');
 check(/const musicHidden = platformSettings\?\.musicPageHidden === true;/.test(app), 'hidden only when the administrator says so (a missing setting means shown)');

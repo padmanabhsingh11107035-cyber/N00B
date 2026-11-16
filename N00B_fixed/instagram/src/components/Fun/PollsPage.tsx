@@ -233,7 +233,7 @@ const PollCard: React.FC<{
 };
 
 // ================================================================================================================================ the form that makes a poll
-const CreateForm: React.FC<{ onCreated: (p: Poll) => void; onCancel: () => void; say: (t: string, k?: 'ok' | 'err') => void }> = ({ onCreated, onCancel, say }) => {
+export const CreateForm: React.FC<{ onCreated: (p: Poll) => void; onCancel: () => void; say: (t: string, k?: 'ok' | 'err') => void }> = ({ onCreated, onCancel, say }) => {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [minutes, setMinutes] = useState(1440);

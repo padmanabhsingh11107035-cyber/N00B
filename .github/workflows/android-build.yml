@@ -238,7 +238,8 @@ jobs:
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # the key and the keystore share ONE password (PKCS12 keystore made 2026-11-06), so the working store password is used for both (the separate key-password secret held a hidden non-ASCII character)
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -f "app/release.keystore" ]; then
             # Google Play does not allow an app to install apps or update itself outside Google Play (and keeps REQUEST_INSTALL_PACKAGES for installer apps only): the bundle for Play is built without them

@@ -908,11 +908,11 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         data-testid="create-pick-photos"
-                        className="min-w-[132px] px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold cursor-pointer transition-colors flex flex-col items-center gap-1.5"
+                        className="min-w-[132px] px-4 py-3 rounded-xl bg-white hover:bg-zinc-200 text-black text-sm font-semibold cursor-pointer transition-colors flex flex-col items-center gap-1.5"
                       >
                         <ImageIcon className="w-6 h-6" aria-hidden="true" />
                         Photos
-                        <span className="text-[10px] font-medium opacity-80">up to 20</span>
+                        <span className="text-[10px] font-medium text-zinc-600">up to 20</span>
                       </button>
                       <button
                         type="button"

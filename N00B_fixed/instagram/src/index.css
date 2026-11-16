@@ -1773,6 +1773,10 @@ html body .auth-v2[data-stage="form"] .auth-sheet label { color: #1a1330; font-w
 html body .auth-v2[data-stage="form"] .auth-sheet input:not([type="checkbox"]):not([type="radio"]) { background: #f4f1ff !important; color: #1a1330 !important; border: 2px solid #e4ddff !important; border-radius: 18px !important; font-size: 15px; font-weight: 600; padding-top: 14px; padding-bottom: 14px; }
 html body .auth-v2[data-stage="form"] .auth-sheet input:focus { background: #fff !important; border-color: #7c4dff !important; box-shadow: 0 0 0 5px rgba(124, 77, 255, .18) !important; }
 html body .auth-v2[data-stage="form"] .auth-sheet input::placeholder { color: #9a92b8 !important; font-weight: 500; }
+/* a login the browser filled in by itself (saved password): the browser paints that text in its own colour, white on a dark page. These boxes are light, so the text stays dark. */
+html body .auth-v2[data-stage="form"] .auth-sheet input:not([type="checkbox"]):not([type="radio"]) { color-scheme: light; -webkit-text-fill-color: #1a1330 !important; caret-color: #1a1330; }
+html body .auth-v2[data-stage="form"] .auth-sheet input:-webkit-autofill, html body .auth-v2[data-stage="form"] .auth-sheet input:-webkit-autofill:hover, html body .auth-v2[data-stage="form"] .auth-sheet input:-webkit-autofill:focus { -webkit-text-fill-color: #1a1330 !important; -webkit-box-shadow: 0 0 0 1000px #f4f1ff inset !important; box-shadow: 0 0 0 1000px #f4f1ff inset !important; transition: background-color 9999s ease-out; }
+html body .auth-v2[data-stage="form"] .auth-sheet input::placeholder { -webkit-text-fill-color: #9a92b8 !important; }
 html body .auth-v2[data-stage="form"] .auth-sheet .text-cyan-400, html body .auth-v2[data-stage="form"] .auth-sheet .text-blue-400 { color: #7c4dff !important; }
 html body .auth-v2[data-stage="form"] .auth-sheet .text-zinc-400, html body .auth-v2[data-stage="form"] .auth-sheet .text-zinc-300 { color: #6b6480 !important; }
 html body .auth-v2[data-stage="form"] [data-testid="login-form-back"] { background: #f1edff !important; color: #4b2fd0 !important; border: 0 !important; font-weight: 800; }

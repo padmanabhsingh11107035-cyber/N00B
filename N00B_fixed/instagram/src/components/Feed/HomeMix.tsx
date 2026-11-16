@@ -100,8 +100,33 @@ function useArmed(): [boolean, () => boolean] {
   return [armed, press];
 }
 
+/** The pictures of an anonymous post, in order (an older post has one, kept in mediaKey). */
+export const anonPicKeys = (m: AnonMessage): string[] => (m.mediaKeys && m.mediaKeys.length ? m.mediaKeys : m.mediaKey ? [m.mediaKey] : []);
+export const ANON_MAX_PICS = 10;
+
+// The pictures of an anonymous post: one is shown plain; several are swiped sideways, with "2 / 5" in the corner and dots underneath.
+const AnonPics: React.FC<{ keys: string[] }> = ({ keys }) => {
+  const [at, setAt] = useState(0);
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    if (i !== at) setAt(Math.min(keys.length - 1, Math.max(0, i)));
+  };
+  if (keys.length === 1) return <img src={resolveMedia(keys[0])} alt="" loading="lazy" decoding="async" className="hm-pic" data-testid="home-anon-pic" />;
+  return (
+    <div className="hm-pics-wrap" data-testid="home-anon-pics">
+      <div className="hm-pics" onScroll={onScroll}>
+        {keys.map((k) => <img key={k} src={resolveMedia(k)} alt="" loading="lazy" decoding="async" className="hm-pic" data-testid="home-anon-pic" />)}
+      </div>
+      <span className="hm-pics-n" aria-hidden="true">{at + 1} / {keys.length}</span>
+      <div className="hm-dots" aria-hidden="true">{keys.map((k, i) => <i key={k} className={i === at ? 'is-on' : ''} />)}</div>
+    </div>
+  );
+};
+
 const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => void }> = ({ m, currentUser, onRemoved }) => {
   const admin = isMainAdmin(currentUser);
+  const pics = anonPicKeys(m);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -126,7 +151,7 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => v
         <span className="hm-ava" aria-hidden="true"><VenetianMask className="w-5 h-5" /></span>
         <span className="min-w-0 flex-1">
           <span className="hm-who">Anonymous</span>
-          <span className="hm-sub">{m.mediaKey ? 'Post' : 'Thought'} · {ago(m.createdAt)}</span>
+          <span className="hm-sub">{pics.length ? 'Post' : 'Thought'} · {ago(m.createdAt)}</span>
         </span>
         {admin
           ? <button type="button" onClick={() => void remove()} disabled={busy} className={`hm-act ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed ? 'Tap again' : 'Remove'}</button>
@@ -135,7 +160,7 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => v
             : <button type="button" onClick={() => setReporting((v) => !v)} aria-expanded={reporting} aria-label="Report this thought" className="hm-ib"><Flag className="w-4 h-4" /></button>}
       </header>
       {/* drawn as plain text: nothing in it can run as HTML or script */}
-      {m.mediaKey && <img src={resolveMedia(m.mediaKey)} alt="" loading="lazy" decoding="async" className="hm-pic" data-testid="home-anon-pic" />}
+      {pics.length > 0 && <AnonPics keys={pics} />}
       {m.body && <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>}
       {reporting && (
         <div className="hm-panel" role="group" aria-label="Why are you reporting this thought?">
@@ -279,24 +304,26 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const postingRef = useRef(false);
   const keyRef = useRef(newKey());
   const count = Array.from(text).length;
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState('');
+  // up to ten pictures (no video); each keeps its own preview address, and the file key it got once it was uploaded (so a second try does not upload it again)
+  const [photos, setPhotos] = useState<{ file: File; url: string }[]>([]);
+  const uploaded = useRef(new Map<File, string>());
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
   const fileRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    if (!photo) { setPreview(''); return; }
-    const url = URL.createObjectURL(photo);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
+  useEffect(() => () => { photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)); }, []);
   const pickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
+    const chosen: File[] = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = '';
-    if (!f) return;
-    if (!f.type.startsWith('image/')) { setError('Only a picture can be added.'); return; }
-    setError('');
-    setPhoto(f);
+    if (chosen.length === 0) return;
+    const pictures = chosen.filter((f) => f.type.startsWith('image/'));
+    const room = ANON_MAX_PICS - photos.length;
+    setError(pictures.length < chosen.length ? 'Only pictures can be added (no videos).' : pictures.length > room ? `A post can have at most ${ANON_MAX_PICS} pictures.` : '');
+    if (room <= 0) return;
+    setPhotos((prev) => [...prev, ...pictures.slice(0, room).map((file) => ({ file, url: URL.createObjectURL(file) }))]);
   };
-  const canPublish = !posting && (text.trim().length > 0 || !!photo) && count <= ANON_MAX_LENGTH;
+  const dropPhoto = (i: number) => setPhotos((prev) => { const gone = prev[i]; if (gone) URL.revokeObjectURL(gone.url); return prev.filter((_, j) => j !== i); });
+  const [sent, setSent] = useState(0);
+  const canPublish = !posting && (text.trim().length > 0 || photos.length > 0) && count <= ANON_MAX_LENGTH;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !postingRef.current) onClose(); };
     window.addEventListener('keydown', onKey);
@@ -308,11 +335,18 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     postingRef.current = true; setPosting(true); setError('');
     try {
       let made: AnonMessage;
-      if (photo) {
-        // the picture goes up under a file name of a time and random letters: nothing in it says who uploaded it
-        const up = await uploadMediaFile(photo, 'posts');
-        try { made = await postAnonPost(text, up.objectKey, keyRef.current); }
-        catch (e) { throw /anon_post_create|schema cache|does not exist/i.test(e instanceof Error ? e.message : '') ? new Error('Anonymous pictures are not switched on yet. Please try again later, or share the words alone.') : e; }
+      if (photos.length > 0) {
+        // each picture goes up under a file name of a time and random letters: nothing in it says who uploaded it
+        const keys: string[] = [];
+        for (let i = 0; i < photos.length; i++) {
+          setSent(i);
+          const f = photos[i].file;
+          let key = uploaded.current.get(f);
+          if (!key) { key = (await uploadMediaFile(f, 'posts')).objectKey; uploaded.current.set(f, key); }
+          keys.push(key);
+        }
+        try { made = await postAnonPost(text, keys, keyRef.current); }
+        catch (e) { throw /anon_post_create|schema cache|does not exist/i.test(e instanceof Error ? e.message : '') ? new Error(keys.length > 1 ? 'Several pictures in one anonymous post are not switched on yet. Please share one picture, or try again later.' : 'Anonymous pictures are not switched on yet. Please try again later, or share the words alone.') : e; }
       } else {
         made = await postAnonMessage(text, keyRef.current);
       }
@@ -332,14 +366,20 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         </div>
         <label htmlFor="hm-anon-text" className="sr-only">Your anonymous thought</label>
         <textarea id="hm-anon-text" value={text} onChange={(e) => onType(e.target.value)} placeholder="Say what is on your mind…" rows={4} autoFocus className="hm-field" />
-        {preview && (
-          <div className="hm-prev" data-testid="anon-photo-preview">
-            <img src={preview} alt="The picture you chose" />
-            <button type="button" onClick={() => setPhoto(null)} disabled={posting} aria-label="Remove the picture" className="hm-ib" data-no-hit="1"><X className="w-4 h-4" /></button>
+        {photos.length > 0 && (
+          <div className="hm-prevs" data-testid="anon-photo-preview">
+            {photos.map((p, i) => (
+              <div key={p.url} className="hm-prev">
+                <img src={p.url} alt={`Picture ${i + 1} of ${photos.length}`} />
+                <button type="button" onClick={() => dropPhoto(i)} disabled={posting} aria-label={`Remove picture ${i + 1}`} className="hm-ib" data-no-hit="1"><X className="w-4 h-4" /></button>
+              </div>
+            ))}
           </div>
         )}
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} data-testid="anon-photo-input" />
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={posting} className="hm-act hm-add" data-testid="anon-add-photo"><ImagePlus className="w-4 h-4" aria-hidden="true" />{photo ? 'Change the picture' : 'Add a picture'}</button>
+        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={pickPhoto} data-testid="anon-photo-input" />
+        {photos.length < ANON_MAX_PICS && (
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={posting} className="hm-act hm-add" data-testid="anon-add-photo"><ImagePlus className="w-4 h-4" aria-hidden="true" />{photos.length ? `Add more pictures (${photos.length} of ${ANON_MAX_PICS})` : 'Add pictures'}</button>
+        )}
         <div className="hm-count-row">
           <p role="alert" className="hm-err">{error}</p>
           <p aria-live="polite" className="hm-sub">{count} / {ANON_MAX_LENGTH}</p>
@@ -350,7 +390,7 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         </div>
         <button type="button" onClick={() => void publish()} disabled={!canPublish} className="hm-vote" data-testid="anon-publish">
           {posting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}
-          {posting ? (photo ? 'Uploading…' : 'Publishing…') : 'Publish anonymously'}
+          {posting ? (photos.length ? `Uploading ${Math.min(sent + 1, photos.length)} of ${photos.length}…` : 'Publishing…') : 'Publish anonymously'}
         </button>
       </div>
     </div>

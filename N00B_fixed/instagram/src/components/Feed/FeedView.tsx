@@ -31,7 +31,7 @@ import {
   CupSoda,
   Gift,
   GraduationCap,
-  Youtube,
+
   Music,
   Bot,
   UtensilsCrossed,
@@ -837,7 +837,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
               title="Feed"
               aria-label="Feed: long videos and live streams"
             >
-              <Youtube className="w-[22px] h-[22px]" strokeWidth={1.9} />
+              <svg className="hv-feed-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+                <rect x="3" y="6" width="22" height="15" rx="4.5" stroke="currentColor" strokeWidth="2" />
+                <path d="M11.6 10.4v6.2a.8.8 0 0 0 1.2.7l5.2-3.1a.8.8 0 0 0 0-1.4l-5.2-3.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" />
+                <path d="M9 24.2h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="23.6" cy="6" r="3.1" className="hv-feed-dot" />
+              </svg>
             </button>
           )}
 

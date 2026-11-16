@@ -25,7 +25,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
   { kind: 'video', title: 'Video', blurb: 'A long video for the Videos page', Icon: MonitorPlay, tint: 'text-white' },
   { kind: 'live', title: 'Live', blurb: 'Go live and talk to people right now', Icon: Radio, tint: 'text-red-500' },
   { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' },
-  { kind: 'anon', title: 'Anonymous thought', blurb: 'Your words on Home, without your name', Icon: VenetianMask, tint: 'text-white' },
+  { kind: 'anon', title: 'Anonymous post', blurb: 'Words or a picture on Home, without your name', Icon: VenetianMask, tint: 'text-white' },
   { kind: 'poll', title: 'Poll', blurb: 'Ask everyone a question; shown with your name', Icon: BarChart3, tint: 'text-white' },
   { kind: 'lenses', title: 'Lenses', blurb: 'Face filters: take a picture, save it or share it anywhere', Icon: ScanFace, tint: 'text-amber-300' },
   { kind: 'studio', title: 'Edit in Studio', blurb: 'Edit photos and videos first, then share them', Icon: Wand2, tint: 'text-fuchsia-300' }

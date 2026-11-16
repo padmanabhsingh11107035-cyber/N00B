@@ -537,6 +537,7 @@ export {
   dismissPollReports,
   fetchAnonMessages,
   postAnonMessage,
+  postAnonPost,
   reportAnonMessage,
   fetchAnonMessagesAdmin,
   adminRemoveAnonMessage,

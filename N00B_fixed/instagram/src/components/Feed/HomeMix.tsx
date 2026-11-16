@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Link2, Loader2, Send, X } from 'lucide-react';
+import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Link2, Loader2, Send, X, ImagePlus } from 'lucide-react';
 import type { User } from '../../types';
 import { isMainAdmin } from '../../adminAccess';
 import {
   ANON_MAX_LENGTH,
   fetchAnonMessages,
   postAnonMessage,
+  postAnonPost,
+  uploadMediaFile,
   reportAnonMessage,
   adminRemoveAnonMessage,
   fetchPolls,
@@ -17,6 +19,7 @@ import {
   type AnonMessage,
   type Poll
 } from '../../services/api';
+import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -123,7 +126,7 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => v
         <span className="hm-ava" aria-hidden="true"><VenetianMask className="w-5 h-5" /></span>
         <span className="min-w-0 flex-1">
           <span className="hm-who">Anonymous</span>
-          <span className="hm-sub">Thought · {ago(m.createdAt)}</span>
+          <span className="hm-sub">{m.mediaKey ? 'Post' : 'Thought'} · {ago(m.createdAt)}</span>
         </span>
         {admin
           ? <button type="button" onClick={() => void remove()} disabled={busy} className={`hm-act ${armed ? 'is-warn' : ''}`}><Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed ? 'Tap again' : 'Remove'}</button>
@@ -132,7 +135,8 @@ const AnonCard: React.FC<{ m: AnonMessage; currentUser: User; onRemoved: () => v
             : <button type="button" onClick={() => setReporting((v) => !v)} aria-expanded={reporting} aria-label="Report this thought" className="hm-ib"><Flag className="w-4 h-4" /></button>}
       </header>
       {/* drawn as plain text: nothing in it can run as HTML or script */}
-      <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>
+      {m.mediaKey && <img src={resolveMedia(m.mediaKey)} alt="" loading="lazy" decoding="async" className="hm-pic" data-testid="home-anon-pic" />}
+      {m.body && <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{m.body}</p>}
       {reporting && (
         <div className="hm-panel" role="group" aria-label="Why are you reporting this thought?">
           <p className="hm-sub">Why is it a problem?</p>
@@ -275,7 +279,24 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const postingRef = useRef(false);
   const keyRef = useRef(newKey());
   const count = Array.from(text).length;
-  const canPublish = !posting && text.trim().length > 0 && count <= ANON_MAX_LENGTH;
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [preview, setPreview] = useState('');
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (!photo) { setPreview(''); return; }
+    const url = URL.createObjectURL(photo);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+  const pickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    e.target.value = '';
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { setError('Only a picture can be added.'); return; }
+    setError('');
+    setPhoto(f);
+  };
+  const canPublish = !posting && (text.trim().length > 0 || !!photo) && count <= ANON_MAX_LENGTH;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !postingRef.current) onClose(); };
     window.addEventListener('keydown', onKey);
@@ -286,8 +307,17 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     if (postingRef.current || !canPublish) return;   // a double tap can not send it twice
     postingRef.current = true; setPosting(true); setError('');
     try {
-      const made = await postAnonMessage(text, keyRef.current);
+      let made: AnonMessage;
+      if (photo) {
+        // the picture goes up under a file name of a time and random letters: nothing in it says who uploaded it
+        const up = await uploadMediaFile(photo, 'posts');
+        try { made = await postAnonPost(text, up.objectKey, keyRef.current); }
+        catch (e) { throw /anon_post_create|schema cache|does not exist/i.test(e instanceof Error ? e.message : '') ? new Error('Anonymous pictures are not switched on yet. Please try again later, or share the words alone.') : e; }
+      } else {
+        made = await postAnonMessage(text, keyRef.current);
+      }
       announceMixItem({ kind: 'anon', at: made.createdAt, anon: made });
+      keyRef.current = newKey();
       onClose();
     } catch (e) {
       setError(friendly(e, 'Could not publish right now. Please check your connection and try again.'));
@@ -297,11 +327,19 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     <div className="hm-scrim" data-noob-keep="1" role="dialog" aria-modal="true" aria-label="Share a thought anonymously" onClick={() => { if (!posting) onClose(); }}>
       <div className="hm-sheet" data-testid="anon-composer" onClick={(e) => e.stopPropagation()}>
         <div className="hm-sheet-head">
-          <h2><VenetianMask className="w-5 h-5" aria-hidden="true" />Anonymous thought</h2>
+          <h2><VenetianMask className="w-5 h-5" aria-hidden="true" />Share anonymously</h2>
           <button type="button" onClick={() => { if (!posting) onClose(); }} aria-label="Close" className="hm-ib" data-no-hit="1"><X className="w-5 h-5" /></button>
         </div>
         <label htmlFor="hm-anon-text" className="sr-only">Your anonymous thought</label>
-        <textarea id="hm-anon-text" value={text} onChange={(e) => onType(e.target.value)} placeholder="Say what is on your mind…" rows={5} autoFocus className="hm-field" />
+        <textarea id="hm-anon-text" value={text} onChange={(e) => onType(e.target.value)} placeholder="Say what is on your mind…" rows={4} autoFocus className="hm-field" />
+        {preview && (
+          <div className="hm-prev" data-testid="anon-photo-preview">
+            <img src={preview} alt="The picture you chose" />
+            <button type="button" onClick={() => setPhoto(null)} disabled={posting} aria-label="Remove the picture" className="hm-ib" data-no-hit="1"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} data-testid="anon-photo-input" />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={posting} className="hm-act hm-add" data-testid="anon-add-photo"><ImagePlus className="w-4 h-4" aria-hidden="true" />{photo ? 'Change the picture' : 'Add a picture'}</button>
         <div className="hm-count-row">
           <p role="alert" className="hm-err">{error}</p>
           <p aria-live="polite" className="hm-sub">{count} / {ANON_MAX_LENGTH}</p>
@@ -312,7 +350,7 @@ export const AnonComposer: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         </div>
         <button type="button" onClick={() => void publish()} disabled={!canPublish} className="hm-vote" data-testid="anon-publish">
           {posting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}
-          {posting ? 'Publishing…' : 'Publish anonymously'}
+          {posting ? (photo ? 'Uploading…' : 'Publishing…') : 'Publish anonymously'}
         </button>
       </div>
     </div>

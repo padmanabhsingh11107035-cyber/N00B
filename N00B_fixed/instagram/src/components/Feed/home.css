@@ -143,3 +143,9 @@ header.hv-top .hv-feed-btn { width: 34px; height: 36px; padding: 0; background: 
 @media (prefers-reduced-motion: reduce) { .hm-scrim, .hm-sheet { animation: none; } .hm-bar { transition: none; } }
 /* the poll form opened from the Create sheet lies over the whole page, the bottom bar included */
 .fx-root[data-testid="poll-composer"] .fx-sheet-wrap { z-index: 97; }
+/* an anonymous post: its picture on the card, and the chosen picture in the composer */
+.hm-pic { display: block; width: 100%; max-height: 520px; object-fit: cover; margin-top: 12px; border-radius: 18px; background: var(--hv-surface-2); }
+.hm-prev { position: relative; margin-top: 10px; }
+.hm-prev img { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; }
+.hm-prev .hm-ib { position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, .65); color: #fff; }
+.hm-add { margin-top: 10px; }

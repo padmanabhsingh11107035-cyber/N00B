@@ -6629,7 +6629,7 @@ export function connectLiveLoungeScreenShare(
 // ---- Anonymous Messages (migration 20261015000002) ----
 // Everything goes through functions in the database; the tables themselves can not be read from the app. The public feed answer holds {id, body, createdAt} and nothing
 // else: no author, no username, no picture, no e-mail - the database never sends them, so there is nothing for the page, its state or its network traffic to leak.
-export interface AnonMessage { id: string; body: string; createdAt: string }
+export interface AnonMessage { id: string; body: string; createdAt: string; /** the file key of its picture ("posts/<name>"), when it has one */ mediaKey?: string | null }
 export interface AnonAdminMessage extends AnonMessage { hidden: boolean; reportCount: number; reasons: string[] }
 export interface AnonPage<T> { messages: T[]; hasMore: boolean }
 export const ANON_MAX_LENGTH = 1000;
@@ -6647,6 +6647,12 @@ export async function fetchAnonMessages(opts: { limit?: number; before?: { creat
 export async function postAnonMessage(body: string, clientKey: string): Promise<AnonMessage> {
   const res = await rpc<AnonMessage & { duplicate?: boolean }>('anon_message_post', { p_body: body, p_client_key: clientKey });
   return { id: res.id, body: res.body, createdAt: res.createdAt };
+}
+
+/** Publishes an anonymous post: one picture (already uploaded, its file key) with optional words. Needs migration 20261116000002. */
+export async function postAnonPost(body: string, mediaKey: string, clientKey: string): Promise<AnonMessage> {
+  const res = await rpc<AnonMessage & { duplicate?: boolean }>('anon_post_create', { p_body: body, p_media_key: mediaKey, p_client_key: clientKey });
+  return { id: res.id, body: res.body, createdAt: res.createdAt, mediaKey: res.mediaKey ?? mediaKey };
 }
 
 export async function reportAnonMessage(messageId: string, reason: string): Promise<{ hidden: boolean }> {

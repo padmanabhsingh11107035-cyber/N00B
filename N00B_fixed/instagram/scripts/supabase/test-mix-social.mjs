@@ -22,5 +22,7 @@ check(/total in \(1, 5, 10, 25, 50, 100, 250, 500, 1000\)/.test(sql2) && /'mixKi
 check(/\/thought\/\$\{loc\.target\}/.test(routes) && /head === 'thought'/.test(routes) && /location\.feature === 'thought'/.test(hub), 'a thought has its own address /thought/<id> that opens its page');
 check(/funShareUrl\(\{ feature: 'thought'/.test(mix), 'Share on a thought sends that link');
 check(/onOpenMix/.test(nm) && /onOpenMix=\{\(kind, id\)/.test(app), 'tapping such a notification opens the poll or the thought');
+const hubSrc = read('src/components/Support/SupportHub.tsx'), supSrc = read('src/components/Support/CustomerSupportModal.tsx');
+check(/support-tile-report-problem/.test(hubSrc) && /support-tile-grievance/.test(hubSrc) && /onReportProblem=\{openReportProblem\}/.test(supSrc) && /grievance\.html/.test(supSrc), 'Customer Support has "Report a problem" and the Grievance Officer complaint form');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

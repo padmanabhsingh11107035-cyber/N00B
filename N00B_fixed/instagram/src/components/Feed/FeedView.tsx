@@ -40,14 +40,12 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, Repeat2, AlertCircle } from 'lucide-react';
-import { openReportProblem } from '../Common/ReportProblemSheet';
+import { Wand2, Repeat2 } from 'lucide-react';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
 import { sendLike } from '../../utils/likeSync';
 import { applyLike, useLikeLedgerVersion } from '../../utils/likeLedger';
 import { useLensOpen } from '../Lenses/lensStore';
-import { VenetianMask } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
 import { useFullPage } from '../../utils/fullPage';
@@ -91,8 +89,7 @@ import { CONTENT_CATEGORIES } from '../../data/mockData';
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
 const FoodStallView = React.lazy(() => import('../Store/FoodStallView').then((m) => ({ default: m.FoodStallView })));
 const OurTeamPage = React.lazy(() => import('../Team/OurTeamPage'));
-const loadAnonymousPage = () => import('../Anonymous/AnonymousMessagesPage');
-const AnonymousMessagesPage = React.lazy(() => loadAnonymousPage().then((m) => ({ default: m.AnonymousMessagesPage })));
+const AnonymousMessagesPage = React.lazy(() => import('../Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const preloadOurTeam = () => { void import('../Team/OurTeamPage'); };
 const preloadFunHub = () => { void import('../Fun/FunHub'); };
 // The four Fun pages in the menu, with the icon each one wears there.
@@ -247,10 +244,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
     try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* Home opens anyway */ }   // the thoughts are on Home now
     return false;
   });
-  const openAnonymous = () => {
-    try { window.history.replaceState(null, '', '/anonymous' + window.location.search); } catch { /* the page still opens */ }
-    setShowAnonymous(true);
-  };
   const closeAnonymous = () => {
     try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* nothing to undo */ }
     setShowAnonymous(false);
@@ -672,14 +665,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
         featOn('team') && { id: 'team', entryId: 'team', label: 'Our Team', icon: <Users />, hint: 'Meet the people behind NOOB', onPointerDown: preloadOurTeam, onClick: go('team', () => setShowOurTeam(true)) },
         joinTeamOpen && { id: 'join', entryId: 'join', label: 'Join the NOOB team', icon: <Handshake />, hint: 'Apply to help build NOOB', onClick: go('join', () => setShowJoinUsModal(true)) },
         { id: 'spark', entryId: 'spark', label: 'Join our SparkX team', icon: <Rocket />, hint: 'IIT Bombay Techfest', onClick: go('spark', () => setShowSparkXModal(true)) },
-        featOn('anonymous') && isMainAdmin(currentUser) && { id: 'anonymous', entryId: 'anonymous', label: 'Anonymous thoughts (moderate)', icon: <VenetianMask />, hint: 'Your words, without your name', onPointerDown: () => { void loadAnonymousPage(); }, onClick: go('anonymous', openAnonymous) },
       ]),
     },
     {
       id: 'fun',
       title: 'Fun & community',
       items: menuItems([
-        ...(onOpenFunPage ? FUN_FEATURES.filter((f) => featOn(funFeatureKey(f.id)) && (f.id !== 'polls' || isMainAdmin(currentUser))).map((f): MenuItemSpec => {
+        ...(onOpenFunPage ? FUN_FEATURES.filter((f) => featOn(funFeatureKey(f.id)) && f.id !== 'polls').map((f): MenuItemSpec => {
           const Icon = FUN_MENU_ICONS[f.id];
           return { id: 'fun-' + f.id, entryId: 'fun-' + f.id, label: f.label, icon: <Icon aria-hidden={true} />, hint: f.blurb, onPointerDown: preloadFunHub, onClick: go('fun-' + f.id, () => onOpenFunPage({ feature: f.id })) };
         }) : []),
@@ -699,7 +691,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
           : { id: 'food', entryId: 'food', label: 'NOOB Food Stall', icon: <UtensilsCrossed />, hint: 'Burgers, bhel, fries, manchurian & coke', onClick: go('food', () => setShowFoodStall(true)) }),
         featOn('ai') && { id: 'ai', entryId: 'ai', label: 'NOOB AI', icon: <Bot />, hint: 'Talk to your AI friend by voice', onClick: go('ai', () => setShowNoobAi(true)) },
         featOn('support') && { id: 'support', entryId: 'support', label: 'Customer Support', icon: <MessageCircle />, hint: 'Chat with the NOOB support team', onClick: go('support', () => setShowSupportModal(true)) },
-        { id: 'report', entryId: 'report', label: 'Report a problem', icon: <AlertCircle />, hint: 'Tell us what went wrong', onClick: go('report', openReportProblem) },
         // NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app)
         featOn('drinks') && { id: 'drinks', entryId: 'drinks', label: 'NOOB Cold Drinks', icon: <CupSoda />, hint: 'Ten cans, ten flavours: scroll to explore in 3D', onClick: go('drinks', () => window.location.assign('/cold-drinks/')) },
         featOn('creations') && { id: 'creations', entryId: 'creations', label: 'More of our creations', icon: <Layers />, hint: 'Other websites we made: visit and explore', onClick: go('creations', () => setShowCreations(true)) },

@@ -7,6 +7,8 @@ import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport'
 import './supportDesk.css';
 import { SupportChatPanel } from './SupportChatPanel';
 import { SupportHeader, SupportHub, type SupportScreen } from './SupportHub';
+import { openReportProblem } from '../Common/ReportProblemSheet';
+import { MAIN_SITE } from '../../utils/siteUrl';
 import { SupportRatingSheet } from './SupportRatingSheet';
 import { CallPage, FaqPage, ReportPage, TicketPage } from './SupportPages';
 import { SuggestionBoxPage } from './SuggestionBoxPage';
@@ -1012,6 +1014,8 @@ ${description}`.slice(0, 2000));
             onTopic={handleTopic}
             onOpenTerms={openTerms}
             onOpenPrivacy={openPrivacy}
+            onReportProblem={openReportProblem}
+            onGrievance={() => { try { window.open(`${MAIN_SITE}/grievance.html`, '_blank', 'noopener'); } catch { /* the form is also linked in the Privacy Policy */ } }}
           />
         )}
 

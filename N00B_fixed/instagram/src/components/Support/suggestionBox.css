@@ -58,6 +58,13 @@
 /* the card on the first screen of the help desk that opens the page */
 .sd-idea { display: flex; align-items: center; gap: 13px; width: 100%; margin: 0 0 22px; padding: 13px 14px; border-radius: 20px; text-align: left; background: linear-gradient(135deg, #fff7dd, #ffefb8); border: 1px solid #f7e2a1; box-shadow: 0 14px 28px -20px rgba(217, 119, 6, .7); transition: transform .12s; }
 .sd-idea:active { transform: scale(.98); }
+.sd-idea.sd-idea-alt { margin: 0 0 12px; background: #ffffff; border: 1px solid #ececf1; }
+.sd-idea.sd-idea-alt:last-of-type { margin-bottom: 22px; }
+.sd-idea.sd-idea-alt small { color: #6d6d7a; }
+.sd-idea.sd-idea-alt .sd-chev { color: #a0a0ad; }
+.sd-idea-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 14px; }
+.sd-idea-ic > svg { width: 22px; height: 22px; }
+.sd-idea > .sd-idea-ic { flex: none; }
 .sd-idea > svg:first-child { width: 44px; height: 44px; flex: none; }
 .sd-idea > span { flex: 1; min-width: 0; }
 .sd-idea strong { display: block; font-size: 15px; font-weight: 800; color: #1c1c1c; }

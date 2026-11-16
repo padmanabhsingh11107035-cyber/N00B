@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ChevronRight, Star, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ChevronRight, Scale, Star, X } from 'lucide-react';
 import { CallTileIcon, ChatTileIcon, FaqTileIcon, IdeaTileIcon, PaymentTileIcon, ReportTileIcon, TicketTileIcon } from './SupportIcons';
 import { useFeatureOn } from '../../utils/featureFlags';
 import './suggestionBox.css';
@@ -55,9 +55,13 @@ interface HubProps {
   onTopic: (t: Topic) => void;
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
+  /** "Report a problem": the sheet where someone tells the team what went wrong in the app */
+  onReportProblem?: () => void;
+  /** the Grievance Officer's complaint form */
+  onGrievance?: () => void;
 }
 
-export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPayment, onTopic, onOpenTerms, onOpenPrivacy }) => {
+export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPayment, onTopic, onOpenTerms, onOpenPrivacy, onReportProblem, onGrievance }) => {
   const topics = SUPPORT_TOPICS.filter((t) => t.action !== 'payment' && t.action !== 'report');
   const showIdeas = useFeatureOn('suggestions');   // the administrator can switch the Suggestion Box off for users
   return (
@@ -83,6 +87,21 @@ export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPay
         <button type="button" className="sd-idea" onClick={() => onOpen('suggestions')} data-testid="support-tile-suggestions">
           <IdeaTileIcon />
           <span><strong>Suggestion Box</strong><small>Share an idea, an improvement or a problem</small></span>
+          <ChevronRight className="sd-chev" />
+        </button>
+      )}
+
+      {onReportProblem && (
+        <button type="button" className="sd-idea sd-idea-alt" onClick={onReportProblem} data-testid="support-tile-report-problem">
+          <span className="sd-idea-ic" style={{ background: '#fde8e8', color: '#c62828' }}><AlertCircle /></span>
+          <span><strong>Report a problem</strong><small>Tell us what went wrong in the app</small></span>
+          <ChevronRight className="sd-chev" />
+        </button>
+      )}
+      {onGrievance && (
+        <button type="button" className="sd-idea sd-idea-alt" onClick={onGrievance} data-testid="support-tile-grievance">
+          <span className="sd-idea-ic" style={{ background: '#e8f0fe', color: '#1d4ed8' }}><Scale /></span>
+          <span><strong>Grievance Officer</strong><small>Make a formal complaint about content or your data</small></span>
           <ChevronRight className="sd-chev" />
         </button>
       )}

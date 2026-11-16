@@ -91,7 +91,7 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
             </button>
           </div>
           <nav className="fx-tabs max-w-2xl mx-auto overflow-x-auto no-scrollbar" role="tablist" aria-label="NOOB Fun pages">
-            {FUN_FEATURES.map((f) => {
+            {FUN_FEATURES.filter((f) => f.id !== 'polls' || active.id === 'polls').map((f) => {
               const Icon = ICONS[f.id];
               const on = f.id === active.id;
               return (

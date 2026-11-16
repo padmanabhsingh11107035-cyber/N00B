@@ -34,6 +34,7 @@ const OPEN_TO_VISITORS = {
   noob_room_participants_list: 'the room lists are public to read by design (their tables have a public read policy)',
   noob_room_chat_recent: 'the room lists are public to read by design (their tables have a public read policy)',
   anon_messages_feed: 'Anonymous Messages is a public feed with no author shown',
+  anon_message_get: 'one anonymous thought by its id (its shared page /thought/<id>): only visible ones (not removed, not hidden), the same four fields as the feed, never an author',
   ask_profile_public: 'the public Ask Me Anything page of a person',
   public_profile: 'a shared link to a profile: private and suspended accounts are not shown',
   public_post: 'a shared link: private and suspended accounts are not shown (public_account_ok)',

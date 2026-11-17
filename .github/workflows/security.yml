@@ -48,7 +48,7 @@ jobs:
         with:
           node-version: 22
       # the packages the website is built from; a problem in a package that only runs on a developer's computer is not a hole in the site
-      - run: npm audit --omit=dev --audit-level=high
+      - run: node scripts/audit-packages.mjs
 
   secrets:
     name: Secrets in the code or its history

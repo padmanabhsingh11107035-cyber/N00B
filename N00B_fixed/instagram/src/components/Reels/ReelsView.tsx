@@ -159,7 +159,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [reelCommentsError, setReelCommentsError] = useState(false);
   const [reelCommentsReload, setReelCommentsReload] = useState(0);   // bumped by "Try again"
   // the sheet rises from the bottom on every screen and is 30-50 % of the page tall, by the number of comments
-  const commentsBox = useCommentsBox(isLoadingComments ? 3 : reelComments.filter((c) => !c.parentId).length);
+  const commentsBox = useCommentsBox(isLoadingComments ? 3 : reelComments.filter((c) => !c.parentId).length, showComments);
   const [commentInput, setCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   // Replying to a comment (yours or anyone's) — always resolves to the top-level comment's id, even

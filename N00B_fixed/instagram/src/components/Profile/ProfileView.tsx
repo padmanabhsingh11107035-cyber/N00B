@@ -53,7 +53,6 @@ import {
   Eye,
   ChevronDown,
   Link2,
-  Menu,
   MoreHorizontal,
   Repeat2,
 } from 'lucide-react';
@@ -783,7 +782,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             aria-label={isOwnProfile ? 'Settings and activity' : 'Options'}
             data-testid="profile-three-dots"
           >
-            {isOwnProfile ? <Menu className="w-6 h-6" strokeWidth={1.75} /> : <MoreHorizontal className="w-6 h-6" strokeWidth={1.75} />}
+            {isOwnProfile ? <Settings className="w-6 h-6" strokeWidth={1.75} data-testid="settings-gear-icon" /> : <MoreHorizontal className="w-6 h-6" strokeWidth={1.75} />}
           </button>
 
           {/* Dropdown Menu */}

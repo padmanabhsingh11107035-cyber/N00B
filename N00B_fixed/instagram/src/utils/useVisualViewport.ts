@@ -150,6 +150,7 @@ const readCommentsBox = (rows: number): SheetBox => {
 // are), the list scrolls on its own without pulling the page along, and if the phone's keyboard pushes the page up, it is put back at once. Two sheets at a time are counted.
 let commentsLocks = 0;
 const stopPageTouch = (e: TouchEvent) => {
+  if (!document.querySelector('.cmt-sheet')) return;   // no comments sheet on the screen: nothing is locked (a page that keeps its sheet code mounted must never block scrolling)
   const t = e.target;
   if (t instanceof Element) {
     const sheet = t.closest('.cmt-sheet');
@@ -164,9 +165,9 @@ const stopPageTouch = (e: TouchEvent) => {
   }
   if (e.cancelable) e.preventDefault();
 };
-function useCommentsLock(): void {
+function useCommentsLock(active: boolean): void {
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (!active || typeof document === 'undefined') return;
     if (commentsLocks++ === 0) {
       document.documentElement.classList.add('cmt-lock');
       document.addEventListener('touchmove', stopPageTouch, { passive: false });
@@ -184,11 +185,12 @@ function useCommentsLock(): void {
         document.removeEventListener('touchmove', stopPageTouch);
       }
     };
-  }, []);
+  }, [active]);
 }
 
-export function useCommentsBox(rows: number): SheetBox {
-  useCommentsLock();
+/** `active`: false while the sheet is not open (Reels keeps this hook mounted all the time). */
+export function useCommentsBox(rows: number, active = true): SheetBox {
+  useCommentsLock(active);
   const [box, setBox] = useState<SheetBox>(() => readCommentsBox(rows));
   useEffect(() => {
     const on = () => setBox((prev) => { const next = readCommentsBox(rows); return prev.keyboard === next.keyboard && JSON.stringify(prev.style) === JSON.stringify(next.style) ? prev : next; });

@@ -75,6 +75,10 @@ self.addEventListener('push', (event) => {
     data.title = 'NOOB';
   }
 
+  // The phone already writes "NOOB" (the app's name, "from NOOB") above every notification. A title that is just "NOOB" would repeat it ("NOOB / from NOOB"), so then the title is left empty:
+  // the phone shows NOOB once, with the content under it. A real heading (a name, a call) is kept.
+  const heading = !data.title || String(data.title).trim().toLowerCase() === 'noob' ? '' : String(data.title);
+
   const isCallRing = data.type === 'call_ring';
   const options = {
     body: data.body,
@@ -96,8 +100,8 @@ self.addEventListener('push', (event) => {
   if (data.type === 'new_message') {
     event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       const inFront = list.some((c) => c.visibilityState === 'visible');
-      if (!inFront) return self.registration.showNotification(data.title || 'NOOB', options);
-      return self.registration.showNotification(data.title || 'NOOB', { ...options, silent: true, vibrate: [], tag: 'noob-in-app-chat' })
+      if (!inFront) return self.registration.showNotification(heading, options);
+      return self.registration.showNotification(heading, { ...options, silent: true, vibrate: [], tag: 'noob-in-app-chat' })
         .then(() => new Promise((resolve) => setTimeout(resolve, 400)))
         .then(() => self.registration.getNotifications({ tag: 'noob-in-app-chat' }))
         .then((shown) => shown.forEach((n) => n.close()));
@@ -105,7 +109,7 @@ self.addEventListener('push', (event) => {
     return;
   }
 
-  event.waitUntil(self.registration.showNotification(data.title || 'NOOB', options));
+  event.waitUntil(self.registration.showNotification(heading, options));
 });
 
 // Clicking the OS notification should bring an existing NOOB tab to the front instead of always

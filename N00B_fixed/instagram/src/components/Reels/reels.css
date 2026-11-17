@@ -44,3 +44,6 @@
 
 /* paused */
 .rv-play { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 9999px; padding: 0 !important; }
+
+/* the comments are open: the video shrinks into the space above the sheet (ReelsView), so the buttons, the writing and the play sign step aside */
+.rv-commenting .rv-rail, .rv-commenting .rv-info, .rv-commenting .rv-play, .rv-commenting [data-reel-tap] > .bg-gradient-to-t, .rv-commenting [data-reel-tap] > .bg-gradient-to-b { opacity: 0 !important; pointer-events: none !important; transition: opacity .2s ease; }

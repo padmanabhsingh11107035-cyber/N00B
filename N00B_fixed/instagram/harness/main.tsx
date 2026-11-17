@@ -201,6 +201,23 @@ async function boot() {
   } else if (page === 'contentreport') {
     const { ContentReportHost, openContentReport } = await import('../src/components/Common/ContentReportSheet.tsx');
     Page = () => { React.useEffect(() => { openContentReport({ type: 'reel', id: '00000000-0000-0000-0000-000000000001' }); }, []); return h(ContentReportHost); };
+  } else if (page === 'reels') {
+    // Reels with a made-up video: tap the comment button and the video shrinks above the sheet
+    const { ReelsView } = await import('../src/components/Reels/ReelsView.tsx');
+    const makeVideo = (hue: number): Promise<string> => new Promise((resolve) => {
+      const c = document.createElement('canvas'); c.width = 270; c.height = 480; const g = c.getContext('2d')!;
+      const rec = new MediaRecorder((c as any).captureStream(15), { mimeType: 'video/webm' }); const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => chunks.push(e.data); rec.onstop = () => resolve(URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })));
+      let t = 0; const timer = setInterval(() => { t++; g.fillStyle = `hsl(${(hue + t * 4) % 360} 70% 45%)`; g.fillRect(0, 0, 270, 480); g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText('REEL ' + t, 20, 240); }, 66);
+      rec.start(); setTimeout(() => { clearInterval(timer); rec.stop(); }, 4000);
+    });
+    Page = () => {
+      const [urls, setUrls] = React.useState<string[]>([]);
+      React.useEffect(() => { void Promise.all([makeVideo(20), makeVideo(200)]).then(setUrls); }, []);
+      if (urls.length === 0) return h('p', { style: { color: '#fff', padding: 24 } }, 'making two test videos (4 seconds)...');
+      const reels = urls.map((u, i) => ({ id: 'reel-' + i, userId: 'someone', username: 'someone', userAvatar: '', videoUrl: u, thumbnailUrl: '', caption: 'test reel ' + i, hashtags: [], likesCount: 3, commentsCount: 2, viewsCount: 5, isLiked: false, isSaved: false, createdAt: new Date().toISOString() }));
+      return h(ReelsView, { reels: reels as any, currentUser, onGoBack: noop, onNavigateToProfile: noop });
+    };
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

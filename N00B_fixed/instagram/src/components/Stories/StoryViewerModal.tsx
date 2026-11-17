@@ -20,6 +20,7 @@ import { holdSongs } from '../../utils/songSound';
 import { funShareUrl } from '../../utils/funRoutes';
 import { preloadStoryPictures, isStoryPictureLoaded } from '../../utils/preloadStoryMedia';
 import { LoadingSmall } from '../Common/LoadingPages';
+import { ContentAiBadge } from '../Common/ContentAiBadge';
 import { rotateClass, rotateModeOf } from '../../utils/rotatingStory';
 
 interface StoryViewerModalProps {
@@ -598,6 +599,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* "AI info" label (made with AI), under the name; a tap says why */}
+        <ContentAiBadge kind="story" id={story.id} className="absolute left-5 top-[76px] z-30" />
 
         {/* Story Media */}
         <div className="relative w-full h-full flex items-center justify-center bg-black" style={{ containerType: 'inline-size' }}>

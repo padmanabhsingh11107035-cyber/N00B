@@ -9,5 +9,7 @@ check(/registerPlugin<\{ hasFirebase[\s\S]*?\('PushGuard'\)/.test(push) && /\.va
 check((push.match(/await buildOk\(\)/g) || []).length >= 4 && !/PushNotifications\.register\(\);[\s\S]{0,40}buildOk/.test(push), 'every register / unregister path goes through that check');
 check(/@CapacitorPlugin\(name = "PushGuard"\)/.test(java) && /FirebaseApp/.test(java) && /catch \(Throwable/.test(java), 'the native check exists and can not itself fail the app');
 check(/registerPlugin\(PushGuardPlugin\.class\)/.test(main) && /cp android-overrides\/PushGuardPlugin\.java/.test(wf), 'the build copies and registers it');
+const sw = read('public/sw.js');
+check(/const heading = !data\.title \|\| String\(data\.title\)\.trim\(\)\.toLowerCase\(\) === 'noob' \? '' : String\(data\.title\);/.test(sw) && (sw.match(/showNotification\(heading/g) || []).length === 3 && !/showNotification\(data\.title/.test(sw), 'iPhone notifications: a title that is just "NOOB" is left empty, so the phone shows NOOB once (not "NOOB / from NOOB") with the content under it');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -471,6 +471,9 @@ export interface Post {
 }
 
 export interface Story {
+  /** only used when publishing: the "AI info" label (see content_ai_label_set) */
+  hasAiLabel?: boolean;
+  aiSource?: 'creator' | 'detected';
   id: string;
   userId: string;
   username: string;
@@ -530,6 +533,9 @@ export interface StoryHighlight {
 }
 
 export interface Reel {
+  /** only used when publishing: the "AI info" label (see content_ai_label_set) */
+  hasAiLabel?: boolean;
+  aiSource?: 'creator' | 'detected';
   id: string;
   userId: string;
   username: string;

@@ -39,7 +39,7 @@ check(!/handleNextReel|handlePrevReel|navigateWithCooldown/.test(view), 'the old
 section('4. The layout (as in Roblox\'s Moments)');
 check(/rv-title leading-none text-white">Reels</.test(view) && /data-testid="reel-sound-button"/.test(view), 'the "Reels" title pill with the sound button on the right');
 check(/bg-\[#0f0f11\]/.test(view) && /media-dark/.test(view), 'the same near-black page colour');
-check(/data-reel-tap className="relative w-full h-full overflow-hidden bg-black/.test(view) && /object-contain object-bottom/.test(audio) && /video\.style\.objectFit = near \? 'cover' : 'contain'/.test(view), 'the video fills the whole page when its shape fits (about 9:16), and is shown whole in the middle (never cropped) when it does not');
+check(/data-reel-tap className="relative w-full h-full overflow-hidden bg-black/.test(view) && /object-contain object-bottom/.test(audio) && /video\.style\.objectFit = near && !commentingRef\.current \? 'cover' : 'contain'/.test(view), 'the video fills the whole page when its shape fits (about 9:16), and is shown whole in the middle (never cropped) when it does not');
 check(/data-testid="reel-actions"/.test(view) && /absolute right-3 bottom-\[26px\]/.test(view), 'like / comment / share / save / menu are plain icons down the right edge of the video');
 check(/text-\[16px\] font-bold text-white truncate/.test(view) && /w-\[36px\] h-\[36px\] rounded-full/.test(view) && /absolute left-4 right-\[72px\] bottom-\[26px\]/.test(view), 'round picture and bold name over the bottom left of the video');
 check(/No likes yet/.test(view) && /'like' : 'likes'/.test(view) && /reel\.likesCount\.toLocaleString\(\)/.test(view), 'the like count sits under the heart');

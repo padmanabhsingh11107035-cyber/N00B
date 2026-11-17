@@ -1,5 +1,5 @@
 name: Build Android APK
-# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.) 2026-11-18: home screen icon wordmark no longer cut off (android-overrides/icon-fix).
+# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.) 2026-11-18: home screen icon wordmark no longer cut off (android-overrides/icon-fix). 2026-11-17 (3): GOOGLE_SERVICES_JSON secret added, build again so Firebase is inside.
 
 on:
   workflow_dispatch: {}

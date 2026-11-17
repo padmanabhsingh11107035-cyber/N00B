@@ -1440,6 +1440,20 @@ export async function fetchPostAiInfo(postId: string): Promise<'creator' | 'dete
   try { const r = await rpc<{ source?: string } | null>('post_ai_info', { p_post: postId }); return r?.source === 'detected' ? 'detected' : r ? 'creator' : null; } catch { return null; }
 }
 
+/** The "AI info" label on a reel or a story (migration 20261118000002): the owner switches it on right after publishing. A failure never loses the reel / story. */
+export async function setContentAiLabel(kind: 'reel' | 'story', id: string, source: 'creator' | 'detected'): Promise<void> {
+  try { await rpc('content_ai_label_set', { p_kind: kind, p_id: id, p_source: source }); } catch { /* the content is published; the label can be added by hand later */ }
+}
+/** Which of these reels / stories carry the label (id -> why). Only for what this person may see. */
+export async function fetchContentAiLabels(kind: 'reel' | 'story', ids: string[]): Promise<Record<string, 'creator' | 'detected'>> {
+  try {
+    const rows = await rpc<Array<{ id: string; source: string }>>('content_ai_labels', { p_kind: kind, p_ids: ids.slice(0, 100) });
+    const out: Record<string, 'creator' | 'detected'> = {};
+    for (const r of Array.isArray(rows) ? rows : []) out[r.id] = r.source === 'detected' ? 'detected' : 'creator';
+    return out;
+  } catch { return {}; }
+}
+
 export async function toggleLikePost(postId: string): Promise<{ isLiked: boolean; likesCount: number }> {
   try { return await rpc('toggle_post_like', { p_post: postId }); } catch (err) { return { error: errorText(err, 'Could not update the like.') } as any; }
 }
@@ -2074,6 +2088,7 @@ export async function createStory(storyData: Partial<Story>): Promise<Story> {
       p_stickers: storyData.stickers || [],
       p_close_friends: !!storyData.isCloseFriendsOnly
     });
+    if (storyData.hasAiLabel && story?.id) await setContentAiLabel('story', story.id, storyData.aiSource === 'detected' ? 'detected' : 'creator');
     return mapStory(story);
   } catch (err) {
     throw new Error(errorText(err, 'Could not post your story.'));
@@ -2907,6 +2922,7 @@ export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
       p_hashtags: reelData.hashtags || [],
       p_category: reelData.category || 'others'
     });
+    if (reelData.hasAiLabel && reel?.id) await setContentAiLabel('reel', reel.id, reelData.aiSource === 'detected' ? 'detected' : 'creator');
     return mapReel(reel);
   } catch (err) {
     throw new Error(errorText(err, 'Failed to publish reel.'));

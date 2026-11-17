@@ -1,3 +1,4 @@
+import { detectAiMedia } from '../../utils/aiDetect';
 import React, { useState, useRef, useEffect } from 'react';
 import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
 import { Story, User } from '../../types';
@@ -123,6 +124,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
   const [isCloseFriends, setIsCloseFriends] = useState(false);
+  // "AI info" label: switched on by the person, or by NOOB when the original picture holds a made-with-AI marker (then it can not be switched off)
+  const [aiLabel, setAiLabel] = useState(false);
+  const [aiDetected, setAiDetected] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [showPollInput, setShowPollInput] = useState(false);
   const [pollBgColor, setPollBgColor] = useState(POLL_BG_COLORS[0]);
@@ -576,6 +580,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   };
 
   const uploadStoryFile = async (file: File) => {
+    void detectAiMedia(file).then((found) => { if (found) { setAiDetected(true); setAiLabel(true); } });   // the ORIGINAL file: the upload drops its tags
     setIsUploading(true);
     setUploadError('');
     try {
@@ -744,6 +749,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mediaType: 'image',
         filter,
         isCloseFriendsOnly: isCloseFriends,
+        hasAiLabel: aiLabel,
+        aiSource: aiDetected ? 'detected' : 'creator',
         stickers: mainStickers
       };
 
@@ -1906,6 +1913,18 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" /> Close Friends Only
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (aiDetected && aiLabel) return; setAiLabel(!aiLabel); }}
+                aria-pressed={aiLabel}
+                title={aiDetected ? 'NOOB found a made-with-AI marker inside your picture, so this label is on' : 'Turn on if your picture is made or changed with AI'}
+                data-testid="story-ai-label"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                  aiLabel ? 'bg-purple-500 text-white font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" /> AI info label
               </button>
             </div>
 

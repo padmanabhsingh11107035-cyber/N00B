@@ -719,7 +719,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 }
               ]
             : undefined,
-          webLink: webLink.trim() || undefined
+          webLink: webLink.trim() || undefined,
+          hasAiLabel,
+          aiSource: aiDetected ? 'detected' : 'creator'
         }
       });
       } else {
@@ -1883,6 +1885,16 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                     className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-white focus:outline-none"
                   />
                 </div>
+
+                {creationType === 'reel' && (
+                  <div className="border-t border-neutral-800/80 flex items-center justify-between gap-3 py-3" data-testid="reel-ai-switch">
+                    <span>
+                      <span className="block text-sm text-white">AI info label</span>
+                      <span className="block text-[11px] text-zinc-500">{aiDetected ? 'NOOB found a made-with-AI marker inside your video, so this label is on.' : 'Turn this on if your video is made or changed with AI.'}</span>
+                    </span>
+                    <Switch on={hasAiLabel} onChange={(on) => { if (aiDetected && !on) return; setHasAiLabel(on); }} label="AI info label" />
+                  </div>
+                )}
 
                 {creationType === 'post' && (
                   <div className="border-t border-neutral-800/80">

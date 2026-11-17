@@ -32,7 +32,7 @@ check(!/@[a-z0-9-]+\.[a-z]{2,}/i.test(sec.replace(/https:\/\/[^\s]+/g, '')), 'no
 
 section('3. Automatic checks on GitHub');
 const wf = read('../../.github/workflows/security.yml');
-check(/node scripts\/security-audit-db\.mjs/.test(wf) && /npm audit --omit=dev --audit-level=high/.test(wf) && /gitleaks/.test(wf) && /codeql-action\/analyze/.test(wf), 'the database audit, the package audit, the secret scan and CodeQL run');
+check(/node scripts\/security-audit-db\.mjs/.test(wf) && /node scripts\/audit-packages\.mjs/.test(wf) && /npm', \['audit', '--omit=dev'/.test(read('scripts/audit-packages.mjs')) && /gitleaks/.test(wf) && /codeql-action\/analyze/.test(wf), 'the database audit, the package audit, the secret scan and CodeQL run');
 check(/cron:/.test(wf) && /pull_request:/.test(wf) && /permissions:\s*\n\s+contents: read/.test(wf), 'on every push and pull request and every week, with read-only rights');
 check(/package-ecosystem: "npm"/.test(read('../../.github/dependabot.yml')), 'Dependabot watches the packages');
 

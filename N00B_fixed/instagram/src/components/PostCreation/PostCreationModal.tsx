@@ -55,6 +55,7 @@ import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { MusicPicker, MusicSelection } from '../Common/MusicPicker';
+import { detectAiMedia } from '../../utils/aiDetect';
 
 type PostSticker = NonNullable<PostSlide['stickers']>[number];
 type PostTaggedPerson = NonNullable<PostSlide['taggedUsers']>[number];
@@ -175,6 +176,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const [hideLikes, setHideLikes] = useState(false);
   const [disableComments, setDisableComments] = useState(false);
   const [hasAiLabel, setHasAiLabel] = useState(false);
+  // NOOB found a made-with-AI marker inside a picked file (utils/aiDetect.ts): the label is then on, and stays on
+  const [aiDetected, setAiDetected] = useState(false);
   const [scheduledFor, setScheduledFor] = useState('');
 
   // Uploading state & UI feedback
@@ -404,6 +407,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
   const uploadPicked = async (files: File[], forceType?: 'image' | 'video' | 'postvideo') => {
     if (files.length === 0) return;
+    // look for a made-with-AI marker in the ORIGINAL files (the upload makes them smaller and drops their tags); it only ever adds the label
+    void Promise.all(files.slice(0, 10).map((f) => detectAiMedia(f))).then((found) => { if (found.some(Boolean)) { setAiDetected(true); setHasAiLabel(true); } });
 
     // A VIDEO FOR A POST (not a reel): on the Post tab a video becomes the post itself, up to 3 minutes, and it plays by itself, with sound, as people scroll Home.
     // A post is either pictures or one video.
@@ -757,6 +762,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               ]
             : undefined,
           hasAiLabel,
+          aiSource: aiDetected ? 'detected' : 'creator',
           isLikeCountHidden: hideLikes,
           isCommentsDisabled: disableComments,
           scheduledFor: scheduledFor || undefined
@@ -1902,10 +1908,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                         </div>
                         <div className="flex items-center justify-between gap-3 py-2.5">
                           <span>
-                            <span className="block text-sm text-white">Label as AI generated</span>
-                            <span className="block text-[11px] text-zinc-500">Shows an "AI Enhanced" label on the picture.</span>
+                            <span className="block text-sm text-white">AI info label</span>
+                            <span className="block text-[11px] text-zinc-500" data-testid="create-ai-note">{aiDetected ? 'NOOB found a made-with-AI marker inside your file, so this label is on.' : 'Turn this on if your picture or video was made or changed with AI. People see "AI info" on your post.'}</span>
                           </span>
-                          <Switch on={hasAiLabel} onChange={setHasAiLabel} label="Label as AI generated" />
+                          <Switch on={hasAiLabel} onChange={(on) => { if (aiDetected && !on) return; setHasAiLabel(on); }} label="AI info label" />
                         </div>
                         <div className="py-2.5">
                           <label className="text-sm text-white flex items-center gap-2 mb-1.5"><Link2 className="w-4 h-4 text-zinc-300" /> Link</label>

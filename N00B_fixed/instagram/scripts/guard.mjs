@@ -29,6 +29,7 @@ const CHECKS = [
   ['Home mix (anonymous thoughts and polls between the posts, Feed button in the top bar)', ['node', 'scripts/supabase/test-home-mix.mjs']],
   ['Video posts (3 minutes, auto-play with sound as you scroll, Photos / Video choice, scroll hints)', ['node', 'scripts/supabase/test-video-posts.mjs']],
   ['Likes, comments and share on anonymous thoughts and polls', ['node', 'scripts/supabase/test-mix-social.mjs']],
+  ['AI info label on posts (detector, creator switch, label, database rules)', ['node', '--liftoff-only', 'scripts/supabase/test-ai-label.mjs']],
   ['Admin account type + no full-screen button on posts', ['node', 'scripts/supabase/test-account-type-and-no-fullscreen.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],
   ['Light / dark theme', ['node', 'scripts/supabase/test-mono-theme.mjs']],

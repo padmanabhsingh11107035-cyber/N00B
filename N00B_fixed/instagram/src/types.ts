@@ -458,6 +458,8 @@ export interface Post {
   collabUserDisplayName?: string;
   taggedUsers?: { userId?: string; username: string; displayName?: string; avatar?: string }[];
   hasAiLabel?: boolean;
+  /** why the AI label is on: the person said so ('creator') or NOOB found a made-with-AI marker in the file ('detected') */
+  aiSource?: 'creator' | 'detected';
   hashtags: string[];
   // Was a plain string, never actually populated by the DB (posts.audio_track is jsonb and always
   // this richer shape) — fixed to match, since nothing read the stale string type.

@@ -48,6 +48,7 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { lookStyle, lookRatio, lookAlt } from '../../utils/slideLook';
+import { fetchPostAiInfo } from '../../services/api';
 import { reportSongVisibility, forgetSong, holdSongs, toggleFeedSound, subscribeFeedSong, getFeedSongView } from '../../utils/songSound';
 
 interface ToggleFollowResult {
@@ -98,6 +99,15 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  // the "AI info" label: tapping it says why (the person said so, or NOOB found a marker in the file); asked only then
+  const [aiInfoOpen, setAiInfoOpen] = useState(false);
+  const [aiSource, setAiSource] = useState<'creator' | 'detected' | null>(post.aiSource ?? null);
+  useEffect(() => {
+    if (!aiInfoOpen || aiSource || !post.hasAiLabel) return;
+    let alive = true;
+    void fetchPostAiInfo(post.id).then((src) => { if (alive && src) setAiSource(src); });
+    return () => { alive = false; };
+  }, [aiInfoOpen]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [likeBurstKey, setLikeBurstKey] = useState(0);
   const reactionEmoji = reactionEmojiForCategory(post.category);
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
@@ -906,8 +916,16 @@ export const PostCard: React.FC<PostCardProps> = ({
 
           {/* AI Creator Label */}
           {post.hasAiLabel && (
-            <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md border border-purple-500/40 rounded-full px-2.5 py-0.5 text-[10px] text-purple-300 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-purple-400" /> AI Enhanced
+            <div className="absolute top-3 left-3 z-[5]" data-testid="post-ai-info">
+              <button type="button" onClick={(e) => { e.stopPropagation(); setAiInfoOpen((v) => !v); }} aria-expanded={aiInfoOpen} className="bg-black/70 backdrop-blur-md border border-purple-500/40 rounded-full px-2.5 py-1 text-[11px] font-semibold text-purple-200 flex items-center gap-1 cursor-pointer">
+                <Sparkles className="w-3 h-3 text-purple-300" aria-hidden="true" /> AI info
+              </button>
+              {aiInfoOpen && (
+                <div role="status" onClick={(e) => e.stopPropagation()} className="mt-1.5 max-w-[240px] rounded-2xl bg-black/85 backdrop-blur-md border border-white/15 px-3 py-2 text-[12px] leading-snug text-zinc-100 shadow-xl" data-testid="post-ai-info-note">
+                  <strong className="block text-white mb-0.5">Made with AI</strong>
+                  {aiSource === 'detected' ? 'NOOB found a marker inside this file that says it was made or changed with AI.' : aiSource === 'creator' ? 'The person who shared this says it was made or changed with AI.' : 'This post is labelled as made or changed with AI.'}
+                </div>
+              )}
             </div>
           )}
         </div>

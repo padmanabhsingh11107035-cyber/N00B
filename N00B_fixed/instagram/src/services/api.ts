@@ -537,6 +537,7 @@ export {
   fetchPollReports,
   dismissPollReports,
   MIX_COMMENT_MAX,
+  fetchPostAiInfo,
   fetchMixStats,
   setMixLike,
   fetchMixComments,

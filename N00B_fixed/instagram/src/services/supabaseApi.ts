@@ -1425,10 +1425,19 @@ export async function createPost(postData: Partial<Post>): Promise<Post> {
       p_audio: storedAudioTrack(postData.audioTrack),
       p_web_link: postData.webLink || null
     });
+    // the "AI info" label (migration 20261117000002): create_post does not take it, so it is switched on right after, for this person's own post; a failure never loses the post
+    if (postData.hasAiLabel && post?.id) {
+      try { await rpc('post_ai_label_set', { p_post: post.id, p_source: postData.aiSource === 'detected' ? 'detected' : 'creator' }); post.hasAiLabel = true; } catch { /* the post is published; the label can be added again later */ }
+    }
     return mapPost(post);
   } catch (err) {
     throw new Error(errorText(err, 'Failed to publish post.'));
   }
+}
+
+/** Why a post carries the AI label (asked when someone taps the label): the person said so, or NOOB found a marker in the file. */
+export async function fetchPostAiInfo(postId: string): Promise<'creator' | 'detected' | null> {
+  try { const r = await rpc<{ source?: string } | null>('post_ai_info', { p_post: postId }); return r?.source === 'detected' ? 'detected' : r ? 'creator' : null; } catch { return null; }
 }
 
 export async function toggleLikePost(postId: string): Promise<{ isLiked: boolean; likesCount: number }> {

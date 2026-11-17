@@ -77,8 +77,8 @@ export const ProfilePostViewer: React.FC<Props> = ({ title, posts: snapshot, liv
   }, [startId]);
 
   return (
-    <div className="edge-own fixed inset-0 z-[80] bg-black flex flex-col" data-testid="profile-post-viewer">
-      <div className="shrink-0 flex items-center gap-3 px-3 pb-3 border-b border-zinc-900 bg-black" style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)) + 12px)' }} data-testid="profile-post-viewer-bar">
+    <div className="edge-own fixed inset-0 z-[80] bg-black flex flex-col" data-noob-keep="1" data-testid="profile-post-viewer">
+      <div className="shrink-0 flex items-center gap-3 px-3 pb-2 border-b border-zinc-900 bg-black" style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)) + 2px)' }} data-testid="profile-post-viewer-bar">
         <button onClick={onClose} aria-label="Back" className="p-2 -ml-1 rounded-full hover:bg-zinc-900 text-white cursor-pointer"><ArrowLeft className="w-5 h-5" /></button>
         <h2 className="text-sm font-bold text-white truncate">{title}</h2>
       </div>

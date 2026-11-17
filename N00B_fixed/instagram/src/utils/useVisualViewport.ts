@@ -146,7 +146,49 @@ const readCommentsBox = (rows: number): SheetBox => {
   };
 };
 
+// While a comments sheet is open the page behind it is LOCKED, like YouTube's: scrolling or swiping anywhere outside the comment list does nothing (the post, the reel and the page stay where they
+// are), the list scrolls on its own without pulling the page along, and if the phone's keyboard pushes the page up, it is put back at once. Two sheets at a time are counted.
+let commentsLocks = 0;
+const stopPageTouch = (e: TouchEvent) => {
+  const t = e.target;
+  if (t instanceof Element) {
+    const sheet = t.closest('.cmt-sheet');
+    if (sheet) {
+      // inside the sheet only its own scrolling list (or the text box) may move
+      for (let el: Element | null = t; el && el !== sheet; el = el.parentElement) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return;
+        if (el instanceof HTMLTextAreaElement) return;
+      }
+    }
+  }
+  if (e.cancelable) e.preventDefault();
+};
+function useCommentsLock(): void {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (commentsLocks++ === 0) {
+      document.documentElement.classList.add('cmt-lock');
+      document.addEventListener('touchmove', stopPageTouch, { passive: false });
+    }
+    const home = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); };
+    const vv = window.visualViewport;
+    vv?.addEventListener('scroll', home);
+    window.addEventListener('scroll', home);
+    return () => {
+      vv?.removeEventListener('scroll', home);
+      window.removeEventListener('scroll', home);
+      if (--commentsLocks <= 0) {
+        commentsLocks = 0;
+        document.documentElement.classList.remove('cmt-lock');
+        document.removeEventListener('touchmove', stopPageTouch);
+      }
+    };
+  }, []);
+}
+
 export function useCommentsBox(rows: number): SheetBox {
+  useCommentsLock();
   const [box, setBox] = useState<SheetBox>(() => readCommentsBox(rows));
   useEffect(() => {
     const on = () => setBox((prev) => { const next = readCommentsBox(rows); return prev.keyboard === next.keyboard && JSON.stringify(prev.style) === JSON.stringify(next.style) ? prev : next; });

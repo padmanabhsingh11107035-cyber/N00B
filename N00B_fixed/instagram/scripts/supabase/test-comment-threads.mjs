@@ -100,5 +100,9 @@ check([pcs, vcs, rv, read('src/components/Feed/HomeMix.tsx')].every((src) => /cm
 const idx = read('src/index.css');
 check(/html\.sd-open \.rp-backdrop, html\.sd-open \.rp-backdrop \* \{ visibility: visible; \}/.test(idx), 'the Report a problem sheet is shown above the Customer Support page (that page hides everything else with visibility)');
 
+check(/useCommentsLock\(\);/.test(vv) && /addEventListener\('touchmove', stopPageTouch, \{ passive: false \}\)/.test(vv) && /classList\.add\('cmt-lock'\)/.test(vv), 'while a comments sheet is open the page behind is locked (every sheet uses useCommentsBox): touches outside the comment list do nothing, like YouTube');
+check(/html\.cmt-lock, html\.cmt-lock body \{ overflow: hidden !important/.test(css) && /\.cmt-sheet textarea, html body \.cmt-sheet input \{ font-size: 16px/.test(css), 'the page does not scroll behind the sheet, and the text box is 16 px so the iPhone does not zoom the page when it is tapped');
+const pv2 = read('src/components/Profile/ProfilePostViewer.tsx');
+check(/data-noob-keep="1"/.test(pv2) && /\+ 2px\)/.test(pv2), 'the profile post viewer is left alone by the automatic gap rules (a photo post got the clock gap twice), its Back bar sits just under the clock');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -74,7 +74,8 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
   html body .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) { background-color: #16161b !important; background-image: none !important; }
   :root[data-theme="light"] .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)), html body.light .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) { background-color: #ffffff !important; }
   html body .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) .cmt-backdrop { display: none !important; }
-  html body .cmt-sheet textarea { font-size: 14px; line-height: 1.35; }
+  html body .cmt-sheet textarea, html body .cmt-sheet input { font-size: 16px; line-height: 1.35; }   /* 16 px: the iPhone zooms the whole page into a smaller text box when it is tapped */
+  html body .cmt-sheet .overflow-y-auto { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   /* the send button: a round gradient */
   html body .cmt-sheet form button[type="submit"] { background: linear-gradient(135deg, #7c5cff, #ff4d8d 60%, #ffae42) !important; color: #fff !important; border-radius: 9999px !important; width: 40px; height: 40px; padding: 0 !important; display: grid; place-items: center; flex-shrink: 0; }
   html body .cmt-sheet form button[type="submit"]:disabled { opacity: .4; }
@@ -90,3 +91,6 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
     html body .cmt-sheet > * { padding-left: max(16px, calc((100% - 860px) / 2)) !important; padding-right: max(16px, calc((100% - 860px) / 2)) !important; }
   }
 }
+
+/* a comments sheet is open: the page behind it does not scroll (YouTube-like); the list inside the sheet still does */
+html.cmt-lock, html.cmt-lock body { overflow: hidden !important; overscroll-behavior: none; }

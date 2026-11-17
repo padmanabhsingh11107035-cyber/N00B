@@ -70,6 +70,10 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
   html body .cmt-sheet .overflow-y-auto { min-height: 96px; flex: 1 1 0%; }
   html body .cmt-sheet .text-gray-500, html body .cmt-sheet .text-gray-400, html body .cmt-sheet .text-neutral-500 { color: var(--cmt-mute) !important; }
   html body .cmt-sheet .overflow-y-auto, html body .cmt-sheet .overflow-y-auto p { color: var(--cmt-text); }
+  /* While somebody types (the keyboard is up), the whole screen behind the sheet, also the part under the keyboard's glass and its bar, is the sheet's own colour: the post, reel or video never shows through */
+  html body .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) { background-color: #16161b !important; background-image: none !important; }
+  :root[data-theme="light"] .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)), html body.light .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) { background-color: #ffffff !important; }
+  html body .cmt-wrap:has(.cmt-sheet :is(form:focus-within, textarea:focus, input:focus)) .cmt-backdrop { display: none !important; }
   html body .cmt-sheet textarea { font-size: 14px; line-height: 1.35; }
   /* the send button: a round gradient */
   html body .cmt-sheet form button[type="submit"] { background: linear-gradient(135deg, #7c5cff, #ff4d8d 60%, #ffae42) !important; color: #fff !important; border-radius: 9999px !important; width: 40px; height: 40px; padding: 0 !important; display: grid; place-items: center; flex-shrink: 0; }

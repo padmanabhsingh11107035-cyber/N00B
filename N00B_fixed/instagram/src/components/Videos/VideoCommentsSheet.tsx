@@ -223,7 +223,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
   };
 
   return (
-    <div id="video-comments-sheet-modal" className="fixed inset-0 z-50">
+    <div id="video-comments-sheet-modal" className="cmt-wrap fixed inset-0 z-50" data-noob-sheet="1">
       <div ref={drag.backdropRef} className="cmt-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
       <div
         ref={drag.sheetRef}

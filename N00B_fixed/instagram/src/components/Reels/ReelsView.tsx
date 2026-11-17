@@ -1435,7 +1435,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && createPortal(
-        <div className="fixed inset-0 z-[60]" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
+        <div className="cmt-wrap fixed inset-0 z-[60]" data-noob-sheet="1" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
         <div ref={commentsDrag.backdropRef} className="cmt-backdrop absolute inset-0 bg-black/45" onClick={commentsDrag.closeAnimated} aria-hidden="true" />
         <div
           ref={commentsDrag.sheetRef}

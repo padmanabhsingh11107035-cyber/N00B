@@ -276,7 +276,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   };
 
   return (
-    <div id="comments-sheet-modal" className="fixed inset-0 z-50">
+    <div id="comments-sheet-modal" className="cmt-wrap fixed inset-0 z-50" data-noob-sheet="1">
       <div ref={drag.backdropRef} className="cmt-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
       <div
         ref={drag.sheetRef}

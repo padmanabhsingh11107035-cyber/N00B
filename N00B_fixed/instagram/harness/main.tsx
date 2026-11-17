@@ -193,6 +193,11 @@ async function boot() {
     await import('../src/components/Common/nzPage.css');   // loaded in the real app: it also styles .cs-sheet (the Create sheet), which once leaked onto the comment sheets
     const { CommentsSheet } = await import('../src/components/Feed/CommentsSheet.tsx');
     Page = () => h('div', { style: { minHeight: '100dvh', background: '#222' } }, h(CommentsSheet, { post: { id: 'post-1', userId: 'someone', username: 'someone', caption: 'x', slides: [] } as any, currentUser, onClose: () => console.info('[harness] closed') }));
+  } else if (page === 'support') {
+    // the Customer Support page with the Report a problem sheet host, as in main.tsx
+    const { CustomerSupportModal } = await import('../src/components/Support/CustomerSupportModal.tsx');
+    const { ReportProblemHost } = await import('../src/components/Common/ReportProblemSheet.tsx');
+    Page = () => h(React.Fragment, null, h(CustomerSupportModal as any, { currentUser, onClose: () => console.info('[harness] closed') }), h(ReportProblemHost));
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

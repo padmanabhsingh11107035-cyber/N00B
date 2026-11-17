@@ -238,7 +238,7 @@ const MixComments: React.FC<{ kind: MixKind; id: string; title: string; canManag
     catch (e) { setError(friendly(e, 'Could not remove the comment.')); }
   };
   return (
-    <div className="hm-scrim" data-noob-keep="1" role="dialog" aria-modal="true" aria-label={`Comments on ${title}`} onClick={onClose}>
+    <div className="hm-scrim cmt-wrap" data-noob-keep="1" role="dialog" aria-modal="true" aria-label={`Comments on ${title}`} onClick={onClose}>
       <div className="hm-sheet hm-cm cmt-sheet" style={box.style} data-testid="home-mix-comments" onClick={(e) => e.stopPropagation()}>
         <div className="hm-sheet-head">
           <h2><MessageCircle className="w-5 h-5" aria-hidden="true" />Comments</h2>

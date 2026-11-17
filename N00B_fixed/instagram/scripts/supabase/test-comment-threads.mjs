@@ -95,5 +95,10 @@ check(/@media \(min-width: 640px\) \{\s*html body \.cmt-sheet \{ max-width: none
 check(/border-radius: 9999px !important/.test(soft) && /linear-gradient\(135deg, #7c5cff/.test(soft), 'a pill text box and a round gradient send button, like the anonymous comments');
 check([pcs, vcs].every((src) => /<SheetGrip drag=\{drag\} alwaysBar>/.test(src)) && /commentsDrag\} className="-mx-4 px-4" alwaysBar/.test(rv), 'the grab bar shows on every screen size');
 
+check(/\.cmt-wrap:has\(\.cmt-sheet :is\(form:focus-within, textarea:focus, input:focus\)\) \{ background-color: #16161b !important/.test(soft) && /body\.light \.cmt-wrap:has[^{]*\{ background-color: #ffffff !important/.test(soft), 'while somebody types, the whole screen behind the sheet (also under the keyboard) is the sheet colour, dark and light');
+check([pcs, vcs, rv, read('src/components/Feed/HomeMix.tsx')].every((src) => /cmt-wrap/.test(src)) && [pcs, vcs, rv].every((src) => /cmt-wrap fixed inset-0[^>]*data-noob-sheet="1"/.test(src)), 'every comment sheet frame is a cmt-wrap (the three full-screen ones are sheets, so the clock gap rule does not move them)');
+const idx = read('src/index.css');
+check(/html\.sd-open \.rp-backdrop, html\.sd-open \.rp-backdrop \* \{ visibility: visible; \}/.test(idx), 'the Report a problem sheet is shown above the Customer Support page (that page hides everything else with visibility)');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

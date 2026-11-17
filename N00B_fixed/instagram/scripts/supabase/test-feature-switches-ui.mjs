@@ -40,7 +40,7 @@ check(F.disabledFeatureSet(['reels', 7, null, 'chat']).size === 2 && F.disabledF
 check(Object.entries(F.TAB_FEATURE).every(([tab, key]) => keys.includes(key)) && F.TAB_FEATURE.post === 'create', 'every tab of the bar is tied to a page (the + button is "create")');
 
 section('2. The app: who sees what');
-check(/const adminSeesAll = isMainAdmin\(currentUser\);/.test(app) && /adminSeesAll \? new Set<string>\(\) : disabledFeatureSet\(/.test(app), 'the administrator always gets an empty list, so sees every page');
+check(!/adminSeesAll/.test(app) && /useMemo<ReadonlySet<string>>\(\(\) => disabledFeatureSet\(offList/.test(app), 'a page that is switched off is off for everybody, the administrator too (laptop and phones agree)');
 check(/<FeatureFlagsContext\.Provider value=\{featuresOff\}>/.test(app) && /<\/FeatureFlagsContext\.Provider>/.test(app), 'the whole app is told which pages are off');
 check(/platformSettings\?\.disabledFeatures\?\.join\(','\)/.test(app) && /fetchPublicPlatformSettings\(\)\.then/.test(app) && /Date\.now\(\) - last > 120_000/.test(app), 'the list comes with the settings that are read when the app opens and again when it comes back to the front');
 check(/const key = TAB_FEATURE\[activeTab\];\s*if \(key && featuresOff\.has\(key\)\) setActiveTab\('feed'\);/.test(app), 'anyone who is on a page when it goes off is taken Home');

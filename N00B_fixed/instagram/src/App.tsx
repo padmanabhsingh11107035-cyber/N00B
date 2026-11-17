@@ -368,11 +368,12 @@ export default function App() {
   useEffect(() => {
     if (musicHidden && activeTab === 'music') setActiveTab('feed');
   }, [musicHidden, activeTab]);
-  // The pages the administrator has switched OFF for users (Admin Control Panel -> Pages). The administrator always sees everything; for everyone else a page that is off leaves the
+  // The pages the administrator has switched OFF for users (Admin Control Panel -> Pages). A page that is off leaves the
   // bottom bar, the side menu, the menu on Home and every button that opens it, and anyone who is on it when it goes off is taken Home.
-  const adminSeesAll = isMainAdmin(currentUser);
+  // 2026-11-17: the administrator is NOT exempt any more. A page that is off is off on every screen for everybody, so the laptop (where the administrator is signed in) and the phones agree.
+  // To look at a page that is off, switch it on again in the Pages tab for a moment.
   const offList = platformSettings?.disabledFeatures?.join(',') ?? '';
-  const featuresOff = useMemo<ReadonlySet<string>>(() => (adminSeesAll ? new Set<string>() : disabledFeatureSet(offList ? offList.split(',') : [])), [adminSeesAll, offList]);
+  const featuresOff = useMemo<ReadonlySet<string>>(() => disabledFeatureSet(offList ? offList.split(',') : []), [offList]);
   const featOn = (key: string) => !featuresOff.has(key);
   useEffect(() => { setCalcLocked(!!platformSettings?.disabledFeatures?.includes('calc')); }, [offList]);   // the calculator lock (it also applies to the administrator)
   useEffect(() => {

@@ -80,7 +80,7 @@ export const AdminFeaturesPanel: React.FC = () => {
             <h3 className="text-sm font-black text-white">Pages on / off</h3>
             <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">
               One tap switches a page off for every user: it leaves the bottom bar, the side menu, the menu on Home and the buttons that open it. Nothing is deleted, and tapping again brings it back.
-              You (the administrator) always see every page, so look with a normal account to check. Users see the change when they open the app or come back to it (within a couple of minutes).
+              A page that is off is off for everybody, you too, on every screen (phones, laptops and computers). To look at a page again, switch it on here for a moment. Everyone sees the change when they open the app or come back to it (within a couple of minutes).
             </p>
           </div>
           <button type="button" onClick={() => void load()} disabled={loading} className="shrink-0 p-2 rounded-xl bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer disabled:opacity-50" aria-label="Refresh" title="Refresh">

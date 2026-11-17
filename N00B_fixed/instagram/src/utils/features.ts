@@ -1,5 +1,5 @@
 // Every page of the app that the administrator can switch off for users (Admin Control Panel -> "Pages"). A page that is switched off disappears from the bottom bar, the side menu,
-// the menu on Home and the buttons that open it; the administrator still sees everything. Nothing is deleted: switching the page on again brings it back.
+// the menu on Home and the buttons that open it; this holds for everybody, the administrator too (since 2026-11-17). Nothing is deleted: switching the page on again brings it back.
 //
 // The key of a page is a short word that is stored in the database (platform_settings.disabled_features), so a key is never renamed once it is in use.
 export interface FeatureDef {

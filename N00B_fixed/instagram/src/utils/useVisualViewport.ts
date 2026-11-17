@@ -52,7 +52,7 @@ const readBox = (fraction: number): SheetBox => {
     keyboard: kb,
     style: { position: 'fixed', left: 0, right: 0, bottom: 'auto', top: top + visible - height, height: height + kb, paddingBottom: kb || 'env(safe-area-inset-bottom)',
       // the sheet's own colour carries on below it (a solid shadow): whatever is under the keyboard's see-through glass or its bar (the "^ v done" row) is the sheet, never the post or reel behind
-      boxShadow: '0 140px 0 140px #09090b' },
+      boxShadow: '0 900px 0 900px #09090b' },
   };
 };
 
@@ -141,7 +141,7 @@ const readCommentsBox = (rows: number): SheetBox => {
       position: 'fixed', left: 0, right: 0, bottom: 'auto', top: top + visible - height, height: height + kb, paddingBottom: kb || 'env(safe-area-inset-bottom)',
       transition: `top .32s ${EASE}, height .32s ${EASE}`,
       // under the keyboard's see-through glass (a phone only) the sheet's own colour carries on
-      boxShadow: wide ? '0 -18px 50px rgba(0, 0, 0, .45)' : '0 140px 0 140px #09090b',
+      boxShadow: wide ? '0 -18px 50px rgba(0, 0, 0, .45), 0 900px 0 900px var(--cmt-bg, #16161b)' : '0 900px 0 900px var(--cmt-bg, #16161b)',
     },
   };
 };

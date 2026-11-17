@@ -27,6 +27,7 @@ import {
   Trash2,
   Pencil,
   MoreVertical,
+  Flag,
   Link2,
   Pin,
   MessageSquareOff,
@@ -38,6 +39,7 @@ import {
   VolumeX
 } from 'lucide-react';
 import { Reel, User } from '../../types';
+import { openContentReport } from '../Common/ContentReportSheet';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
@@ -1139,6 +1141,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                         className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                       >
                         <Music className="w-4 h-4 text-violet-400" /> Use this sound
+                      </button>
+                    )}
+                    {!isReelOwner && currentReel && (
+                      <button
+                        onClick={() => { setShowReelOptionsMenu(false); openContentReport({ type: 'reel', id: currentReel.id }); }}
+                        className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                        data-testid="reel-report"
+                      >
+                        <Flag className="w-4 h-4" /> Report
                       </button>
                     )}
                     {(isReelOwner || isMasterAdmin) && (

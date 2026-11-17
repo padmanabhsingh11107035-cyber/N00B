@@ -198,6 +198,9 @@ async function boot() {
     const { CustomerSupportModal } = await import('../src/components/Support/CustomerSupportModal.tsx');
     const { ReportProblemHost } = await import('../src/components/Common/ReportProblemSheet.tsx');
     Page = () => h(React.Fragment, null, h(CustomerSupportModal as any, { currentUser, onClose: () => console.info('[harness] closed') }), h(ReportProblemHost));
+  } else if (page === 'contentreport') {
+    const { ContentReportHost, openContentReport } = await import('../src/components/Common/ContentReportSheet.tsx');
+    Page = () => { React.useEffect(() => { openContentReport({ type: 'reel', id: '00000000-0000-0000-0000-000000000001' }); }, []); return h(ContentReportHost); };
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

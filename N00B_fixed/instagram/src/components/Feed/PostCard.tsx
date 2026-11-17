@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { RepostButton } from '../Common/RepostButton';
+import { openContentReport } from '../Common/ContentReportSheet';
 import { linkify } from '../Common/Linkified';
 import { flushSync } from 'react-dom';
 import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
@@ -13,6 +14,7 @@ import {
   Send,
   Bookmark,
   MoreHorizontal,
+  Flag,
   MapPin,
   Sparkles,
   ExternalLink,
@@ -673,6 +675,15 @@ export const PostCard: React.FC<PostCardProps> = ({
               >
                 <Heart className="w-4 h-4 text-red-400" /> Likes{isOwner ? ' & Views' : ''}
               </button>
+              {!isOwner && (
+                <button
+                  onClick={() => { setShowOptionsMenu(false); openContentReport({ type: 'post', id: post.id }); }}
+                  className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                  data-testid="post-report"
+                >
+                  <Flag className="w-4 h-4" /> Report
+                </button>
+              )}
               {isOwner && (
                 <>
                   <button

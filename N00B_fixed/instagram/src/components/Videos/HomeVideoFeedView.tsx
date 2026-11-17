@@ -2,7 +2,8 @@ import { applyLikes, useLikeLedgerVersion } from '../../utils/likeLedger';
 import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdBanner } from '../Ads/AdBanner';
-import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon } from 'lucide-react';
+import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon, Flag } from 'lucide-react';
+import { openContentReport } from '../Common/ContentReportSheet';
 import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { siteOrigin } from '../../utils/siteUrl';
@@ -583,6 +584,17 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 <ListPlus className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
                 <span className="text-xs font-bold text-white">Add to playlist</span>
               </button>
+
+              {!isOwner(actionVideo) && (
+                <button
+                  onClick={() => { setShowOptionsMenu(false); openContentReport({ type: 'video', id: actionVideo.id }); }}
+                  className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+                  data-testid="video-report"
+                >
+                  <Flag className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                  <span className="text-xs font-bold text-red-400">Report</span>
+                </button>
+              )}
 
               {isMainAdmin(currentUser) && (
                 <button

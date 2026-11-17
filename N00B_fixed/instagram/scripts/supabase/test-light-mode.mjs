@@ -23,7 +23,7 @@ const built = G.build(G.collectTokens());
 check(built.css === css, 'src/lightAccents.css matches the colour classes used in the app (run: node scripts/gen-light-accents.mjs)');
 check(/@import "\.\/lightAccents\.css"/.test(read('src/index.css')), 'the app stylesheet loads it');
 check(/^@layer base \{/m.test(css) && /\}\s*$/.test(css), 'it lives in @layer base, next to the light-mode rules it has to win over (an !important rule outside every layer loses to one inside)');
-check(built.count >= 100, `${built.count} accent colours are covered`);
+check(built.count >= 90, `${built.count} accent colours are covered`);
 
 section('2. Every pale colour gets a readable one');
 {

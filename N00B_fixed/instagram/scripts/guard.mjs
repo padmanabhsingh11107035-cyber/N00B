@@ -30,6 +30,7 @@ const CHECKS = [
   ['Video posts (3 minutes, auto-play with sound as you scroll, Photos / Video choice, scroll hints)', ['node', 'scripts/supabase/test-video-posts.mjs']],
   ['Likes, comments and share on anonymous thoughts and polls', ['node', 'scripts/supabase/test-mix-social.mjs']],
   ['AI info label on posts (detector, creator switch, label, database rules)', ['node', '--liftoff-only', 'scripts/supabase/test-ai-label.mjs']],
+  ['Report on posts, reels, videos (SQL on real Postgres, menus, admin card)', ['node', '--liftoff-only', 'scripts/supabase/test-content-reports.mjs']],
   ['Comment sheets (threads, 30-50 % bottom sheet, load errors)', ['node', '--liftoff-only', 'scripts/supabase/test-comment-threads.mjs']],
   ['Admin account type + no full-screen button on posts', ['node', 'scripts/supabase/test-account-type-and-no-fullscreen.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],

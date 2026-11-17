@@ -5110,6 +5110,11 @@ export async function fetchAdminAudit(limit = 100): Promise<{ success: boolean; 
   }
 }
 
+/** Someone reports one post / reel / video / story to the NOOB team (it lands in Admin > Safety Reports with who reported, what, and whose it is). */
+export async function reportContent(type: 'post' | 'reel' | 'video' | 'story', id: string, reason: string, details = ''): Promise<{ success: boolean; message?: string; error?: string }> {
+  try { return await rpc('report_content', { p_type: type, p_id: id, p_reason: reason, p_details: details }); } catch (err) { return failWith(err, 'Could not send the report.'); }
+}
+
 export async function fetchAdminReports(): Promise<{ success: boolean; reports: any[]; error?: string }> {
   try {
     const res = await rpc<any>('admin_reports');

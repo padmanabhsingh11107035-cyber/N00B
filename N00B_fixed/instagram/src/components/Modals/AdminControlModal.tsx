@@ -1,3 +1,4 @@
+import { MAIN_SITE } from '../../utils/siteUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import './adminUserDetail.css';
 import { formatNoobPoints } from '../../utils/formatPoints';
@@ -2060,7 +2061,7 @@ They will not be told.`)) return;
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-bold text-white">@{rep.targetUsername}</span>
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
-                                Reported Account
+                                {rep.contentType ? `Reported ${rep.contentType}` : 'Reported Account'}
                               </span>
                             </div>
                             <span className="text-[11px] text-zinc-400 block">
@@ -2088,6 +2089,15 @@ They will not be told.`)) return;
                           {rep.reason}
                         </span>
                       </div>
+
+                      {rep.contentType && rep.contentPath && (
+                        <div className="p-2.5 bg-zinc-950/80 rounded-xl border border-zinc-800/80 text-xs text-zinc-300 leading-relaxed space-y-1" data-testid="report-content-info">
+                          <span className="text-[10px] font-bold text-zinc-500 block uppercase">Reported {rep.contentType}</span>
+                          <a href={`${MAIN_SITE}${rep.contentPath}`} target="_blank" rel="noopener noreferrer" className="text-noob font-bold underline break-all">{MAIN_SITE}{rep.contentPath}</a>
+                          <span className="block">Made by <span className="text-white font-bold">@{rep.targetUsername}</span> <span className="text-zinc-500 break-all">({rep.targetUserId})</span></span>
+                          <span className="block">Reported by <span className="text-white font-bold">@{rep.reporterUsername || 'Anonymous'}</span> <span className="text-zinc-500 break-all">({rep.reporterId})</span></span>
+                        </div>
+                      )}
 
                       {rep.details && (
                         <div className="p-2.5 bg-zinc-950/80 rounded-xl border border-zinc-800/80 text-xs text-zinc-300 leading-relaxed">

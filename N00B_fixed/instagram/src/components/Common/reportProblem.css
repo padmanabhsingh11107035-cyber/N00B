@@ -24,3 +24,11 @@
 .rp-thanks { margin: 8px 0 4px; font-size: 18px; font-weight: 800; color: var(--r-ink); }
 .rp-hint { margin: 0 0 16px; font-size: 13px; color: var(--r-ink-soft); }
 .rp-body > .rp-btn { width: 100%; }
+
+/* "Report" on a post / reel / video: the list of reasons */
+.rp-reasons { display: flex; flex-direction: column; gap: 6px; }
+.rp-reason { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1.5px solid var(--r-line); background: var(--r-soft); color: var(--r-ink); border-radius: 12px; padding: 11px 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.rp-reason.is-on { border-color: var(--r-green); }
+.rp-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--r-ink-soft); flex-shrink: 0; box-sizing: border-box; }
+.rp-reason.is-on .rp-dot { border-color: var(--r-green); background: radial-gradient(circle, var(--r-green) 0 45%, transparent 50%); }
+.rp-body { max-height: 78vh; overflow-y: auto; }

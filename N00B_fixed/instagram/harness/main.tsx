@@ -190,6 +190,7 @@ async function boot() {
   } else if (page === 'comments') {
     // the comments sheet of a post, as on every screen: ?n=<how many comments>
     await import('../src/components/Feed/home.css');
+    await import('../src/components/Common/nzPage.css');   // loaded in the real app: it also styles .cs-sheet (the Create sheet), which once leaked onto the comment sheets
     const { CommentsSheet } = await import('../src/components/Feed/CommentsSheet.tsx');
     Page = () => h('div', { style: { minHeight: '100dvh', background: '#222' } }, h(CommentsSheet, { post: { id: 'post-1', userId: 'someone', username: 'someone', caption: 'x', slides: [] } as any, currentUser, onClose: () => console.info('[harness] closed') }));
   } else if (page === 'homemix') {

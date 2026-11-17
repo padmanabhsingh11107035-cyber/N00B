@@ -1436,14 +1436,14 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && createPortal(
         <div className="fixed inset-0 z-[60]" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
-        <div ref={commentsDrag.backdropRef} className="cs-backdrop absolute inset-0 bg-black/45" onClick={commentsDrag.closeAnimated} aria-hidden="true" />
+        <div ref={commentsDrag.backdropRef} className="cmt-backdrop absolute inset-0 bg-black/45" onClick={commentsDrag.closeAnimated} aria-hidden="true" />
         <div
           ref={commentsDrag.sheetRef}
           style={commentsBox.style}
           data-testid="comments-sheet"
-          className="cs-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl px-4 pb-4 flex flex-col shadow-2xl overflow-hidden"
+          className="cmt-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl px-4 pb-4 flex flex-col shadow-2xl overflow-hidden"
         >
-          <SheetGrip drag={commentsDrag} className="-mx-4 px-4">
+          <SheetGrip drag={commentsDrag} className="-mx-4 px-4" alwaysBar>
           <div className="flex items-center justify-between pb-2 sm:pt-3 border-b border-neutral-800">
             <h4 className="text-xs font-bold text-white">Reel Comments</h4>
             <button onClick={commentsDrag.closeAnimated} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white cursor-pointer`}>

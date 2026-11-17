@@ -138,7 +138,7 @@ header.hv-top .hv-feed-dot { fill: #ff4d8d; stroke: var(--hv-ring-gap); stroke-w
 .hm-ab.is-liked svg { animation: hm-pop .28s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes hm-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 .hm-cm { display: flex; flex-direction: column; min-height: 0; max-height: none; border-radius: 26px 26px 0 0; }
-.hm-sheet.hm-cm.cs-sheet { animation: cs-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; }
+.hm-sheet.hm-cm.cmt-sheet { animation: cmt-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; }
 .hm-cm-list { flex: 1; min-height: 120px; overflow-y: auto; display: grid; align-content: start; gap: 14px; padding: 2px 0 10px; }
 .hm-c { display: flex; align-items: flex-start; gap: 10px; }
 .hm-c-ava { width: 34px; height: 34px; }

@@ -44,10 +44,42 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
 
 /* ---- the comments sheet (posts, reels, videos): rises from the bottom edge, and the dark layer behind it fades in. Only "backwards" fill: once it has arrived, the drag-to-close
    (inline transform) is free to move it. */
-.cs-sheet { animation: cs-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; will-change: transform; }
-.cs-backdrop { animation: cs-fade .28s ease-out backwards; }
-.cs-row { animation: cs-in .26s ease-out backwards; }
-@keyframes cs-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes cs-fade { from { opacity: 0; } }
-@keyframes cs-in { from { opacity: 0; transform: translateY(6px); } }
-@media (prefers-reduced-motion: reduce) { .cs-sheet, .cs-backdrop, .cs-row { animation: none; } }
+.cmt-sheet { animation: cmt-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; will-change: transform; }
+.cmt-backdrop { animation: cmt-fade .28s ease-out backwards; }
+.cmt-row { animation: cmt-in .26s ease-out backwards; }
+@keyframes cmt-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes cmt-fade { from { opacity: 0; } }
+@keyframes cmt-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .cmt-sheet, .cmt-backdrop, .cmt-row { animation: none; } }
+
+/* ---- the comments sheet, soft and calm (the same family as the anonymous / poll comments): a charcoal sheet (white in Light mode), quiet surfaces, a pill text box and a round
+   gradient send button; no yellow, no stitched edge. On a wide screen it spans the whole width (its content stays in a readable middle column). All inside @layer base, in the same
+   layer as the theme rules, with a more specific selector, so it wins in Dark and Light. The class names start with cmt- on purpose: cs-sheet belongs to the Create sheet. */
+@layer base {
+  html body .cmt-sheet {
+    --cmt-bg: #16161b; --cmt-surface: rgba(255, 255, 255, .07); --cmt-line: rgba(255, 255, 255, .09); --cmt-text: #f4f4f8; --cmt-mute: #9a9ab0;
+    background-color: var(--cmt-bg) !important; background-image: none !important; outline: 0 !important; border: 0 !important; border-top: 1px solid var(--cmt-line) !important;
+    border-radius: 26px 26px 0 0; color: var(--cmt-text);
+  }
+  :root[data-theme="light"] .cmt-sheet, html body.light .cmt-sheet { --cmt-bg: #ffffff; --cmt-surface: rgba(30, 30, 60, .06); --cmt-line: rgba(30, 30, 60, .1); --cmt-text: #15151f; --cmt-mute: #6d6d82; }
+  html body .cmt-sheet [class*="border-neutral-8"], html body .cmt-sheet [class*="border-neutral-7"] { border-color: var(--cmt-line) !important; }
+  html body .cmt-sheet form { background: transparent !important; }
+  /* the text box: a soft pill */
+  html body .cmt-sheet form .bg-black, html body .cmt-sheet input[type="text"] { background-color: var(--cmt-surface) !important; border-color: transparent !important; border-radius: 9999px !important; }
+  html body .cmt-sheet form .bg-black:focus-within, html body .cmt-sheet input[type="text"]:focus { border-color: #ff4d8d !important; }
+  html body .cmt-sheet textarea { font-size: 14px; line-height: 1.35; }
+  /* the send button: a round gradient */
+  html body .cmt-sheet form button[type="submit"] { background: linear-gradient(135deg, #7c5cff, #ff4d8d 60%, #ffae42) !important; color: #fff !important; border-radius: 9999px !important; width: 40px; height: 40px; padding: 0 !important; display: grid; place-items: center; flex-shrink: 0; }
+  html body .cmt-sheet form button[type="submit"]:disabled { opacity: .4; }
+  html body .cmt-sheet .rounded-full.bg-noob { background: linear-gradient(135deg, #7c5cff, #ff4d8d 60%, #ffae42) !important; color: #fff !important; }
+  /* the close button and the soft rows */
+  html body .cmt-sheet [aria-label="Close"] { background-color: var(--cmt-surface) !important; color: var(--cmt-mute) !important; border-radius: 12px; }
+  html body .cmt-sheet [class*="hover:bg-neutral-900"]:hover { background-color: var(--cmt-surface) !important; }
+  /* wide screens (tablet, laptop, computer): the whole width; the content keeps a comfortable middle column */
+  @media (min-width: 640px) {
+    html body .cmt-sheet { max-width: none !important; border-radius: 28px 28px 0 0; }
+  }
+  @media (min-width: 900px) {
+    html body .cmt-sheet > * { padding-left: max(16px, calc((100% - 860px) / 2)) !important; padding-right: max(16px, calc((100% - 860px) / 2)) !important; }
+  }
+}

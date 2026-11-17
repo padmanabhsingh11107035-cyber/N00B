@@ -224,14 +224,14 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
 
   return (
     <div id="video-comments-sheet-modal" className="fixed inset-0 z-50">
-      <div ref={drag.backdropRef} className="cs-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
+      <div ref={drag.backdropRef} className="cmt-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
       <div
         ref={drag.sheetRef}
         style={box.style}
         data-testid="comments-sheet"
-        className="cs-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
+        className="cmt-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
       >
-        <SheetGrip drag={drag}>
+        <SheetGrip drag={drag} alwaysBar>
         <div className="flex items-center justify-between px-4 pb-3 sm:pt-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white tracking-tight">Comments</h3>
@@ -281,7 +281,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
               const replies = repliesOf(c.id);
               const isExpanded = expandedThreads.includes(c.id);
               return (
-                <div key={c.id} className="py-1.5 cs-row" style={{ animationDelay: `${Math.min(rowIndex, 8) * 28}ms` }}>
+                <div key={c.id} className="py-1.5 cmt-row" style={{ animationDelay: `${Math.min(rowIndex, 8) * 28}ms` }}>
                   <CommentRow c={c} />
                   {replies.length > 0 && (
                     <div className="ml-8 mt-1">

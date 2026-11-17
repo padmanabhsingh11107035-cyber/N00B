@@ -71,14 +71,29 @@ check(V.commentsFraction(0, 1400) === 0.3 && V.commentsFraction(3, 1400) >= 0.3 
 check(V.commentsFraction(-5, 800) === 0.3 && V.commentsFraction(NaN, 800) >= 0.3, 'nonsense counts stay in range');
 const vv = read('src/utils/useVisualViewport.ts'), css = read('src/polish.css'), pcs = read('src/components/Feed/CommentsSheet.tsx'), vcs = read('src/components/Videos/VideoCommentsSheet.tsx'), rv = read('src/components/Reels/ReelsView.tsx'), api = read('src/services/supabaseApi.ts');
 check(/const wide = window\.innerWidth >= 640;/.test(vv) && /wide \? '0 -18px 50px/.test(vv) && /transition: `top \.32s/.test(vv), 'on a wide screen it is the same bottom sheet (no keyboard, no dark side bands) and its height eases between sizes');
-check(/\.cs-sheet \{ animation: cs-rise[^}]*backwards/.test(css) && /@keyframes cs-rise \{ from \{ transform: translateY\(100%\)/.test(css) && /prefers-reduced-motion: reduce\) \{ \.cs-sheet/.test(css), 'it rises from the bottom (and stays still for people who ask for less motion); the drag-to-close can still move it');
+check(/\.cmt-sheet \{ animation: cmt-rise[^}]*backwards/.test(css) && /@keyframes cmt-rise \{ from \{ transform: translateY\(100%\)/.test(css) && /prefers-reduced-motion: reduce\) \{ \.cmt-sheet/.test(css), 'it rises from the bottom (and stays still for people who ask for less motion); the drag-to-close can still move it');
 for (const [name, src] of [['posts', pcs], ['videos', vcs], ['reels', rv]]) {
-  check(/useCommentsBox\(/.test(src) && /cs-sheet relative/.test(src) && !/sm:h-\[80vh\]/.test(src.slice(src.indexOf('cs-sheet') - 200, src.indexOf('cs-sheet') + 300)) && /closeAnimated/.test(src) && /data-testid="comments-error"/.test(src) && /data-testid="comments-retry"/.test(src), name + ': the shared sheet (bottom, 30-50 %, slides away when closed) and a "could not be loaded" with Try again');
+  check(/useCommentsBox\(/.test(src) && /cmt-sheet relative/.test(src) && !/sm:h-\[80vh\]/.test(src.slice(src.indexOf('cmt-sheet') - 200, src.indexOf('cmt-sheet') + 300)) && /closeAnimated/.test(src) && /data-testid="comments-error"/.test(src) && /data-testid="comments-retry"/.test(src), name + ': the shared sheet (bottom, 30-50 %, slides away when closed) and a "could not be loaded" with Try again');
 }
 check(/failed: true/.test(api) && /if \(page\.failed\)/.test(pcs) && /if \(page\.failed\) \{ setReelCommentsError\(true\)/.test(rv) && /fetchLongVideoComments\(video\.id, true\)/.test(vcs), 'a list that did not arrive is never shown as "no comments yet"');
 check(/\[showComments, currentReel\?\.id, reelCommentsReload\]/.test(rv), 'the reel comments reload for another reel, not each time the reel object is renewed (a like count)');
 check(/post_comments_threads/.test(api) && /reel_comments_threads/.test(api) && /if \(page\.comments\.length > 0\) shortCache\.set/.test(api) && /withRetry\(load\)/.test(api), 'the app asks for threads, tries twice, and does not remember an empty answer');
 fs.rmSync(out, { force: true });
+
+section('3. The look: calm and soft, the whole width on a wide screen, and no clash with the Create sheet (cs-sheet)');
+const cssFiles = [];
+const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = d + '/' + e.name; if (e.isDirectory()) walk(p); else if (p.endsWith('.css')) cssFiles.push(p); } };
+walk('src');
+const definers = cssFiles.filter((f) => /\.cmt-(sheet|backdrop|row)\b/.test(read(f)));
+check(definers.every((f) => /polish\.css$|home\.css$/.test(f)), 'the cmt- classes are only defined in polish.css (and home.css), nowhere else');
+const usesOld = [pcs, vcs, rv, read('src/components/Feed/HomeMix.tsx')].some((src) => /\bcs-(sheet|backdrop|row)\b/.test(src));
+check(!usesOld, 'the comment sheets do not use cs-sheet / cs-row (those belong to the Create sheet: they once turned the comments yellow, 70 % tall and narrow)');
+check(!/@keyframes cs-(rise|fade)/.test(css), 'polish.css does not redefine the Create sheet\'s animations');
+const soft = css.slice(css.lastIndexOf('/*', css.indexOf('the comments sheet, soft and calm'))).replace(/\/\*[\s\S]*?\*\//g, '');   // the rules only, without the comment above them
+check(/@layer base \{/.test(soft) && /--cmt-bg: #16161b/.test(soft) && /--cmt-bg: #ffffff/.test(soft) && !/#F8CB46|#f6c945|yellow/i.test(soft), 'a charcoal sheet (white in Light mode), set in the theme layer so it wins in both, and no yellow');
+check(/@media \(min-width: 640px\) \{\s*html body \.cmt-sheet \{ max-width: none !important/.test(soft) && /@media \(min-width: 900px\)[\s\S]*calc\(\(100% - 860px\) \/ 2\)/.test(soft), 'on a tablet, laptop or computer the sheet spans the whole width, its content in a readable middle column');
+check(/border-radius: 9999px !important/.test(soft) && /linear-gradient\(135deg, #7c5cff/.test(soft), 'a pill text box and a round gradient send button, like the anonymous comments');
+check([pcs, vcs].every((src) => /<SheetGrip drag=\{drag\} alwaysBar>/.test(src)) && /commentsDrag\} className="-mx-4 px-4" alwaysBar/.test(rv), 'the grab bar shows on every screen size');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

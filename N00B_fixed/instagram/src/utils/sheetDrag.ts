@@ -51,11 +51,11 @@ export function useSheetDrag(onClose: () => void): SheetDrag {
   const place = useCallback((dy: number, animate: boolean) => {
     const el = sheetRef.current;
     if (!el) return;
-    el.style.transition = animate ? 'transform 220ms cubic-bezier(.2,.8,.2,1)' : 'none';
+    el.style.transition = animate ? 'transform 340ms cubic-bezier(.32,.72,0,1)' : 'none';
     el.style.transform = dy ? `translateY(${dy}px)` : '';
     const bd = backdropRef.current;
     if (bd) {
-      bd.style.transition = animate ? 'opacity 220ms ease-out' : 'none';
+      bd.style.transition = animate ? 'opacity 340ms ease-out' : 'none';
       bd.style.opacity = dy > 0 ? String(Math.max(0, 1 - dy / Math.max(1, el.offsetHeight))) : '';
     }
   }, []);
@@ -66,7 +66,7 @@ export function useSheetDrag(onClose: () => void): SheetDrag {
     place(el.offsetHeight + 40, true);
     if (backdropRef.current) backdropRef.current.style.opacity = '0';
     if (timer.current != null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => closeRef.current(), 200);
+    timer.current = window.setTimeout(() => closeRef.current(), 330);
   }, [place]);
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLElement>) => {

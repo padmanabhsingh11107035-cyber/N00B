@@ -110,7 +110,7 @@ export function useKeyboardMetrics(): { keyboard: number; visible: number; page:
 // One sheet for the comments of posts, reels and videos, on a phone, a tablet, a laptop and a computer: it rises from the bottom edge and covers between 30 % and 50 % of the page,
 // depending on how many comments there are (a few comments: a low sheet, the post stays in view; many: up to half the page, then the list scrolls). It follows the keyboard on a phone,
 // and its height eases from one size to the next instead of jumping. On a wide screen it is the same bottom sheet, centred (no keyboard to dodge, no dark side bands).
-export const COMMENTS_MIN = 0.3;
+export const COMMENTS_MIN = 0.5;
 export const COMMENTS_MAX = 0.5;
 const COMMENTS_FIXED_PX = 168;   // the grip + title row and the writing area (icons, text box, send)
 const COMMENTS_ROW_PX = 66;      // one comment
@@ -133,7 +133,7 @@ const readCommentsBox = (rows: number): SheetBox => {
   const kb = wide || keyboard < 80 ? 0 : keyboard;
   const top = kb ? vTop : 0;
   const visible = kb ? vVisible : page;
-  const height = Math.max(220, Math.min(Math.round(page * commentsFraction(rows, page)), visible - 24));
+  const height = Math.max(300, Math.min(Math.round(page * commentsFraction(rows, page)), visible - 24));
   return {
     phone: true,
     keyboard: kb,

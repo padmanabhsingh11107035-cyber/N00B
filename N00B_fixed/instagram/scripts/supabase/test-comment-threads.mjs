@@ -66,9 +66,9 @@ const out = path.resolve('node_modules/.cache-commentsbox.mjs');
 buildSync({ entryPoints: [path.resolve('src/utils/useVisualViewport.ts')], bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'error', external: ['react'] });
 const V = await import(pathToFileURL(out).href);
 const near = (a, b) => Math.abs(a - b) < 0.011;
-check(near(V.commentsFraction(0, 812), 0.3) && near(V.commentsFraction(2, 812), 0.37) && V.commentsFraction(6, 812) === 0.5 && V.commentsFraction(50, 812) === 0.5, 'no comments: 30 %; two: about 37 %; six or more: 50 % (never more) on a 812 px phone');
-check(V.commentsFraction(0, 1400) === 0.3 && V.commentsFraction(3, 1400) >= 0.3 && V.commentsFraction(3, 1400) <= 0.5, 'a tall screen (a tablet, a computer) stays between 30 % and 50 % too');
-check(V.commentsFraction(-5, 800) === 0.3 && V.commentsFraction(NaN, 800) >= 0.3, 'nonsense counts stay in range');
+check([0, 2, 6, 50].every((n) => near(V.commentsFraction(n, 812), 0.5)), 'the sheet covers 50 % of the page, whatever the number of comments')
+check(V.commentsFraction(0, 1400) === 0.5 && V.commentsFraction(3, 1400) === 0.5, 'a tall screen (a tablet, a computer) is 50 % too')
+check(V.commentsFraction(-5, 800) === 0.5 && V.commentsFraction(NaN, 800) === 0.5, 'nonsense counts stay at 50 %')
 const vv = read('src/utils/useVisualViewport.ts'), css = read('src/polish.css'), pcs = read('src/components/Feed/CommentsSheet.tsx'), vcs = read('src/components/Videos/VideoCommentsSheet.tsx'), rv = read('src/components/Reels/ReelsView.tsx'), api = read('src/services/supabaseApi.ts');
 check(/const wide = window\.innerWidth >= 640;/.test(vv) && /wide \? '0 -18px 50px/.test(vv) && /transition: `top \.32s/.test(vv), 'on a wide screen it is the same bottom sheet (no keyboard, no dark side bands) and its height eases between sizes');
 check(/\.cmt-sheet \{ animation: cmt-rise[^}]*backwards/.test(css) && /@keyframes cmt-rise \{ from \{ transform: translateY\(100%\)/.test(css) && /prefers-reduced-motion: reduce\) \{ \.cmt-sheet/.test(css), 'it rises from the bottom (and stays still for people who ask for less motion); the drag-to-close can still move it');

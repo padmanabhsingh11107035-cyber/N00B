@@ -44,7 +44,7 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
 
 /* ---- the comments sheet (posts, reels, videos): rises from the bottom edge, and the dark layer behind it fades in. Only "backwards" fill: once it has arrived, the drag-to-close
    (inline transform) is free to move it. */
-.cmt-sheet { animation: cmt-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; will-change: transform; }
+.cmt-sheet { animation: cmt-rise .45s cubic-bezier(.32, .72, 0, 1) backwards; will-change: transform; }
 .cmt-backdrop { animation: cmt-fade .28s ease-out backwards; }
 .cmt-row { animation: cmt-in .26s ease-out backwards; }
 @keyframes cmt-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -67,6 +67,9 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
   /* the text box: a soft pill */
   html body .cmt-sheet form .bg-black, html body .cmt-sheet input[type="text"] { background-color: var(--cmt-surface) !important; border-color: transparent !important; border-radius: 9999px !important; }
   html body .cmt-sheet form .bg-black:focus-within, html body .cmt-sheet input[type="text"]:focus { border-color: #ff4d8d !important; }
+  html body .cmt-sheet .overflow-y-auto { min-height: 96px; flex: 1 1 0%; }
+  html body .cmt-sheet .text-gray-500, html body .cmt-sheet .text-gray-400, html body .cmt-sheet .text-neutral-500 { color: var(--cmt-mute) !important; }
+  html body .cmt-sheet .overflow-y-auto, html body .cmt-sheet .overflow-y-auto p { color: var(--cmt-text); }
   html body .cmt-sheet textarea { font-size: 14px; line-height: 1.35; }
   /* the send button: a round gradient */
   html body .cmt-sheet form button[type="submit"] { background: linear-gradient(135deg, #7c5cff, #ff4d8d 60%, #ffae42) !important; color: #fff !important; border-radius: 9999px !important; width: 40px; height: 40px; padding: 0 !important; display: grid; place-items: center; flex-shrink: 0; }

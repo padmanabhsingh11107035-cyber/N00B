@@ -161,16 +161,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [reelCommentsReload, setReelCommentsReload] = useState(0);   // bumped by "Try again"
   // the sheet rises from the bottom on every screen and is 30-50 % of the page tall, by the number of comments
   const commentsBox = useCommentsBox(isLoadingComments ? 3 : reelComments.filter((c) => !c.parentId).length, showComments);
-  // YouTube-like: while the comments are open the reel's video shrinks into the space above the sheet (the whole picture, not cropped), the buttons and writing go quiet, and when the sheet closes
-  // everything comes back. The video's height follows the sheet's top edge, with the same easing as the sheet.
-  const [cardTop, setCardTop] = useState(0);
-  useEffect(() => {
-    commentingRef.current = showComments;
-    const v = playerHostRef.current?.querySelector('video');
-    if (v) v.style.objectFit = showComments ? 'contain' : (coverFit ? 'cover' : 'contain');
-    if (showComments) { const el = document.querySelector('[data-testid="reel-card"]'); setCardTop(el ? Math.round(el.getBoundingClientRect().top) : 0); }
-  }, [showComments]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const shrunkVideoHeight = showComments && commentsBox.style ? Math.max(140, Number(commentsBox.style.top) - cardTop) : null;
   const [commentInput, setCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   // Replying to a comment (yours or anyone's) — always resolves to the top-level comment's id, even
@@ -306,7 +296,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Every reel plays through ONE video element that lives for the whole session (see src/utils/reelAudio.ts): the phone gives the permission to
   // make sound to that element, so once it has it, every reel can have sound without asking again.
   const playerHostRef = useRef<HTMLDivElement>(null);
-  const commentingRef = useRef(false);   // the comments sheet is open: the video shrinks into the space above it (YouTube-like)
   const [coverFit, setCoverFit] = useState(true);   // the video's shape fits the page: it fills it edge to edge; otherwise the whole picture is shown
   const hasReels = !!currentReel;
   const soundBlockedRef = useRef(false);
@@ -373,7 +362,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       const h = playerHostRef.current;
       if (!h || !(video.videoWidth > 0) || !(video.videoHeight > 0) || !(h.clientHeight > 0)) return;
       const near = video.videoWidth / video.videoHeight < 1.1;
-      video.style.objectFit = near && !commentingRef.current ? 'cover' : 'contain';   // while the comments are open the whole video shows in the space above them
+      video.style.objectFit = near ? 'cover' : 'contain';
       video.style.objectPosition = 'center';
       setCoverFit(near);
     };
@@ -990,9 +979,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       </span>
     );
     return (
-      <div className={`absolute inset-0 ${isCur ? '' : 'pointer-events-none'}${isCur && showComments ? ' rv-commenting' : ''}`} data-testid={isCur ? 'reel-card' : 'reel-card-peek'}>
+      <div className={`absolute inset-0 ${isCur ? '' : 'pointer-events-none'}`} data-testid={isCur ? 'reel-card' : 'reel-card-peek'}>
         {/* The video fills the whole page (as in YouTube Shorts): edge to edge when its shape fits the page, the whole picture (not cropped) when it does not. Tapping it pauses / plays (twice: likes). */}
-        <div data-reel-tap className="relative w-full h-full overflow-hidden bg-black cursor-pointer" onClick={isCur ? handleTap : undefined} style={isCur ? { height: shrunkVideoHeight != null ? shrunkVideoHeight : undefined, transition: 'height .32s cubic-bezier(.22, 1, .36, 1)' } : undefined}>
+        <div data-reel-tap className="relative w-full h-full overflow-hidden bg-black cursor-pointer" onClick={isCur ? handleTap : undefined}>
           {reel.thumbnailUrl && (
             <img
               src={reel.thumbnailUrl}

@@ -1,6 +1,6 @@
-// "AI info" label on reels and stories (migration 20261118000002) + the video that shrinks above the comments in Reels.
+// "AI info" label on reels and stories (migration 20261118000002).
 //   1. the SQL on a REAL Postgres (PGlite): only the owner labels, 'detected' wins, strangers / blocked people / visitors get nothing, the label goes when the content goes;
-//   2. the screens: reel and story show the label, the creators have the switch, publishing switches it on, Reels shrinks the video above the comments.
+//   2. the screens: reel and story show the label, the creators have the switch, publishing switches it on.
 // Usage: node --liftoff-only scripts/supabase/test-content-ai-label.mjs
 import fs from 'node:fs';
 let passed = 0, failed = 0;
@@ -48,7 +48,7 @@ check(/window\.setTimeout\(flush, 40\)/.test(badge) && /slice\(i, i \+ 100\)|ids
 check(/<ContentAiBadge kind="reel" id=\{reel\.id\}/.test(rv) && /<ContentAiBadge kind="story" id=\{story\.id\}/.test(sv), 'Reels and the story viewer show it');
 check(/detectAiMedia\(file\)/.test(cs) && /data-testid="story-ai-label"/.test(cs) && /hasAiLabel: aiLabel/.test(cs), 'the story creator finds markers in the original picture and has the switch');
 check(/data-testid="reel-ai-switch"/.test(pc) && /hasAiLabel,\s*aiSource: aiDetected \? 'detected' : 'creator'\s*\}/.test(pc), 'the reel creator has the switch and sends the label');
-check(/rv-commenting/.test(rv) && /shrunkVideoHeight/.test(rv) && /near && !commentingRef\.current \? 'cover' : 'contain'/.test(rv) && /\.rv-commenting \.rv-rail/.test(css), 'Reels: while the comments are open the video shrinks into the space above the sheet (whole picture), the buttons and writing step aside');
+check(!/rv-commenting|shrunkVideoHeight|commentingRef/.test(rv), 'Reels: the video stays as it is when the comments open (it does not shrink)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -13,3 +13,6 @@ Everything else that is special about the Android app is done by the build workf
   to the app at all (Go Live, Live Lounge). Each step is checked with `grep -q`, so a build that lost one fails instead of shipping without it.
 - The app's name and id (`NOOB`, `com.noob.social`) come from `capacitor.config.json`; the launcher icon is made from `resources/icon.png` with a black background; the splash screen
   from `resources/splash.png`.
+
+## icon-fix (2026-11-18)
+`icon-fix/mipmap-*/ic_launcher_foreground.png`: the NOOB wordmark scaled to 76 % inside the adaptive-icon canvas. The generated icon had the wordmark at 73 % of the width, wider than the part Android keeps (the middle 66 %), so a phone's rounded icon shape cut off the N and the B. The build copies these over the generated files AFTER capacitor-assets ran.

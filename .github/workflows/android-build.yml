@@ -1,5 +1,5 @@
 name: Build Android APK
-# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.)
+# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.) 2026-11-18: home screen icon wordmark no longer cut off (android-overrides/icon-fix).
 
 on:
   workflow_dispatch: {}
@@ -116,6 +116,12 @@ jobs:
         run: |
           npm install --no-save @capacitor/assets
           npx capacitor-assets generate --android --iconBackgroundColor '#000000'
+
+      - name: Keep the NOOB wordmark inside the part of the home screen icon that Android shows
+        # capacitor-assets draws the wordmark too wide (73 % of the icon canvas); a phone's rounded icon shape then cuts off the N and the B. These are the same pictures with the wordmark at 76 % of the canvas.
+        run: |
+          cp -r android-overrides/icon-fix/. android/app/src/main/res/
+          test -s android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
 
       - name: Sync web build into the native project
         run: npx cap sync android

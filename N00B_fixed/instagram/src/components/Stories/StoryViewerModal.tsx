@@ -346,7 +346,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = commentText.trim();
+    sendStoryText(commentText.trim());
+  };
+
+  // One tap on an emoji sends it as the reply (the owner gets it like any other reply to the story).
+  const QUICK_REACTIONS = ['🔥', '😂', '😮', '😍', '😢', '👏'];
+
+  const sendStoryText = (text: string) => {
     if (!text) return;
     const id = story.id;
     if (isHighlight) {
@@ -1103,6 +1109,14 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             </button>
           </div>
         ) : (
+          <>
+          {isCommentFocused && !commentText.trim() && (
+            <div className="absolute inset-x-3 z-30 flex items-center justify-center gap-2" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 64px)' }} data-testid="story-quick-reactions">
+              {QUICK_REACTIONS.map((emo) => (
+                <button key={emo} type="button" aria-label={`React ${emo}`} onPointerDown={(e) => e.preventDefault()} onMouseDown={(e) => e.preventDefault()} onClick={() => sendStoryText(emo)} className="w-11 h-11 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-2xl leading-none flex items-center justify-center cursor-pointer active:scale-90 transition-transform" data-testid="story-quick-reaction">{emo}</button>
+              ))}
+            </div>
+          )}
           <div className="absolute bottom-4 inset-x-3 z-30 flex items-center gap-2.5" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <form onSubmit={handleSendComment} className="sv-reply flex-1 flex items-center rounded-full focus-within:border-noob">
               <input
@@ -1174,6 +1188,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               <LikeReactionBurst emoji={reactionEmojiForCategory(undefined)} burstKey={likeBurstKey} />
             </button>
           </div>
+          </>
         )}
 
         {showViewersSheet && (

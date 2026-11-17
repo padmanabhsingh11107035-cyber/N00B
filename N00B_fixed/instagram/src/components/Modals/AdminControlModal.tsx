@@ -221,6 +221,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [auditEntries, setAuditEntries] = useState<AdminAuditEntry[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [reportsList, setReportsList] = useState<any[]>([]);
+  const [reportKind, setReportKind] = useState<'all' | 'account' | 'post' | 'reel' | 'video' | 'story'>('all');
+  const [reportState, setReportState] = useState<'pending_review' | 'done' | 'all'>('pending_review');
   const [expandedEvidence, setExpandedEvidence] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
@@ -2030,6 +2032,47 @@ They will not be told.`)) return;
                 </button>
               </div>
 
+              {!loadingReports && reportsList.length > 0 && (() => {
+                const kindOf = (r: any) => r.contentType || 'account';
+                const pending = reportsList.filter((r) => r.status === 'pending_review');
+                const weekAgo = Date.now() - 7 * 86400000;
+                const lastWeek = reportsList.filter((r) => new Date(r.createdAt).getTime() > weekAgo).length;
+                const counts: Record<string, number> = {};
+                for (const r of reportsList) counts[r.targetUsername] = (counts[r.targetUsername] || 0) + 1;
+                const repeat = Object.entries(counts).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                const kinds: { id: typeof reportKind; label: string }[] = [
+                  { id: 'all', label: 'All' }, { id: 'account', label: 'Accounts' }, { id: 'post', label: 'Posts' },
+                  { id: 'reel', label: 'Reels' }, { id: 'video', label: 'Videos' }, { id: 'story', label: 'Stories' }
+                ];
+                const chip = (on: boolean) => `text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer ${on ? 'bg-noob/20 text-noob border-noob/40' : 'bg-zinc-900 text-zinc-400 border-zinc-800'}`;
+                return (
+                  <div className="space-y-2.5" data-testid="report-dashboard">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800 text-center"><div className="text-lg font-black text-amber-300">{pending.length}</div><div className="text-[10px] text-zinc-400">Waiting</div></div>
+                      <div className="p-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800 text-center"><div className="text-lg font-black text-white">{lastWeek}</div><div className="text-[10px] text-zinc-400">Last 7 days</div></div>
+                      <div className="p-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800 text-center"><div className="text-lg font-black text-white">{reportsList.length}</div><div className="text-[10px] text-zinc-400">All time</div></div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {kinds.map((k) => {
+                        const n = k.id === 'all' ? pending.length : pending.filter((r) => kindOf(r) === k.id).length;
+                        return <button key={k.id} type="button" className={chip(reportKind === k.id)} onClick={() => setReportKind(k.id)}>{k.label}{n ? ` (${n})` : ''}</button>;
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button type="button" className={chip(reportState === 'pending_review')} onClick={() => setReportState('pending_review')}>Waiting</button>
+                      <button type="button" className={chip(reportState === 'done')} onClick={() => setReportState('done')}>Handled</button>
+                      <button type="button" className={chip(reportState === 'all')} onClick={() => setReportState('all')}>Everything</button>
+                    </div>
+                    {repeat.length > 0 && (
+                      <div className="p-2.5 bg-rose-500/10 rounded-xl border border-rose-500/20 text-[11px] text-rose-200" data-testid="report-repeat">
+                        <span className="font-bold">Reported more than once: </span>
+                        {repeat.map(([u, n]) => `@${u} (${n})`).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {loadingReports ? (
                 <div className="py-12 text-center">
                   <Loader2 className="w-7 h-7 animate-spin text-noob mx-auto mb-2" />
@@ -2045,7 +2088,7 @@ They will not be told.`)) return;
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {reportsList.map((rep) => (
+                  {reportsList.filter((r) => (reportKind === 'all' || (r.contentType || 'account') === reportKind) && (reportState === 'all' || (reportState === 'pending_review' ? r.status === 'pending_review' : r.status !== 'pending_review'))).map((rep) => (
                     <div
                       key={rep.id}
                       className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3 hover:border-zinc-700 transition-colors"

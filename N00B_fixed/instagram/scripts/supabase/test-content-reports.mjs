@@ -45,12 +45,28 @@ check(jr.contentPath === '/reel/' + reel, 'a reel report carries the reel addres
 const direct = await asUser(db, bob, async () => { try { await db.query('select public.report_json(r) from public.reports r'); return 'read'; } catch (e) { return e.message; } });
 check(/permission denied/i.test(direct), 'a normal user can not read the report view');
 
+// the reporter hears back (migration 20261118000003)
+const noob = await mkUser('noob'); await db.query(`update public.profiles set is_admin = true where id = $1`, [noob]);
+const notices = async (uid) => (await db.query(`select message, data from public.notifications where target_user_id = $1 and type = 'admin_direct' order by created_at`, [uid])).rows;
+check((await notices(bob)).length === 0, 'before the team looks, the reporter has no message');
+await asUser(db, noob, async () => { await db.query('select public.admin_report_action($1, $2, false)', [r1.reportId, 'dismissed']); });
+const n1 = await notices(bob);
+check(n1.length === 1 && /post you reported/.test(n1[0].message) && /does not break/.test(n1[0].message) && n1[0].data.outcome === 'dismissed', 'a dismissed report tells the reporter it does not break the rules');
+await asUser(db, noob, async () => { await db.query('select public.admin_report_action($1, $2, false)', [r1.reportId, 'resolved']); });
+check((await notices(bob)).length === 1, 'changing the decision later stays quiet (one message per report)');
+const reelReport = (await db.query(`select id from public.reports where content_type = 'reel'`)).rows[0].id;
+await asUser(db, noob, async () => { await db.query('select public.admin_report_action($1, $2, false)', [reelReport, 'resolved']); });
+const n2 = await notices(bob);
+check(n2.length === 2 && /reel you reported and took action/.test(n2[1].message), 'a handled report tells the reporter action was taken');
+check((await notices(ann)).length === 0, 'the owner of the content gets nothing from a report');
+
 section('2. The screens');
 const sheet = read('src/components/Common/ContentReportSheet.tsx'), main = read('src/main.tsx'), api = read('src/services/supabaseApi.ts'), admin = read('src/components/Modals/AdminControlModal.tsx');
 check(/<ContentReportHost \/>/.test(main) && /rpc\('report_content'/.test(api) && /export function openContentReport/.test(sheet), 'the report sheet is mounted once and calls report_content');
 check(/!isOwner && \(\s*<button\s+onClick=\{\(\) => \{ setShowOptionsMenu\(false\); openContentReport\(\{ type: 'post'/.test(read('src/components/Feed/PostCard.tsx')), 'posts (and the videos inside them): Report is in the menu of somebody else\'s post');
 check(/!isReelOwner && currentReel && \([\s\S]{0,260}openContentReport\(\{ type: 'reel'/.test(read('src/components/Reels/ReelsView.tsx')), 'reels: Report is in the menu of somebody else\'s reel');
 check(/!isOwner\(actionVideo\) && \([\s\S]{0,260}openContentReport\(\{ type: 'video'/.test(read('src/components/Videos/HomeVideoFeedView.tsx')), 'videos: Report is in the menu of somebody else\'s video');
+check(/data-testid="report-dashboard"/.test(admin) && /reportKind/.test(admin) && /report-repeat/.test(admin), 'the admin Reports tab has the counters, the type and status filters and the repeat-reported list');
 check(/report-content-info/.test(admin) && /rep\.reporterId/.test(admin) && /rep\.contentPath/.test(admin) && /Made by/.test(admin), 'the admin card shows the link, who made it and who reported it');
 
 const sv = read('src/components/Stories/StoryViewerModal.tsx');

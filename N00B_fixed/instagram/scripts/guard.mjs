@@ -34,6 +34,7 @@ const CHECKS = [
   ['Android app file: only the offline page is packed inside', ['node', '--liftoff-only', 'scripts/supabase/test-native-dist-prune.mjs']],
   ['Android: no registering for phone notifications without Firebase', ['node', '--liftoff-only', 'scripts/supabase/test-push-guard.mjs']],
   ['Report on posts, reels, videos (SQL on real Postgres, menus, admin card)', ['node', '--liftoff-only', 'scripts/supabase/test-content-reports.mjs']],
+  ['Saved collections (SQL on real Postgres, Saved screen)', ['node', '--liftoff-only', 'scripts/supabase/test-collections.mjs']],
   ['Comment sheets (threads, 30-50 % bottom sheet, load errors)', ['node', '--liftoff-only', 'scripts/supabase/test-comment-threads.mjs']],
   ['Admin account type + no full-screen button on posts', ['node', 'scripts/supabase/test-account-type-and-no-fullscreen.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],

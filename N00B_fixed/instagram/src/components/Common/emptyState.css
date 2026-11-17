@@ -1,0 +1,7 @@
+.es-wrap { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 24px; color: inherit; }
+.es-wrap.es-compact { padding: 22px 16px; }
+.es-ico { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; background: color-mix(in srgb, currentColor 10%, transparent); color: inherit; opacity: .85; }
+.es-compact .es-ico { width: 42px; height: 42px; margin-bottom: 8px; }
+.es-ico svg { width: 24px; height: 24px; }
+.es-title { font-size: 15px; font-weight: 800; line-height: 1.25; }
+.es-text { margin-top: 4px; max-width: 280px; font-size: 12.5px; line-height: 1.4; opacity: .62; }

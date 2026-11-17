@@ -1,10 +1,11 @@
+import { EmptyState } from '../Common/EmptyState';
 import React, { useState, useEffect, useRef } from 'react';
 import { linkify } from '../Common/Linkified';
 import { useCommentsBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
-import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageCircle, X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
 import { applyLikes } from '../../utils/likeLedger';
@@ -340,9 +341,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               <button type="button" onClick={loadComments} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
             </div>
           ) : sortedTopLevel.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 text-xs">
-              No comments yet. Start the conversation!
-            </div>
+            <EmptyState compact icon={<MessageCircle />} title="No comments yet" text="Start the conversation!" testId="comments-empty" />
           ) : (
             sortedTopLevel.map((c, rowIndex) => {
               const replies = repliesOf(c.id);

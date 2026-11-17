@@ -1,3 +1,4 @@
+import { EmptyState } from '../Common/EmptyState';
 import { createPortal } from 'react-dom';
 import { RepostButton } from '../Common/RepostButton';
 import React, { useState, useRef, useEffect } from 'react';
@@ -1474,7 +1475,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 <button type="button" onClick={() => setReelCommentsReload((n) => n + 1)} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
               </div>
             ) : reelComments.filter((c) => !c.parentId).length === 0 ? (
-              <p className="text-center text-gray-500 py-6">No comments yet. Be the first to comment!</p>
+              <EmptyState compact icon={<MessageCircle />} title="No comments yet" text="Be the first to comment!" testId="comments-empty" />
             ) : (
               reelComments
                 .filter((c) => !c.parentId)

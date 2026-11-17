@@ -95,6 +95,7 @@ import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { predictFollowToggle } from '../../utils/followPredict';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { SavedVault } from './SavedVault';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { FeedVideoWatchView } from '../Feed/FeedVideoWatchView';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -1579,102 +1580,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* C. SAVED POSTS & COLLECTIONS (owner only) */}
         {activeTab === 'saved' && isOwnProfile && (
-          <div className="space-y-6">
-            {/* Header & New Collection Button */}
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-              <div className="flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-noob" />
-                <span className="text-sm font-bold text-white">
-                  Saved Posts Vault ({savedPosts.length})
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  const name = prompt('Enter new private collection name:');
-                  if (name) {
-                    setCollections([
-                      ...collections,
-                      {
-                        id: `col_${Date.now()}`,
-                        name,
-                        coverUrl: savedPosts[0]?.slides?.[0]?.mediaUrl || posts[0]?.slides?.[0]?.mediaUrl || '/noob-logo-circle.png',
-                        postsCount: 1,
-                        isCollaborative: false,
-                        posts: [savedPosts[0] || posts[0]]
-                      }
-                    ]);
-                  }
-                }}
-                className="text-xs text-noob font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-noob/10 border border-noob/30 hover:bg-noob/20 transition-colors cursor-pointer"
-              >
-                <FolderPlus className="w-3.5 h-3.5" /> New Collection
-              </button>
-            </div>
-
-            {/* All Saved Posts Grid */}
-            {savedPosts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
-                {savedPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => openPostFrom(post, savedPosts, 'Saved')}
-                    className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
-                  >
-                    <PostThumbnailMedia
-                      src={post.slides?.[0]?.mediaUrl}
-                      filter={post.slides?.[0]?.filter}
-                      mediaType={post.slides?.[0]?.mediaType}
-                      alt={post.caption || 'Saved post'}
-                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300`}
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs backdrop-blur-[2px]">
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-4 h-4 fill-white" /> {post.likesCount || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle className="w-4 h-4 fill-white" /> {post.commentsCount || 0}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 px-4 bg-zinc-900/40 rounded-3xl border border-zinc-800/60">
-                <Bookmark className="w-10 h-10 text-noob mx-auto mb-3 opacity-60" />
-                <h3 className="text-sm font-bold text-white">No Saved Posts Yet</h3>
-                <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
-                  When you bookmark posts from your Feed or Explore, they will be securely organized in your private vault here.
-                </p>
-              </div>
-            )}
-
-            {/* Organized Collections Sub-section */}
-            {collections.length > 0 && (
-              <div className="pt-4 border-t border-zinc-800/80 space-y-3">
-                <span className="text-xs text-zinc-400 font-semibold uppercase tracking-wider block">
-                  Organized Collections ({collections.length})
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {collections.map((col) => (
-                    <div
-                      key={col.id}
-                      className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden p-2.5 group hover:border-noob/50 transition-colors cursor-pointer shadow-md"
-                    >
-                      <div className="aspect-square rounded-xl overflow-hidden bg-black mb-2">
-                        <img loading="lazy" decoding="async"
-                          src={col.coverUrl || '/noob-logo-circle.png'}
-                          alt={col.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      </div>
-                      <span className="text-xs font-bold text-white truncate block">{col.name}</span>
-                      <span className="text-[10px] text-zinc-400 block">{col.postsCount || 1} items</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <SavedVault savedPosts={savedPosts} morePosts={[...posts, ...likedPosts]} collections={collections} onChanged={loadPrivateCollections} openPost={openPostFrom} />
         )}
 
         {/* D. LIKED POSTS (owner only) */}

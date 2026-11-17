@@ -3217,6 +3217,33 @@ export async function addPostToCollection(collectionId: string, postId: string) 
   }
 }
 
+export async function removePostFromCollection(collectionId: string, postId: string) {
+  try {
+    const res = await rpc<any>('remove_post_from_collection', { p_collection: collectionId, p_post: postId });
+    return { ...res, collection: res.collection ? mapCollection(res.collection) : res.collection };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not remove the post.') };
+  }
+}
+
+export async function renameCollection(collectionId: string, name: string) {
+  try {
+    const res = await rpc<any>('rename_collection', { p_collection: collectionId, p_name: name });
+    return { ...res, collection: res.collection ? mapCollection(res.collection) : res.collection };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not rename the collection.') };
+  }
+}
+
+export async function deleteCollection(collectionId: string) {
+  try {
+    await rpc<any>('delete_collection', { p_collection: collectionId });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not delete the collection.') };
+  }
+}
+
 // ----------------------------------------------------------------------------- chats & messages
 
 // The database sends "no value" as null; the old server simply left the key out. Screens were written for that.

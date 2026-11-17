@@ -1,3 +1,4 @@
+import { EmptyState } from '../Common/EmptyState';
 import { sendLike } from '../../utils/likeSync';
 import { applyLikes } from '../../utils/likeLedger';
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { useCommentsBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
-import { X, Send, Heart, Pin, Trash2, CornerDownRight, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
+import { MessageCircle, X, Send, Heart, Pin, Trash2, CornerDownRight, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react';
 import { LongVideo, PostComment, User } from '../../types';
 import {
   fetchLongVideoComments,
@@ -275,7 +276,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
               <button type="button" onClick={loadComments} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
             </div>
           ) : sortedTopLevel.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 text-xs">No comments yet. Start the conversation!</div>
+            <EmptyState compact icon={<MessageCircle />} title="No comments yet" text="Start the conversation!" testId="comments-empty" />
           ) : (
             sortedTopLevel.map((c, rowIndex) => {
               const replies = repliesOf(c.id);

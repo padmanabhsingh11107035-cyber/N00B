@@ -1,5 +1,6 @@
+import { EmptyState } from '../Common/EmptyState';
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus, MoreVertical, Ban, Flag, EyeOff, User as UserIcon, X, Lock } from 'lucide-react';
+import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus, MoreVertical, Ban, Flag, EyeOff, User as UserIcon, X, Lock, Users } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { blockUser, unblockUser, hideProfileFrom, unhideProfileFrom, submitSafetyReport } from '../../services/api';
@@ -197,13 +198,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
             )}
           </div>
         ) : filteredList.length === 0 ? (
-          <div className="py-16 text-center text-zinc-500 text-xs px-6">
-            {query
-              ? 'No one matches your search.'
-              : tab === 'followers'
-              ? 'No followers yet.'
-              : 'Not following anyone yet.'}
-          </div>
+          <EmptyState icon={<Users />} title={query ? 'No one matches your search' : tab === 'followers' ? 'No followers yet' : 'Not following anyone yet'} text={query ? 'Try another name.' : tab === 'followers' ? 'When people follow this account, they show up here.' : 'People this account follows show up here.'} testId="follow-empty" />
         ) : (
           <div className="divide-y divide-zinc-900">
             {filteredList.map((u) => {

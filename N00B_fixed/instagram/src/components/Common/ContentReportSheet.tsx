@@ -6,6 +6,8 @@ import './reportProblem.css';
 // The report goes to the NOOB team (Admin > Safety Reports) with who reported it, what it is (its link) and whose it is. The owner is never told who reported.
 export type ReportableKind = 'post' | 'reel' | 'video' | 'story';
 export const CONTENT_REPORT_EVENT = 'noob-report-content';
+/** sent when the Report sheet closes (a story that waited behind it carries on) */
+export const CONTENT_REPORT_CLOSED_EVENT = 'noob-report-content-closed';
 export function openContentReport(target: { type: ReportableKind; id: string }): void {
   try { window.dispatchEvent(new CustomEvent(CONTENT_REPORT_EVENT, { detail: target })); } catch { /* nothing to do */ }
 }
@@ -69,5 +71,6 @@ export const ContentReportHost: React.FC = () => {
     window.addEventListener(CONTENT_REPORT_EVENT, on);
     return () => window.removeEventListener(CONTENT_REPORT_EVENT, on);
   }, []);
-  return target ? <Sheet target={target} onClose={() => setTarget(null)} /> : null;
+  const close = () => { setTarget(null); try { window.dispatchEvent(new Event(CONTENT_REPORT_CLOSED_EVENT)); } catch { /* nothing waits */ } };
+  return target ? <Sheet target={target} onClose={close} /> : null;
 };

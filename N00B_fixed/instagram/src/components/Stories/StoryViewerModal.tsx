@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
-import { Repeat2, X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
+import { Repeat2, X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask, Flag } from 'lucide-react';
 import { Story, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
 import { toggleRepost, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
@@ -21,6 +21,7 @@ import { funShareUrl } from '../../utils/funRoutes';
 import { preloadStoryPictures, isStoryPictureLoaded } from '../../utils/preloadStoryMedia';
 import { LoadingSmall } from '../Common/LoadingPages';
 import { ContentAiBadge } from '../Common/ContentAiBadge';
+import { openContentReport, CONTENT_REPORT_CLOSED_EVENT } from '../Common/ContentReportSheet';
 import { rotateClass, rotateModeOf } from '../../utils/rotatingStory';
 
 interface StoryViewerModalProps {
@@ -79,6 +80,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  // the Report sheet is open over the story: the story waits (and carries on when the sheet closes)
+  const [reportOpen, setReportOpen] = useState(false);
+  useEffect(() => {
+    const done = () => setReportOpen(false);
+    window.addEventListener(CONTENT_REPORT_CLOSED_EVENT, done);
+    return () => window.removeEventListener(CONTENT_REPORT_CLOSED_EVENT, done);
+  }, []);
   const [commentText, setCommentText] = useState('');
   // Keyed by story id (not a single shared boolean) — liking one story must never show as "liked"
   // on every other story in the same viewing session. Seeded from each story's own persisted
@@ -281,7 +289,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   }, [isPaused]);
 
   useEffect(() => {
-    if (isPaused || isCommentFocused || isStickerFocused || openQuestionResultsKey !== null || !story || !mediaReady || showViewersSheet || showStoryOptionsMenu) return;
+    if (isPaused || isCommentFocused || isStickerFocused || openQuestionResultsKey !== null || !story || !mediaReady || showViewersSheet || showStoryOptionsMenu || reportOpen) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -299,7 +307,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, isCommentFocused, isStickerFocused, openQuestionResultsKey, currentIndex, stories.length, onClose, story, mediaReady, showViewersSheet, showStoryOptionsMenu]);
+  }, [isPaused, isCommentFocused, isStickerFocused, openQuestionResultsKey, currentIndex, stories.length, onClose, story, mediaReady, showViewersSheet, showStoryOptionsMenu, reportOpen]);
 
   // On a computer: A / ← = previous story, D / → = next story (like tapping or swiping on a phone), Esc closes.
   // The one key listener calls the latest handlers through this ref (they are defined below).
@@ -541,6 +549,18 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+            {!isOwnStory && !isHighlight && !isMasterAdmin && (
+              <button
+                type="button"
+                onClick={() => { setReportOpen(true); openContentReport({ type: 'story', id: story.id }); }}
+                className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"
+                title="Report this story"
+                aria-label="Report this story"
+                data-testid="story-report"
+              >
+                <Flag className="w-4 h-4" />
+              </button>
+            )}
             {isHighlight && isOwnStory && onEditHighlight && (
               <button
                 onClick={onEditHighlight}

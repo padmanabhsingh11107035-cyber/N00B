@@ -31,6 +31,7 @@ const CHECKS = [
   ['Likes, comments and share on anonymous thoughts and polls', ['node', 'scripts/supabase/test-mix-social.mjs']],
   ['AI info label on posts (detector, creator switch, label, database rules)', ['node', '--liftoff-only', 'scripts/supabase/test-ai-label.mjs']],
   ['AI label on reels and stories (SQL on real Postgres), Reels video above the comments', ['node', '--liftoff-only', 'scripts/supabase/test-content-ai-label.mjs']],
+  ['Android app file: only the offline page is packed inside', ['node', '--liftoff-only', 'scripts/supabase/test-native-dist-prune.mjs']],
   ['Android: no registering for phone notifications without Firebase', ['node', '--liftoff-only', 'scripts/supabase/test-push-guard.mjs']],
   ['Report on posts, reels, videos (SQL on real Postgres, menus, admin card)', ['node', '--liftoff-only', 'scripts/supabase/test-content-reports.mjs']],
   ['Comment sheets (threads, 30-50 % bottom sheet, load errors)', ['node', '--liftoff-only', 'scripts/supabase/test-comment-threads.mjs']],

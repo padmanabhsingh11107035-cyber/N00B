@@ -1,5 +1,5 @@
 name: Build Android APK
-# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.) 2026-11-18: home screen icon wordmark no longer cut off (android-overrides/icon-fix). 2026-11-17 (3): GOOGLE_SERVICES_JSON secret added, build again so Firebase is inside.
+# 2026-11-15: the release signing secrets (ANDROID_KEYSTORE_BASE64, _PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are set, so this run also builds the signed Play bundle (AAB). (Passwords re-entered 2026-11-15; re-run 2026-11-17 (2) to check them.) 2026-11-18: home screen icon wordmark no longer cut off (android-overrides/icon-fix). 2026-11-17 (3): GOOGLE_SERVICES_JSON secret added, build again so Firebase is inside. 2026-11-17 (4): the app file now packs only the offline page (smaller).
 
 on:
   workflow_dispatch: {}
@@ -79,6 +79,10 @@ jobs:
           # The website's main address: where the Android app loads pictures and videos from (/media/...) and what its links say. Set the repo variable
           # SITE_URL (Settings -> Secrets and variables -> Actions -> Variables) only to use a different one; the default is the new .com.
           VITE_SITE_URL: ${{ vars.SITE_URL || 'https://noobsocials.com' }}
+
+      # The app opens the LIVE website, so the copy packed inside it is never shown (only the no-connection page is): keep just that. The app file shrinks from ~230 MB to a few MB.
+      - name: Keep only what the app can show offline (smaller app file)
+        run: node scripts/prune-native-dist.mjs dist
 
       - name: Add Android platform
         run: npx cap add android

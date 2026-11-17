@@ -53,6 +53,10 @@ check(/!isReelOwner && currentReel && \([\s\S]{0,260}openContentReport\(\{ type:
 check(/!isOwner\(actionVideo\) && \([\s\S]{0,260}openContentReport\(\{ type: 'video'/.test(read('src/components/Videos/HomeVideoFeedView.tsx')), 'videos: Report is in the menu of somebody else\'s video');
 check(/report-content-info/.test(admin) && /rep\.reporterId/.test(admin) && /rep\.contentPath/.test(admin) && /Made by/.test(admin), 'the admin card shows the link, who made it and who reported it');
 
+const sv = read('src/components/Stories/StoryViewerModal.tsx');
+check(/!isOwnStory && !isHighlight && !isMasterAdmin && \([\s\S]{0,300}openContentReport\(\{ type: 'story', id: story\.id \}\)/.test(sv) && /data-testid="story-report"/.test(sv), 'stories: a Report flag in the top row of the story of somebody else');
+check(/reportOpen\) return;/.test(sv) && /CONTENT_REPORT_CLOSED_EVENT/.test(sv) && /CONTENT_REPORT_CLOSED_EVENT/.test(sheet), 'the story waits while the Report sheet is open and carries on when it closes');
+
 section('3. The profile post viewer');
 const pv = read('src/components/Profile/ProfilePostViewer.tsx');
 check(/className="edge-own fixed inset-0/.test(pv) && /safe-area-inset-top/.test(pv), 'its Back bar keeps its own room under the clock (a video inside skips the app\'s automatic gap)');

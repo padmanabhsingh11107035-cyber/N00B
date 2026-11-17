@@ -4,9 +4,11 @@ import { registerPushToken } from './api';
 // Phone notifications exist only in the native Android app (Capacitor's plugin has no meaningful web implementation) — this is a no-op everywhere else, so it is
 // safe to call unconditionally from app startup.
 //
-// Android app version 3 (version code 3) is the first build that has Firebase set up (google-services.json). Asking an OLDER build to register with Firebase
+// Firebase (google-services.json) must be inside the build for registration to work. Asking an OLDER build to register with Firebase
 // closes the whole app by itself (it did, right after login), so builds below 3 never ask.
-const FIREBASE_FROM_BUILD = 3;
+// Builds 3 to 280 were made with or without Firebase depending on the secret on the day; the ones WITHOUT it stopped the whole app right after login when they registered. Builds from 281 carry
+// the PushGuard check (android-overrides/PushGuardPlugin.java) and register only when Firebase is really in the app; older builds never register.
+const FIREBASE_FROM_BUILD = 281;
 const OFF_KEY = 'noob.nativePushOff';   // the person switched phone notifications off in Install and Permissions
 
 export type NativePushState = 'old-build' | 'on' | 'off' | 'blocked';
@@ -17,7 +19,14 @@ const setOff = (v: boolean): void => { try { if (v) localStorage.setItem(OFF_KEY
 async function buildOk(): Promise<boolean> {
   const { App } = await import('@capacitor/app');
   const info = await App.getInfo();
-  return Number(info.build) >= FIREBASE_FROM_BUILD;
+  if (!(Number(info.build) >= FIREBASE_FROM_BUILD)) return false;
+  try {
+    const { registerPlugin } = await import('@capacitor/core');
+    const guard = registerPlugin<{ hasFirebase: () => Promise<{ value: boolean }> }>('PushGuard');
+    return (await guard.hasFirebase()).value === true;   // no Firebase in this build: never register (that stops the app)
+  } catch {
+    return false;
+  }
 }
 
 let listening = false;

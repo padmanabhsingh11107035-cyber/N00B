@@ -16,6 +16,8 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(AppUpdaterPlugin.class);
     // The icon on the home screen (normal / NOOB Pro, Settings and activity > App icon, src/utils/appIcon.ts).
     registerPlugin(AppIconPlugin.class);
+    // Does this build have Firebase? The web app asks before it registers for phone notifications (without Firebase that registration stops the whole app).
+    registerPlugin(PushGuardPlugin.class);
     super.onCreate(savedInstanceState);
   }
 }

@@ -87,6 +87,7 @@ jobs:
         run: |
           cp android-overrides/MainActivity.java android/app/src/main/java/com/noob/social/MainActivity.java
           cp android-overrides/AppUpdaterPlugin.java android/app/src/main/java/com/noob/social/AppUpdaterPlugin.java
+          cp android-overrides/PushGuardPlugin.java android/app/src/main/java/com/noob/social/PushGuardPlugin.java
           # Android only lets an app start the installer when it says so in its manifest (the person still has to allow it once, and confirm each install)
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" /> <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />#' android/app/src/main/AndroidManifest.xml
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
@@ -166,6 +167,8 @@ jobs:
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON is not set: this app has no Firebase, so phone notifications stay off in it (the app itself works)"
           fi
 
       # Play Store requires an increasing versionCode on every upload and a

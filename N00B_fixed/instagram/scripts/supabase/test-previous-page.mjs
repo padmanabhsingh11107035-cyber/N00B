@@ -13,7 +13,7 @@ const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).jo
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
 const C = 'src/components/';
 /** the z-index numbers of the full-screen layers drawn by a file, in the order they appear */
-const zs = (f) => [...read(C + f).matchAll(/fixed inset-0 z-(?:\[(\d+)\]|(\d+))/g)].map((m) => Number(m[1] ?? m[2]));
+const zs = (f) => [...read(C + f).matchAll(/fixed inset-0(?: edge-own)? z-(?:\[(\d+)\]|(\d+))/g)].map((m) => Number(m[1] ?? m[2]));
 /** the body of the handler that starts at `marker` (up to the first line that closes it) */
 const around = (src, marker, len = 330) => { const i = src.indexOf(marker); return i < 0 ? '' : src.slice(i, i + len); };
 

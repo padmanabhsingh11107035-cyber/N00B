@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { linkify } from '../Common/Linkified';
-import { useSheetBox } from '../../utils/useVisualViewport';
+import { useCommentsBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
@@ -23,7 +23,6 @@ interface CommentsSheetProps {
 }
 
 export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser, onClose, onNavigateToProfile }) => {
-  const box = useSheetBox(0.45);   // a phone: the sheet covers 45 % of the page (the post stays in view above it) and sits right above the keyboard; the keyboard's glass shows black, never the page
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   const openProfile = async (userId?: string) => {
     if (!userId || !onNavigateToProfile) return;
@@ -45,7 +44,12 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState('');
-  const loadedCount = useRef(0);
+  const loadedCount = useRef(0);   // top-level comments loaded so far (the next page starts after them)
+  const [loadError, setLoadError] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
+  const [countDelta, setCountDelta] = useState(0);   // comments added / deleted here since the list was loaded
+  // the sheet rises from the bottom on every screen and is 30-50 % of the page tall, by the number of comments (a few: low, so the post stays in view; many: up to half)
+  const box = useCommentsBox(loading ? 3 : comments.filter((c) => !c.parentId).length);
 
   const isPostOwner = post.userId === currentUser.id || post.username === currentUser.username;
 
@@ -55,15 +59,23 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
 
   const loadComments = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const page = await fetchCommentsPage(post.id, 0);
-      const data = page.comments;
-      loadedCount.current = page.comments.length;
+      if (page.failed) {   // could not reach the server (tried twice): say so, never "no comments yet"
+        setLoadError(true);
+        setComments([]);
+        return;
+      }
+      loadedCount.current = page.topCount ?? page.comments.length;
       setHasMore(page.hasMore);
       setMoreError('');
-      setComments(applyLikes(data, 'comment'));
+      setTotal(page.total ?? page.comments.length);
+      setCountDelta(0);
+      setComments(applyLikes(page.comments, 'comment'));
     } catch (err) {
       console.error(err);
+      setLoadError(true);
       setComments([]);
     } finally {
       setLoading(false);
@@ -77,7 +89,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
     const page = await fetchCommentsPage(post.id, loadedCount.current);
     if (page.failed) setMoreError('Could not load more comments. Tap to try again.');
     else {
-      loadedCount.current += page.comments.length;
+      loadedCount.current += page.topCount ?? page.comments.length;
       setHasMore(page.hasMore);
       // a comment can move between pages while people write: never show one twice
       setComments((prev) => { const have = new Set(prev.map((c) => c.id)); return [...prev, ...applyLikes(page.comments.filter((c) => !have.has(c.id)), 'comment')]; });
@@ -100,6 +112,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
       // these unconditionally used to make a silently-failed save look identical to a real one (the
       // text vanished, confetti fired, but nothing was ever saved).
       setComments(prev => [...(Array.isArray(prev) ? prev : []), newC]);
+      setCountDelta((d) => d + 1);
       if (replyingTo) setExpandedThreads((prev) => (prev.includes(replyingTo.topLevelId) ? prev : [...prev, replyingTo.topLevelId]));
       setInputText('');
       setAttachment(null);
@@ -114,6 +127,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const handleDeleteComment = async (commentId: string) => {
     try {
       await deleteComment(post.id, commentId);
+      setCountDelta((d) => d - comments.filter((c) => c.id === commentId || c.parentId === commentId).length);
       // A deleted top-level comment takes its replies with it (cascade on the server) — drop both here.
       setComments(prev => (Array.isArray(prev) ? prev.filter((c) => c.id !== commentId && c.parentId !== commentId) : []));
     } catch (err) {
@@ -148,6 +162,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
     for (const cId of selectedCommentIds) {
       await deleteComment(post.id, cId);
     }
+    setCountDelta((d) => d - comments.filter((c) => selectedCommentIds.includes(c.id) || selectedCommentIds.includes(c.parentId || '')).length);
     setComments(prev => (Array.isArray(prev) ? prev.filter((c) => !selectedCommentIds.includes(c.id) && !selectedCommentIds.includes(c.parentId || '')) : []));
     setSelectedCommentIds([]);
     setIsBulkMode(false);
@@ -261,20 +276,20 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   };
 
   return (
-    <div id="comments-sheet-modal" className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
-      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={onClose} aria-hidden="true" />
+    <div id="comments-sheet-modal" className="fixed inset-0 z-50">
+      <div ref={drag.backdropRef} className="cs-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
       <div
         ref={drag.sheetRef}
         style={box.style}
         data-testid="comments-sheet"
-        className="relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl sm:rounded-2xl sm:h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+        className="cs-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
       >
         {/* Header: the grey bar and this row are the handle (drag down to close) */}
         <SheetGrip drag={drag}>
         <div className="flex items-center justify-between px-4 pb-3 sm:pt-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white tracking-tight">Comments</h3>
-            <span className="text-xs text-gray-400">({comments.length})</span>
+            <span className="text-xs text-gray-400" data-testid="comments-count">({Math.max(0, (total ?? comments.length) + countDelta)})</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -289,7 +304,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={drag.closeAnimated}
               aria-label="Close"
               className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800`}
             >
@@ -318,17 +333,22 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
         {/* Comments List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {loading ? (
-            <div className="text-center py-8 text-xs text-gray-500">Loading comments...</div>
+            <div className="text-center py-8 text-xs text-gray-500" data-testid="comments-loading">Loading comments...</div>
+          ) : loadError ? (
+            <div className="text-center py-8 text-xs text-gray-400" role="alert" data-testid="comments-error">
+              <p className="mb-2">The comments could not be loaded.</p>
+              <button type="button" onClick={loadComments} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
+            </div>
           ) : sortedTopLevel.length === 0 ? (
             <div className="text-center py-12 text-gray-500 text-xs">
               No comments yet. Start the conversation!
             </div>
           ) : (
-            sortedTopLevel.map((c) => {
+            sortedTopLevel.map((c, rowIndex) => {
               const replies = repliesOf(c.id);
               const isExpanded = expandedThreads.includes(c.id);
               return (
-                <div key={c.id} className="py-1.5">
+                <div key={c.id} className="py-1.5 cs-row" style={{ animationDelay: `${Math.min(rowIndex, 8) * 28}ms` }}>
                   <CommentRow c={c} />
                   {replies.length > 0 && (
                     <div className="ml-8 mt-1">

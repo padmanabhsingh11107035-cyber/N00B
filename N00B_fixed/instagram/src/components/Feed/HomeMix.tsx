@@ -33,6 +33,7 @@ import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { useCommentsBox } from '../../utils/useVisualViewport';
 
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
@@ -203,6 +204,7 @@ const MixComments: React.FC<{ kind: MixKind; id: string; title: string; canManag
   const [error, setError] = useState('');
   const sendingRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const box = useCommentsBox(loading ? 3 : list.length);   // the same bottom sheet as every other comments sheet: 30-50 % of the page by the number of comments
   const bump = (d: number) => { const s = statStore.get(statKey(kind, id)) ?? NO_STAT; putStat(kind, id, { ...s, comments: Math.max(0, s.comments + d) }); };
   useEffect(() => {
     let alive = true;
@@ -237,7 +239,7 @@ const MixComments: React.FC<{ kind: MixKind; id: string; title: string; canManag
   };
   return (
     <div className="hm-scrim" data-noob-keep="1" role="dialog" aria-modal="true" aria-label={`Comments on ${title}`} onClick={onClose}>
-      <div className="hm-sheet hm-cm" data-testid="home-mix-comments" onClick={(e) => e.stopPropagation()}>
+      <div className="hm-sheet hm-cm cs-sheet" style={box.style} data-testid="home-mix-comments" onClick={(e) => e.stopPropagation()}>
         <div className="hm-sheet-head">
           <h2><MessageCircle className="w-5 h-5" aria-hidden="true" />Comments</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="hm-ib" data-no-hit="1"><X className="w-5 h-5" /></button>

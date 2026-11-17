@@ -70,7 +70,7 @@ check(/touchAction: 'none'/.test(drag) && /setPointerCapture/.test(drag) && /DRA
 section('4. The comment sheets: 45 % of the page, above the keyboard, nothing behind the keyboard');
 for (const f of ['src/components/Feed/CommentsSheet.tsx', 'src/components/Videos/VideoCommentsSheet.tsx', 'src/components/Reels/ReelsView.tsx']) {
   const s = read(f);
-  check(/useSheetBox\(0\.45\)/.test(s) && /rounded-t-3xl/.test(s), path.basename(f) + ': 45 % of the page, rounded top');
+  check(/useCommentsBox\(/.test(s) && /rounded-t-3xl/.test(s), path.basename(f) + ': 30-50 % of the page (by the number of comments), rounded top');
 }
 const comments = read('src/components/Feed/CommentsSheet.tsx') + read('src/components/Videos/VideoCommentsSheet.tsx');
 check(!/Enter line breaks as needed/.test(comments) && (comments.match(/'Add a comment\.\.\.'/g) || []).length === 2, 'the comment box says "Add a comment..." (the long text was cut off: "Add a comment (Enter line")');

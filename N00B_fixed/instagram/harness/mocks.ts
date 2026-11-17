@@ -313,6 +313,12 @@ export const rpcMocks = {
   poll_create: (a, ctx) => ({ ...pollOf(POLL_DEFS[5], ctx), question: a.p_question }),
   poll_admin_reports: () => ({ reports: [] }), poll_report: () => ({ ok: true, hidden: false }), poll_remove: () => null,
 
+  post_comments_threads: (a, ctx) => {
+    const n = ctx.state === 'empty' ? 0 : Number(new URLSearchParams(location.search).get('n') ?? 6);
+    const words = ['Love this!', 'Where was this taken? I need to go there', 'So good', 'Haha same', 'Wow', 'This made my day, thank you for sharing it with everybody', 'Can you do a tutorial?', 'Beautiful colours'];
+    const comments = Array.from({ length: Math.min(n, a.p_limit) }, (_, i) => ({ id: 'c' + i, postId: a.p_post, userId: 'p' + (1 + i % 4), username: PEOPLE[i % 4].username, userAvatar: PEOPLE[i % 4].avatar, isVerified: i % 4 === 0, text: words[i % words.length], likesCount: i, isLiked: false, isPinned: i === 0 && n > 3, createdAt: new Date(Date.now() - (i + 1) * 3600e3).toISOString(), parentId: null }));
+    return { comments, topCount: comments.length, hasMore: n > a.p_limit + a.p_offset, total: n };
+  },
   mix_stats: (a) => Object.fromEntries((a.p_ids || []).map((id, i) => [id, { likes: 12 + i * 1200, comments: 3 + i, liked: i === 1 }])),
   mix_like: (a) => ({ liked: !!a.p_on, likes: a.p_on ? 13 : 12 }),
   mix_comments_list: () => ({ comments: [

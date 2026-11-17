@@ -41,3 +41,13 @@ button { transition: background-color .15s ease, color .15s ease, opacity .15s e
 @keyframes rp-turn { 0% { transform: rotate(-180deg) scale(.78); } 70% { transform: rotate(0deg) scale(1.12); } 100% { transform: rotate(0deg) scale(1); } }
 @keyframes rp-turn-back { 0% { transform: rotate(180deg) scale(.9); } 100% { transform: rotate(0deg) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .rp-ico .rp-arrows { animation: none !important; } .rp-ico .rp-tick { transition: none !important; } }
+
+/* ---- the comments sheet (posts, reels, videos): rises from the bottom edge, and the dark layer behind it fades in. Only "backwards" fill: once it has arrived, the drag-to-close
+   (inline transform) is free to move it. */
+.cs-sheet { animation: cs-rise .38s cubic-bezier(.22, 1, .36, 1) backwards; will-change: transform; }
+.cs-backdrop { animation: cs-fade .28s ease-out backwards; }
+.cs-row { animation: cs-in .26s ease-out backwards; }
+@keyframes cs-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes cs-fade { from { opacity: 0; } }
+@keyframes cs-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .cs-sheet, .cs-backdrop, .cs-row { animation: none; } }

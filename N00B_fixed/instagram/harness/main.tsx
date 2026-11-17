@@ -187,6 +187,11 @@ async function boot() {
     // the Games page (the people list is the harness user only; the leaderboard comes from the mocks, or is empty)
     const { GamesView } = await import('../src/components/Games/GamesView.tsx');
     Page = () => h(GamesView, { currentUser, allUsers: [currentUser], onUserUpdated: noop, onNavigateToUserProfile: noop, onBack: () => console.info('[harness] onBack') });
+  } else if (page === 'comments') {
+    // the comments sheet of a post, as on every screen: ?n=<how many comments>
+    await import('../src/components/Feed/home.css');
+    const { CommentsSheet } = await import('../src/components/Feed/CommentsSheet.tsx');
+    Page = () => h('div', { style: { minHeight: '100dvh', background: '#222' } }, h(CommentsSheet, { post: { id: 'post-1', userId: 'someone', username: 'someone', caption: 'x', slides: [] } as any, currentUser, onClose: () => console.info('[harness] closed') }));
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

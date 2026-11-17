@@ -63,7 +63,7 @@ section('3. Every list is shown through the ledger');
 const app = read('src/App.tsx');
 check(/applyLikes\(postsState, 'post'\)/.test(app) && /applyLikes\(reelsState, 'reel'\)/.test(app) && /applyLikes\(storiesState, 'story'\)/.test(app), 'the app\'s posts, reels and stories');
 check(/applyLikes\(videosState, 'video'\)/.test(read('src/components/Videos/HomeVideoFeedView.tsx')), 'the long-video feed');
-check(/applyLikes\(data, 'comment'\)/.test(read('src/components/Feed/CommentsSheet.tsx')) && /applyLikes\(data, 'comment'\)/.test(read('src/components/Videos/VideoCommentsSheet.tsx')), 'the comments of posts, reels and videos');
+check(/applyLikes\((data|page\.comments), 'comment'\)/.test(read('src/components/Feed/CommentsSheet.tsx')) && /applyLikes\(data, 'comment'\)/.test(read('src/components/Videos/VideoCommentsSheet.tsx')), 'the comments of posts, reels and videos');
 
 section('4. A like never restarts a page');
 const reels = read('src/components/Reels/ReelsView.tsx');

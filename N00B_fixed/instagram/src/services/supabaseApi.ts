@@ -1591,23 +1591,43 @@ export async function fetchComments(postId: string) {
   }
 }
 
-export interface CommentsPage { comments: any[]; hasMore: boolean; failed?: boolean }
+export interface CommentsPage { comments: any[]; hasMore: boolean; failed?: boolean; /** top-level comments in this page (the next page starts after the ones already loaded) */ topCount?: number; /** every comment of the post / reel, replies included */ total?: number }
+/** The comment lists are paged by THREAD: 20 top-level comments, each with all its replies (migration 20261117000003). */
+export const THREAD_PAGE_SIZE = 20;
+/** One more try after a short wait: a list that failed once on a weak connection almost always arrives the second time. */
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try { return await fn(); } catch { await new Promise((r) => setTimeout(r, 600)); return fn(); }
+}
 
-/** One page of a post's comments (newest first). offset 0 is the first page; "Load more" asks for the next offset. Falls back to the whole (capped) list while the migration is not run. */
+
+/** One page of a post's comments: 20 top-level comments (pinned first, then newest), each with ALL its replies. offset = top-level comments already loaded. A failed first load is tried once more and then says so (failed), it is never shown as "no comments"; an empty list is not remembered. Falls back to the old paging while the migration is not run. */
 export async function fetchCommentsPage(postId: string, offset = 0): Promise<CommentsPage> {
-  try {
-    const load = async (): Promise<CommentsPage> => {
+  const key = `comments-page:${postId}`;
+  const load = async (): Promise<CommentsPage> => {
+    try {
+      const res = await rpc<any>('post_comments_threads', { p_post: postId, p_limit: THREAD_PAGE_SIZE, p_offset: offset });
+      const comments = Array.isArray(res?.comments) ? res.comments.map(mapComment) : [];
+      return { comments, hasMore: !!res?.hasMore, topCount: Number(res?.topCount) || 0, total: Number(res?.total) || comments.length };
+    } catch (err) {
+      if (!isMissingRpc(err)) throw err;
+      let comments: any[];
       try {
         const res = await rpc<{ comments: any[] }>('post_comments_page', { p_post: postId, p_limit: LIST_PAGE_SIZE, p_offset: offset });
-        const comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
-        return { comments, hasMore: comments.length >= LIST_PAGE_SIZE };
-      } catch (err) {
-        if (!isMissingRpc(err)) throw err;
-        if (offset > 0) return { comments: [], hasMore: false };
-        return { comments: await fetchComments(postId), hasMore: false };
+        comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+      } catch (e2) {
+        if (!isMissingRpc(e2)) throw e2;
+        comments = offset > 0 ? [] : ((await fetchComments(postId)) as any[]);
       }
-    };
-    return offset === 0 ? await cached(`comments-page:${postId}`, load) : await load();
+      return { comments, hasMore: comments.length >= LIST_PAGE_SIZE, topCount: comments.length, total: comments.length };
+    }
+  };
+  try {
+    if (offset > 0) return await withRetry(load);
+    const hit = shortCache.get(key);
+    if (hit && Date.now() - hit.at < CACHE_MS) return hit.data as CommentsPage;
+    const page = await withRetry(load);
+    if (page.comments.length > 0) shortCache.set(key, { at: Date.now(), data: page });
+    return page;
   } catch (err) {
     console.error('Error fetching comments:', err);
     return { comments: [], hasMore: false, failed: true };
@@ -2353,14 +2373,15 @@ export async function fetchLongVideoById(videoId: string): Promise<LongVideo | n
   }
 }
 
-export async function fetchLongVideoComments(videoId: string) {
+export async function fetchLongVideoComments(videoId: string, strict = false) {
   try {
     return await cached(`video-comments:${videoId}`, async () => {
-      const res = await rpc<{ comments: any[] }>('long_video_comments', { p_video: videoId });
+      const res = await withRetry(() => rpc<{ comments: any[] }>('long_video_comments', { p_video: videoId }));
       return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
     });
   } catch (err) {
     console.error('Error fetching video comments:', err);
+    if (strict) throw err;   // the comments sheet shows "could not load" with a Retry button instead of "no comments"
     return [];
   }
 }
@@ -2935,21 +2956,34 @@ export async function fetchReelComments(reelId: string) {
   }
 }
 
-/** One page of a reel's comments (newest first); same rules as fetchCommentsPage. */
+/** One page of a reel's comments; same rules as fetchCommentsPage. */
 export async function fetchReelCommentsPage(reelId: string, offset = 0): Promise<CommentsPage> {
-  try {
-    const load = async (): Promise<CommentsPage> => {
+  const key = `reel-comments-page:${reelId}`;
+  const load = async (): Promise<CommentsPage> => {
+    try {
+      const res = await rpc<any>('reel_comments_threads', { p_reel: reelId, p_limit: THREAD_PAGE_SIZE, p_offset: offset });
+      const comments = Array.isArray(res?.comments) ? res.comments.map(mapComment) : [];
+      return { comments, hasMore: !!res?.hasMore, topCount: Number(res?.topCount) || 0, total: Number(res?.total) || comments.length };
+    } catch (err) {
+      if (!isMissingRpc(err)) throw err;
+      let comments: any[];
       try {
         const res = await rpc<{ comments: any[] }>('reel_comments_page', { p_reel: reelId, p_limit: LIST_PAGE_SIZE, p_offset: offset });
-        const comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
-        return { comments, hasMore: comments.length >= LIST_PAGE_SIZE };
-      } catch (err) {
-        if (!isMissingRpc(err)) throw err;
-        if (offset > 0) return { comments: [], hasMore: false };
-        return { comments: await fetchReelComments(reelId), hasMore: false };
+        comments = Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+      } catch (e2) {
+        if (!isMissingRpc(e2)) throw e2;
+        comments = offset > 0 ? [] : ((await fetchReelComments(reelId)) as any[]);
       }
-    };
-    return offset === 0 ? await cached(`reel-comments-page:${reelId}`, load) : await load();
+      return { comments, hasMore: comments.length >= LIST_PAGE_SIZE, topCount: comments.length, total: comments.length };
+    }
+  };
+  try {
+    if (offset > 0) return await withRetry(load);
+    const hit = shortCache.get(key);
+    if (hit && Date.now() - hit.at < CACHE_MS) return hit.data as CommentsPage;
+    const page = await withRetry(load);
+    if (page.comments.length > 0) shortCache.set(key, { at: Date.now(), data: page });
+    return page;
   } catch (err) {
     console.error('Error fetching reel comments:', err);
     return { comments: [], hasMore: false, failed: true };

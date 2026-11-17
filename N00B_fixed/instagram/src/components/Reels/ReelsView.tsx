@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { linkify } from '../Common/Linkified';
 import { EditCaptionSheet } from '../Common/EditCaptionSheet';
 import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
-import { useSheetBox } from '../../utils/useVisualViewport';
+import { useCommentsBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import { flushSync } from 'react-dom';
@@ -121,7 +121,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onNavigateToProfile,
   onUseSound
 }) => {
-  const commentsBox = useSheetBox(0.45);   // a phone: the comments cover 45 % of the page (the reel stays in view above) and sit right above the keyboard; its glass shows black, never the page
   const commentsDrag = useSheetDrag(() => setShowComments(false));   // drag the grey bar or the title down to close
   const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -155,6 +154,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [reelCommentsMoreError, setReelCommentsMoreError] = useState('');
   const reelCommentsLoaded = useRef(0);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [reelCommentsError, setReelCommentsError] = useState(false);
+  const [reelCommentsReload, setReelCommentsReload] = useState(0);   // bumped by "Try again"
+  // the sheet rises from the bottom on every screen and is 30-50 % of the page tall, by the number of comments
+  const commentsBox = useCommentsBox(isLoadingComments ? 3 : reelComments.filter((c) => !c.parentId).length);
   const [commentInput, setCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
   // Replying to a comment (yours or anyone's) — always resolves to the top-level comment's id, even
@@ -483,13 +486,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     if (!showComments || !currentReel) return;
     let cancelled = false;
     setIsLoadingComments(true);
+    setReelCommentsError(false);
     reelCommentsLoaded.current = 0;
     setReelCommentsMore(false);
     setReelCommentsMoreError('');
     fetchReelCommentsPage(currentReel.id, 0)
       .then((page) => {
         if (cancelled) return;
-        reelCommentsLoaded.current = page.comments.length;
+        if (page.failed) { setReelCommentsError(true); setReelComments([]); return; }   // say so: never "no comments yet" for a list that did not arrive
+        reelCommentsLoaded.current = page.topCount ?? page.comments.length;
         setReelCommentsMore(page.hasMore);
         setReelComments(page.comments);
       })
@@ -499,7 +504,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [showComments, currentReel]);
+    // the reel's id, not the reel object: the object is renewed whenever a like count changes, which used to reload (and blank) the list again and again
+  }, [showComments, currentReel?.id, reelCommentsReload]);
 
   const loadMoreReelComments = async () => {
     if (!currentReel || loadingMoreReelComments) return;
@@ -509,7 +515,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     const page = await fetchReelCommentsPage(reelId, reelCommentsLoaded.current);
     if (page.failed) setReelCommentsMoreError('Could not load more comments. Tap to try again.');
     else {
-      reelCommentsLoaded.current += page.comments.length;
+      reelCommentsLoaded.current += page.topCount ?? page.comments.length;
       setReelCommentsMore(page.hasMore);
       // a comment can move between pages while people write: never show one twice
       setReelComments((prev) => { const have = new Set(prev.map((c) => c.id)); return [...prev, ...page.comments.filter((c) => !have.has(c.id))]; });
@@ -1429,25 +1435,30 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && createPortal(
-        <div className="fixed inset-0 z-[60] sm:flex sm:items-center sm:justify-center sm:p-4" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
-        <div ref={commentsDrag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={() => setShowComments(false)} aria-hidden="true" />
+        <div className="fixed inset-0 z-[60]" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
+        <div ref={commentsDrag.backdropRef} className="cs-backdrop absolute inset-0 bg-black/45" onClick={commentsDrag.closeAnimated} aria-hidden="true" />
         <div
           ref={commentsDrag.sheetRef}
           style={commentsBox.style}
           data-testid="comments-sheet"
-          className="relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl sm:rounded-2xl sm:h-[80vh] px-4 pb-4 flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+          className="cs-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl px-4 pb-4 flex flex-col shadow-2xl overflow-hidden"
         >
           <SheetGrip drag={commentsDrag} className="-mx-4 px-4">
           <div className="flex items-center justify-between pb-2 sm:pt-3 border-b border-neutral-800">
             <h4 className="text-xs font-bold text-white">Reel Comments</h4>
-            <button onClick={() => setShowComments(false)} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white cursor-pointer`}>
+            <button onClick={commentsDrag.closeAnimated} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white cursor-pointer`}>
               ✕
             </button>
           </div>
           </SheetGrip>
           <div className="flex-1 overflow-y-auto py-3 space-y-1 text-xs text-gray-300">
             {isLoadingComments ? (
-              <p className="text-center text-gray-500 py-6">Loading comments...</p>
+              <p className="text-center text-gray-500 py-6" data-testid="comments-loading">Loading comments...</p>
+            ) : reelCommentsError ? (
+              <div className="text-center text-gray-400 py-6" role="alert" data-testid="comments-error">
+                <p className="mb-2">The comments could not be loaded.</p>
+                <button type="button" onClick={() => setReelCommentsReload((n) => n + 1)} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
+              </div>
             ) : reelComments.filter((c) => !c.parentId).length === 0 ? (
               <p className="text-center text-gray-500 py-6">No comments yet. Be the first to comment!</p>
             ) : (

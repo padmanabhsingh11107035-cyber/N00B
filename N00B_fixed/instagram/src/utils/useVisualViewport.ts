@@ -105,3 +105,63 @@ export function useKeyboardMetrics(): { keyboard: number; visible: number; page:
   }, []);
   return m;
 }
+
+// ---- the box of the COMMENTS sheet, on every screen
+// One sheet for the comments of posts, reels and videos, on a phone, a tablet, a laptop and a computer: it rises from the bottom edge and covers between 30 % and 50 % of the page,
+// depending on how many comments there are (a few comments: a low sheet, the post stays in view; many: up to half the page, then the list scrolls). It follows the keyboard on a phone,
+// and its height eases from one size to the next instead of jumping. On a wide screen it is the same bottom sheet, centred (no keyboard to dodge, no dark side bands).
+export const COMMENTS_MIN = 0.3;
+export const COMMENTS_MAX = 0.5;
+const COMMENTS_FIXED_PX = 168;   // the grip + title row and the writing area (icons, text box, send)
+const COMMENTS_ROW_PX = 66;      // one comment
+
+/** How much of the page the sheet covers for `rows` top-level comments on a page that is `pageHeight` px tall (always between 30 % and 50 %). */
+export function commentsFraction(rows: number, pageHeight: number): number {
+  const need = COMMENTS_FIXED_PX + (Number.isFinite(rows) ? Math.max(0, rows) : 0) * COMMENTS_ROW_PX;
+  return Math.min(COMMENTS_MAX, Math.max(COMMENTS_MIN, need / Math.max(1, pageHeight)));
+}
+
+const EASE = 'cubic-bezier(.22, 1, .36, 1)';
+const readCommentsBox = (rows: number): SheetBox => {
+  if (typeof window === 'undefined') return { phone: false, style: undefined, keyboard: 0 };
+  const wide = window.innerWidth >= 640;
+  const page = window.innerHeight;
+  const vv = window.visualViewport;
+  const vTop = vv ? Math.round(vv.offsetTop) : 0;
+  const vVisible = vv ? Math.round(vv.height) : page;
+  const keyboard = Math.max(0, page - (vTop + vVisible));
+  const kb = wide || keyboard < 80 ? 0 : keyboard;
+  const top = kb ? vTop : 0;
+  const visible = kb ? vVisible : page;
+  const height = Math.max(220, Math.min(Math.round(page * commentsFraction(rows, page)), visible - 24));
+  return {
+    phone: true,
+    keyboard: kb,
+    style: {
+      position: 'fixed', left: 0, right: 0, bottom: 'auto', top: top + visible - height, height: height + kb, paddingBottom: kb || 'env(safe-area-inset-bottom)',
+      transition: `top .32s ${EASE}, height .32s ${EASE}`,
+      // under the keyboard's see-through glass (a phone only) the sheet's own colour carries on
+      boxShadow: wide ? '0 -18px 50px rgba(0, 0, 0, .45)' : '0 140px 0 140px #09090b',
+    },
+  };
+};
+
+export function useCommentsBox(rows: number): SheetBox {
+  const [box, setBox] = useState<SheetBox>(() => readCommentsBox(rows));
+  useEffect(() => {
+    const on = () => setBox((prev) => { const next = readCommentsBox(rows); return prev.keyboard === next.keyboard && JSON.stringify(prev.style) === JSON.stringify(next.style) ? prev : next; });
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    vv?.addEventListener('resize', on);
+    vv?.addEventListener('scroll', on);
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    on();
+    return () => {
+      vv?.removeEventListener('resize', on);
+      vv?.removeEventListener('scroll', on);
+      window.removeEventListener('resize', on);
+      window.removeEventListener('orientationchange', on);
+    };
+  }, [rows]);
+  return box;
+}

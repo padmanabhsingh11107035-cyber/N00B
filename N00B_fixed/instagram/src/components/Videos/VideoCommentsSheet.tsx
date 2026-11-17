@@ -2,7 +2,7 @@ import { sendLike } from '../../utils/likeSync';
 import { applyLikes } from '../../utils/likeLedger';
 import React, { useState, useEffect } from 'react';
 import { linkify } from '../Common/Linkified';
-import { useSheetBox } from '../../utils/useVisualViewport';
+import { useCommentsBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
@@ -31,11 +31,13 @@ interface VideoCommentsSheetProps {
 // of the post ones — reels duplicate this same way (inline in ReelsView.tsx) rather than sharing a
 // single genericized sheet, so this matches the codebase's existing pattern for a second target type.
 export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, currentUser, isMasterAdmin, onClose }) => {
-  const box = useSheetBox(0.45);   // a phone: the sheet covers 45 % of the page (the video stays in view above it) and sits right above the keyboard; the keyboard's glass shows black, never the page
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   const [comments, setComments] = useState<PostComment[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // the sheet rises from the bottom on every screen and is 30-50 % of the page tall, by the number of comments
+  const box = useCommentsBox(loading ? 3 : comments.filter((c) => !c.parentId).length);
   const [selectedCommentIds, setSelectedCommentIds] = useState<string[]>([]);
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ topLevelId: string; username: string } | null>(null);
@@ -52,11 +54,13 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
 
   const loadComments = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const data = await fetchLongVideoComments(video.id);
+      const data = await fetchLongVideoComments(video.id, true);   // strict: a failed load says so, it is not "no comments"
       setComments(Array.isArray(data) ? applyLikes(data, 'comment') : []);
     } catch (err) {
       console.error(err);
+      setLoadError(true);
       setComments([]);
     } finally {
       setLoading(false);
@@ -219,13 +223,13 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
   };
 
   return (
-    <div id="video-comments-sheet-modal" className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
-      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={onClose} aria-hidden="true" />
+    <div id="video-comments-sheet-modal" className="fixed inset-0 z-50">
+      <div ref={drag.backdropRef} className="cs-backdrop absolute inset-0 bg-black/45" onClick={drag.closeAnimated} aria-hidden="true" />
       <div
         ref={drag.sheetRef}
         style={box.style}
         data-testid="comments-sheet"
-        className="relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl sm:rounded-2xl sm:h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+        className="cs-sheet relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
       >
         <SheetGrip drag={drag}>
         <div className="flex items-center justify-between px-4 pb-3 sm:pt-3 border-b border-neutral-800">
@@ -242,7 +246,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
                 {isBulkMode ? 'Cancel' : 'Bulk Manage'}
               </button>
             )}
-            <button onClick={onClose} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800`}>
+            <button onClick={drag.closeAnimated} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800`}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -264,15 +268,20 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
 
         <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {loading ? (
-            <div className="text-center py-8 text-xs text-gray-500">Loading comments...</div>
+            <div className="text-center py-8 text-xs text-gray-500" data-testid="comments-loading">Loading comments...</div>
+          ) : loadError ? (
+            <div className="text-center py-8 text-xs text-gray-400" role="alert" data-testid="comments-error">
+              <p className="mb-2">The comments could not be loaded.</p>
+              <button type="button" onClick={loadComments} className="px-3 py-1.5 rounded-full bg-neutral-800 text-white font-bold cursor-pointer" data-testid="comments-retry">Try again</button>
+            </div>
           ) : sortedTopLevel.length === 0 ? (
             <div className="text-center py-12 text-gray-500 text-xs">No comments yet. Start the conversation!</div>
           ) : (
-            sortedTopLevel.map((c) => {
+            sortedTopLevel.map((c, rowIndex) => {
               const replies = repliesOf(c.id);
               const isExpanded = expandedThreads.includes(c.id);
               return (
-                <div key={c.id} className="py-1.5">
+                <div key={c.id} className="py-1.5 cs-row" style={{ animationDelay: `${Math.min(rowIndex, 8) * 28}ms` }}>
                   <CommentRow c={c} />
                   {replies.length > 0 && (
                     <div className="ml-8 mt-1">

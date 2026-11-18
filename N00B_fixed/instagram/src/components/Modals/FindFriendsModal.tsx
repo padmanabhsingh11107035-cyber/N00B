@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Lock, ShieldCheck, UserCheck, UserPlus, Users, EyeOff, HandHeart, Share2 } from 'lucide-react';
 import { User } from '../../types';
-import { getContactsPermissionState, scanContacts } from '../../services/contactSync';
+import { getContactsPermissionState, scanContacts, pickWebContacts, webContactPickerSupported } from '../../services/contactSync';
 import { siteOrigin } from '../../utils/siteUrl';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import './findfriends.css';
@@ -45,11 +45,12 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const allow = async () => {
+  const pickerOk = webContactPickerSupported();
+  const allow = async (viaPicker = false) => {
     setStage('loading');
-    const r = await scanContacts();
+    const r = viaPicker ? await pickWebContacts() : await scanContacts();
     if (r.status === 'ok') { setPeople(r.users); setStage('results'); }
-    else if (r.status === 'denied') setStage('denied');
+    else if (r.status === 'denied') setStage(viaPicker ? 'web' : 'denied');
     else if (r.status === 'empty') {
       // nobody from the contacts is on NOOB: a few other people to follow instead
       const pool = registeredUsers.filter((u) => u.id !== currentUser.id && !u.isFollowing);
@@ -168,8 +169,10 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
             <>
               <div className="ff-hero">
                 <div className="ff-shield"><ShieldCheck size={42} /></div>
-                <h3 className="ff-h1">Finding friends from contacts is in the Android app</h3>
-                <p className="ff-lead">A website cannot read your contacts, which keeps them safe. Here are some people on NOOB you might like.</p>
+                <h3 className="ff-h1">{pickerOk ? 'Choose contacts to look for' : 'Finding friends from contacts is in the Android app'}</h3>
+                <p className="ff-lead">{pickerOk
+                  ? 'Your browser lets you pick contacts yourself. Only the ones you choose are checked, and nothing is saved.'
+                  : 'This browser cannot read your contacts (iPhone and computers never allow it), which keeps them safe. Invite your friends instead, or follow some people below.'}</p>
               </div>
               {people.length > 0 ? list : <p className="ff-note">No suggestions right now. Check back later.</p>}
             </>
@@ -180,21 +183,23 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({ currentUser,
       <div className="ff-foot">
         <div className="ff-foot-in">
           {stage === 'intro' && (<>
-            <button type="button" className="ff-btn primary" onClick={allow}><ShieldCheck size={20} /> Allow and find friends</button>
+            <button type="button" className="ff-btn primary" onClick={() => allow()}><ShieldCheck size={20} /> Allow and find friends</button>
             <button type="button" className="ff-btn ghost" onClick={onClose}>Not now</button>
           </>)}
           {stage === 'loading' && <button type="button" className="ff-btn ghost" disabled>Please wait&hellip;</button>}
-          {(stage === 'results' || stage === 'web') && <button type="button" className="ff-btn primary" onClick={onClose}>Done</button>}
+          {stage === 'web' && pickerOk && <button type="button" className="ff-btn primary" onClick={() => allow(true)}><Users size={20} /> Choose contacts</button>}
+          {stage === 'web' && !pickerOk && <button type="button" className="ff-btn primary" onClick={invite}><Share2 size={20} /> Invite friends</button>}
+          {(stage === 'results' || stage === 'web') && <button type="button" className={`ff-btn ${stage === 'web' ? 'ghost' : 'primary'}`} onClick={onClose}>Done</button>}
           {stage === 'empty' && (<>
             <button type="button" className="ff-btn primary" onClick={invite}><Share2 size={20} /> Invite friends</button>
             <button type="button" className="ff-btn ghost" onClick={onClose}>Done</button>
           </>)}
           {stage === 'denied' && (<>
-            <button type="button" className="ff-btn primary" onClick={allow}>Try again</button>
+            <button type="button" className="ff-btn primary" onClick={() => allow()}>Try again</button>
             <button type="button" className="ff-btn ghost" onClick={onClose}>Not now</button>
           </>)}
           {stage === 'error' && (<>
-            <button type="button" className="ff-btn primary" onClick={allow}>Try again</button>
+            <button type="button" className="ff-btn primary" onClick={() => allow()}>Try again</button>
             <button type="button" className="ff-btn ghost" onClick={onClose}>Close</button>
           </>)}
         </div>

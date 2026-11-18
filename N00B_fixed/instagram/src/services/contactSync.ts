@@ -65,6 +65,29 @@ function uniqueNumbers(raw: (string | undefined | null)[]): string[] {
   return out;
 }
 
+/** Chrome on Android (also the installed web app) has a contact picker: the person chooses contacts themselves and only those numbers are read. iPhone/desktop browsers have nothing like it. */
+export function webContactPickerSupported(): boolean {
+  try { return typeof navigator !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window; } catch { return false; }
+}
+
+export async function pickWebContacts(): Promise<ContactScan> {
+  let step = 'opening the contact picker';
+  try {
+    const nav = navigator as unknown as { contacts: { select: (p: string[], o: { multiple: boolean }) => Promise<{ tel?: string[] }[]> } };
+    const picked = await nav.contacts.select(['tel'], { multiple: true });
+    if (!picked.length) return { status: 'empty', users: [] };
+    const numbers = uniqueNumbers(picked.flatMap((c) => c.tel || []));
+    if (!numbers.length) return { status: 'empty', users: [] };
+    step = 'looking for your friends';
+    const users = await matchContacts(numbers);
+    return users.length ? { status: 'ok', users } : { status: 'empty', users: [] };
+  } catch (err) {
+    const name = (err as { name?: string })?.name;
+    if (name === 'AbortError' || name === 'NotAllowedError') return { status: 'denied', users: [] };
+    return { status: 'error', users: [], detail: `${step}: ${String((err as { message?: string })?.message || err)}`.slice(0, 200) };
+  }
+}
+
 export type ContactScan = { status: 'ok' | 'empty' | 'denied' | 'unsupported' | 'error'; users: User[]; detail?: string };
 
 /** The "Find friends" button: asks for the permission (only now, never before) and then looks for the people in the phone's contacts who are on NOOB. Says WHY when there is nobody to show. */

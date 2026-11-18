@@ -151,6 +151,11 @@
   ! X-Frame-Options
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
+# Paperfield (a territory game: plain files and ES modules, no build step) runs in a frame of its own, from this same site. Its one network use is the WebSocket to the shared lobby (wss, our own addresses only).
+/games/paperfield/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' wss://noobsocials.com wss://games.noobsocials.com; worker-src 'none'; frame-ancestors 'self' https://noobsocials.com https://www.noobsocials.com https://games.noobsocials.com; base-uri 'self'; object-src 'none'; form-action 'none'
 # Brick Escape (a sliding-brick puzzle: plain files, no build step) runs in a frame of its own, from this same site, under the same rules as Color Sort above.
 /games/brick-escape/*
   ! X-Frame-Options

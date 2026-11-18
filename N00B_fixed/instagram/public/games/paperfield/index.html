@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1e2433">
+<title>Paperfield</title>
+<link rel="stylesheet" href="game.css?v=1">
+</head>
+<body>
+<canvas id="c" aria-label="Paperfield game"></canvas>
+
+<div id="hud" hidden>
+  <div id="me"><i id="meSw"></i><b id="meScore">0.00%</b><span id="meInfo"></span></div>
+  <div id="board"></div>
+  <canvas id="mini" width="96" height="96"></canvas>
+  <div id="feed"></div>
+  <button id="snd" class="ib" aria-label="Sound">🔊</button>
+</div>
+
+<div id="menu">
+  <div class="card">
+    <h1><span>P</span><span>A</span><span>P</span><span>E</span><span>R</span><span>F</span><span>I</span><span>E</span><span>L</span><span>D</span></h1>
+    <p class="tag">Claim the whole map</p>
+    <input id="name" type="text" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words" spellcheck="false">
+    <button id="play" class="big" disabled>Connecting…</button>
+    <div class="row">
+      <button id="skinBtn" class="alt"><i id="skinSw"></i><span id="skinName">Skin</span></button>
+    </div>
+    <p id="status" class="status"></p>
+    <p class="how">Swipe or use the arrow keys. Leave your land, then come back to claim everything inside your loop. If anyone touches your trail, you are out!</p>
+  </div>
+</div>
+
+<div id="dead" hidden>
+  <div class="card">
+    <h2 id="deadTitle">Game over</h2>
+    <p id="deadBy"></p>
+    <div class="stats"><div><b id="dPeak">0%</b><span>Best territory</span></div><div><b id="dKills">0</b><span>Eliminations</span></div><div><b id="dTime">0s</b><span>Time</span></div></div>
+    <button id="again" class="big">Play again</button>
+    <div class="row"><button id="deadSkins" class="alt">Skins</button><button id="deadMenu" class="alt">Menu</button></div>
+  </div>
+</div>
+
+<div id="skins" hidden>
+  <div class="card wide">
+    <div class="head"><h2>Skins</h2><button id="skinsClose" class="ib" aria-label="Close">✕</button></div>
+    <p class="muted">100 skins. Pick one: it dresses your land, your trail and your face.</p>
+    <div id="skinGrid"></div>
+  </div>
+</div>
+
+<script type="module" src="game.js?v=1"></script>
+</body>
+</html>

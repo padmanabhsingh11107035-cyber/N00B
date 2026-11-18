@@ -1,6 +1,17 @@
 {
  "games": [
   {
+   "id": "paperfield",
+   "title": "Paperfield",
+   "description": "Claim the whole map: leave your land, draw a loop and come back to take everything inside it.",
+   "category": "arcade",
+   "players": "Solo / Friend",
+   "url": "/games/paperfield/",
+   "poster": "/game-posters/paperfield/01-cover.webp",
+   "portrait": true,
+   "lazy": false
+  },
+  {
    "id": "noob_run_3d",
    "title": "NOOB Run 3D",
    "description": "A 3D endless runner.",

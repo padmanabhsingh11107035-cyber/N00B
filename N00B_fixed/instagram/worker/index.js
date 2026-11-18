@@ -5,6 +5,8 @@
 //      The older address  /media/<key>  (what app versions from before the cache still ask for: an Android app that was not updated, a tab left open for days) is the same thing.
 // Every other address is served straight from the files, as before.
 import { botGate } from './botGate.js';
+import { PaperfieldLobby, originAllowed } from './paperfield.js';   // Paperfield's shared lobby (a Durable Object, see worker/paperfield.js)
+export { PaperfieldLobby };
 import { routeFor } from './gamesSite.js';   // the separate games address: its games hub and its 404s (see gamesSite.js)
 import { aiRoute, sleepingPage, isUnreachable } from './aiSite.js';   // the NOOB AI address: its public pages are answered here, everything else goes through to NOOB AI (see aiSite.js)
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
@@ -332,6 +334,12 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Paperfield's shared lobby: a WebSocket to the one Durable Object that holds the world (only from our own pages)
+    if (url.pathname === '/ws/paperfield') {
+      if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 });
+      if (!originAllowed(request.headers.get('Origin')) || !env.PAPERFIELD) return new Response('Not allowed', { status: 403 });
+      return env.PAPERFIELD.get(env.PAPERFIELD.idFromName('lobby-1')).fetch(request);
+    }
     // www.noobsocials.com is only a second name for the same site: a permanent redirect to the address without www, path and query kept (first of all, before anything else is looked at).
     // Only reading requests are redirected; every other address (the games address, /__geo, /m/ ...) is untouched.
     if (url.hostname === 'www.noobsocials.com' && (request.method === 'GET' || request.method === 'HEAD')) {

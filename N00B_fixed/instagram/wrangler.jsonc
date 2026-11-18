@@ -16,10 +16,13 @@
   //                    "on" = only members of the chat get a chat file; "off" = nothing is checked or logged.
   //   CHAT_MEDIA_PRIVATE_BUCKET: "on" = also look in the private bucket "chatmedia" first (turns the gate on by itself); "off" = only the old public bucket.
   "vars": { "CHAT_MEDIA_GATE": "on", "CHAT_MEDIA_PRIVATE_BUCKET": "on" },
+  // Paperfield's one shared lobby (worker/paperfield.js): a Durable Object, kept in memory only. The migration creates the class once.
+  "durable_objects": { "bindings": [{ "name": "PAPERFIELD", "class_name": "PaperfieldLobby" }] },
+  "migrations": [{ "tag": "v1-paperfield", "new_sqlite_classes": ["PaperfieldLobby"] }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/*", "!/assets/*", "!/games/_shared/*", "!/face/*", "!/games/brick-escape/*", "!/games/flappy20/*", "!/games/royal-ludo/*", "!/games/nocta-uno/*", "!/games/noobgames-hub/*", "!/games/strikebowl/*", "!/games/pulsegrid/*", "!/games/vertical-platformer/*", "!/games/terrafoundry/*", "!/games/metro-rush/*", "!/games/ashenfang/*", "!/games/breachpt/*", "!/games/apexdrift/*", "!/games/farbound/*", "!/games/frostzero/*", "!/games/lane-runner/*", "!/games/noob-run-3d/*", "!/games/canyon-rush/*", "!/games/coil-rush/*", "!/games/color-sort/*", "!/games/critterkart/*", "!/games/helix-fall/*", "!/games/siegecraft/*", "!/games/the-rogue/*", "!/games/underhall/*", "!/game-posters/*", "!/brand/*", "!/music/*", "!/features/*", "!/screens/*", "!/lenses/*", "!/cold-drinks/*", "!/avatars/*", "!/live-avatars/*", "!/draw-stickers/*", "!/opening/*", "!/food-hero/*"]
+    "run_worker_first": ["/*", "!/assets/*", "!/games/_shared/*", "!/face/*", "!/games/brick-escape/*", "!/games/flappy20/*", "!/games/royal-ludo/*", "!/games/nocta-uno/*", "!/games/noobgames-hub/*", "!/games/strikebowl/*", "!/games/pulsegrid/*", "!/games/vertical-platformer/*", "!/games/terrafoundry/*", "!/games/metro-rush/*", "!/games/ashenfang/*", "!/games/breachpt/*", "!/games/apexdrift/*", "!/games/farbound/*", "!/games/frostzero/*", "!/games/lane-runner/*", "!/games/noob-run-3d/*", "!/games/canyon-rush/*", "!/games/coil-rush/*", "!/games/color-sort/*", "!/games/paperfield/*", "!/games/critterkart/*", "!/games/helix-fall/*", "!/games/siegecraft/*", "!/games/the-rogue/*", "!/games/underhall/*", "!/game-posters/*", "!/brand/*", "!/music/*", "!/features/*", "!/screens/*", "!/lenses/*", "!/cold-drinks/*", "!/avatars/*", "!/live-avatars/*", "!/draw-stickers/*", "!/opening/*", "!/food-hero/*"]
   }
 }

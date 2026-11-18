@@ -5,7 +5,7 @@
 export const GAMES_HOSTS = new Set(['games.noobsocials.com']);
 
 /** the game folders that exist (public/games/<name>/). On the games address ONLY these are served: an unknown /games/<x>/ must be a plain 404, not the app's fallback page (the app must never run there). A test keeps this list equal to the folders. */
-export const GAME_DIRS = new Set(['_shared', 'apexdrift', 'ashenfang', 'breachpt', 'brick-escape', 'canyon-rush', 'coil-rush', 'color-sort', 'critterkart', 'farbound', 'flappy20', 'frostzero', 'helix-fall', 'lane-runner', 'metro-rush', 'neon-alley', 'nocta-uno', 'noob-run-3d', 'noobgames-hub', 'pulsegrid', 'royal-ludo', 'siegecraft', 'strikebowl', 'terrafoundry', 'the-rogue', 'underhall', 'vertical-platformer']);
+export const GAME_DIRS = new Set(['_shared', 'apexdrift', 'ashenfang', 'breachpt', 'brick-escape', 'canyon-rush', 'coil-rush', 'color-sort', 'critterkart', 'farbound', 'flappy20', 'frostzero', 'helix-fall', 'lane-runner', 'metro-rush', 'neon-alley', 'nocta-uno', 'noob-run-3d', 'noobgames-hub', 'paperfield', 'pulsegrid', 'royal-ludo', 'siegecraft', 'strikebowl', 'terrafoundry', 'the-rogue', 'underhall', 'vertical-platformer']);
 
 /** the hub's own files: address on the games host -> file in the website's files. "/" is asked for as the folder (".../index.html" would be answered with a redirect). */
 const HUB = {

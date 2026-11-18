@@ -27,6 +27,8 @@ interface HostedGameFrameProps {
   scoreGame?: string;
   /** an online race: the game asks this page to open a Supabase Realtime room, and this page passes the small messages between the players' phones (nothing else is shared). */
   multiplayer?: { game: string; id: string; name: string };
+  /** the player's NOOB name: a game with a lobby of its own (Paperfield) shows it as the starting name (given in the page's # part; the game keeps nothing else about who they are) */
+  playerName?: string;
   /** the game keeps nothing of its own in browser storage and has no bridge: it is framed WITHOUT same-origin rights (see utils/gamesOrigin.ts). Ignored for a game with a ranking, score or race. */
   isolated?: boolean;
   /** the game's files cannot yet be moved to a separate games address (they still address the app by window.location.origin) */
@@ -44,7 +46,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame, multiplayer, isolated, sameOriginOnly }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame, multiplayer, isolated, sameOriginOnly, playerName }) => {
   // where and how the frame runs: the app's own address (default), or the separate games address when one is set for this build
   const plan = React.useMemo(
     () => planGameFrame(url, { isolated, sameOriginOnly, bridge: !!(ranking || scoreGame || multiplayer), appOrigin: window.location.origin }),
@@ -199,7 +201,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
         {(visible || (!lazy && !wasShown)) && <iframe
           ref={frameRef}
           title={title}
-          src={plan.src}
+          src={playerName ? `${plan.src}${plan.src.includes('#') ? '&' : '#'}noob-name=${encodeURIComponent(playerName.slice(0, 16))}` : plan.src}
           allow="autoplay; fullscreen; gamepad"
           allowFullScreen
           referrerPolicy="no-referrer"

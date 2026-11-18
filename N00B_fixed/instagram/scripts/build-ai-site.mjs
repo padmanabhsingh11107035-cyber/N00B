@@ -17,12 +17,13 @@ const NAV = [
   ['/features', 'Features'], ['/how-it-works', 'How it works'], ['/languages', 'Languages'], ['/safety', 'Safety'], ['/faq', 'FAQ'], ['/install', 'Install'],
 ];
 
-const ORG = { '@type': 'Organization', '@id': MAIN + '/#organization', name: 'NOOB', url: MAIN + '/', logo: SITE + '/logo.png', sameAs: ['https://www.instagram.com/nooob.xyz'] };
+const FOUNDER = { '@type': 'Person', '@id': MAIN + '/about#founder', name: 'Padmanabh Singh Vaghela', jobTitle: 'Founder, CEO and Owner of NOOB Socials and NOOB AI' };
+const ORG = { '@type': 'Organization', '@id': MAIN + '/#org', name: 'NOOB Socials', alternateName: ['NOOB', 'noobsocials'], url: MAIN + '/', logo: SITE + '/logo.png', founder: FOUNDER, sameAs: ['https://www.instagram.com/nooob.xyz'] };
 const APP = {
   '@type': 'SoftwareApplication', '@id': SITE + '/#app', name: 'NOOB AI', url: SITE + '/', image: SITE + '/og-image.png',
   description: 'NOOB AI is a free multilingual AI voice assistant with healthcare knowledge. Talk in your own language, hear it answer out loud, and let it remember you.',
   applicationCategory: 'LifestyleApplication', operatingSystem: 'Web, iPhone, Android, Windows, macOS', inLanguage: ['en', 'hi', 'ta', 'bn', 'mr', 'gu'],
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' }, publisher: { '@id': MAIN + '/#organization' },
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' }, publisher: { '@id': MAIN + '/#org' },
 };
 
 function crumbs(items) {
@@ -31,7 +32,7 @@ function crumbs(items) {
 
 function layout({ file, p, title, desc, h1, lede, body, ld = [], current = '' }) {
   const url = SITE + p;
-  const graph = { '@context': 'https://schema.org', '@graph': [ORG, { '@type': 'WebSite', '@id': SITE + '/#website', url: SITE + '/', name: 'NOOB AI', publisher: { '@id': MAIN + '/#organization' } }, ...ld] };
+  const graph = { '@context': 'https://schema.org', '@graph': [ORG, { '@type': 'WebSite', '@id': SITE + '/#website', url: SITE + '/', name: 'NOOB AI', publisher: { '@id': MAIN + '/#org' } }, ...ld] };
   const nav = NAV.map(([href, label]) => `<a href="${href}"${current === href ? ' aria-current="page"' : ''}>${label}</a>`).join('');
   const html = `<!doctype html>
 <html lang="en">
@@ -118,7 +119,7 @@ ${card('Plays your songs', 'Say "Play Kesariya". NOOB AI plays it in the YouTube
 <ol class="steps"><li><b>You speak</b><span>Hold the button on a NOOB device or tap the orb in the app. You can type too.</span></li><li><b>NOOB AI understands</b><span>It listens in your language, thinks with your saved details in mind, and looks things up when needed.</span></li><li><b>It answers out loud</b><span>The first words arrive in a few seconds, in the same language, in a natural voice.</span></li></ol>
 <p class="more"><a href="/how-it-works">Read how it works</a></p></div></section>
 
-<section class="sec alt"><div class="wrap split"><div><h2>Part of NOOB</h2><p>NOOB AI is made by the team behind <a href="${MAIN}/">NOOB</a>, the student-run social app for reels, chat and games. Already have a NOOB account? Choose <strong>Continue with NOOB</strong> on the sign-in page and you do not need a new password.</p><p class="muted">Accounts made without NOOB get 5 free questions, then link a NOOB account for unlimited use.</p></div>
+<section class="sec alt"><div class="wrap split"><div><h2>Part of NOOB</h2><p>NOOB AI is made by the team behind <a href="${MAIN}/">NOOB Socials</a>, the free social app for reels, chat and games, made by Padmanabh Singh Vaghela. Already have a NOOB account? Choose <strong>Continue with NOOB</strong> on the sign-in page and you do not need a new password.</p><p class="muted">Accounts made without NOOB get 5 free questions, then link a NOOB account for unlimited use.</p></div>
 <div class="panel"><p class="big">Free</p><p>No subscription and no card. Sign in and start talking.</p></div></div></section>
 
 <section class="sec"><div class="wrap"><h2>Questions people ask</h2><div class="faqs">
@@ -311,7 +312,7 @@ ${cta('Ready?', 'Open NOOB AI now, or install it first.')}
 layout({
   file: 'about.html', p: '/about', current: '',
   title: 'About NOOB AI: the AI friend from the NOOB team',
-  desc: 'NOOB AI is the AI assistant from the team behind NOOB, the student-run social app. Learn why it was built and how it fits with NOOB.',
+  desc: 'NOOB AI is the AI assistant made by Padmanabh Singh Vaghela, founder of NOOB Socials. Learn why it was built and how it fits with NOOB.',
   h1: 'About NOOB AI', lede: 'A friendly, multilingual, healthcare-aware AI, made by the NOOB team.',
   ld: [APP, crumbs([['NOOB AI', '/'], ['About', '/about']])],
   body: `
@@ -319,7 +320,7 @@ layout({
 <h2>Why we built it</h2>
 <p>We wanted an AI that talks the way people really talk: in their own language, out loud, and with some care. Most assistants forget you the moment you close them and ignore how you feel. NOOB AI remembers you, notices your mood, and keeps health questions safe, and it is free.</p>
 <h2>Made by NOOB</h2>
-<p>NOOB AI is built by the team behind <a href="${MAIN}/">NOOB</a>, a student-run social app for reels, videos, chat, games and music. You can sign in to NOOB AI with your NOOB account, and NOOB AI is part of the same family.</p>
+<p>NOOB AI is made by <strong>Padmanabh Singh Vaghela</strong>, the founder, CEO and owner of <a href="${MAIN}/">NOOB Socials</a> (and of NOOB AI), a free social app for reels, videos, chat, 37 games and music. You can sign in to NOOB AI with your NOOB account, and NOOB AI is part of the same family.</p>
 <h2>What it is made of</h2>
 <ul class="tick"><li>An app for your browser or home screen (HTML, CSS and JavaScript).</li><li>A server for speech, AI and memory (Python), with a local database (SQLite).</li><li>An optional NOOB device with a microphone, speaker and small screen (an ESP32-S3).</li></ul>
 <p><a class="btn ghost" href="${MAIN}/about">About NOOB</a></p>

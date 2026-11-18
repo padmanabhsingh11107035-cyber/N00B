@@ -39,10 +39,10 @@ const FEATURES = [
   },
   {
     slug: 'games', name: 'NOOB Games', open: '/games', shot: 'noob-socials-games.jpg',
-    title: 'NOOB Games | 50+ mini games on NOOB Socials',
-    description: 'Play more than 50 mini games on NOOB Socials, such as Ludo and Chess, alone or against friends, with a leaderboard.',
-    lead: 'More than fifty mini games in the noob arena.',
-    points: ['Play alone against a bot or invite a friend to a match with a link.', 'Ludo, Chess, Snakes & Ladders, Monopoly and many more.', 'A leaderboard shows who wins the most.', 'No download needed: games run inside NOOB.']
+    title: 'NOOB Games | 37 games on NOOB Socials',
+    description: 'Play 37 games on NOOB Socials, from Critter Kart, Helix Fall and Siegecraft to Ludo and Chess Blitz, alone or against friends, with a leaderboard.',
+    lead: '37 games in the noob arena.',
+    points: ['Play alone against a bot or invite a friend to a match with a link.', '37 games: Critter Kart, Helix Fall, Siegecraft, Underhall, Royal Ludo, Chess Blitz, Snakes & Ladders, Monopoly and more (see the full list of all 37 games).', 'A leaderboard shows who wins the most.', 'No download needed: games run inside NOOB.']
   },
   {
     slug: 'music', name: 'NOOB Music', open: '/music', shot: 'noob-socials-music.jpg',
@@ -186,7 +186,7 @@ ${FEATURES.filter((o) => o.slug !== f.slug).map((o) => `    <a href="/features/$
 
 const idxUrl = `${SITE}/features`;
 const idxTitle = 'NOOB Socials features | Reels, videos, chat, games, music, stories and points';
-const idxDesc = 'Everything you can do on NOOB Socials, the free student-run social app: reels, long videos, chat, explore, games, music, stories and NOOB Points.';
+const idxDesc = 'Everything you can do on NOOB Socials, the free social app made by Padmanabh Singh Vaghela: reels, long videos, chat, explore, games, music, stories and NOOB Points.';
 const idx = head(idxTitle, idxDesc, idxUrl, {
   '@context': 'https://schema.org',
   '@graph': [
@@ -197,7 +197,7 @@ const idx = head(idxTitle, idxDesc, idxUrl, {
 `<nav class="crumbs" aria-label="Breadcrumb"><a href="/">NOOB Socials</a> › Features</nav>
 <main>
 <h1>What you can do on NOOB</h1>
-<p class="lead">NOOB Socials is free and run by students. Pick a part of NOOB to read about it, then log in to open it.</p>
+<p class="lead">NOOB Socials is free and made for fun by Padmanabh Singh Vaghela. Pick a part of NOOB to read about it, then log in to open it.</p>
 <div class="grid">
 ${FEATURES.map((f) => `  <a href="/features/${f.slug}"><b>${esc(f.name)}</b><span>${esc(f.lead)}</span></a>`).join('\n')}
 </div>
@@ -215,3 +215,6 @@ if (sm.includes('<!-- features:start -->')) sm = sm.replace(/ {2}<!-- features:s
 else sm = sm.replace('</urlset>', block + '</urlset>');
 fs.writeFileSync(smPath, sm);
 console.log(`made ${FEATURES.length + 1} pages in public/features and updated the site map`);
+
+// the full game list page and its link on the Games page (reads the app's own game list)
+await import('./make-games-list.mjs');

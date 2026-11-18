@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-  <url><loc>https://noobsocials.com/</loc><lastmod>2026-10-18</lastmod><changefreq>daily</changefreq><priority>1.0</priority>
+  <url><loc>https://noobsocials.com/</loc><lastmod>2026-11-18</lastmod><changefreq>daily</changefreq><priority>1.0</priority>
     <image:image><image:loc>https://noobsocials.com/screens/noob-socials-login-page.jpg</image:loc><image:title>NOOB Socials log in page</image:title><image:caption>The NOOB Socials log in page: sign in with your user ID, email or phone, or continue with Google, Apple, Facebook or Discord.</image:caption></image:image>
     <image:image><image:loc>https://noobsocials.com/screens/noob-socials-home-feed.jpg</image:loc><image:title>NOOB Socials home feed</image:title><image:caption>The Home feed: stories at the top, topic chips (Fun &amp; Humor, Gaming, Music) and photo posts from people you follow.</image:caption></image:image>
   </url>
-  <url><loc>https://noobsocials.com/about</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://noobsocials.com/about</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://noobsocials.com/screenshots</loc><lastmod>2026-10-18</lastmod><changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://noobsocials.com/screens/noob-socials-login-page.jpg</image:loc><image:title>NOOB Socials – Log in</image:title><image:caption>The NOOB Socials log in page: sign in with your user ID, email or phone, or continue with Google, Apple, Facebook or Discord.</image:caption></image:image>
     <image:image><image:loc>https://noobsocials.com/screens/noob-socials-login-page-desktop.jpg</image:loc><image:title>NOOB Socials – Log in on a computer</image:title><image:caption>The same log in page on a computer.</image:caption></image:image>
@@ -31,16 +31,17 @@
   <url><loc>https://noobsocials.com/grievance.html</loc><lastmod>2026-11-03</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://noobsocials.com/terms</loc><lastmod>2026-10-16</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://noobsocials.com/data-deletion</loc><lastmod>2026-10-16</lastmod><changefreq>yearly</changefreq><priority>0.2</priority></url>
-  <url><loc>https://noobsocials.com/noob-features</loc><lastmod>2026-11-08</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://noobsocials.com/noob-features</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <!-- features:start -->
-  <url><loc>https://noobsocials.com/features</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://noobsocials.com/features/reels</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/videos</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/chat</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/explore</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/games</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/music</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/stories</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://noobsocials.com/features/points</loc><lastmod>2026-10-20</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://noobsocials.com/features/reels</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/videos</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/chat</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/explore</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/games</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/music</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/stories</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/points</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://noobsocials.com/features/all-games</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <!-- features:end -->
 </urlset>

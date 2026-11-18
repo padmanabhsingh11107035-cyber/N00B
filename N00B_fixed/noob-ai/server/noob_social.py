@@ -1,8 +1,8 @@
 """
-"Continue with NOOB": sign in to the NOOB AI Assistant with a NOOB social media account (nooob.xyz).
+"Continue with NOOB": sign in to the NOOB AI Assistant with a NOOB social media account (noobsocials.com).
 
 It checks the username/email and password with NOOB's own login service (the same one the
-nooob.xyz website uses), reads the account's signup details (name, birthday, phone, email, city...), and ends that login
+noobsocials.com website uses), reads the account's signup details (name, birthday, phone, email, city...), and ends that login
 straight away. The NOOB password is never saved or logged by the assistant.
 """
 
@@ -113,7 +113,7 @@ def list_feedback(secret, noob_id):
 # ---------------- the person's current NOOB profile picture ----------------
 # Shown next to their name in the NOOB AI app. It is asked from NOOB (same shared secret as the feedback above, scoped to the one
 # linked account) and kept for a few minutes, so changing the picture in NOOB shows up here without signing in again.
-MEDIA_BASE = "https://nooob.xyz"
+MEDIA_BASE = "https://noobsocials.com"
 AVATAR_FRESH = 300         # seconds a picture is trusted before NOOB is asked again
 AVATAR_RETRY = 60          # seconds before trying again after NOOB could not be reached
 _avatars = {}              # NOOB account id -> {"url": str, "until": float}

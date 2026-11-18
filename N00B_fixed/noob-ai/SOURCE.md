@@ -1,7 +1,7 @@
 # NOOB AI — the voice assistant
 
 This folder is the complete code of **NOOB AI**, the multilingual voice assistant that opens from the NOOB app
-(**Profile → ⋮ → NOOB AI**) and runs at https://ai.nooob.xyz. It is developed here, in the NOOB repository.
+(**Profile → ⋮ → NOOB AI**) and runs at https://ai.noobsocials.com. It is developed here, in the NOOB repository.
 
 - It does **not** run on Cloudflare with the NOOB website: the server (`server/`, Python) runs on the owner's PC
   and is reached through a Cloudflare Tunnel. The robot's code is `noob_esp32/noob_esp32.ino` (ESP32-S3).

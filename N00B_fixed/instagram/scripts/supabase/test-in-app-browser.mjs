@@ -10,14 +10,14 @@ const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(
 const section = (t) => console.log(`\n${t}`);
 const M = await import(pathToFileURL(path.resolve('src/utils/inAppBrowser.ts')).href);
 const { shouldOpenInApp, isFrameBlocked, hostOf, openInApp, closeInApp } = M;
-const OWN = 'nooob.xyz';
+const OWN = 'noobsocials.com';
 
 section('1. Which clicks open in NOOB');
 check(shouldOpenInApp({ href: 'https://example.com/shop', button: 0 }, OWN) === true, 'an ordinary click on a link to another website');
 check(shouldOpenInApp({ href: 'http://example.com' }, OWN) === true, 'a plain http link too');
-check(shouldOpenInApp({ href: 'https://www.nooob.xyz/' }, OWN) === false && shouldOpenInApp({ href: 'https://nooob.xyz/?pro=plus' }, 'www.nooob.xyz') === false && shouldOpenInApp({ href: 'https://www.nooob.xyz/x' }, 'n00b.example.workers.dev') === false, 'the NOOB address itself (with or without www) is never shown inside the in-app browser (its pages forbid it: it came out as an empty white page)');
-check(isFrameBlocked('https://nooob.xyz/x') && isFrameBlocked('https://www.nooob.xyz') && !isFrameBlocked('https://ai.nooob.xyz') && shouldOpenInApp({ href: 'https://ai.nooob.xyz/' }, OWN) === true, 'if NOOB itself ever got there, it shows the Open in browser card (not a blank page); NOOB AI keeps working');
-check(shouldOpenInApp({ href: 'https://nooob.xyz/?post=1' }, OWN) === false && shouldOpenInApp({ href: 'https://NOOOB.xyz/' }, OWN) === false && shouldOpenInApp({ href: 'https://noob.xyz/x' }, OWN) === true, 'links inside NOOB itself are left alone (any capital letters), a look-alike address is another website');
+check(shouldOpenInApp({ href: 'https://www.noobsocials.com/' }, OWN) === false && shouldOpenInApp({ href: 'https://noobsocials.com/?pro=plus' }, 'www.noobsocials.com') === false && shouldOpenInApp({ href: 'https://www.noobsocials.com/x' }, 'n00b.example.workers.dev') === false, 'the NOOB address itself (with or without www) is never shown inside the in-app browser (its pages forbid it: it came out as an empty white page)');
+check(isFrameBlocked('https://noobsocials.com/x') && isFrameBlocked('https://www.noobsocials.com') && !isFrameBlocked('https://ai.noobsocials.com') && shouldOpenInApp({ href: 'https://ai.noobsocials.com/' }, OWN) === true, 'if NOOB itself ever got there, it shows the Open in browser card (not a blank page); NOOB AI keeps working');
+check(shouldOpenInApp({ href: 'https://noobsocials.com/?post=1' }, OWN) === false && shouldOpenInApp({ href: 'https://NOOBSOCIALS.com/' }, OWN) === false && shouldOpenInApp({ href: 'https://noobsocial.com/x' }, OWN) === true && shouldOpenInApp({ href: 'https://nooob.xyz/x' }, OWN) === true, 'links inside NOOB itself are left alone (any capital letters), a look-alike address is another website');
 for (const [name, href] of [['mailto', 'mailto:a@b.co'], ['tel', 'tel:+911234567890'], ['sms', 'sms:123'], ['UPI', 'upi://pay?pa=a@b'], ['javascript', 'javascript:alert(1)'], ['data', 'data:text/html,hi'], ['blob', 'blob:https://nooob.xyz/abc']]) {
   check(shouldOpenInApp({ href }, OWN) === false, `${name}: links are never touched`);
 }
@@ -37,7 +37,7 @@ openInApp('https://example.com/a'); closeInApp();
 check(true, 'open and close do not crash');
 
 section('5. The new .com is NOOB too');
-check(shouldOpenInApp({ href: 'https://noobsocials.com/?profile=ann' }, 'nooob.xyz') === false && shouldOpenInApp({ href: 'https://www.noobsocials.com/' }, 'nooob.xyz') === false && shouldOpenInApp({ href: 'https://nooob.xyz/?post=1' }, 'noobsocials.com') === false, 'a link to either NOOB address opens the normal way, from either address');
+check(shouldOpenInApp({ href: 'https://noobsocials.com/?profile=ann' }, 'www.noobsocials.com') === false && shouldOpenInApp({ href: 'https://www.noobsocials.com/' }, 'noobsocials.com') === false && shouldOpenInApp({ href: 'https://nooob.xyz/?post=1' }, 'noobsocials.com') === true, 'a link to NOOB opens the normal way; the retired nooob.xyz is just another website'); 
 check(isFrameBlocked('https://noobsocials.com/x') && isFrameBlocked('https://www.noobsocials.com') && !isFrameBlocked('https://example.com'), 'and neither address is ever shown inside the in-app browser');
 check(shouldOpenInApp({ href: 'https://noobsocials.com.evil.io/' }, 'noobsocials.com') === true && shouldOpenInApp({ href: 'https://evilnoobsocials.com/' }, 'noobsocials.com') === true, 'look-alike addresses are other sites');
 

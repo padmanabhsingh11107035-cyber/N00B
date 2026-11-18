@@ -5,7 +5,7 @@
 //   * siteOrigin()   on the website: the address the person is on (if it is ours); in the Android app, which runs from files on the phone: MAIN_SITE.
 // No browser-only code runs when this file is loaded, so it can be tested on its own.
 
-export const SITE_DOMAINS = ['noobsocials.com', 'nooob.xyz'] as const;
+export const SITE_DOMAINS = ['noobsocials.com'] as const;
 
 const fromEnv = (): string => {
   try { return String((import.meta as any).env?.VITE_SITE_URL || '').trim(); } catch { return ''; }

@@ -3073,7 +3073,7 @@ They will not be told.`)) return;
                       </span>
                       <span className="text-[11px] text-zinc-400">
                         {noobAiMaintenance
-                          ? 'NOOB AI is locked: everyone but you sees "NOOB AI is under maintenance" (in the app, at ai.nooob.xyz and on NOOB devices).'
+                          ? 'NOOB AI is locked: everyone but you sees "NOOB AI is under maintenance" (in the app, at ai.noobsocials.com and on NOOB devices).'
                           : 'NOOB AI (the voice assistant) is open to everyone.'}
                       </span>
                     </div>

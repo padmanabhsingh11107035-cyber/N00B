@@ -155,7 +155,7 @@ async function sendEmailDetailed(to: string, subject: string, text: string, html
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text: out.text, html: out.html }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@noobsocials.com>').trim(), to: [to], subject, text: out.text, html: out.html }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
     // The database only accepts a new email login that has a ticket (migration 20261027000001/2): the private address about to be created is written down first,
     // with the service key, so that a call made straight to the login service's public sign-up address can never make an account without this code check.
     const createOnce = async () => {
-      const authEmail = `${crypto.randomUUID()}@users.nooob.xyz`;
+      const authEmail = `${crypto.randomUUID()}@users.noobsocials.com`;   // a domain we own (the old nooob.xyz is not ours): migration 20261118000006
       const { error: ticketErr } = await admin.from('signup_tickets').insert({ auth_email: authEmail });
       if (ticketErr) console.warn('signup ticket:', String(ticketErr.message || ticketErr).slice(0, 200));   // the table is not there yet (migration not run): the rule is not on either, so go on
       return admin.auth.admin.createUser({

@@ -91,7 +91,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text: out.text, html: out.html, ...((Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() ? { reply_to: (Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() } : {}) }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@noobsocials.com>').trim(), to: [to], subject, text: out.text, html: out.html, ...((Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() ? { reply_to: (Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() } : {}) }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
@@ -629,7 +629,7 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
   let vapid: (endpoint: string) => Promise<string> = async () => '';
   if (recipients.length) {
     try {
-      vapid = await makeVapid(String(data.publicKey || ''), privateKey, (Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@nooob.xyz').trim());
+      vapid = await makeVapid(String(data.publicKey || ''), privateKey, (Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@noobsocials.com').trim());
     } catch (e) {
       console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
       return json({ error: 'Push keys are invalid.' }, 500);

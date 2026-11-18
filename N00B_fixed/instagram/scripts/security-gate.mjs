@@ -12,6 +12,7 @@ const STEPS = [
   ['Profile privacy and Live Lounge rules', ['node', '--liftoff-only', 'scripts/supabase/test-profile-privacy-lounge-db.mjs']],
   ['Ads rules', ['node', '--liftoff-only', 'scripts/supabase/test-ads-db.mjs']],
   ['Admin password re-check, admin email approval, new-device notice', ['node', '--liftoff-only', 'scripts/supabase/test-admin-security-db.mjs']],
+  ['Hidden login addresses moved to our own domain', ['node', '--liftoff-only', 'scripts/supabase/test-fake-login-domain-db.mjs']],
   ['Security configuration (headers, links, workflows)', ['node', 'scripts/supabase/test-security-config.mjs']],
   ['Website packages with known problems', ['node', 'scripts/audit-packages.mjs']],
   ['TypeScript (no type errors anywhere)', ['npx', 'tsc', '--noEmit', '-p', '.']],

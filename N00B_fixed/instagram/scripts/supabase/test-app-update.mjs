@@ -25,7 +25,7 @@ check(N.nativeUpdateState(10, 11) === 'newer' && N.nativeUpdateState(11, 11) ===
 section('2. The Android app shows the live website, so ordinary changes arrive by themselves');
 const cfg = JSON.parse(read('capacitor.config.json'));
 check(cfg.server?.url === 'https://noobsocials.com' && cfg.webDir === 'dist' && cfg.server?.androidScheme === 'https', 'the app shows the live website (since 2026-11-03), so every change to the website reaches the Android app by itself, without a new app file');
-check(Array.isArray(cfg.server.allowNavigation) && cfg.server.allowNavigation.includes('noobsocials.com') && cfg.server.allowNavigation.includes('nooob.xyz'), 'both of NOOB’s addresses stay inside the app');
+check(Array.isArray(cfg.server.allowNavigation) && cfg.server.allowNavigation.includes('noobsocials.com') && !JSON.stringify(cfg.server.allowNavigation).includes('nooob.xyz'), 'NOOB’s address stays inside the app (the retired nooob.xyz is not allowed in)');
 check(cfg.server?.errorPath === 'native-offline.html' && fs.existsSync('public/native-offline.html') && /No connection/.test(read('public/native-offline.html')), 'without a connection the app shows the "No connection" page that is inside it');
 check(/connect-src[^;]*https:\/\/api\.github\.com/.test(read('public/_headers')), 'the website may ask GitHub for the newest app build number');
 

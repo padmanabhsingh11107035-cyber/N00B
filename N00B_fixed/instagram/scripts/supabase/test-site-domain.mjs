@@ -14,14 +14,14 @@ const load = async (q = '') => import(pathToFileURL(path.resolve('src/utils/site
 
 section('1. Which addresses are NOOB');
 const S = await load();
-check(S.SITE_DOMAINS.includes('noobsocials.com') && S.SITE_DOMAINS.includes('nooob.xyz'), 'both the new .com and the old .xyz are NOOB');
-for (const h of ['noobsocials.com', 'www.noobsocials.com', 'ai.noobsocials.com', 'coaching.noobsocials.com', 'nooob.xyz', 'WWW.NOOB.xyz'.toLowerCase().replace('noob', 'nooob'), 'ai.nooob.xyz']) check(S.isOwnHost(h), `${h} is ours`);
-for (const h of ['example.com', 'noobsocials.com.evil.io', 'evilnoobsocials.com', 'nooob.xyz.attacker.net', 'noob.xyz', '', null, undefined]) check(!S.isOwnHost(h), `${String(h)} is not ours`);
+check(S.SITE_DOMAINS.includes('noobsocials.com') && !S.SITE_DOMAINS.includes('nooob.xyz'), 'NOOB is noobsocials.com only (the retired nooob.xyz is not ours)');
+for (const h of ['noobsocials.com', 'www.noobsocials.com', 'ai.noobsocials.com', 'coaching.noobsocials.com']) check(S.isOwnHost(h), `${h} is ours`);
+for (const h of ['example.com', 'noobsocials.com.evil.io', 'evilnoobsocials.com', 'nooob.xyz', 'www.nooob.xyz', 'ai.nooob.xyz', 'nooob.xyz.attacker.net', 'noob.xyz', '', null, undefined]) check(!S.isOwnHost(h), `${String(h)} is not ours`);
 
 section('2. The main address comes from the build, and can only be one of ours');
 check(S.MAIN_SITE === 'https://noobsocials.com', 'the main address (shared links, the Android app, emails) is the new .com unless the build says otherwise');
 globalThis.__env = {};
-for (const [value, want] of [['https://noobsocials.com', 'https://noobsocials.com'], ['https://noobsocials.com/', 'https://noobsocials.com'], ['https://www.noobsocials.com', 'https://noobsocials.com'], ['https://nooob.xyz', 'https://nooob.xyz'], ['https://evil.example', 'https://noobsocials.com'], ['not a url', 'https://noobsocials.com'], ['', 'https://noobsocials.com']]) {
+for (const [value, want] of [['https://noobsocials.com', 'https://noobsocials.com'], ['https://noobsocials.com/', 'https://noobsocials.com'], ['https://www.noobsocials.com', 'https://noobsocials.com'], ['https://nooob.xyz', 'https://noobsocials.com'], ['https://evil.example', 'https://noobsocials.com'], ['not a url', 'https://noobsocials.com'], ['', 'https://noobsocials.com']]) {
   // import.meta.env is replaced by the build; here the file is read with the value written in
   const src = read('src/utils/siteUrl.ts').replace("(import.meta as any).env?.VITE_SITE_URL", JSON.stringify(value));
   const tmp = path.join(fs.mkdtempSync(path.join(process.env.TEMP || '.', 'noob-site-')), 'siteUrl.ts');
@@ -39,8 +39,8 @@ section('3. Links that are shown or shared');
     return M;
   };
   check((await make('noobsocials.com')).siteOrigin() === 'https://noobsocials.com', 'on the new .com, links say the new .com');
-  check((await make('nooob.xyz')).siteOrigin() === 'https://nooob.xyz', 'on the old address, links stay on the old address (nobody is moved without choosing)');
-  check((await make('ai.nooob.xyz')).siteOrigin() === 'https://noobsocials.com', 'on a sub-address (ai., coaching.) a link points at the main site, not at the sub-address');
+  check((await make('nooob.xyz')).siteOrigin() === 'https://noobsocials.com', 'on the retired address nothing is treated as NOOB: links point at the main site');
+  check((await make('ai.noobsocials.com')).siteOrigin() === 'https://noobsocials.com', 'on a sub-address (ai., coaching.) a link points at the main site, not at the sub-address');
   check((await make('localhost')).siteOrigin() === 'https://noobsocials.com', 'on a test address, links point at the real site');
   const n = await make('localhost', true);
   check(n.isNativeApp() && n.siteOrigin() === 'https://noobsocials.com' && n.mediaOrigin() === 'https://noobsocials.com', 'inside the Android app, links and pictures use the website\'s full address');
@@ -85,7 +85,7 @@ section('5. www. opens the address without www');
 section('6. The Install button on the old address installs the new app');
 {
   const at = (hostname, extra = {}) => { globalThis.window = { location: { hostname }, ...extra }; return S.isOnOtherNoobAddress(); };
-  check(at('nooob.xyz') === true && at('www.nooob.xyz') === true, 'on nooob.xyz the button sends people to the main address');
+  check(at('nooob.xyz') === false && at('www.nooob.xyz') === false, 'nooob.xyz is no longer treated as one of our addresses');
   check(at('noobsocials.com') === false && at('www.noobsocials.com') === false, 'on noobsocials.com it installs right there');
   check(at('localhost') === false && at('192.168.1.5') === false && at('example.com') === false, 'a test address or another website is never sent anywhere');
   check(at('ai.nooob.xyz') === false && at('coaching.nooob.xyz') === false && at('ai.noobsocials.com') === false, 'NOOB AI and NOOB STUDY (ai. / coaching.) are other apps: never sent anywhere');

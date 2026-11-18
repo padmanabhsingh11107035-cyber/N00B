@@ -28,7 +28,7 @@ NOOB remembers what you tell it — even after it is switched off — and is spe
 | **Plays songs from YouTube** | *"Play Kesariya"*, *"गाना चलाओ"*: the app plays it in YouTube's own player (pause / another video / stop, or just say "stop the music"); the NOOB device plays the sound on its speaker — press the button to stop |
 | **Permanent memory** | Everything NOOB learns is saved in a local database and survives power-off |
 | **NOOB App**: About Me, Memory, Conversations, Devices, Settings | Web app (HTML + CSS + JavaScript) served by the NOOB server |
-| **Continue with NOOB** | Sign in with your NOOB social media account (nooob.xyz) — no new password needed |
+| **Continue with NOOB** | Sign in with your NOOB social media account (noobsocials.com) — no new password needed |
 | Free trial for people without NOOB | Accounts made without a NOOB account get 5 free questions, then link NOOB for unlimited |
 | 5-star rating | After the first 15 questions, NOOB AI asks for a 1–5 star rating (the owner sees them in Settings) |
 | Maintenance lock | The NOOB admin can lock NOOB AI from the NOOB app (Admin Control Panel → Platform → NOOB AI maintenance lock): everyone except the owner then sees "NOOB AI is under maintenance" in the app, the website and on devices |
@@ -275,7 +275,7 @@ YouTube changes often; if songs stop working, run `Setup NOOB.bat` again — it 
 
 ### Continue with NOOB (sign in with your NOOB social media account)
 
-- On the sign-in page, click **Continue with NOOB** and enter your NOOB (nooob.xyz) username or email and
+- On the sign-in page, click **Continue with NOOB** and enter your NOOB (noobsocials.com) username or email and
   password. The assistant checks them with NOOB's own login service, reads only your username and display name,
   and ends that login straight away — **your NOOB password is never saved**. Suspended NOOB accounts are refused.
 - The first time, NOOB creates an assistant account for you. By default **anyone with a NOOB account can join
@@ -291,11 +291,11 @@ YouTube changes often; if songs stop working, run `Setup NOOB.bat` again — it 
 
 ### Use NOOB from anywhere with your own domain (optional, free)
 
-NOOB works with a custom domain such as `ai.nooob.xyz`, using a free **Cloudflare Tunnel**. It gives the app a
+NOOB works with a custom domain such as `ai.noobsocials.com`, using a free **Cloudflare Tunnel**. It gives the app a
 secure `https://` address (so voice works on phones too) without opening your router. The NOOB PC must be on.
 
 1. Create your owner account first (on the PC). Your domain must be on your (free) Cloudflare account.
-2. Double-click **`server/Setup online access.bat`** and type the address you want (e.g. `ai.nooob.xyz`).
+2. Double-click **`server/Setup online access.bat`** and type the address you want (e.g. `ai.noobsocials.com`).
    It downloads Cloudflare's `cloudflared` tool into `server/tools`, opens a browser once so you can log in to
    Cloudflare and pick your domain, creates the tunnel and the web address, and saves `server/tunnel.yml`.
 3. Restart NOOB. From now on the NOOB server switches online access on and off by itself.
@@ -306,7 +306,7 @@ The NOOB **device** still talks to the PC over your Wi-Fi; the web address is fo
 
 ### The "NOOB AI" button in the NOOB social media app
 
-In the NOOB social app (nooob.xyz), **Profile → ⋮ → NOOB AI** opens NOOB AI (`https://ai.nooob.xyz`) inside
+In the NOOB social app (noobsocials.com), **Profile → ⋮ → NOOB AI** opens NOOB AI (`https://ai.noobsocials.com`) inside
 the app and signs you in automatically: the app hands over your NOOB login once (after `#` in the address, which is
 never sent to a server), NOOB AI checks it with NOOB and forgets it. It works on any phone, tablet or computer.
 If the NOOB PC is off, the app shows **"NOOB is sleeping"** with a **Wake up NOOB** button to check again.
@@ -395,7 +395,7 @@ noob-esp32-assistant/
     ├── noob_memory.py         ← permanent memory (SQLite database)
     ├── noob_devices.py        ← "Connect to nearby devices" (UDP discovery + pairing)
     ├── noob_settings.py       ← settings file handling
-    ├── noob_social.py         ← "Continue with NOOB" (sign in with a nooob.xyz account)
+    ├── noob_social.py         ← "Continue with NOOB" (sign in with a noobsocials.com account)
     ├── noob_tunnel.py         ← optional online address (Cloudflare Tunnel)
     ├── noob_network.py        ← quick connections on phone hotspots (IPv4 first)
     ├── noob_music.py          ← songs from YouTube (search, and the sound for the device)

@@ -12,7 +12,7 @@ const notice = read('src/components/Common/MovedNotice.tsx');
 const S = await import(pathToFileURL(path.resolve('src/utils/siteUrl.ts')).href + '?x=' + Math.random());
 
 section('1. Who sees it');
-check(S.isOtherNoobHost('nooob.xyz') && S.isOtherNoobHost('www.nooob.xyz') && S.isOtherNoobHost('NOOOB.XYZ'), 'nooob.xyz (and www.) is the old address');
+check(!S.isOtherNoobHost('nooob.xyz') && !S.isOtherNoobHost('www.nooob.xyz') && !S.isOtherNoobHost('NOOOB.XYZ'), 'nooob.xyz is not one of NOOB addresses any more (it is not ours)');
 check(!S.isOtherNoobHost('noobsocials.com') && !S.isOtherNoobHost('www.noobsocials.com'), 'noobsocials.com is not');
 check(!S.isOtherNoobHost('ai.nooob.xyz') && !S.isOtherNoobHost('coaching.nooob.xyz') && !S.isOtherNoobHost('localhost') && !S.isOtherNoobHost('example.com') && !S.isOtherNoobHost('nooob.xyz.evil.io') && !S.isOtherNoobHost(''), 'NOOB AI, NOOB STUDY, test addresses and other websites are not');
 check(/movedNoticeApplies\(isOnOtherNoobAddress\(\), window\.location\.hostname, window\.location\.search\)/.test(notice), 'it is shown when the page is on the old address');

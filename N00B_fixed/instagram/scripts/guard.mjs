@@ -36,6 +36,7 @@ const CHECKS = [
   ['Report on posts, reels, videos (SQL on real Postgres, menus, admin card)', ['node', '--liftoff-only', 'scripts/supabase/test-content-reports.mjs']],
   ['Saved collections (SQL on real Postgres, Saved screen)', ['node', '--liftoff-only', 'scripts/supabase/test-collections.mjs']],
   ['Admin password re-check, admin email approval, new-device notice (SQL on real Postgres)', ['node', '--liftoff-only', 'scripts/supabase/test-admin-security-db.mjs']],
+  ['Hidden login addresses moved to our own domain (SQL on real Postgres)', ['node', '--liftoff-only', 'scripts/supabase/test-fake-login-domain-db.mjs']],
   ['Comment sheets (threads, 30-50 % bottom sheet, load errors)', ['node', '--liftoff-only', 'scripts/supabase/test-comment-threads.mjs']],
   ['Admin account type + no full-screen button on posts', ['node', 'scripts/supabase/test-account-type-and-no-fullscreen.mjs']],
   ['Mute notifications per chat', ['node', 'scripts/supabase/test-chat-mute.mjs']],

@@ -145,7 +145,7 @@ export function buildIcs(m: MeetingLike, o?: string): string {
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NOOB//Live Lounge//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${m.id}@nooob.xyz`,
+    `UID:${m.id}@noobsocials.com`,
     `DTSTAMP:${icsDate(new Date().toISOString())}`,
     `DTSTART:${start}`,
     `DTEND:${end}`,

@@ -138,7 +138,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (env('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>'), to: [to], subject, text: `${text}\n\nNOOB · ${SITE}`, html: html + footer, ...(env('RECOVERY_EMAIL_REPLY_TO') ? { reply_to: env('RECOVERY_EMAIL_REPLY_TO') } : {}) }),
+      body: JSON.stringify({ from: (env('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@noobsocials.com>'), to: [to], subject, text: `${text}\n\nNOOB · ${SITE}`, html: html + footer, ...(env('RECOVERY_EMAIL_REPLY_TO') ? { reply_to: env('RECOVERY_EMAIL_REPLY_TO') } : {}) }),
       signal: AbortSignal.timeout(10_000)
     });
     if (!res.ok) return { ok: false, error: `${res.status} ${await res.text().catch(() => '')}`.slice(0, 300) };

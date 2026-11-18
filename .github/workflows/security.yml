@@ -36,6 +36,8 @@ jobs:
       - run: node --liftoff-only scripts/supabase/test-ads-db.mjs
       # admins must confirm their password for dangerous actions, admin accounts always use email approval, a new device is noticed
       - run: node --liftoff-only scripts/supabase/test-admin-security-db.mjs
+      # the hidden login addresses live on a domain we own, and the move keeps every login working
+      - run: node --liftoff-only scripts/supabase/test-fake-login-domain-db.mjs
       - run: node scripts/supabase/test-security-config.mjs
 
   packages:

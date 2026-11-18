@@ -1,6 +1,6 @@
 """
 Online access for NOOB AI (optional, free): a Cloudflare Tunnel gives the NOOB App a secure web address such
-as https://ai.nooob.xyz, so it opens from phones anywhere and from the "NOOB AI" button in the NOOB social app.
+as https://ai.noobsocials.com, so it opens from phones anywhere and from the "NOOB AI" button in the NOOB social app.
 
 One-time setup: double-click "Setup online access.bat" (or run:  python noob_tunnel.py setup).
 After that the NOOB server starts the tunnel by itself every time it starts.

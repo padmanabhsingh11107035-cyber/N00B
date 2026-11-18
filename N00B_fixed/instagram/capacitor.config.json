@@ -8,9 +8,7 @@
     "errorPath": "native-offline.html",
     "allowNavigation": [
       "noobsocials.com",
-      "*.noobsocials.com",
-      "nooob.xyz",
-      "*.nooob.xyz"
+      "*.noobsocials.com"
     ]
   },
   "android": {

@@ -18,6 +18,7 @@ export {
   fetchChatLastSeen,
   searchGifs,
   recordSignupDevice,
+  noteSignupDevice,
   fetchHealth,
   requestSignupOtp,
   verifySignupOtp,

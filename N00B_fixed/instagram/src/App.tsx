@@ -73,7 +73,8 @@ import {
   markNotificationsAsRead,
   startPresenceHeartbeat,
   startLastSeenHeartbeat,
-  startInFrontHeartbeat
+  startInFrontHeartbeat,
+  noteSignupDevice
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { HintedScroll } from './components/Feed/ScrollMoreHint';
@@ -778,6 +779,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       initPushNotifications();
+      void noteSignupDevice();   // fills a still-empty sign-up address/platform (only blanks are ever written)
       resumePendingPush();   // a "turn on notifications" that was cut short (phone offline, app closed) finishes by itself now
     }
   }, [currentUser?.id]);

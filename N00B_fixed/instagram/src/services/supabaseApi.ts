@@ -4065,7 +4065,14 @@ export interface GifItem { id: string; title: string; url: string; preview?: str
 // Best-effort, fire-and-forget, called once right after a successful sign-up: stamps this account's
 // profile_private row with the real IP/OS platform the edge function's own request arrived from
 // (never trusted from the client). Never blocks or fails a sign-up over this.
+/** On every login: fills a still-empty sign-up address/platform. Writes blanks only, so it can never replace a recorded value. */
+export async function noteSignupDevice(): Promise<void> {
+  try { await supabase.rpc('note_signup_device'); } catch { /* best-effort only */ }
+}
+
 export async function recordSignupDevice(): Promise<void> {
+  // 1) the database function (fills only what is still empty; needs migration 20261118000008), 2) the edge function as before. Either one is enough.
+  try { await supabase.rpc('note_signup_device'); } catch { /* best-effort only */ }
   try {
     await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'record_signup_device' } });
   } catch {

@@ -39,10 +39,10 @@ const FEATURES = [
   },
   {
     slug: 'games', name: 'NOOB Games', open: '/games', shot: 'noob-socials-games.jpg',
-    title: 'NOOB Games | 37 games on NOOB Socials',
-    description: 'Play 37 games on NOOB Socials, from Critter Kart, Helix Fall and Siegecraft to Ludo and Chess Blitz, alone or against friends, with a leaderboard.',
-    lead: '37 games in the noob arena.',
-    points: ['Play alone against a bot or invite a friend to a match with a link.', '37 games: Critter Kart, Helix Fall, Siegecraft, Underhall, Royal Ludo, Chess Blitz, Snakes & Ladders, Monopoly and more (see the full list of all 37 games).', 'A leaderboard shows who wins the most.', 'No download needed: games run inside NOOB.']
+    title: 'NOOB Games | 38 games on NOOB Socials',
+    description: 'Play 38 games on NOOB Socials, from Critter Kart, Helix Fall and Siegecraft to Ludo and Chess Blitz, alone or against friends, with a leaderboard.',
+    lead: '38 games in the noob arena.',
+    points: ['Play alone against a bot or invite a friend to a match with a link.', '38 games: Critter Kart, Helix Fall, Siegecraft, Underhall, Royal Ludo, Chess Blitz, Snakes & Ladders, Monopoly and more (see the full list of all 38 games).', 'A leaderboard shows who wins the most.', 'No download needed: games run inside NOOB.']
   },
   {
     slug: 'music', name: 'NOOB Music', open: '/music', shot: 'noob-socials-music.jpg',

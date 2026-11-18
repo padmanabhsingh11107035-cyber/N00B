@@ -5,7 +5,7 @@ import { fetchVapidKeyResult, subscribeToPush, unsubscribeFromPush, fetchMyPushE
 import { checkPushSupport, currentPushEnv, type PushSupport } from '../../utils/pushSupport';
 import { withTimeout, isRetryableFailure, nextDelay, readPending, writePending } from '../../utils/pushRetry';
 
-const DISMISSED_KEY = 'noob_push_prompt_seen';
+import { enableNativePush } from '../../services/pushNotifications';
 
 // Browsers only ever show their OWN native permission prompt once per
 // origin — if it's denied, calling requestPermission() again just returns
@@ -20,12 +20,7 @@ export function shouldShowPushPrompt(): boolean {
   // Only for people who installed the app (Home Screen on iOS, "Install app" on Android/desktop) —
   // never someone just visiting the website in an ordinary browser tab.
   if (!currentPushEnv(Capacitor.isNativePlatform()).standalone) return false;
-  try {
-    if (localStorage.getItem(DISMISSED_KEY)) return false;
-  } catch {
-    // Private-browsing localStorage access can throw — treat as "not seen
-    // yet" rather than crashing the prompt logic.
-  }
+  // Shown every time the app is opened until notifications are on (the old "only once" memory is gone: "Maybe later" now means "not in this visit").
   return true;
 }
 
@@ -213,18 +208,13 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
   // get the key and the helper ready while the person reads the question
   useEffect(() => { warmPushSetup(); }, []);
 
-  const dismiss = () => {
-    try {
-      localStorage.setItem(DISMISSED_KEY, '1');
-    } catch {
-      // Ignore — worst case this prompt reappears next session.
-    }
-    onDone();
-  };
+  const dismiss = () => onDone();
 
   // The prompt closes at once; the browser's own question and all the rest carry on in the background (see startEnablingPush).
+  // In the Android app the phone's own question is asked instead (and the phone is registered).
   const handleEnable = () => {
-    startEnablingPush();
+    if (Capacitor.isNativePlatform()) void enableNativePush();
+    else startEnablingPush();
     dismiss();
   };
 

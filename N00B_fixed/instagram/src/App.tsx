@@ -162,7 +162,7 @@ import { applyAppIcon } from './utils/appIcon';
 import { detectPlatform } from './utils/appPlatform';
 import { startVisitTracking, noteVisit } from './services/visitTracker';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
-import { initPushNotifications } from './services/pushNotifications';
+import { initPushNotifications, nativePushNeedsAsk } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
 import { readDiag, explainSessionEnd } from './services/authDiag';
@@ -967,10 +967,15 @@ export default function App() {
   // ordinary browser tab), and only once per browser (it also checks actual Notification.permission
   // and a localStorage "already asked" flag, so this never nags someone who already answered).
   useEffect(() => {
-    if (!currentUser || Capacitor.isNativePlatform()) return;
-    if (!shouldShowPushPrompt()) return;
-    const timer = setTimeout(() => setShowPushPrompt(true), 1500);
-    return () => clearTimeout(timer);
+    if (!currentUser) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (Capacitor.isNativePlatform()) {
+      // Android app: the same box, shown whenever the phone has not been asked yet
+      void nativePushNeedsAsk().then((need) => { if (need) timer = setTimeout(() => setShowPushPrompt(true), 1500); });
+    } else if (shouldShowPushPrompt()) {
+      timer = setTimeout(() => setShowPushPrompt(true), 1500);
+    }
+    return () => { if (timer) clearTimeout(timer); };
   }, [currentUser?.id]);
 
   // The account's own settings and its muted / favourite lists belong to whoever is signed in: forget them when the account changes, read them for the new one.

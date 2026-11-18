@@ -40,9 +40,7 @@ export async function findFriendsFromContacts(): Promise<User[]> {
       projection: { name: true, phones: true }
     });
 
-    const phoneNumbers = contacts
-      .flatMap((c) => c.phones?.map((p) => p.number) || [])
-      .filter((n): n is string => !!n);
+    const phoneNumbers = uniqueNumbers(contacts.flatMap((c) => c.phones?.map((p) => p.number) || []));
 
     if (phoneNumbers.length === 0) return [];
 
@@ -51,6 +49,20 @@ export async function findFriendsFromContacts(): Promise<User[]> {
     console.error('Contact sync failed:', err);
     return [];
   }
+}
+
+/** Same person saved twice (or with spaces / +91 / 0 in front) is sent once: compared by the last 10 digits, like the server does. Keeps the list short enough for the server's limits. */
+function uniqueNumbers(raw: (string | undefined | null)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const n of raw) {
+    if (!n) continue;
+    const key = n.replace(/\D/g, '').slice(-10);
+    if (key.length < 7 || seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
 }
 
 export type ContactScan = { status: 'ok' | 'empty' | 'denied' | 'unsupported' | 'error'; users: User[]; detail?: string };
@@ -68,9 +80,10 @@ export async function scanContacts(): Promise<ContactScan> {
     if (permission.contacts !== 'granted') return { status: 'denied', users: [] };
     step = 'reading the contacts';
     const { contacts } = await Contacts.getContacts({ projection: { name: true, phones: true } });
-    const phoneNumbers = contacts.flatMap((c) => c.phones?.map((p) => p.number) || []).filter((n): n is string => !!n);
+    const phoneNumbers = uniqueNumbers(contacts.flatMap((c) => c.phones?.map((p) => p.number || (p as { normalizedNumber?: string }).normalizedNumber) || []));
     if (phoneNumbers.length === 0) return { status: 'empty', users: [] };
-    const users = await matchContacts(phoneNumbers);
+    step = 'looking for your friends';
+    const users = await matchContacts(phoneNumbers);   // throws with the real reason (offline, too many searches, ...)
     return users.length ? { status: 'ok', users } : { status: 'empty', users: [] };
   } catch (err) {
     console.error('Contact sync failed:', err);

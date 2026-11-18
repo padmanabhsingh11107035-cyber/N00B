@@ -72,6 +72,16 @@ export async function nativePushDiag(): Promise<string> {
   }
 }
 
+/** True when the Android app should show its own "Turn on notifications?" box: the phone has never been asked (or the person has not answered), and this build can do notifications. */
+export async function nativePushNeedsAsk(): Promise<boolean> {
+  try {
+    if (!Capacitor.isNativePlatform() || !(await buildOk())) return false;
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const perm = await PushNotifications.checkPermissions();
+    return perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale';
+  } catch { return false; }
+}
+
 // Asks the phone's question when needed and registers this phone. Called from the Install and Permissions toggle.
 export async function enableNativePush(): Promise<NativePushState> {
   try {
@@ -110,8 +120,8 @@ export async function initPushNotifications(): Promise<void> {
   try {
     if (!(await buildOk()) || isOff()) return;
     const { PushNotifications } = await import('@capacitor/push-notifications');
-    let permission = await PushNotifications.checkPermissions();
-    if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') permission = await PushNotifications.requestPermissions();
+    const permission = await PushNotifications.checkPermissions();
+    // never asked yet: the app's own "Turn on notifications?" box asks (App.tsx), so the phone's question comes after an explanation, not out of nowhere
     if (permission.receive !== 'granted') return;
     await listen();
     await PushNotifications.register();

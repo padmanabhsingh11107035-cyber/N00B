@@ -1,6 +1,6 @@
 // Paperfield: the game's screen (drawing, controls, menu). The rules are sim.js: on the server in the big shared lobby, or right here (only bots) when the server is out of reach.
 // The land is a fine grid, but it is drawn as smooth outlines (marching squares over a softened copy of each player's land), and heads and trails move freely, so everything is curved.
-import { World, TICK_MS, GW, GH, UNITS, CELL, SKINS } from './sim.js';
+import { World, TICK_MS, GW, GH, UNITS, CELL, SKINS, SPEED, TURN } from './sim.js';
 import { SKIN_LIST, patternTile, drawHead, roundRect } from './skins.js';
 
 const $ = (id) => document.getElementById(id);
@@ -13,7 +13,7 @@ const S = {
   own: new Uint8Array(GW * GH), counts: new Int32Array(256), skinOf: new Uint8Array(256), ver: 0,
   pl: new Map(), you: 0, tickMs: TICK_MS, lastTick: 0, mode: 'menu', online: false, humans: 0, bots: 0, total: GW * GH,
   cam: { x: UNITS / 2, y: UNITS / 2 }, skin: Math.min(99, Math.max(0, parseInt(store.get('paperfield_skin', String((Math.random() * 100) | 0)), 10) || 0)),
-  parts: [], pops: [], sound: store.get('paperfield_sound', '1') !== '0', lastScore: 0, deadTimer: 0, kills: 0, want: 0, sentAt: 0, sentAng: 99,
+  dirty: new Uint8Array(256), parts: [], pops: [], sound: store.get('paperfield_sound', '1') !== '0', lastScore: 0, deadTimer: 0, kills: 0, want: 0, sentAt: 0, sentAng: null,
 };
 let net = null;
 const nameInput = $('name');
@@ -80,14 +80,14 @@ function decodeRle(arr, into) {
   let p = 0;
   for (let i = 0; i < arr.length; i += 2) { const v = arr[i], n = arr[i + 1]; into.fill(v, p, p + n); p += n; }
 }
-const mkPlayer = (id, name, skin, human, alive, x, y, a, trail) => ({ id, name, skin, human: !!human, alive: !!alive, x0: x, y0: y, x1: x, y1: y, a0: a, a1: a, trail: trail || [], inside: true, fresh: true });
+const mkPlayer = (id, name, skin, human, alive, x, y, a, trail) => ({ id, name, skin, human: !!human, alive: !!alive, x0: x, y0: y, x1: x, y1: y, a0: a, a1: a, trail: trail || [], inside: true, fresh: true, buf: [[performance.now(), x, y, a]] });
 
 function onInit(m) {
   decodeRle(m.own, S.own);
   S.counts.fill(0);
   for (let i = 0; i < S.own.length; i++) S.counts[S.own[i]]++;
   S.counts[0] = 0;
-  S.ver++;
+  S.ver++; territory = null;
   S.pl.clear();
   S.tickMs = m.tickMs || TICK_MS;
   for (const [id, name, skin, human, alive, x, y, a, trail] of m.players) {
@@ -105,7 +105,7 @@ function onTick(m) {
   const now = performance.now();
   for (let i = 0; i < m.own.length; i += 3) {
     const s = m.own[i], n = m.own[i + 1], v = m.own[i + 2];
-    for (let c = s; c < s + n; c++) { const o = S.own[c]; if (o !== v) { S.counts[o]--; S.counts[v]++; S.own[c] = v; } }
+    for (let c = s; c < s + n; c++) { const o = S.own[c]; if (o !== v) { S.counts[o]--; S.counts[v]++; S.own[c] = v; S.dirty[o] = 1; S.dirty[v] = 1; } }
   }
   if (m.own.length) S.ver++;
   S.counts[0] = 0;
@@ -121,7 +121,7 @@ function onTick(m) {
     let p = S.pl.get(id);
     if (!p) { p = mkPlayer(id, 'Player', id % SKINS, false, true, x, y, a); S.pl.set(id, p); }
     seen.add(id);
-    if (p.fresh || !p.alive || Math.abs(x - p.x1) + Math.abs(y - p.y1) > 4) { p.x0 = x; p.y0 = y; p.a0 = a; p.trail = []; p.inside = true; } else { p.x0 = p.x1; p.y0 = p.y1; p.a0 = p.a1; }
+    if (p.fresh || !p.alive || Math.abs(x - p.x1) + Math.abs(y - p.y1) > 4) { p.x0 = x; p.y0 = y; p.a0 = a; p.trail = []; p.inside = true; p.buf = []; } else { p.x0 = p.x1; p.y0 = p.y1; p.a0 = p.a1; }
     // the trail: points of the way outside the land (the same rule as the server's)
     const c = Math.floor(y / CELL) * GW + Math.floor(x / CELL);
     const inLand = c >= 0 && c < S.own.length && S.own[c] === id;
@@ -134,6 +134,10 @@ function onTick(m) {
       p.inside = false;
     }
     p.x1 = x; p.y1 = y; p.a1 = a; p.alive = true; p.fresh = false;
+    const b = p.buf;
+    if (b.length && Math.abs(x - b[b.length - 1][1]) + Math.abs(y - b[b.length - 1][2]) > 4) b.length = 0;
+    b.push([now, x, y, a]); if (b.length > 8) b.shift();
+    if (id === S.you) reconcile(p, x, y, a);
   }
   for (const p of S.pl.values()) if (!seen.has(p.id)) { if (p.alive) p.trail = []; p.alive = false; }
   for (const [killer, victim] of ev.k || []) {
@@ -163,7 +167,7 @@ function onTick(m) {
 function handle(m) {
   if (m.t === 'init') onInit(m);
   else if (m.t === 'tick') onTick(m);
-  else if (m.t === 'you') { S.you = m.id; S.lastScore = 0; S.kills = 0; S.sentAng = 99; S.spawnAt = performance.now(); startPlaying(); }
+  else if (m.t === 'you') { S.you = m.id; S.lastScore = 0; S.kills = 0; S.sentAng = null; S.spawnAt = performance.now(); startPlaying(); }
   else if (m.t === 'dead') onDead(m);
   else if (m.t === 'full') { setStatus('The lobby is full right now. Try again in a moment.'); $('play').disabled = false; $('play').textContent = 'Play'; }
 }
@@ -251,7 +255,7 @@ function startPlaying() {
   S.mode = 'playing';
   $('menu').hidden = true; $('dead').hidden = true; $('hud').hidden = false;
   const me = S.pl.get(S.you);
-  if (me) { S.cam.x = me.x1; S.cam.y = me.y1; S.want = me.a1; }
+  if (me) { S.cam.x = me.x1; S.cam.y = me.y1; S.want = me.a1; pred = { x: me.x1, y: me.y1, a: me.a1 }; }
   clearTimeout(S.deadTimer);
 }
 function play() {
@@ -281,12 +285,17 @@ nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') play(); e.
 function steer(a, force) {
   if (S.mode !== 'playing' || !S.you) return;
   S.want = a;
-  const now = performance.now();
-  let d = Math.abs(a - S.sentAng); if (d > Math.PI) d = 2 * Math.PI - d;
-  if (!force && (d < 0.05 || now - S.sentAt < 40)) return;
-  S.sentAt = now; S.sentAng = a;
-  net.send({ t: 'ang', a: Math.round(a * 100) });
+  sendWant(force);
 }
+function sendWant(force) {
+  const now = performance.now();
+  let d = S.sentAng == null ? 9 : Math.abs(S.want - S.sentAng); if (d > Math.PI && d < 9) d = 2 * Math.PI - d;
+  if (d < 0.03 || (!force && now - S.sentAt < 35)) return;
+  S.sentAt = now; S.sentAng = S.want;
+  net.send({ t: 'ang', a: Math.round(S.want * 100) });
+}
+// the last direction is always sent, even if the finger stopped moving right after a throttled move
+setInterval(() => { if (S.mode === 'playing' && S.you) sendWant(true); }, 50);
 const down = new Set();
 const KEYS = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowRight: [1, 0], KeyD: [1, 0], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0] };
 function keyDir() {
@@ -330,10 +339,15 @@ function feed(text) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------- smooth land: an outline around each player's land (marching squares over a softened copy)
+let Q = 0;   // quality: 0 full, 1 lighter (smaller picture), 2 plainest (no patterns, no outlines): chosen by how fast frames come
+const PERF = { frames: 0, draw: 0, build: 0, builds: 0, ticks: 0, tick: 0, slow: 0 };
+const PATTERNS = new Map();
 let territory = null;   // { ver, x0, y0, w, h, list: [{ id, path, bx0, by0, bx1, by1 }] } in grid cells
-function buildTerritory(wx0, wy0, ww, wh) {
+function buildTerritory(wx0, wy0, ww, wh, prev, all) {
   const own = S.own, W2 = ww + 2, H2 = wh + 2;
   const masks = new Map();
+  const keep = new Map();
+  if (prev && !all) for (const t of prev.list) if (!S.dirty[t.id]) keep.set(t.id, t);
   for (let j = 0; j < wh; j++) {
     const gy = wy0 + j;
     if (gy < 0 || gy >= GH) continue;
@@ -342,14 +356,14 @@ function buildTerritory(wx0, wy0, ww, wh) {
       const gx = wx0 + i;
       if (gx < 0 || gx >= GW) continue;
       const o = own[row + gx];
-      if (!o) continue;
+      if (!o || keep.has(o)) continue;
       let m = masks.get(o);
       if (!m) { m = { id: o, f: new Float32Array(W2 * H2), i0: i, i1: i, j0: j, j1: j }; masks.set(o, m); }
       m.f[(j + 1) * W2 + i + 1] = 1;
       if (i < m.i0) m.i0 = i; if (i > m.i1) m.i1 = i; if (j < m.j0) m.j0 = j; if (j > m.j1) m.j1 = j;
     }
   }
-  const list = [];
+  const list = [...keep.values()];
   for (const m of masks.values()) {
     const f = m.f;
     const g = new Float32Array(f.length);
@@ -365,7 +379,8 @@ function buildTerritory(wx0, wy0, ww, wh) {
     const path = contour(g, W2, H2, a0, Math.min(W2 - 2, a1), b0, Math.min(H2 - 2, b1), wx0, wy0);
     list.push({ id: m.id, path, bx0: wx0 + m.i0, by0: wy0 + m.j0, bx1: wx0 + m.i1 + 1, by1: wy0 + m.j1 + 1 });
   }
-  return { ver: S.ver, x0: wx0, y0: wy0, w: ww, h: wh, list };
+  S.dirty.fill(0);
+  return { ver: S.ver, at: performance.now(), x0: wx0, y0: wy0, w: ww, h: wh, list };
 }
 
 // the line segments of a square, by its corner pattern (a = top left 1, b = top right 2, c = bottom right 4, d = bottom left 8); edges: 0 top, 1 right, 2 bottom, 3 left
@@ -428,7 +443,7 @@ function contour(g, W2, H2, i0, i1, j0, j1, wx0, wy0) {
 // ---------------------------------------------------------------------------------------------------------------- drawing
 let cw = 0, ch = 0, dpr = 1;
 function resize() {
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  dpr = Math.min(Q ? 1 : 1.5, window.devicePixelRatio || 1);
   cw = window.innerWidth; ch = window.innerHeight;
   canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
 }
@@ -443,15 +458,45 @@ function leaders() {
   return arr;
 }
 const angLerp = (a, b, f) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * f; };
+const DELAY = 80;            // others are drawn this many ms in the past, so a late tick does not make them stutter
+let pred = null;             // my own head, moved right here at once (the server's answer is blended in)
+function reconcile(p, x, y, a) {
+  const lead = S.online ? 0.085 : 0.02;   // the server's position is about this old when it arrives
+  const sx = x + Math.cos(a) * SPEED * lead, sy = y + Math.sin(a) * SPEED * lead;
+  if (!pred || !p.alive || Math.hypot(pred.x - sx, pred.y - sy) > 3) { pred = { x: sx, y: sy, a }; return; }
+  pred.x += (sx - pred.x) * 0.22; pred.y += (sy - pred.y) * 0.22;
+}
+function stepPred(dt) {
+  const me = S.pl.get(S.you);
+  if (!pred || !me || !me.alive || S.mode !== 'playing') return;
+  let d = S.want - pred.a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  const m = TURN * dt;
+  pred.a += d > m ? m : d < -m ? -m : d;
+  pred.x += Math.cos(pred.a) * SPEED * dt; pred.y += Math.sin(pred.a) * SPEED * dt;
+}
+function sample(p, now) {
+  if (p.id === S.you && pred && p.alive && S.mode === 'playing') return [pred.x, pred.y, pred.a];
+  const b = p.buf, rt = now - DELAY;
+  if (!b || !b.length) return [p.x1, p.y1, p.a1];
+  if (rt <= b[0][0]) return [b[0][1], b[0][2], b[0][3]];
+  for (let i = b.length - 1; i > 0; i--) {
+    if (b[i - 1][0] <= rt) {
+      const u = b[i], v = b[i - 1];
+      if (rt <= u[0]) { const f = (rt - v[0]) / Math.max(1, u[0] - v[0]); return [v[1] + (u[1] - v[1]) * f, v[2] + (u[2] - v[2]) * f, angLerp(v[3], u[3], f)]; }
+    }
+  }
+  const l = b[b.length - 1], ex = Math.min(0.12, (rt - l[0]) / 1000);   // past the newest tick: keep going a little, straight
+  return [l[1] + Math.cos(l[3]) * SPEED * ex, l[2] + Math.sin(l[3]) * SPEED * ex, l[3]];
+}
 
 function drawWorld(now, dt) {
-  const f = Math.min(1, (now - S.lastTick) / S.tickMs);
-  const rpos = (p) => [p.x0 + (p.x1 - p.x0) * f, p.y0 + (p.y1 - p.y0) * f];
+  stepPred(dt);
+  const rpos = (p) => sample(p, now);
   let focus = S.you ? S.pl.get(S.you) : null;
   if (S.mode === 'menu' || !focus) focus = leaders().find((p) => p.alive);
   if (focus && (focus.alive || S.mode === 'dead')) {
     const [fx, fy] = rpos(focus);
-    const k = 1 - Math.pow(0.002, dt);
+    const k = 1 - Math.pow(0.0004, dt);
     S.cam.x += (fx - S.cam.x) * k; S.cam.y += (fy - S.cam.y) * k;
   }
   const mine = S.you && S.mode !== 'menu' ? S.counts[S.you] : 0;
@@ -475,9 +520,12 @@ function drawWorld(now, dt) {
   const cellPx = cs * CELL;
   const vx0 = Math.floor(-ox / cellPx), vx1 = Math.ceil((cw - ox) / cellPx), vy0 = Math.floor(-oy / cellPx), vy1 = Math.ceil((ch - oy) / cellPx);
   const T = territory;
-  if (!T || T.ver !== S.ver || vx0 < T.x0 + 3 || vy0 < T.y0 + 3 || vx1 > T.x0 + T.w - 3 || vy1 > T.y0 + T.h - 3) {
-    const px = 18;
-    territory = buildTerritory(vx0 - px, vy0 - px, vx1 - vx0 + 2 * px, vy1 - vy0 + 2 * px);
+  const leftWindow = !T || vx0 < T.x0 + 3 || vy0 < T.y0 + 3 || vx1 > T.x0 + T.w - 3 || vy1 > T.y0 + T.h - 3;
+  if (leftWindow || (T.ver !== S.ver && now - T.at > 90)) {
+    const px = 26;
+    const t0 = performance.now();
+    territory = buildTerritory(vx0 - px, vy0 - px, vx1 - vx0 + 2 * px, vy1 - vy0 + 2 * px, T, leftWindow);
+    PERF.build += performance.now() - t0; PERF.builds++;
   }
   const lip = 0.34 / CELL;   // the 3D edge, in cells
   ctx.save();
@@ -488,14 +536,14 @@ function drawWorld(now, dt) {
     ctx.save(); ctx.translate(0, lip); ctx.fillStyle = k.dark; ctx.fill(t.path, 'evenodd'); ctx.restore();
     ctx.fillStyle = k.base; ctx.fill(t.path, 'evenodd');
     const tile = patternTile(k);
-    if (tile) {
+    if (tile && Q < 2) {
       ctx.save(); ctx.clip(t.path, 'evenodd');
-      const pt = ctx.createPattern(tile, 'repeat');
-      try { pt.setTransform(new DOMMatrix().scale(4 / 64)); } catch (e) { /* no pattern transform */ }
+      let pt = PATTERNS.get(k.id);
+      if (!pt) { pt = ctx.createPattern(tile, 'repeat'); try { pt.setTransform(new DOMMatrix().scale(4 / 64)); } catch (e) { /* no pattern transform */ } PATTERNS.set(k.id, pt); }
       ctx.fillStyle = pt; ctx.fillRect(Math.max(vx0, t.bx0) - 2, Math.max(vy0, t.by0) - 2, Math.min(vx1, t.bx1) - Math.max(vx0, t.bx0) + 4, Math.min(vy1, t.by1) - Math.max(vy0, t.by0) + 4);
       ctx.restore();
     }
-    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.16; ctx.stroke(t.path);
+    if (Q < 2) { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.16; ctx.stroke(t.path); }
   }
   ctx.restore();
   // the edge of the field
@@ -508,11 +556,11 @@ function drawWorld(now, dt) {
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (const p of S.pl.values()) {
     if (!p.alive) continue;
-    const [px, py] = rpos(p);
+    const [px, py, pa] = rpos(p);
     const k = SKIN_LIST[p.skin] || SKIN_LIST[0];
     const t = p.trail;
     if (t.length >= 2 && !p.inside) {
-      for (let pass = 0; pass < 2; pass++) {
+      for (let pass = Q >= 2 ? 1 : 0; pass < 2; pass++) {
         ctx.beginPath();
         ctx.moveTo(ox + t[0] * cs, oy + t[1] * cs);
         for (let q = 2; q < t.length; q += 2) ctx.lineTo(ox + t[q] * cs, oy + t[q + 1] * cs);
@@ -522,7 +570,7 @@ function drawWorld(now, dt) {
       }
       ctx.globalAlpha = 1;
     }
-    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) vis.push([p, px, py, angLerp(p.a0, p.a1, f)]);
+    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) vis.push([p, px, py, pa]);
   }
   // heads and names (the lower ones in front)
   vis.sort((a, b) => a[2] - b[2]);
@@ -619,13 +667,17 @@ let prev = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - prev) / 1000);
   prev = now;
+  const t0 = performance.now();
   try { drawWorld(now, dt); updateHud(now); } catch (e) { console.error(e); }
+  const took = performance.now() - t0; PERF.frames++; PERF.draw += took; if (took > 30) PERF.slow++;
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// every two seconds: if frames come slowly, draw a lighter picture
+{ let lf = 0, lt = performance.now(); setInterval(() => { const now = performance.now(), fps = (PERF.frames - lf) / ((now - lt) / 1000); lf = PERF.frames; lt = now; if (document.hidden || S.mode === 'menu' || fps === 0) return; if (fps < 40 && Q < 2) { Q++; resize(); } }, 2000); }
 
 connect();
-window.__paperfield = { S, handle, connect, get net() { return net; } };
+window.__paperfield = { S, PERF, handle, connect, get net() { return net; } };
 
 // Poster mode: a link ending in #poster=menu, #poster=play or #poster=skins prepares the offline world for the store pictures on the Games page (nothing else uses it).
 (function () {
@@ -643,5 +695,24 @@ window.__paperfield = { S, handle, connect, get net() { return net; } };
       const plan = [[0, 18], [1.6, 20], [3.14, 26], [-1.55, 34], [0, 12]];
       for (const [a, n] of plan) { net.send({ t: 'ang', a: Math.round(a * 100) }); for (let i = 0; i < n; i++) net.tick(); }
     } else if (m[1] === 'skins') openSkins();
+  }, 100);
+})();
+
+// Speed check: a link ending in #perf plays a few seconds by itself and writes the frame times into the page title (for tests only).
+(function () {
+  if (!/#perf/.test(location.hash)) return;
+  const wait = setInterval(() => {
+    if (!net || !net.world) return;
+    clearInterval(wait);
+    const w = net.world;
+    for (let i = 0; i < 1500; i++) { w.step(); w.flush(); }
+    handle(w.snapshot());
+    nameInput.value = 'Perf'; play();
+    const wp = w.players.get(S.you); wp.prot = 1e9;
+    Object.assign(PERF, { frames: 0, draw: 0, build: 0, builds: 0, slow: 0 });
+    const h = wp.ang; let k = 0;
+    const t0 = performance.now();
+    const turn = setInterval(() => { net.send({ t: 'ang', a: Math.round((h + (k++) * 0.8) * 100) }); }, 1000);
+    setTimeout(() => { clearInterval(turn); const el = (performance.now() - t0) / 1000; document.title = `PERF fps=${(PERF.frames / el).toFixed(1)} drawMs=${(PERF.draw / Math.max(1, PERF.frames)).toFixed(2)} builds=${PERF.builds} buildMs=${(PERF.build / Math.max(1, PERF.builds)).toFixed(2)} slow=${PERF.slow} frames=${PERF.frames}`; }, 8000);
   }, 100);
 })();

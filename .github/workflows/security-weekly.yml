@@ -1,0 +1,31 @@
+# Every Monday (and on demand): look at the REAL website from the outside like a stranger would. If anything that is protected today stops being protected
+# (a header, old TLS coming back, a public file, a database function open to visitors, weak email-spoofing rules) this turns red and GitHub e-mails the owner.
+# Read-only: nothing is changed or created. The two keys below are the public ones that ship inside the app on purpose.
+name: Weekly live security scan
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: N00B_fixed/instagram/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: The website, from the outside
+        run: node scripts/live-security-scan.mjs https://noobsocials.com
+      - name: Database and files, as a logged-out stranger
+        env:
+          SUPABASE_URL: https://abffssydapumuhwgzeck.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_g20GG46EXeMr1jcNwVJtmw_rAZKsuA3
+        run: node scripts/live-check-exposure.mjs

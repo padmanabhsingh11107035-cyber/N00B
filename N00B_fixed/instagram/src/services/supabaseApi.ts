@@ -61,6 +61,19 @@ async function rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise
   return data as T;
 }
 
+/** A protected admin action (balance change, suspension): when the database says "confirm your password", ask once, then try again. */
+async function rpcProtected<T = any>(fn: string, args?: Record<string, unknown>): Promise<T> {
+  try { return await rpc<T>(fn, args); } catch (err) {
+    if (!(err instanceof ApiError) || !/REAUTH_REQUIRED/.test(err.message)) throw err;
+    const { requestAdminPassword } = await import('../components/Common/AdminReauthSheet');
+    if (!(await requestAdminPassword())) throw new ApiError('Cancelled: the password was not confirmed.', 'P0001');
+    return await rpc<T>(fn, args);
+  }
+}
+export async function adminReauthConfirm(password: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_reauth_confirm', { p_password: password }); } catch (err) { return { success: false, error: errorText(err, 'Could not check the password.') }; }
+}
+
 // Lists that load a page at a time (comments, music): the number shown first and added by each "Load more" (migration 20261114000012).
 export const LIST_PAGE_SIZE = 100;
 /** The paged database function is not installed yet (the migration has not been run): the caller falls back to the old, unpaged one. */
@@ -4992,7 +5005,7 @@ export async function suspendUserAccount(payload: {
   suspend?: boolean;
 }): Promise<{ success: boolean; message: string; user?: User; error?: string }> {
   try {
-    const res = await rpc<any>('admin_suspend_user', { p_target: payload.targetUserId, p_reason: payload.reason || null, p_suspend: payload.suspend !== false });
+    const res = await rpcProtected<any>('admin_suspend_user', { p_target: payload.targetUserId, p_reason: payload.reason || null, p_suspend: payload.suspend !== false });
     return { ...res, user: mapUser(res.user) };
   } catch (err) {
     const message = errorText(err, 'Could not change the account status.');
@@ -5005,7 +5018,7 @@ export async function adjustUserPoints(
   payload: { setTo?: number; delta?: number; reason?: string }
 ): Promise<{ success: boolean; message?: string; user?: User; error?: string }> {
   try {
-    const res = await rpc<any>('admin_adjust_points', {
+    const res = await rpcProtected<any>('admin_adjust_points', {
       p_target: targetUserId, p_set_to: payload.setTo ?? null, p_delta: payload.delta ?? null, p_reason: payload.reason || null
     });
     return { ...res, user: mapUser(res.user) };
@@ -5172,7 +5185,7 @@ export async function takeAdminReportAction(
   action: 'resolved' | 'dismissed' | 'banned',
   suspendTarget: boolean = false
 ): Promise<{ success: boolean; message?: string; report?: any; error?: string }> {
-  try { return await rpc('admin_report_action', { p_id: reportId, p_action: action, p_suspend: suspendTarget }); } catch (err) { return failWith(err, 'Could not update the report.'); }
+  try { return await rpcProtected('admin_report_action', { p_id: reportId, p_action: action, p_suspend: suspendTarget }); } catch (err) { return failWith(err, 'Could not update the report.'); }
 }
 
 // ---- NOOB AI feedback (reports/suggestions submitted from inside NOOB AI) ----

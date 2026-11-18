@@ -13,6 +13,7 @@ import './polish.css';
 import { installErrorReporter } from './utils/errorReporter.ts';
 import { ReportProblemHost } from './components/Common/ReportProblemSheet.tsx';
 import { ContentReportHost } from './components/Common/ContentReportSheet.tsx';
+import { AdminReauthHost } from './components/Common/AdminReauthSheet.tsx';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';
 import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
@@ -161,6 +162,7 @@ createRoot(document.getElementById('root')!).render(
           <AppUpdateGate />
           <ReportProblemHost />
           <ContentReportHost />
+          <AdminReauthHost />
         </MusicPlayerProvider>
       )}
     </ErrorBoundary>

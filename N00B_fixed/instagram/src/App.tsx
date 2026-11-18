@@ -1,3 +1,4 @@
+import { LoginApprovalNudge } from './components/Common/LoginApprovalNudge';
 import { SignupSourceCard } from './components/Common/SignupSourceCard';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
@@ -2410,6 +2411,7 @@ export default function App() {
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
       <MiniToast />
       {currentUser && <TimeReminder />}
+      {currentUser && <LoginApprovalNudge userId={currentUser.id} />}
       {currentUser && <NativeUpdateBanner />}
       {currentUser && <AndroidAppPrompt />}
       {currentUser && <RenditionStrip />}

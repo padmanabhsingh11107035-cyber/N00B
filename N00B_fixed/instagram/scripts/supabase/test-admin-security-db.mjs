@@ -1,0 +1,84 @@
+// Admin password re-check, admin-only email approval, new-device notice (migration 20261118000005) on a REAL Postgres (PGlite).
+// Usage: node --liftoff-only scripts/supabase/test-admin-security-db.mjs
+let passed = 0, failed = 0;
+const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
+const section = (t) => console.log(`\n${t}`);
+const { createTestDb, asUser, asAnon } = await import('./pg-test-env.mjs');
+const db = await createTestDb();
+const PW = 'secret pass';
+const mkUser = async (name, email) => {
+  const id = (await db.query('select gen_random_uuid() as id')).rows[0].id;
+  await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, $2, extensions.crypt($3, extensions.gen_salt('bf')))`, [id, `${name}@users.nooob.xyz`, PW]);
+  if (!(await db.query('select 1 from public.profiles where id = $1', [id])).rows.length) await db.query('insert into public.profiles (id, username, display_name) values ($1, $2, $2)', [id, name]);
+  if (email !== null) await db.query(`insert into public.profile_private (user_id, email, mobile_number) values ($1, $2, '9999900000') on conflict (user_id) do update set email = excluded.email`, [id, email]);
+  return id;
+};
+const noob = await mkUser('noob', 'noob@example.com'); await db.query('update public.profiles set is_admin = true where id = $1', [noob]);
+const ann = await mkUser('ann', 'ann@example.com'), bob = await mkUser('bob', null);
+const call = async (uid, sql, args = []) => asUser(db, uid, async () => (await db.query(sql, args)).rows[0]?.r);
+const fail = async (uid, sql, args = []) => { try { await call(uid, sql, args); return null; } catch (e) { return e.message; } };
+
+section('A. dangerous admin actions need the password again');
+const pts = (n) => ['select public.admin_adjust_points($1, null, $2, $3) as r', [ann, n, 'test']];
+check(/REAUTH_REQUIRED/.test((await fail(noob, ...pts(10))) || ''), 'changing a balance is refused until the password is confirmed');
+check(/REAUTH_REQUIRED/.test((await fail(noob, 'select public.admin_suspend_user($1, $2, true) as r', ['ann', 'test'])) || ''), 'suspending an account is refused too');
+const bad = await call(noob, 'select public.admin_reauth_confirm($1) as r', ['wrong']);
+check(bad.success === false && /not your password/.test(bad.error), 'a wrong password is answered (not raised) with a clear message');
+check(/REAUTH_REQUIRED/.test((await fail(noob, ...pts(10))) || ''), 'a wrong password opens nothing');
+const good = await call(noob, 'select public.admin_reauth_confirm($1) as r', [PW]);
+check(good.success === true, 'the right password confirms');
+check((await call(noob, ...pts(10))).success === true, 'then the balance change works');
+await db.query(`update public.admin_reauth set until = now() - interval '1 minute' where user_id = $1`, [noob]);
+check(/REAUTH_REQUIRED/.test((await fail(noob, ...pts(10))) || ''), 'after the 10 minute window the password is asked again');
+for (let i = 0; i < 5; i++) await call(noob, 'select public.admin_reauth_confirm($1) as r', ['nope']);
+const locked = await call(noob, 'select public.admin_reauth_confirm($1) as r', [PW]);
+check(locked.success === false && /Too many/.test(locked.error), '5 wrong tries lock the confirmation (even the right password waits)');
+await db.query(`update public.admin_reauth set locked_until = now() - interval '1 second' where user_id = $1`, [noob]);
+check((await call(noob, 'select public.admin_reauth_confirm($1) as r', [PW])).success === true, 'after the lock ends the right password works again');
+check(/permission denied/i.test((await asAnon(db, async () => { try { await db.query('select public.admin_reauth_confirm($1)', ['x']); return 'ran'; } catch (e) { return e.message; } }))), 'a logged-out visitor can not use it');
+const direct = await asUser(db, noob, async () => { try { await db.query('select * from public.admin_reauth'); return 'read'; } catch (e) { return e.message; } });
+check(/permission denied/i.test(direct), 'nobody can read or write the confirmation table directly');
+// a report that suspends needs it; a plain report decision does not
+const rep = (await db.query(`insert into public.reports (reporter_id, target_id, reason) values ($1, $2, 'x') returning id`, [bob, ann])).rows[0].id;
+await db.query(`update public.admin_reauth set until = now() - interval '1 minute' where user_id = $1`, [noob]);
+check(/REAUTH_REQUIRED/.test((await fail(noob, 'select public.admin_report_action($1, $2, true) as r', [rep, 'resolved'])) || ''), 'a report decision that also suspends needs the password');
+check((await call(noob, 'select public.admin_report_action($1, $2, false) as r', [rep, 'dismissed'])).success === true, 'a plain report decision does not');
+
+section('B. the admin account always uses email approval');
+const needed = async (ident) => (await db.query('select public.login_approval_needed($1) as r', [ident])).rows[0].r;
+check(await needed('noob') === true, 'admin: approval is required even though the switch was never turned on');
+check(await needed('ann') === false, 'a normal account: still off unless the person turned it on');
+await db.query(`insert into public.login_approval_settings (user_id, enabled) values ($1, true) on conflict (user_id) do update set enabled = true`, [ann]);
+check(await needed('ann') === true, 'a normal account that turned it on: required (unchanged)');
+await db.query(`update public.profile_private set email = '' where user_id = $1`, [noob]);
+check(await needed('noob') === false, 'an admin with no email address is never locked out');
+await db.query(`update public.profile_private set email = 'noob@example.com' where user_id = $1`, [noob]);
+const chk = (await db.query(`select public.login_approval_check('1.2.3.4', 'noob', $1) as r`, [PW])).rows[0].r;
+check(chk.status === 'ok' && chk.required === true, 'the server-side password check also reports "approval required" for admin');
+const chk2 = (await db.query(`select public.login_approval_check('1.2.3.5', 'bob', $1) as r`, [PW])).rows[0].r;
+check(chk2.status === 'ok' && chk2.required === false, 'and not for an ordinary account without an email');
+
+section('C. a sign-in on a new device is noticed');
+const notices = async (uid) => (await db.query(`select message from public.notifications where target_user_id = $1 and type = 'admin_direct' and title like '%New sign-in%'`, [uid])).rows;
+await call(bob, 'select public.record_login($1, $2, $3) as r', ['dev-1', 'Phone', 'iPhone 15']);
+check((await notices(bob)).length === 0, 'the very first sign-in of an account sends nothing');
+await call(bob, 'select public.record_login($1, $2, $3) as r', ['dev-1', 'Phone', 'iPhone 15']);
+check((await notices(bob)).length === 0, 'opening the app again on the same device sends nothing');
+await call(bob, 'select public.record_login($1, $2, $3) as r', ['dev-2', 'Laptop', 'Windows Chrome']);
+const n = await notices(bob);
+check(n.length === 1 && /Windows Chrome/.test(n[0].message) && /change your password/.test(n[0].message), 'a never-seen device sends a notice that names the device');
+await call(bob, 'select public.end_login($1, $2) as r', ['dev-2', 'logout']);
+await call(bob, 'select public.record_login($1, $2, $3) as r', ['dev-2', 'Laptop', 'Windows Chrome']);
+check((await notices(bob)).length === 1, 'a device that signed in before does not send another notice');
+section('D. the screens and the checks that guard them');
+import fs from 'node:fs';
+const read = (f) => fs.readFileSync(f, 'utf8').split(String.fromCharCode(13)).join('');
+const api = read('src/services/supabaseApi.ts'), main = read('src/main.tsx'), app = read('src/App.tsx');
+check(/rpcProtected<any>\('admin_adjust_points'/.test(api) && /rpcProtected<any>\('admin_suspend_user'/.test(api) && /rpcProtected\('admin_report_action'/.test(api), 'balance change, suspension and a suspending report decision all go through the password prompt');
+check(/REAUTH_REQUIRED/.test(api) && /<AdminReauthHost \/>/.test(main) && /data-testid="admin-reauth"/.test(read('src/components/Common/AdminReauthSheet.tsx')), 'the prompt is mounted once and shown when the server asks');
+check(/<LoginApprovalNudge userId=/.test(app) && /14 \* 24 \* 3600 \* 1000/.test(read('src/components/Common/LoginApprovalNudge.tsx')) && /turnOnLoginApproval\(\)/.test(read('src/components/Common/LoginApprovalNudge.tsx')), 'people without email approval get a one-tap suggestion, at most once every 14 days');
+check(/security-gate\.mjs/.test(read('../../.githooks/pre-push')) && /SKIP_SECURITY_GATE/.test(read('scripts/security-gate.mjs')), 'every push first runs the security gate');
+const weekly = read('../../.github/workflows/security-weekly.yml');
+check(/cron:/.test(weekly) && /live-security-scan\.mjs/.test(weekly) && /live-check-exposure\.mjs/.test(weekly), 'the live security scan runs every week on GitHub');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

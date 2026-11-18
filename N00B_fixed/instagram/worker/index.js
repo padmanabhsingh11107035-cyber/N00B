@@ -6,6 +6,7 @@
 // Every other address is served straight from the files, as before.
 import { botGate } from './botGate.js';
 import { routeFor } from './gamesSite.js';   // the separate games address: its games hub and its 404s (see gamesSite.js)
+import { aiRoute, sleepingPage, isUnreachable } from './aiSite.js';   // the NOOB AI address: its public pages are answered here, everything else goes through to NOOB AI (see aiSite.js)
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
@@ -335,6 +336,19 @@ export default {
     // Only reading requests are redirected; every other address (the games address, /__geo, /m/ ...) is untouched.
     if (url.hostname === 'www.noobsocials.com' && (request.method === 'GET' || request.method === 'HEAD')) {
       return new Response(null, { status: 301, headers: { Location: 'https://noobsocials.com' + url.pathname + url.search, 'Cache-Control': 'public, max-age=3600' } });
+    }
+    // The NOOB AI address (worker/aiSite.js): its public pages come from the website's files (so they are online even when NOOB AI's own computer is off); every other address there is passed on to NOOB AI.
+    const ai = aiRoute(url.hostname, url.pathname, request.headers.get('Cookie') || '');
+    if (ai.kind === 'notfound') return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+    if (ai.kind === 'asset' && (request.method === 'GET' || request.method === 'HEAD')) return env.ASSETS.fetch(new Request(new URL(ai.asset, url.origin), request));
+    if (ai.kind === 'proxy' || ai.kind === 'asset') {
+      const wantsJson = url.pathname.startsWith('/api/') || (request.headers.get('Accept') || '').includes('application/json');
+      try {
+        const res = await fetch(request);   // straight through to NOOB AI, exactly as the browser sent it
+        return isUnreachable(res.status) ? sleepingPage(wantsJson) : res;
+      } catch {
+        return sleepingPage(wantsJson);
+      }
     }
     // The separate games address (docs/GAMES-ORIGIN.md): a public games site. "/" is the games hub (plain files, no sign-in), /games/* are the games; everything else is a 404, so nothing of the app
     // (and no sign-in) can ever exist on it. On the app's address the hub's folder is a 404 too (worker/gamesSite.js).

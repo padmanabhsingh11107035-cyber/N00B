@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /login
+Disallow: /noob-signin
+Disallow: /ask
+Disallow: /device/
+Disallow: /static/
+
+Sitemap: https://ai.noobsocials.com/sitemap.xml

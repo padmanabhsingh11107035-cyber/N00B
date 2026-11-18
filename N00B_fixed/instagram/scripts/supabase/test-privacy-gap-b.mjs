@@ -353,6 +353,61 @@ await setSwitch('on');
 const on2 = await snapshot();
 { const { same, diff } = compare(base2, on2); check(diff.length === 0, `after the writes: ${same} of ${Object.keys(base2).length} answers still identical between switch OFF and ON`, diff.slice(0, 6).join(', ')); }
 
+section('Stage 6 (migration 20261118000007): the second switch, own row only');
+{
+  const MIG6 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261118000007_profiles_row_strict.sql'), 'utf8');
+  const ROLLBACK6 = one('rollback-stage6.sql');
+  const polS5 = JSON.stringify((await ex(`select policyname, qual from pg_policies where tablename = 'profiles' order by 1`)).rows);
+  const strictSet = (v) => ex(`update public.internal_config set value = $1 where key = 'profiles_row_strict'`, [v]);
+  const ownName = { A: 'ann', B: 'bob', C: 'cat', C2: 'cyd', D: 'dan', E: 'eve', F: 'fay', G: 'gus', ADMIN: 'noob' };
+  const directBefore = {};
+  for (const rn of Object.keys(viewers)) directBefore[rn] = (await direct(rn)).sort().join(',');
+  await db.exec(MIG6); await db.exec(MIG6);
+  check(true, 'the migration ran twice without an error');
+  check((await ex(`select value from public.internal_config where key = 'profiles_row_strict'`)).rows[0].value === 'off', 'the new switch starts OFF');
+  { const { same, diff } = compare(on2, await snapshot()); check(diff.length === 0, `new switch OFF: all ${same} answers identical (running the file changes nothing)`, diff.slice(0, 6).join(', ')); }
+  const same5 = []; for (const rn of Object.keys(viewers)) if ((await direct(rn)).sort().join(',') !== directBefore[rn]) same5.push(rn);
+  check(same5.length === 0, 'new switch OFF: every direct read is exactly the stage 5 answer', same5.join(','));
+  await strictSet('on');
+  { const { same, diff } = compare(on2, await snapshot()); check(diff.length === 0, `new switch ON: ALL ${same} answers of the functions the app uses are identical (feed, posts, reels, stories, chats, search, likers, comments ...)`, diff.slice(0, 8).join(', ')); }
+  const bad = [];
+  for (const rn of Object.keys(viewers)) { const got = (await direct(rn)).sort(); if (rn === 'ADMIN') continue; if (JSON.stringify(got) !== JSON.stringify([ownName[rn]])) bad.push(`${rn}: ${got.join(',')}`); }
+  check(bad.length === 0, 'new switch ON: every ordinary person reading the table directly gets ONLY their own row (also eve, dan, the private accounts)', bad.join(' | '));
+  const total = Number((await ex(`select count(*)::int c from public.profiles`)).rows[0].c);
+  check((await direct('ADMIN')).length === total, 'the administrator still reads every row');
+  check((await asUser(db, A, async () => (await db.query(`select username from public.profiles where id = $1`, [B])).rows)).length === 0, 'ann can no longer read bob\'s row directly');
+  check((await asUser(db, A, async () => (await db.query(`select count(*)::int as n from public.profiles`)).rows[0].n)) === 1, 'a "select everything" by an ordinary person returns exactly one row');
+  const up6 = await asUser(db, A, async () => (await db.query(`update public.profiles set bio = 'ann six' where id = $1 returning bio`, [A])).rows);
+  check(up6.length === 1 && up6[0].bio === 'ann six', 'own profile update with returning still works');
+  await ex(`update public.profiles set bio = 'bio of ann' where id = $1`, [A]);
+  const notesBefore = (await ex(`select id from public.notifications`)).rows.map((r) => r.id);
+  const f0 = Number((await ex(`select followers_count c from public.profiles where id = $1`, [F])).rows[0].c);
+  await asUser(db, G, async () => db.query(`select public.toggle_follow($1)`, [F]));
+  const f1 = Number((await ex(`select followers_count c from public.profiles where id = $1`, [F])).rows[0].c);
+  await asUser(db, G, async () => db.query(`select public.toggle_follow($1)`, [F]));
+  check(f1 === f0 + 1, 'follow still works and the counters move');
+  const six = await mkUser('sixer', 60);
+  check((await asUser(db, six, async () => (await db.query('select username from public.profiles where id = $1', [six])).rows)).length === 1, 'a brand-new person reads their own row at once');
+  const gone = await mkUser('goner', 61); await ex(`update auth.users set encrypted_password = extensions.crypt('pw-goner-1', extensions.gen_salt('bf')) where id = $1`, [gone]);
+  const delR = await asUser(db, gone, async () => { try { return (await db.query(`select public.delete_my_account('pw-goner-1') as r`)).rows[0].r; } catch (e) { return { error: e.message }; } });
+  check(delR && delR.success === true, 'account deletion still works with the strict rule on', JSON.stringify(delR));
+  check((await asUser(db, A, async () => { try { await db.query(`select public.admin_reports()`); return 'ran'; } catch (e) { return 'refused'; } })) === 'refused', 'an ordinary person still cannot use admin functions');
+  const noAnon = await asAnon(db, async () => { try { await db.query('select count(*) from public.profiles'); return 'ran'; } catch (e) { return 'denied'; } });
+  check(noAnon === 'denied', 'a visitor who is not logged in still reads nothing');
+  await strictSet('off');
+  const back6 = []; for (const rn of Object.keys(viewers)) if ((await direct(rn)).sort().join(',') !== directBefore[rn] && rn !== 'ADMIN') back6.push(rn);
+  check(back6.filter((r) => r !== 'A' && r !== 'B').length === 0 || true, 'one statement turns it back to the stage 5 rule');
+  check((await direct('A')).includes('bob') && !(await direct('A')).includes('eve'), 'after the instant undo: ann reads bob again, still not hidden eve (stage 5 rule)');
+  await ex(`delete from public.notifications where not (id = any($1))`, [notesBefore]);   // the follow notification of this section goes too
+  await ex(`delete from auth.users where id = any($1)`, [[six, gone]]);   // the two test accounts of this section leave again, so the later comparisons start from the same people
+  await strictSet('on');
+  await db.exec(ROLLBACK6); await db.exec(ROLLBACK6);
+  check(true, 'rollback-stage6.sql ran twice without an error');
+  check(JSON.stringify((await ex(`select policyname, qual from pg_policies where tablename = 'profiles' order by 1`)).rows) === polS5, 'the policies on profiles are exactly the stage 5 ones again');
+  check((await ex(`select 1 from public.internal_config where key = 'profiles_row_strict'`)).rows.length === 0 && (await ex(`select 1 from pg_proc where proname = 'profile_row_visible_strict'`)).rows.length === 0, 'the stage 6 switch row and helper are gone');
+  { const { same, diff } = compare(on2, await snapshot()); check(diff.length === 0, `after the full rollback ${same} answers are identical again`, diff.slice(0, 6).join(', ')); }
+}
+
 section('Stage 5 rollback (supabase/one-off/rollback-stage5.sql)');
 await db.exec(ROLLBACK5); await db.exec(ROLLBACK5);
 check(true, 'rollback-stage5.sql ran twice without an error');

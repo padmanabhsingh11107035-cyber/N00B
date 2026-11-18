@@ -97,9 +97,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { SwitchAccountModal } from './components/Modals/SwitchAccountModal';
 import { OPEN_SWITCH_SHEET_EVENT, QUICK_SWITCH_MESSAGE_EVENT } from './utils/quickSwitch';
-import { AuthView } from './components/Auth/AuthView';
-import { TermsAndConditions } from './components/Legal/TermsAndConditions';
-import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
+// The login screens and the legal pages are only needed by people who are logged out / who open them, so they load on demand (about 170 KB less code to read before Home can show for everyone who is already logged in).
+const AuthView = React.lazy(() => import('./components/Auth/AuthView').then((m) => ({ default: m.AuthView })));
+const TermsAndConditions = React.lazy(() => import('./components/Legal/TermsAndConditions').then((m) => ({ default: m.TermsAndConditions })));
+const PrivacyPolicy = React.lazy(() => import('./components/Legal/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })));
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
@@ -1844,7 +1845,9 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} hint={bootNotice || undefined} />
+        <React.Suspense fallback={<LazyFallback />}>
+          <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} hint={bootNotice || undefined} />
+        </React.Suspense>
       </>
     );
   }
@@ -2659,10 +2662,10 @@ export default function App() {
 
       {/* 8. Legal Modals */}
       {showTermsModal && (
-        <TermsAndConditions onClose={() => setShowTermsModal(false)} />
+        <React.Suspense fallback={null}><TermsAndConditions onClose={() => setShowTermsModal(false)} /></React.Suspense>
       )}
       {showPrivacyModal && (
-        <PrivacyPolicy onClose={() => setShowPrivacyModal(false)} />
+        <React.Suspense fallback={null}><PrivacyPolicy onClose={() => setShowPrivacyModal(false)} /></React.Suspense>
       )}
 
       {/* 9. Direct 1v1 Game Play Modal */}

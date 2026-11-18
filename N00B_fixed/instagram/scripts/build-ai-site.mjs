@@ -17,7 +17,7 @@ const NAV = [
   ['/features', 'Features'], ['/how-it-works', 'How it works'], ['/languages', 'Languages'], ['/safety', 'Safety'], ['/faq', 'FAQ'], ['/install', 'Install'],
 ];
 
-const FOUNDER = { '@type': 'Person', '@id': MAIN + '/about#founder', name: 'Padmanabh Singh Vaghela', alternateName: ['Padmanabh Vaghela', 'Padmanabh Singh'], jobTitle: 'Founder, CEO and Owner of NOOB Socials and NOOB AI', sameAs: ['https://www.instagram.com/padmanabh_noob'] };
+const FOUNDER = { '@type': 'Person', '@id': MAIN + '/about#founder', name: 'Padmanabh Singh Vaghela', alternateName: ['Padmanabh Vaghela', 'Padmanabh Singh'], jobTitle: 'Founder, CEO and Owner of NOOB Socials and NOOB AI', knowsAbout: ['Software development', 'Web and app development', 'Cyber security', 'Artificial intelligence'], award: '1st position, Sparx techfest, IIT Gandhinagar', sameAs: ['https://www.instagram.com/padmanabh_noob'] };
 const ORG = { '@type': 'Organization', '@id': MAIN + '/#org', name: 'NOOB Socials', alternateName: ['NOOB', 'noobsocials'], url: MAIN + '/', logo: SITE + '/logo.png', founder: FOUNDER, sameAs: ['https://www.instagram.com/noobsocials', 'https://www.youtube.com/@noobsocials_456'] };
 const APP = {
   '@type': 'SoftwareApplication', '@id': SITE + '/#app', name: 'NOOB AI', url: SITE + '/', image: SITE + '/og-image.png',

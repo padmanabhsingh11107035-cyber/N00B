@@ -59,8 +59,8 @@ export class PaperfieldLobby {
         if (!info.id) { this.send(ws, { t: 'full' }); return; }
       }
       this.send(ws, { t: 'you', id: info.id });
-    } else if (m.t === 'dir') {
-      if (info.id) w.turn(info.id, m.d | 0);
+    } else if (m.t === 'ang') {
+      if (info.id && Number.isFinite(m.a)) w.steer(info.id, m.a / 100);
     } else if (m.t === 'ping') {
       this.send(ws, { t: 'pong', c: m.c });
     }

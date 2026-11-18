@@ -33,44 +33,47 @@ for (let i = 0; i < 100; i++) {
   });
 }
 
-/** the pattern on one cell (x, y: the cell's place on the map, so the pattern lines up from cell to cell); s = cell size in pixels */
-export function drawPattern(ctx, skin, cx, cy, s, sx, sy, alpha) {
+/** a small square picture of a skin's pattern (it covers 2 x 2 units of the field and repeats): used as a fill over the land of a player. null for a plain skin. */
+const tiles = new Map();
+export function patternTile(skin) {
+  if (!skin.pat) return null;
+  if (tiles.has(skin.id)) return tiles.get(skin.id);
+  const n = 64, c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d');
+  g.fillStyle = skin.sec; g.globalAlpha = 0.5;
   const pat = skin.pat;
-  if (!pat) return;
-  ctx.globalAlpha = alpha == null ? 0.55 : alpha;
-  ctx.fillStyle = skin.sec;
-  if (pat === 1) {          // diagonal stripes
-    if (((cx + cy) & 3) < 2) ctx.fillRect(sx, sy, s, s);
-  } else if (pat === 2) {   // checker
-    if ((cx + cy) & 1) ctx.fillRect(sx, sy, s, s);
-  } else if (pat === 3) {   // dots
-    ctx.beginPath(); ctx.arc(sx + s / 2, sy + s / 2, s * 0.2, 0, 6.2832); ctx.fill();
-  } else if (pat === 4) {   // diamonds
-    if (((cx + cy) & 1) === 0) {
-      ctx.beginPath();
-      ctx.moveTo(sx + s / 2, sy + s * 0.12); ctx.lineTo(sx + s * 0.88, sy + s / 2); ctx.lineTo(sx + s / 2, sy + s * 0.88); ctx.lineTo(sx + s * 0.12, sy + s / 2);
-      ctx.closePath(); ctx.fill();
-    }
+  if (pat === 1) {            // diagonal stripes
+    g.save(); g.translate(n / 2, n / 2); g.rotate(-Math.PI / 4);
+    for (let k = -3; k <= 3; k++) g.fillRect(-n, k * 22 - 5, n * 2, 10);
+    g.restore();
+  } else if (pat === 2) {     // checker
+    g.fillRect(0, 0, n / 2, n / 2); g.fillRect(n / 2, n / 2, n / 2, n / 2);
+  } else if (pat === 3) {     // dots (like seeds)
+    for (const [x, y] of [[16, 16], [48, 48]]) { g.beginPath(); g.ellipse(x, y, 5, 8, 0.6, 0, 6.2832); g.fill(); }
+  } else if (pat === 4) {     // diamonds
+    for (const [x, y] of [[32, 32], [0, 0], [64, 0], [0, 64], [64, 64]]) { g.beginPath(); g.moveTo(x, y - 18); g.lineTo(x + 18, y); g.lineTo(x, y + 18); g.lineTo(x - 18, y); g.closePath(); g.fill(); }
   }
-  ctx.globalAlpha = 1;
+  tiles.set(skin.id, c);
+  return c;
 }
 
-/** the head of a player: a rounded block with a face that looks the way it moves. (x, y) = top left, s = size, dir 0..3 */
-export function drawHead(ctx, skin, x, y, s, dir) {
-  const r = s * 0.26;
+/** the head of a player: a glossy ball with a face that looks the way it moves. (cx, cy) = centre, r = radius, ang = direction in radians */
+export function drawHead(ctx, skin, cx, cy, r, ang) {
   ctx.fillStyle = skin.dark;
-  roundRect(ctx, x, y, s, s, r); ctx.fill();
-  ctx.fillStyle = skin.base;
-  roundRect(ctx, x + s * 0.09, y + s * 0.06, s * 0.82, s * 0.78, r * 0.8); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.28)';
-  roundRect(ctx, x + s * 0.17, y + s * 0.12, s * 0.66, s * 0.2, r * 0.5); ctx.fill();
-  // eyes
-  const ox = [0, 0.07, 0, -0.07][dir] * s, oy = [-0.06, 0, 0.06, 0][dir] * s;
-  const ey = y + s * 0.5 + oy * 0.5;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+  const gr = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
+  gr.addColorStop(0, skin.light); gr.addColorStop(1, skin.base);
+  ctx.fillStyle = gr;
+  ctx.beginPath(); ctx.arc(cx, cy - r * 0.04, r * 0.88, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy - r * 0.5, r * 0.28, r * 0.15, -0.5, 0, 6.2832); ctx.fill();
+  // eyes look along the heading
+  const dx = Math.cos(ang), dy = Math.sin(ang);
   for (const k of [-1, 1]) {
-    const ex = x + s * 0.5 + k * s * 0.17 + ox * 0.5;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, s * 0.13, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = '#1b1b24'; ctx.beginPath(); ctx.arc(ex + ox * 0.55, ey + oy * 0.55, s * 0.065, 0, 6.2832); ctx.fill();
+    const ex = cx + dx * r * 0.18 - dy * k * r * 0.3, ey = cy + dy * r * 0.18 + dx * k * r * 0.3;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, r * 0.22, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#1b1b24'; ctx.beginPath(); ctx.arc(ex + dx * r * 0.09, ey + dy * r * 0.09, r * 0.11, 0, 6.2832); ctx.fill();
   }
 }
 

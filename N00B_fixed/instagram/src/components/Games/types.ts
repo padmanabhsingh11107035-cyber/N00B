@@ -47,7 +47,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     id: 'paperfield',
     title: 'Paperfield',
     category: 'arcade',
-    description: 'Claim the whole map: leave your land, draw a loop and come back to take everything inside it. Cut the trail of another player and they are out; touch your own trail and you are out. One very big shared lobby with dozens of bots, and every real player who joins plays in the same world. 100 skins to unlock your style.',
+    description: 'Claim the whole map: steer freely, leave your land, draw a curved loop and come back to take everything inside it. Cut the trail of another player and they are out; touch your own trail and you are out. One very big shared lobby with dozens of bots, and every real player who joins plays in the same world. 100 skins to unlock your style.',
     bannerBg: 'from-[#37c870] to-[#1b2a5c]',
     badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     pointsReward: 0,
@@ -59,7 +59,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     isNew: true,
     ownSound: true,
     embedPortrait: true,
-    embedControls: 'Swipe (or use the arrow keys / WASD) to turn. Leave your land and come back to claim everything inside your loop; if anyone touches your trail you are out, and so are you if you touch your own. Pick one of 100 skins before you play. Everyone who joins plays in the same big lobby with the bots. It has its own sounds (the speaker button turns them off); no NOOBs for this one, it is just for fun.',
+    embedControls: 'Drag your finger anywhere (or use the arrow keys / WASD) to steer: the head turns smoothly, so every path is a curve. Leave your land and come back to claim everything inside your loop; if anyone touches your trail you are out, and so are you if you touch your own. Pick one of 100 skins before you play. Everyone who joins plays in the same big lobby with the bots. It has its own sounds (the speaker button turns them off); no NOOBs for this one, it is just for fun.',
     embedUrl: '/games/paperfield/',
     posters: [
       '/game-posters/paperfield/01-cover.webp',

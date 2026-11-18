@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#1e2433">
+<meta name="theme-color" content="#21404a">
 <title>Paperfield</title>
-<link rel="stylesheet" href="game.css?v=1">
+<link rel="stylesheet" href="game.css?v=2">
 </head>
 <body>
 <canvas id="c" aria-label="Paperfield game"></canvas>
 
 <div id="hud" hidden>
-  <div id="me"><i id="meSw"></i><b id="meScore">0.00%</b><span id="meInfo"></span></div>
+  <div id="bar"><div id="barFill"></div><b id="meScore">0%</b><em>★</em></div>
+  <div id="skull"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="#fff" d="M12 2C6.9 2 3 5.7 3 10.4c0 2.8 1.4 5 3.5 6.4V20c0 .6.4 1 1 1H9v-2h1.5v2h3v-2H15v2h1.5c.6 0 1-.4 1-1v-3.2c2.1-1.400 3.500-3.600 3.500-6.400C21 5.700 17.100 2 12 2zM8.500 13a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg><b id="kills">0</b></div>
   <div id="board"></div>
   <canvas id="mini" width="96" height="96"></canvas>
   <div id="feed"></div>
@@ -50,6 +51,6 @@
   </div>
 </div>
 
-<script type="module" src="game.js?v=1"></script>
+<script type="module" src="game.js?v=2"></script>
 </body>
 </html>

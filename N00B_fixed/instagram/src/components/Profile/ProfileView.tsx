@@ -108,6 +108,7 @@ import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
 import { ChevronRight, Globe as GlobeIcon, KeyRound, Languages } from 'lucide-react';
+import { inviteFriends } from '../../utils/inviteFriends';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { DevicesModal } from './DevicesModal';
 import { AppearanceSetting } from '../Common/AppearanceSetting';
@@ -238,6 +239,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [archivedPosts, setArchivedPosts] = useState<Post[]>([]);
   const [showSettingsHub, setShowSettingsHub] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [inviteNote, setInviteNote] = useState('');
+  const runInvite = async () => {
+    const r = await inviteFriends();
+    setInviteNote(r === 'copied' ? 'Invite message copied. Paste it to a friend.' : r === 'failed' ? 'Could not open sharing. Copy the address from your browser instead.' : '');
+    if (r === 'copied' || r === 'failed') window.setTimeout(() => setInviteNote(''), 4000);
+  };
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showE2eeModal, setShowE2eeModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -571,6 +578,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openDevices: () => setShowDevices(true),
       openInstall: () => setShowInstallPermissionsPage(true),
       openBlocked: () => setShowBlockedAccountsModal(true),
+      inviteFriends: () => { void runInvite(); },
       openFindContacts: () => window.dispatchEvent(new Event('noob-open-find-friends')),
       openHideProfile: () => setShowHideProfileModal(true),
       openPro: () => setShowProFeaturesModal(true),
@@ -1231,6 +1239,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </>
           )}
         </div>
+        {isOwnProfile && (
+          <>
+            <button type="button" onClick={() => void runInvite()} data-testid="profile-invite" className="mt-2 w-full py-2.5 px-3 rounded-xl border border-noob/50 text-noob text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer transition active:scale-[0.98] hover:bg-noob/10">
+              <UserPlus className="w-4 h-4" /> Invite a friend
+            </button>
+            {inviteNote && <p className="mt-1.5 text-center text-xs text-zinc-400" role="status">{inviteNote}</p>}
+          </>
+        )}
       </div>
 
       {/* 3. Follow Requests Drawer (for Private Accounts) — only ever the

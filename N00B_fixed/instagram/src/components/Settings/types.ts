@@ -14,6 +14,7 @@ export interface SettingsActions {
   openDevices: () => void;
   openInstall: () => void;
   openBlocked: () => void;
+  inviteFriends: () => void;                     // "Invite a friend" (the phone's share sheet, or the message copied)
   openFindContacts: () => void;                  // "Find users from my contacts" (asks for the permission, then lists the people who are on NOOB)
   openHideProfile: () => void;
   openPro: () => void;

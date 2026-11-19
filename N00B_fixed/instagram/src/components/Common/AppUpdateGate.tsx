@@ -51,7 +51,7 @@ export const AppUpdateGate: React.FC = () => {
   if (needed) {
     return (
       <div className="fixed inset-0 z-[2147483000] bg-black text-white flex flex-col items-center justify-center p-8 text-center" role="alertdialog" aria-modal="true" aria-label="Update NOOB" data-testid="app-update-gate">
-        <img src="/noob-app-512.png" alt="" width={96} height={96} className="rounded-3xl mb-6" />
+        <img src="/noob-app-round-512.png" alt="" width={96} height={96} className="rounded-3xl mb-6" />
         <h1 className="text-2xl font-extrabold">Update NOOB to continue</h1>
         <p className="mt-2 max-w-xs text-sm text-zinc-400">A new version of the NOOB app is on Google Play. This old version can not be used any more.</p>
         <button type="button" onClick={() => void openPlay()} className="mt-7 w-full max-w-xs h-12 rounded-full bg-white text-black font-extrabold cursor-pointer active:scale-95 transition-transform">Update</button>
@@ -66,7 +66,7 @@ export const AppUpdateGate: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[2147483000] bg-black/70 flex items-end sm:items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-label="A new NOOB is ready" data-testid="app-update-offer">
       <div className="w-full max-w-sm rounded-3xl bg-zinc-950 border border-white/10 p-6 text-center text-white shadow-2xl" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
-        <img src="/noob-app-512.png" alt="" width={72} height={72} className="rounded-2xl mx-auto mb-4" />
+        <img src="/noob-app-round-512.png" alt="" width={72} height={72} className="rounded-2xl mx-auto mb-4" />
         <h2 className="text-xl font-extrabold">A new NOOB is ready</h2>
         <p className="mt-1.5 text-sm text-zinc-400">Update from Google Play to get the newest features and fixes.</p>
         <button type="button" onClick={() => { later(); void openPlay(); }} className="mt-5 w-full h-12 rounded-full bg-white text-black font-extrabold cursor-pointer active:scale-95 transition-transform" data-testid="app-update-now">Update</button>

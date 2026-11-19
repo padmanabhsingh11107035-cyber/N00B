@@ -12,7 +12,26 @@ import { aiRoute, sleepingPage, isUnreachable } from './aiSite.js';   // the NOO
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 // The Android app file and its build note are handed out from the website's own address (/app/...), so no page, script or app file ever has to name where they are kept.
 const APP_RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/android-latest/';
-const NEW_UPDATER_FROM = 287;   // first app build whose installer only accepts addresses of this website (set after that build exists)
+const NEW_UPDATER_FROM = 287;
+
+/** One file of a release. While the repository is public its plain address works; once it is private a read-only key (the Worker secret GH_READ_TOKEN) is used through the API instead. */
+async function releaseFetch(env, tag, file, init) {
+  const plain = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/' + tag + '/' + file;
+  if (!env || !env.GH_READ_TOKEN) return fetch(plain, init);
+  try {
+    const h = { Authorization: 'Bearer ' + env.GH_READ_TOKEN, 'User-Agent': 'noob-worker', Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    const rel = await fetch('https://api.github.com/repos/padmanabhsingh11107035-cyber/N00B/releases/tags/' + tag, { headers: h });
+    if (rel.ok) {
+      const asset = ((await rel.json()).assets || []).find((x) => x.name === file);
+      if (asset) {
+        const r = await fetch(asset.url, { ...(init || {}), headers: { ...h, Accept: 'application/octet-stream' } });
+        if (r.ok) return r;
+      }
+    }
+  } catch { /* fall back to the plain address */ }
+  return fetch(plain, init);
+}
+   // first app build whose installer only accepts addresses of this website (set after that build exists)
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
 const FILES = {
@@ -389,7 +408,7 @@ export default {
     if (url.pathname === '/app/NOOB.apk' || url.pathname === '/app/native.json') {
       if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
       const isApk = url.pathname.endsWith('.apk');
-      const up = await fetch(APP_RELEASE + (isApk ? 'NOOB.apk' : 'native.json'), { cf: { cacheTtl: isApk ? 300 : 60, cacheEverything: true } });
+      const up = await releaseFetch(env, 'android-latest', isApk ? 'NOOB.apk' : 'native.json', { cf: { cacheTtl: isApk ? 300 : 60, cacheEverything: true } });
       if (!up.ok) return new Response('Not available', { status: 502, headers: { 'Cache-Control': 'no-store' } });
       const h = new Headers({ 'Content-Type': isApk ? 'application/vnd.android.package-archive' : 'application/json; charset=utf-8', 'Cache-Control': isApk ? 'public, max-age=300' : 'no-store', 'X-Content-Type-Options': 'nosniff' });
       if (isApk) h.set('Content-Disposition', 'attachment; filename="NOOB.apk"');
@@ -408,7 +427,7 @@ export default {
     if (!entry || (request.method !== 'GET' && request.method !== 'HEAD')) return env.ASSETS.fetch(request);
 
     // streamed straight through (the release's own address is a short-lived redirect). The browser keeps the file for a year: the address changes when the file does.
-    const upstream = await fetch(RELEASE + entry.file);
+    const upstream = await releaseFetch(env, 'game-data', entry.file);
     if (!upstream.ok) return new Response('Game file unavailable', { status: 502, headers: { 'Cache-Control': 'no-store' } });
     const headers = new Headers({
       'Content-Type': entry.type,

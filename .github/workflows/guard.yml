@@ -4,7 +4,7 @@ name: Guard
 # admin switches ...) and e-mails the owner when one fails. A bug that comes back is caught within minutes of the change that caused it.
 on:
   push:
-    branches: [supabase-migration, main]
+    branches: [main]
   pull_request: {}
 
 permissions:

@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Home, LogOut, UserCircle, Users, ShieldAlert, BellRing, Settings as SettingsIcon, X } from 'lucide-react';
 import './adminMobile.css';
+import { GrowthCard, type Growth } from './AdminGrowth';
 
 // The admin console as a PHONE app: a bottom bar, a home screen with the numbers and the sections in groups, and one page per section with a back arrow.
 // It does not rebuild the panels: every section is still the same panel as on a computer. The list of sections is read from the (hidden) tab strip of AdminControlModal,
@@ -85,9 +86,10 @@ export const PhoneHome: React.FC<{
   items: PhoneItem[];
   stats: { accounts: number; suspended: number; reports: number; role: string };
   canAccounts: boolean; canReports: boolean;
+  growth?: Growth;
   onOpen: (key: string) => void;
   onStat: (kind: 'accounts' | 'suspended' | 'reports') => void;
-}> = ({ items, stats, canAccounts, canReports, onOpen, onStat }) => {
+}> = ({ items, stats, canAccounts, canReports, growth, onOpen, onStat }) => {
   const byKey = new Map(items.map((i) => [i.key, i]));
   const used = new Set<string>();
   const groups = GROUPS.map((g) => ({ title: g.title, rows: g.keys.map((k) => byKey.get(k)).filter((x): x is PhoneItem => !!x) }));
@@ -96,6 +98,7 @@ export const PhoneHome: React.FC<{
   if (rest.length) groups.push({ title: 'More', rows: rest });
   return (
     <div className="apx-home">
+      {growth && canAccounts && <GrowthCard growth={growth} />}
       <div className="apx-tiles">
         <button type="button" disabled={!canAccounts} onClick={() => onStat('accounts')}><small>Accounts</small><b>{stats.accounts}</b></button>
         <button type="button" disabled={!canAccounts} onClick={() => onStat('suspended')}><small>Suspended</small><b className="red">{stats.suspended}</b></button>

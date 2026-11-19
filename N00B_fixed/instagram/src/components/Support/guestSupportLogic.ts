@@ -68,7 +68,7 @@ export const ISSUES: ReadonlyArray<{ kind: IssueKind; label: string; text: strin
 
 // ---------------------------------------------------------------- the helper's words for every answer of the server
 export const BLOCKED_TEXT = `You have used guest help ${GUEST_USES} times on this browser. To keep NOOB safe, guest help is limited. Please use "Forgot password" on the login page, or log in and open Customer Support inside the app.`;
-export const UNAVAILABLE_TEXT = 'Support is unavailable right now. Please try again in a moment.';
+export const UNAVAILABLE_TEXT = 'Support is unavailable right now. Please try again in a moment, or email us at support@noobsocials.com.';
 
 export function greeting(remaining: number): string {
   const left = remaining >= GUEST_USES ? `You can use guest help ${GUEST_USES} times on this browser.` : `You have **${remaining}** guest help ${remaining === 1 ? 'chat' : 'chats'} left on this browser.`;
@@ -133,7 +133,7 @@ export function codeRequestAnswer(status: string, seconds?: number): { text: str
     case 'no_account': return { ok: false, text: 'There is no NOOB account for this email, so I can not send a code.' };
     case 'suspended': return { ok: false, text: 'This account has been **suspended** by the NOOB administrator, so I can not log you in.' };
     case 'not_configured': return { ok: false, text: 'Emailing a code is not switched on yet. Please use "Forgot password" on the login page.' };
-    case 'send_failed': return { ok: false, text: 'I could not send the email right now. Please try again in a moment.' };
+    case 'send_failed': return { ok: false, text: 'I could not send the email right now. Please try again in a moment, or email us at support@noobsocials.com.' };
     case 'bad_case': return { ok: false, text: 'This chat has ended. Please close it and open Help again.' };
     default: return { ok: false, text: UNAVAILABLE_TEXT };
   }

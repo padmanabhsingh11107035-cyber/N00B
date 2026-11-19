@@ -810,7 +810,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       // (the assistant understood a request to end the call in another language)
       if (response?.action === 'END_SESSION') endCallByRequest(isSpeakerOnRef.current && voiceEnabledRef.current);
     } catch (err) {
-      const fallbackReply = `Sorry, I couldn't reach the support service just now. Please check your internet connection, and then ask me again.`;
+      const fallbackReply = `Sorry, I couldn't reach the support service just now. Please check your internet connection, and then ask me again. If it keeps happening, email us at support@noobsocials.com.`;
       setCallTranscript((prev) => [
         ...prev,
         {
@@ -867,7 +867,7 @@ ${subject}
 
 ${description}`.slice(0, 2000));
     setTicketSending(false);
-    if (!res.success) { setTicketError(res.error || 'Could not send that right now. Please try again.'); return; }
+    if (!res.success) { setTicketError(res.error || 'Could not send that right now. Please try again, or email us at support@noobsocials.com.'); return; }
     setTicketSubmitted(true);
     confetti({ particleCount: 35, spread: 65, origin: { y: 0.6 } });
   };

@@ -52,7 +52,7 @@ check(chkStatuses.every((s) => G.codeCheckAnswer(s).text.length > 10), 'every wr
 check(!G.codeCheckAnswer('mismatch').fatal && !G.codeCheckAnswer('bad_format').fatal && ['expired', 'too_many_attempts', 'case_locked', 'rate_limited', 'suspended', 'token_failed'].every((s) => G.codeCheckAnswer(s).fatal), 'a wrong digit can be tried again; a dead code is a new-code matter');
 check(/6-digit/.test(G.codeSentText('a•••@g•••.com', 2)) && /last code/.test(G.codeSentText('m', 0)) && !/last code/.test(G.codeSentText('m', 2)), 'the "code sent" text names the hidden address and the last code');
 const allText = [G.greeting(3), G.greeting(1), G.BLOCKED_TEXT, G.UNAVAILABLE_TEXT, G.idPrompt(true), G.idPrompt(false), ...emailStatuses.map((s) => G.emailAnswer(s).text), ...chkStatuses.map((s) => G.codeCheckAnswer(s).text), ...reqStatuses.map((s) => G.codeRequestAnswer(s).text)].join('\n');
-check(!/[A-Za-z0-9._-]+@[A-Za-z0-9-]+\.[a-z]{2,}/i.test(allText.replace(/name@gmail\.com/g, '')), 'no fixed text contains a real address');
+check(!/[A-Za-z0-9._-]+@[A-Za-z0-9-]+\.[a-z]{2,}/i.test(allText.replace(/name@gmail\.com/g, '').replace(/support@noobsocials\.com/g, '')), 'no fixed text contains a real address');
 check(/3 times|\*\*1\*\* guest help chat /.test(G.greeting(3) + G.greeting(1)) && /\*\*2\*\* guest help chats/.test(G.greeting(2)), 'the greeting says how many uses are left (chat / chats)');
 check(G.ISSUES.length === 6 && G.ISSUES.filter((i) => i.text).length === 5 && new Set(G.ISSUES.map((i) => i.kind)).size === 6 && G.ISSUES.every((i) => i.text.length <= 100), 'six problems to pick from (the last one is "something else", in the person\'s own words)');
 

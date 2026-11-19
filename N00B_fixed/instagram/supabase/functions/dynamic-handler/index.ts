@@ -1702,7 +1702,7 @@ Deno.serve(async (req) => {
 
   return reply({
     model: 'knowledge-engine',
-    reply: `Sorry @${me.username}, I'm having trouble reaching the AI service right now. Please try again in a moment, or use the Call Us tab for a live callback.`,
+    reply: `Sorry @${me.username}, I'm having trouble reaching the AI service right now. Please try again in a moment, or use the Call Us tab for a live callback. You can also email us at support@noobsocials.com.`,
     // only when the caller asks (body.debug): which models were tried and what Groq answered — never the key
     ...(body.debug === true ? { debug: tried } : {})
   });

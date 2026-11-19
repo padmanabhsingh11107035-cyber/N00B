@@ -3,7 +3,7 @@
 NOOB Socials (https://noobsocials.com) is run by students, and its source is public. If you find a way to get into somebody's account, read something private, change somebody
 else's data, or take the site down, please tell us before you tell anyone else.
 
-**How to report:** open a private report at https://github.com/padmanabhsingh11107035-cyber/N00B/security/advisories/new (only the maintainers see it). Please include what
+**How to report:** send a private report through https://noobsocials.com/grievance and say it is a security problem. Please include what
 you did, what you saw, and which account or page it was on. Do not read, change or delete other people's data to prove a point: a test account of your own is enough.
 
 **What we promise:** we read every report, we fix real problems quickly, and we will not take action against anyone who looked for problems in good faith and stayed inside the

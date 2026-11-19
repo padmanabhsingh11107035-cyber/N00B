@@ -224,12 +224,12 @@ check(!/window\.open\('\/about'/.test(profile + allPages) && !/openAbout/.test(t
 const aboutSrc = read('src/components/Settings/pages/support.tsx');
 const featureTitles = ['Share and watch', 'Chat and call', 'Play', 'Go live', 'Fun and community', 'Create and learn', 'Shop and rewards', 'Privacy and safety'];
 const publicAbout = read('public/about.html');
-check(featureTitles.every((t) => aboutSrc.includes(`title: '${t}'`)) && /Why students\?/.test(aboutSrc), 'it tells the same story as the website’s About page: who we are, the eight groups of things you can do, why students');
+check(featureTitles.every((t) => aboutSrc.includes(`title: '${t}'`)) && /How NOOB keeps improving/.test(aboutSrc), 'it tells the same story as the website’s About page: who we are, the eight groups of things you can do, how NOOB keeps improving');
 const websiteItems = [...publicAbout.matchAll(/<li>([^<]+)<\/li>/g)].map((m) => m[1].replace(/&amp;/g, '&'));
 const missing = websiteItems.filter((t) => !aboutSrc.includes(t.replace(/'/g, "\\'")) && !aboutSrc.includes(t));
 check(missing.length === 0, 'every feature the website lists is listed here too', missing.join(' | '));
 check(/\/noob-icon-192\.png/.test(aboutSrc) && !/noob-logo\.svg\.jpeg/.test(aboutSrc) && fs.existsSync('public/noob-icon-192.png'), 'the About pages show the NOOB logo');
-check(/openTeamJoin/.test(aboutSrc) && /instagram\.com\/nooob\.xyz/.test(aboutSrc) && /getDevicePrefs\(\)\.openLinksInApp/.test(aboutSrc), 'Follow us on Instagram (inside NOOB’s own browser unless links are set to open outside) and Join the NOOB team are there');
+check(/openTeamJoin/.test(aboutSrc) && /instagram\.com\/noobsocials/.test(aboutSrc) && /getDevicePrefs\(\)\.openLinksInApp/.test(aboutSrc), 'Follow us on Instagram (inside NOOB’s own browser unless links are set to open outside) and Join the NOOB team are there');
 
 section('11. Instants and Daily NOOB are the only things deleted by a clock');
 check(!/instants-archive|InstantsArchivePage|fetchInstantsArchive/.test(allPages + registry + pagesIndex), 'no Instants archive in Settings: Instants are deleted for good after 24 hours');

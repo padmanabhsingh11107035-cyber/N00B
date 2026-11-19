@@ -96,7 +96,7 @@ const cta = (t, d) => `<section class="band"><div class="wrap"><h2>${t}</h2><p>$
 // ------------------------------------------------------------------------------------------------ home
 layout({
   file: 'index.html', p: '/', current: '',
-  title: 'NOOB AI: free multilingual AI voice assistant with general health information (not medical advice)',
+  title: 'NOOB AI: free multilingual AI voice assistant and health information',
   desc: 'NOOB AI is a free AI voice assistant by NOOB. Talk in your own language, hear it answer out loud, and let it remember you. Healthcare-aware, with safety first.',
   h1: 'Meet <span class="accent">NOOB AI</span>, your multilingual AI friend',
   lede: 'Talk in your own language and hear NOOB AI answer out loud. It remembers what you tell it, notices how you feel, and knows a little about almost everything. Free to use, from the NOOB team.',
@@ -134,7 +134,7 @@ ${cta('Start talking to NOOB AI', 'Sign in with your NOOB account, or create a f
 // ------------------------------------------------------------------------------------------------ features
 layout({
   file: 'features.html', p: '/features', current: '/features',
-  title: 'NOOB AI features: voice, 70+ languages, memory and general health information',
+  title: 'NOOB AI features: voice, 70+ languages, memory and health info',
   desc: 'Everything NOOB AI can do: talk by voice in your language, remember you, understand how you feel, search the web, play songs, and keep you safe with healthcare rules.',
   h1: 'Features', lede: 'A closer look at what NOOB AI can do for you.',
   ld: [APP, crumbs([['NOOB AI', '/'], ['Features', '/features']])],

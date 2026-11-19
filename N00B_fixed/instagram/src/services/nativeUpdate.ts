@@ -6,7 +6,7 @@ import { isNativeApp } from '../utils/siteUrl.ts';
 // "Update the app" for the Android app. Everything the app shows comes live from the website, so ordinary changes arrive by themselves. Only when something NATIVE changes (the
 // parts of the app that are not the website: the screenshot block, the installer itself, permissions) a new app file is needed. This finds out whether one is ready, and with
 // one tap downloads it and hands it to Android's installer (Android asks the person to confirm: no app can install itself silently).
-// The newest app file is published as a release on GitHub by .github/workflows/android-build.yml, with its build number in the release notes ("Native build: 123").
+// The newest app file and its build number are handed out from the website's own /app/ address (see worker/index.js).
 
 interface AppUpdaterPlugin {
   getInfo(): Promise<{ versionCode: number; versionName: string; canInstall: boolean; fromPlay?: boolean }>;
@@ -17,7 +17,7 @@ interface AppUpdaterPlugin {
 }
 const AppUpdater = registerPlugin<AppUpdaterPlugin>('AppUpdater');
 
-export const RELEASE_API = 'https://api.github.com/repos/padmanabhsingh11107035-cyber/N00B/releases/tags/android-latest';
+export const RELEASE_API = '/app/native.json';
 
 /** The build number written in the release notes ("Native build: 123"). */
 export function parseNativeBuild(notes: string | null | undefined): number | null {
@@ -81,10 +81,11 @@ export function autoInstallDue(info: NativeUpdateInfo | null, busy: boolean): bo
 
 async function fetchLatestNativeBuild(): Promise<number | null> {
   try {
-    const res = await fetch(RELEASE_API, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    const res = await fetch(RELEASE_API, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = await res.json();
-    return parseNativeBuild(data?.body);
+    const b = Number(data?.build);
+    return Number.isFinite(b) && b > 0 ? b : parseNativeBuild(data?.body);
   } catch {
     return null;
   }
@@ -124,6 +125,17 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
   return { supported, canInstall, installed, latest, state: nativeUpdateState(installed, latest) };
 }
 
+/** The address the installer should download from: the website tells it (an app from before a change still needs the address it knows). */
+async function installerUrl(): Promise<string> {
+  try {
+    const v = (await AppUpdater.getInfo()).versionCode || 0;
+    const res = await fetch(`/app/update-url?v=${v}`, { cache: 'no-store' });
+    const data = res.ok ? await res.json() : null;
+    if (data && typeof data.url === 'string' && data.url) return data.url;
+  } catch { /* fall back to the website's own address */ }
+  return new URL(ANDROID_APK_URL, window.location.origin).toString();
+}
+
 /** Downloads the newest app file and opens Android's installer. Resolves 'needs-permission' when Android first has to be told that NOOB may install apps. */
 export async function installNativeUpdate(onProgress: (percent: number) => void, onError?: (message: string) => void): Promise<'started' | 'needs-permission'> {
   let handle: { remove: () => Promise<void> } | null = null;
@@ -131,7 +143,7 @@ export async function installNativeUpdate(onProgress: (percent: number) => void,
     handle = await AppUpdater.addListener('progress', (p) => onProgress(p.percent));
     // Android's answer to the install can come after this call is done, so this listener stays until the app closes
     if (onError) await AppUpdater.addListener('error', (e) => onError(e.message));
-    const res = await AppUpdater.downloadAndInstall({ url: ANDROID_APK_URL });
+    const res = await AppUpdater.downloadAndInstall({ url: await installerUrl() });
     return res.needsPermission ? 'needs-permission' : 'started';
   } finally {
     try { await handle?.remove(); } catch { /* nothing to undo */ }

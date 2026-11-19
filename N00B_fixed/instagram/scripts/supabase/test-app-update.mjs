@@ -27,13 +27,13 @@ const cfg = JSON.parse(read('capacitor.config.json'));
 check(cfg.server?.url === 'https://noobsocials.com' && cfg.webDir === 'dist' && cfg.server?.androidScheme === 'https', 'the app shows the live website (since 2026-11-03), so every change to the website reaches the Android app by itself, without a new app file');
 check(Array.isArray(cfg.server.allowNavigation) && cfg.server.allowNavigation.includes('noobsocials.com') && !JSON.stringify(cfg.server.allowNavigation).includes('nooob.xyz'), 'NOOB’s address stays inside the app (the retired nooob.xyz is not allowed in)');
 check(cfg.server?.errorPath === 'native-offline.html' && fs.existsSync('public/native-offline.html') && /No connection/.test(read('public/native-offline.html')), 'without a connection the app shows the "No connection" page that is inside it');
-check(/connect-src[^;]*https:\/\/api\.github\.com/.test(read('public/_headers')), 'the website may ask GitHub for the newest app build number');
+check(!/github/i.test(read('public/_headers')), 'no address of where the code is kept appears in the website headers (the build number comes from the website own /app/ address)');
 
 section('3. The installer inside the app (native)');
 const java = read('android-overrides/AppUpdaterPlugin.java');
 const main = read('android-overrides/MainActivity.java');
 check(/@CapacitorPlugin\(name = "AppUpdater"\)/.test(java) && /registerPlugin\(AppUpdaterPlugin\.class\);[\s\S]*?super\.onCreate/.test(main), 'the installer is registered before the app starts');
-check(/ALLOWED_PREFIX = "https:\/\/github\.com\/padmanabhsingh11107035-cyber\/N00B\/releases\/download\/"/.test(java) && /!address\.startsWith\(ALLOWED_PREFIX\)/.test(java), 'it downloads only from NOOB’s own release page, never from any other address');
+check(/ALLOWED_PREFIX = "https:\/\/noobsocials\.com\/app\/"/.test(java) && /!address\.startsWith\(ALLOWED_PREFIX\)/.test(java), 'it downloads only from NOOB’s own release page, never from any other address');
 check(/MIN_BYTES/.test(java) && /MAX_BYTES/.test(java), 'and only a file of a sensible size');
 check(/canRequestPackageInstalls/.test(java) && /ACTION_MANAGE_UNKNOWN_APP_SOURCES/.test(java) && /needsPermission/.test(java), 'the first time it sends the person to the one Android setting that allows it, then asks them to tap Update again');
 check(/application\/vnd\.android\.package-archive/.test(java) && /FileProvider\.getUriForFile/.test(java) && /ACTION_VIEW/.test(java), 'it opens Android’s installer, which asks the person to confirm (an app can never install itself silently)');
@@ -43,9 +43,9 @@ check(/AppUpdaterPlugin\.java/.test(wf) && /REQUEST_INSTALL_PACKAGES/.test(wf) &
 check(/debug\.keystore/.test(wf) && fs.existsSync('android-overrides/debug.keystore'), 'every build is signed with the same key, so a new app file installs OVER the old one');
 check(/gh release upload android-latest NOOB\.apk native\.json --clobber/.test(wf) && /Native build: \$\{\{ github\.run_number \}\}/.test(wf) && /permissions:\s+contents: write/.test(wf), 'every build publishes the app file, and its build number, where the button looks');
 check(/on:[\s\S]*?paths:\s+- 'N00B_fixed\/instagram\/android-overrides\/\*\*'\s+- 'N00B_fixed\/instagram\/capacitor\.config\.json'/.test(wf) && !/- 'N00B_fixed\/instagram\/\*\*'/.test(wf), 'a new app file is built only when something native changes (not for every website change)');
-check(/ANDROID_APK_URL = 'https:\/\/github\.com\/padmanabhsingh11107035-cyber\/N00B\/releases\/download\/android-latest\/NOOB\.apk'/.test(read('src/utils/appVersion.ts')), 'the website and the app point at the same app file');
+check(/ANDROID_APK_URL = '\/app\/NOOB\.apk'/.test(read('src/utils/appVersion.ts')), 'the website and the app point at the same app file');
 
-check(/public void getLatest\(/.test(java) && /android-latest\/native\.json/.test(java) && /json\.getLong\("build"\)/.test(java), 'the app looks up the newest build number itself, from a tiny file published next to the app file (no browser rule or request limit in the way)');
+check(/public void getLatest\(/.test(java) && /ALLOWED_PREFIX \+ "native\.json"/.test(java) && /json\.getLong\("build"\)/.test(java), 'the app looks up the newest build number itself, from a tiny file published next to the app file (no browser rule or request limit in the way)');
 check(/native\.json/.test(wf) && /gh release upload android-latest NOOB\.apk native\.json --clobber/.test(wf), 'every build publishes that file too');
 
 section('3b. Updating by itself');
@@ -80,7 +80,7 @@ check(/\/android\/i\.test\(navigator\.userAgent\) && !isNativeApp\(\)/.test(read
 
 section('4. The button');
 const svc = read('src/services/nativeUpdate.ts');
-check(/registerPlugin<AppUpdaterPlugin>\('AppUpdater'\)/.test(svc) && /downloadAndInstall\(\{ url: ANDROID_APK_URL \}\)/.test(svc), 'the app calls the installer with the one app file address');
+check(/registerPlugin<AppUpdaterPlugin>\('AppUpdater'\)/.test(svc) && /downloadAndInstall\(\{ url: await installerUrl\(\) \}\)/.test(svc), 'the app calls the installer with the one app file address');
 check(/if \(!info\?\.supported\) \{ window\.location\.href = ANDROID_APK_URL; return; \}/.test(svc), 'an app from before the installer existed still gets the file (handed to the phone’s browser)');
 check(/'needs-permission'/.test(svc) && /Allow NOOB to install apps/.test(svc) && /Installing the update/.test(svc), 'the person is told what happens next at each step');
 const banner = read('src/components/Common/NativeUpdateBanner.tsx');

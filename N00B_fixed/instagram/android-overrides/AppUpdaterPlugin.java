@@ -42,13 +42,13 @@ import java.net.URL;
  * asked to skip even that screen (Android 12 and newer do so when this app is the one that installed the version being replaced, which is true from the second in-app update on);
  * wherever Android still wants a tap, its confirmation screen is opened automatically.
  *
- * The address must be NOOB's own release page on GitHub, nothing else is ever downloaded. Android itself refuses to install the file over this app unless it was
+ * The address must be NOOB's own /app/ address on its website, nothing else is ever downloaded. Android itself refuses to install the file over this app unless it was
  * signed with the same key, so a file from anywhere else could not replace it anyway.
  */
 @CapacitorPlugin(name = "AppUpdater")
 public class AppUpdaterPlugin extends Plugin {
-  private static final String ALLOWED_PREFIX = "https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/";
-  private static final String LATEST_INFO = ALLOWED_PREFIX + "android-latest/native.json";   // {"build": 163}, published next to the app file
+  private static final String ALLOWED_PREFIX = "https://noobsocials.com/app/";
+  private static final String LATEST_INFO = ALLOWED_PREFIX + "native.json";   // {"build": 163}, published next to the app file
   private static final String ACTION_INSTALL_RESULT = "com.noob.social.INSTALL_RESULT";
   private static final long MIN_BYTES = 1024 * 1024;           // a real app file is far bigger than this
   private static final long MAX_BYTES = 200L * 1024 * 1024;     // and far smaller than this

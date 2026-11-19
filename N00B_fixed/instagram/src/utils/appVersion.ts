@@ -43,8 +43,8 @@ export const isMediaPlaying = (): boolean =>
 /** The version this copy of NOOB is. */
 export const currentBuildId = (): string => (typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : '');
 
-/** Where the newest Android app file is kept (published by .github/workflows/android-build.yml). */
-export const ANDROID_APK_URL = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/android-latest/NOOB.apk';
+/** The newest Android app file, handed out from the website's own address (the Worker fetches it). */
+export const ANDROID_APK_URL = '/app/NOOB.apk';
 
 /** Is this copy older than the newest one? (Build numbers are the time of the build.) null when it could not be found out. */
 export function updateState(current: string, latest: string | null | undefined): 'unknown' | 'newest' | 'newer' {

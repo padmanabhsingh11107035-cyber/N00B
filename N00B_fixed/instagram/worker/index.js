@@ -10,6 +10,9 @@ export { PaperfieldLobby };
 import { routeFor } from './gamesSite.js';   // the separate games address: its games hub and its 404s (see gamesSite.js)
 import { aiRoute, sleepingPage, isUnreachable } from './aiSite.js';   // the NOOB AI address: its public pages are answered here, everything else goes through to NOOB AI (see aiSite.js)
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
+// The Android app file and its build note are handed out from the website's own address (/app/...), so no page, script or app file ever has to name where they are kept.
+const APP_RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/android-latest/';
+const NEW_UPDATER_FROM = 287;   // first app build whose installer only accepts addresses of this website (set after that build exists)
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
 const FILES = {
@@ -380,6 +383,24 @@ export default {
       return new Response(JSON.stringify({ city: cf.city || '', region: cf.region || '', country: cf.country || '', latitude: coord(cf.latitude, 90), longitude: coord(cf.longitude, 180) }), {
         headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': '*' }
       });
+    }
+
+    // ---- the Android app file, from this website's own address
+    if (url.pathname === '/app/NOOB.apk' || url.pathname === '/app/native.json') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
+      const isApk = url.pathname.endsWith('.apk');
+      const up = await fetch(APP_RELEASE + (isApk ? 'NOOB.apk' : 'native.json'), { cf: { cacheTtl: isApk ? 300 : 60, cacheEverything: true } });
+      if (!up.ok) return new Response('Not available', { status: 502, headers: { 'Cache-Control': 'no-store' } });
+      const h = new Headers({ 'Content-Type': isApk ? 'application/vnd.android.package-archive' : 'application/json; charset=utf-8', 'Cache-Control': isApk ? 'public, max-age=300' : 'no-store', 'X-Content-Type-Options': 'nosniff' });
+      if (isApk) h.set('Content-Disposition', 'attachment; filename="NOOB.apk"');
+      const len = up.headers.get('Content-Length'); if (len) h.set('Content-Length', len);
+      return new Response(request.method === 'HEAD' ? null : up.body, { status: 200, headers: h });
+    }
+    // the address the app's installer should download from: an app from before the change still only accepts the old address, so it is told that one (only the app asks this)
+    if (url.pathname === '/app/update-url') {
+      const v = Number(url.searchParams.get('v')) || 0;
+      const own = NEW_UPDATER_FROM > 0 && v >= NEW_UPDATER_FROM;
+      return new Response(JSON.stringify({ url: own ? url.origin + '/app/NOOB.apk' : APP_RELEASE + 'NOOB.apk' }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
     }
 
     const name = url.pathname.startsWith('/games/neon-alley/data/') ? url.pathname.slice('/games/neon-alley/data/'.length) : '';

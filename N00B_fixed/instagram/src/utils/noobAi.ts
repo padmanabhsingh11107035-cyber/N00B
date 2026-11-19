@@ -1,6 +1,6 @@
 import { tabSessions } from '../services/supabase';
 
-// NOOB AI is the multilingual voice assistant (github.com/padmanabhsingh11107035-cyber/noobai). Its brain runs on the
+// NOOB AI is the multilingual voice assistant. Its brain runs on the
 // owner's PC (Python: speech, AI, voice, memory, robot pairing) and is reached at this address through a Cloudflare Tunnel.
 export const NOOB_AI_URL = ((import.meta.env.VITE_NOOB_AI_URL as string | undefined) || 'https://ai.noobsocials.com').replace(/\/+$/, '');
 

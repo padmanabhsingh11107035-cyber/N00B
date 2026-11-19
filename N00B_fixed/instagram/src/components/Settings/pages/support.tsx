@@ -144,7 +144,7 @@ export const AboutPage: React.FC<PageProps> = ({ ctx, go, back }) => {
         <div className="px-5 py-7 text-center">
           <img src="/noob-icon-192.png" alt="NOOB" width={72} height={72} className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-3 object-cover border border-white/15" />
           <p className="text-lg font-black text-white tracking-tight">NOOB Socials</p>
-          <p className="text-xs text-zinc-400 mt-1">A social app run by students</p>
+          <p className="text-xs text-zinc-400 mt-1">A free social app for fun</p>
         </div>
       </Section>
       <Section>
@@ -188,13 +188,13 @@ export const AboutNoobPage: React.FC<PageProps> = ({ back }) => (
       <div className="px-5 pt-7 pb-6 text-center">
         <img src="/noob-icon-192.png" alt="NOOB" width={72} height={72} className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-3 object-cover border border-white/15" />
         <p className="text-xl font-black text-white tracking-tight">NOOB Socials</p>
-        <p className="text-[13px] text-zinc-300 mt-2 leading-relaxed max-w-sm mx-auto">A free social app and website, built and run by students, for people who want to share moments, play, learn and make real friends.</p>
+        <p className="text-[13px] text-zinc-300 mt-2 leading-relaxed max-w-sm mx-auto">A free social app and website, made by Padmanabh Singh Vaghela, for people who want to share moments, play and make real friends.</p>
       </div>
     </Section>
 
     <Section title="About us">
       <div className="px-4 py-4 space-y-3 text-[13.5px] leading-relaxed text-zinc-200">
-        <p><strong className="text-white">NOOB Socials</strong> (also written NOOB or noobsocials) is a social media website and app that students build, run and look after themselves. It lives at noobsocials.com, works in any browser, and can be installed on a phone like a normal app.</p>
+        <p><strong className="text-white">NOOB Socials</strong> (also written NOOB or noobsocials) is a social media website and app made and run by Padmanabh Singh Vaghela (Founder, CEO and Owner) and the NOOB developers. It lives at noobsocials.com, works in any browser, and can be installed on a phone like a normal app.</p>
         <p>Everything on NOOB is made to feel like a friendly hang-out rather than a feed to scroll: you share photos, reels and stories, chat with friends, play games together, join live rooms, take on the Daily NOOB challenge, study with an AI helper and even shop from the NOOB store. It is free to join, and you stay in control of who sees what.</p>
       </div>
     </Section>
@@ -213,15 +213,15 @@ export const AboutNoobPage: React.FC<PageProps> = ({ back }) => (
       </Section>
     ))}
 
-    <Section title="Why students?">
+    <Section title="How NOOB keeps improving">
       <div className="px-4 py-4 text-[13.5px] leading-relaxed text-zinc-200">
-        NOOB started as a student project and is still built, tested and moderated by students. That is why it keeps changing quickly: new features come from the Suggestion Box, from the team, and from people like you.
+        NOOB is built, tested and looked after by its own team, so it keeps changing quickly: new features come from the Suggestion Box, from the team, and from people like you.
       </div>
     </Section>
 
     <Section title="Follow and join">
-      <Row icon={Instagram} label="Follow us on Instagram" sub="@nooob.xyz" onClick={() => openLink('https://www.instagram.com/nooob.xyz')} testId="about-instagram" />
-      <Row icon={Handshake} label="Join the NOOB team" sub="The team is run by students, and new members are welcome" onClick={openTeamJoin} testId="about-join-team" />
+      <Row icon={Instagram} label="Follow us on Instagram" sub="@noobsocials" onClick={() => openLink('https://www.instagram.com/noobsocials')} testId="about-instagram" />
+      <Row icon={Handshake} label="Join the NOOB team" sub="New members are welcome" onClick={openTeamJoin} testId="about-join-team" />
     </Section>
   </PageShell>
 );

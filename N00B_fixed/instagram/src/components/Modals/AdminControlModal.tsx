@@ -1,6 +1,7 @@
 import { MAIN_SITE } from '../../utils/siteUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import './adminUserDetail.css';
+import './adminMobile.css';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import {
   ShieldAlert,
@@ -209,6 +210,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   }, [main]);
   const [showUserData, setShowUserData] = useState(false);   // the full-screen "User's data" map page (a page of its own, not a tab: it covers the whole screen)
   const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
+  // Phones: the 29 sections live in a menu (the button above the list shows the current one) instead of one long strip that scrolls sideways.
+  const [navOpen, setNavOpen] = useState(false);
+  const [navLabel, setNavLabel] = useState('Accounts');
+  useEffect(() => {
+    const el = Array.from(document.querySelectorAll('#admin-tabs button')).find((b) => !/border-transparent/.test((b as HTMLElement).className));
+    if (el) setNavLabel((el.textContent || '').replace(/\s*\(\d+\)\s*$/, '').trim());
+    setNavOpen(false);
+  }, [activeTab]);
   const [usersList, setUsersList] = useState<User[]>([]);
 
   // Admin team (main admin only): who has which powers, and the editor for ticking them
@@ -1177,34 +1186,36 @@ They will not be told.`)) return;
         }
       >
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[24%] overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
+        <div className="p-3 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-[24%] overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
               <img src="/noob-logo-circle.png" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-base sm:text-lg font-black text-white tracking-tight">NOOB Admin Control Panel</h2>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2 className="text-base sm:text-lg font-black text-white tracking-tight truncate">NOOB Admin<span className="hidden sm:inline"> Control Panel</span></h2>
                 <VerifiedBadge size="sm" />
               </div>
-              <p className="text-xs text-zinc-400">{main ? 'Master Platform Overseer' : 'Admin Team Member'} • Logged in as @{currentUser.username}</p>
+              <p className="text-xs text-zinc-400" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><span className="hidden sm:inline">{main ? 'Master Platform Overseer' : 'Admin Team Member'} • Logged in as </span>@{currentUser.username}<span className="sm:hidden"> • {main ? 'Master admin' : 'Team'}</span></p>
             </div>
           </div>
 
           {fullPage ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={onUseAsUser}
+                aria-label="Use as User"
                 title="Browse NOOB exactly as a normal member sees it — switch back anytime from the computer icon on your profile page"
                 className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-noob/20 hover:border-noob/40 border border-transparent text-zinc-400 hover:text-noob transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
               >
-                <UserCircle className="w-4 h-4" /> Use as User
+                <UserCircle className="w-4 h-4" /> <span className="hidden sm:inline">Use as User</span>
               </button>
               <button
                 onClick={onLogout}
+                aria-label="Log Out"
                 className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-950 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
               >
-                <LogOut className="w-4 h-4" /> Log Out
+                <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Log Out</span>
               </button>
             </div>
           ) : (
@@ -1273,12 +1284,17 @@ They will not be told.`)) return;
           </button>
           <button onClick={() => setActiveTab('staff')} disabled={!main} className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors">
             <span className="text-[11px] text-zinc-400 block font-medium">Admin Role</span>
-            <span className="text-sm font-black text-noob">{main ? 'Authorized' : 'Delegate'}</span>
+            <span className="text-sm font-black text-noob block"><span className="sm:hidden">{main ? 'Main' : 'Team'}</span><span className="hidden sm:inline">{main ? 'Authorized' : 'Delegate'}</span></span>
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1.5 px-4 pt-3 border-b border-zinc-800 bg-zinc-950 overflow-x-auto scrollbar-none">
+        <button type="button" className="admin-nav-toggle" aria-expanded={navOpen} aria-controls="admin-tabs" onClick={() => setNavOpen((o) => !o)} data-testid="admin-nav-toggle">
+          <span aria-hidden="true">☰</span>
+          <span className="admin-nav-cur">{navLabel}</span>
+          <span className="admin-nav-chev" aria-hidden="true">{navOpen ? '▲' : '▼'}</span>
+        </button>
+        <div id="admin-tabs" data-open={navOpen ? '1' : '0'} onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setNavOpen(false); }} className="flex items-center gap-1.5 px-4 pt-3 border-b border-zinc-800 bg-zinc-950 overflow-x-auto scrollbar-none">
           {canOpenAccounts && (
             <button
               onClick={() => setActiveTab('users')}
@@ -1798,7 +1814,7 @@ They will not be told.`)) return;
                     return (
                       <div
                         key={user.id}
-                        className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                        className={`p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
                           isSuspended
                             ? 'bg-red-950/20 border-red-500/30'
                             : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700'
@@ -1822,7 +1838,7 @@ They will not be told.`)) return;
                             referrerPolicy="no-referrer"
                           />
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-xs font-black text-white truncate">@{user.username}</span>
                               {user.isVerified && <VerifiedBadge size="sm" />}
                               {hasApp && <span title="Has the NOOB Android app installed" aria-label="Has the NOOB Android app installed" data-testid="app-tick" className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 ring-1 ring-sky-300/50 shrink-0"><Check className="w-2.5 h-2.5 text-white" strokeWidth={4} /></span>}
@@ -1898,7 +1914,7 @@ They will not be told.`)) return;
                         </div>
 
                         {/* Action buttons */}
-                        <div className="shrink-0 flex items-center gap-1.5">
+                        <div className="sm:shrink-0 flex flex-wrap items-center gap-1.5">
                           <button
                             onClick={() => copyLink(`profile:${user.id}`, profileLinkFor(user.username))}
                             title={`Copy @${user.username}'s profile link`}

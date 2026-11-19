@@ -58,6 +58,14 @@
         "harness"
       ],
       "port": 5190
+    },
+    {
+      "name": "n00b-admin-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "N00B_fixed/instagram/scripts/dev/admin-preview.mjs"
+      ],
+      "port": 5173
     }
   ]
 }

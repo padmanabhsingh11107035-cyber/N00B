@@ -15,7 +15,7 @@ const person = (id, username, displayName, a, b, extra = {}) => ({
   id, username, displayName, avatar: svg(displayName[0], a, b), bio: 'Here for fun', isVerified: false, accountType: 'public', followersCount: 120, followingCount: 80, postsCount: 6,
   followers: [], following: [], blockedUsers: [], followRequests: [], closeFriends: [], notificationsCount: 0, noobPoints: 5000000, ...extra
 });
-const ME = person('00000000-0000-4000-8000-000000000001', 'you', 'You', '#10b981', '#0ea5e9', { email: 'me@example.com', isAdmin: false, language: 'en' });
+const ME = person('00000000-0000-4000-8000-000000000001', 'you', 'You', '#10b981', '#0ea5e9', { email: 'me@example.com', isAdmin: process.env.MOCK_ADMIN === '1', language: 'en' });
 
 const RIYA = person('00000000-0000-4000-8000-000000000002', 'riya', 'Riya Shah', '#f97316', '#ec4899', { isVerified: true });
 const ARJUN = person('00000000-0000-4000-8000-000000000003', 'arjun', 'Arjun Mehta', '#6366f1', '#0ea5e9', { isVerified: true });
@@ -76,6 +76,8 @@ const silentWav = (() => { const n = 8000 * 30, b = Buffer.alloc(44 + n); b.writ
 const songs = [['Midnight Drive', 'Nova', 'Synthwave', '#e11d48', '#4c0519'], ['Lo-Fi Rain', 'Mira', 'Lo-Fi', '#0ea5e9', '#1e1b4b'], ['Night Shift', 'Zane', 'Phonk', '#7c3aed', '#0f0a1e'], ['Golden Hour', 'Roxy', 'Ambient', '#f59e0b', '#7c2d12'], ['Neon Streets', 'Kairo', 'Cyberpunk', '#10b981', '#022c22'], ['Bass Garden', 'Blaze', 'EDM', '#ec4899', '#500724'], ['Quiet Moon', 'Ivory', 'Lo-Fi', '#64748b', '#0f172a'], ['Run It Up', 'Rogue', 'Hip Hop', '#f97316', '#431407']]
   .map(([title, artist, genre, c1, c2], i) => ({ id: 'm000000' + i, title, artist, genre, audioUrl: silentWav, coverUrl: coverSvg(c1, c2, title[0]), duration: '0:30', uploaderId: i === 1 ? ME.id : 'u' + i, uploaderUsername: artist.toLowerCase(), uploaderAvatar: null, likesCount: i * 3 % 7, playsCount: 120 - i * 9, isLiked: i === 2, createdAt: new Date(Date.now() - i * 86400000).toISOString() }));
 const rpcAnswers = {
+  // the admin console's account list (made-up people, a few with long names and every state) so its layout can be looked at
+  admin_users_list: () => ({ users: [RIYA, ARJUN, MEERA, DEV, person('00000000-0000-4000-8000-000000000009', 'a_very_long_username_for_testing_layouts', 'Padmanabh Singh Vaghela The Third Of Many Names', '#8b5cf6', '#ec4899', { isSuspended: true, email: 'someone.with.a.really.long.email.address@example-domain.com', mobileNumber: '9876543210', countryCode: '+91', ipAddress: '203.0.113.42', signupPlatform: 'Android', pushEnabled: true }), person('00000000-0000-4000-8000-000000000010', 'newuser', 'New User', '#06b6d4', '#22c55e', { email: 'new@example.com', pushEnabled: false })] }),
   list_music_tracks: () => songs,
   form_role: () => 'owner',
   form_collab_list: () => [],

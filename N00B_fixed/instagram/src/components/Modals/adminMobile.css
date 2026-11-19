@@ -1,0 +1,25 @@
+/* Admin console on a phone: a section menu instead of a sideways-scrolling strip of 29 tabs, and nothing wider than the screen. Computers keep the strip. */
+.admin-nav-toggle { display: none; }
+@media (max-width: 767px) {
+  #admin-control-modal-backdrop { overflow-x: hidden; }
+  .admin-nav-toggle {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 16px; background: #0c0c0e; border: 0; border-bottom: 1px solid #27272a;
+    color: #fff; font-weight: 800; font-size: 14px; text-align: left; cursor: pointer;
+  }
+  .admin-nav-cur { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-nav-chev { font-size: 10px; color: #a1a1aa; }
+  #admin-tabs { display: none !important; }
+  #admin-tabs[data-open="1"] {
+    display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px !important; max-height: 60vh; grid-auto-rows: minmax(52px, auto); overflow-y: auto; background: #09090b;
+  }
+  #admin-tabs button {
+    white-space: normal !important; text-align: left; padding: 10px !important; border: 1px solid #27272a !important; border-radius: 12px; background: #111113;
+    line-height: 1.25; align-items: flex-start !important; min-width: 0; word-break: break-word;
+  }
+  #admin-tabs button:not([class*="border-transparent"]) { background: #1c1c1f; border-color: currentColor !important; }
+  #admin-tabs button svg { flex-shrink: 0; margin-top: 1px; }
+  #admin-control-modal-backdrop input, #admin-control-modal-backdrop select, #admin-control-modal-backdrop textarea { max-width: 100%; font-size: 16px; }
+  #admin-control-modal-backdrop table { display: block; max-width: 100%; overflow-x: auto; }
+  #admin-control-modal-backdrop pre { white-space: pre-wrap; word-break: break-word; }
+  #admin-control-modal-backdrop img, #admin-control-modal-backdrop video { max-width: 100%; }
+}

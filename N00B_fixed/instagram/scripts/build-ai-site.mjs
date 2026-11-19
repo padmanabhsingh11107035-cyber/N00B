@@ -21,7 +21,7 @@ const FOUNDER = { '@type': 'Person', '@id': MAIN + '/about#founder', name: 'Padm
 const ORG = { '@type': 'Organization', '@id': MAIN + '/#org', name: 'NOOB Socials', alternateName: ['NOOB', 'noobsocials'], url: MAIN + '/', logo: SITE + '/logo.png', founder: FOUNDER, sameAs: ['https://www.instagram.com/noobsocials', 'https://www.youtube.com/@noobsocials_456'] };
 const APP = {
   '@type': 'SoftwareApplication', '@id': SITE + '/#app', name: 'NOOB AI', url: SITE + '/', image: SITE + '/og-image.png',
-  description: 'NOOB AI is a free multilingual AI voice assistant with healthcare knowledge. Talk in your own language, hear it answer out loud, and let it remember you.',
+  description: 'NOOB AI is a free multilingual AI voice assistant with general health information (not medical advice). Talk in your own language, hear it answer out loud, and let it remember you.',
   applicationCategory: 'LifestyleApplication', operatingSystem: 'Web, iPhone, Android, Windows, macOS', inLanguage: ['en', 'hi', 'ta', 'bn', 'mr', 'gu'],
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' }, publisher: { '@id': MAIN + '/#org' },
 };
@@ -77,7 +77,7 @@ ${body}
 </main>
 <footer class="foot">
   <div class="wrap cols">
-    <div><a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="32"><span>NOOB <b>AI</b></span></a><p class="muted">A free multilingual AI voice assistant with healthcare knowledge, made by the NOOB team.</p></div>
+    <div><a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="32"><span>NOOB <b>AI</b></span></a><p class="muted">A free multilingual AI voice assistant with general health information (not medical advice), made by the NOOB team.</p></div>
     <div><h2>NOOB AI</h2><a href="/features">Features</a><a href="/how-it-works">How it works</a><a href="/languages">Languages</a><a href="/safety">Health and safety</a><a href="/install">Install the app</a></div>
     <div><h2>Help</h2><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/about">About</a><a href="/contact">Contact</a></div>
     <div><h2>NOOB</h2><a href="${MAIN}/">NOOB social app</a><a href="${MAIN}/terms">Terms</a><a href="${MAIN}/privacy">Privacy policy</a><a href="${MAIN}/data-deletion">Delete your data</a></div>
@@ -96,7 +96,7 @@ const cta = (t, d) => `<section class="band"><div class="wrap"><h2>${t}</h2><p>$
 // ------------------------------------------------------------------------------------------------ home
 layout({
   file: 'index.html', p: '/', current: '',
-  title: 'NOOB AI: free multilingual AI voice assistant with healthcare knowledge',
+  title: 'NOOB AI: free multilingual AI voice assistant with general health information (not medical advice)',
   desc: 'NOOB AI is a free AI voice assistant by NOOB. Talk in your own language, hear it answer out loud, and let it remember you. Healthcare-aware, with safety first.',
   h1: 'Meet <span class="accent">NOOB AI</span>, your multilingual AI friend',
   lede: 'Talk in your own language and hear NOOB AI answer out loud. It remembers what you tell it, notices how you feel, and knows a little about almost everything. Free to use, from the NOOB team.',
@@ -134,7 +134,7 @@ ${cta('Start talking to NOOB AI', 'Sign in with your NOOB account, or create a f
 // ------------------------------------------------------------------------------------------------ features
 layout({
   file: 'features.html', p: '/features', current: '/features',
-  title: 'NOOB AI features: voice, 70+ languages, memory and healthcare knowledge',
+  title: 'NOOB AI features: voice, 70+ languages, memory and general health information',
   desc: 'Everything NOOB AI can do: talk by voice in your language, remember you, understand how you feel, search the web, play songs, and keep you safe with healthcare rules.',
   h1: 'Features', lede: 'A closer look at what NOOB AI can do for you.',
   ld: [APP, crumbs([['NOOB AI', '/'], ['Features', '/features']])],

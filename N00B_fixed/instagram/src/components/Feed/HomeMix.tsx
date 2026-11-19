@@ -33,13 +33,20 @@ import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { loadFeed as loadScratchFeed, failed as scratchFailed, type ScratchCard as ScratchCardData } from '../Scratch/scratchData';
 import { useCommentsBox } from '../../utils/useVisualViewport';
 
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
 
-export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll };
-export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : 'poll-' + i.poll.id);
+export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'scratch'; at: string; card: ScratchCardData };
+export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : 'scratch-' + i.card.id);
+const ScratchMixCard = React.lazy(() => import('../Scratch/ScratchMixCard').then((m) => ({ default: m.ScratchMixCard })));
+function shuffled<T>(list: T[]): T[] {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 /** A new anonymous thought or poll was just made (the Create sheet): Home shows it at once. */
 export const HOME_MIX_NEW_EVENT = 'noob-home-mix-new';
 export const announceMixItem = (item: MixItem): void => { try { window.dispatchEvent(new CustomEvent(HOME_MIX_NEW_EVENT, { detail: item })); } catch { /* it shows after the next refresh */ } };
@@ -81,30 +88,36 @@ export function loadStats(k: MixKind, ids: string[]): void {
 }
 
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
-export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number) {
+export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, scratchOn = false) {
   const [items, setItems] = useState<MixItem[]>([]);
   useEffect(() => {
     let alive = true;
     void Promise.all([
       anonOn ? fetchAnonMessages({ limit: 20 }).then((r) => r.messages).catch(() => [] as AnonMessage[]) : Promise.resolve([] as AnonMessage[]),
-      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[])
-    ]).then(([anon, polls]) => {
+      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[]),
+      scratchOn ? loadScratchFeed({ limit: 10 }).then((r) => (scratchFailed(r) ? [] : r.cards)).catch(() => [] as ScratchCardData[]) : Promise.resolve([] as ScratchCardData[])
+    ]).then(([anon, polls, scratch]) => {
       if (!alive) return;
-      setItems([...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })), ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p }))].sort(newestFirst));
+      // thoughts, polls and scratch cards are shuffled together, so each refresh of Home brings them in a different order
+      setItems(shuffled([
+        ...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })),
+        ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
+        ...scratch.map((c): MixItem => ({ kind: 'scratch', at: c.createdAt, card: c }))
+      ]));
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
     });
     return () => { alive = false; };
-  }, [anonOn, pollsOn, refreshKey]);
+  }, [anonOn, pollsOn, scratchOn, refreshKey]);
   useEffect(() => {
     const onNew = (e: Event) => {
       const item = (e as CustomEvent<MixItem>).detail;
-      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn)) return;
+      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn) || (item.kind === 'scratch' && !scratchOn)) return;
       setItems((prev) => [item, ...prev.filter((x) => mixKey(x) !== mixKey(item))]);
     };
     window.addEventListener(HOME_MIX_NEW_EVENT, onNew);
     return () => window.removeEventListener(HOME_MIX_NEW_EVENT, onNew);
-  }, [anonOn, pollsOn]);
+  }, [anonOn, pollsOn, scratchOn]);
   const remove = useCallback((key: string) => setItems((prev) => prev.filter((x) => mixKey(x) !== key)), []);
   const updatePoll = useCallback((p: Poll) => setItems((prev) => prev.map((x) => (x.kind === 'poll' && x.poll.id === p.id ? { ...x, poll: p } : x))), []);
   return { items, remove, updatePoll };
@@ -438,6 +451,8 @@ export function useCanManagePolls(enabled: boolean): boolean {
 export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile }) =>
   item.kind === 'anon'
     ? <AnonCard m={item.anon} currentUser={currentUser} canManage={canManage} onRemoved={() => onRemoved(mixKey(item))} />
+    : item.kind === 'scratch'
+    ? <React.Suspense fallback={null}><ScratchMixCard initial={item.card} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} /></React.Suspense>
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;
 
 // ---- writing an anonymous thought (opened from the Create sheet) ----------------------------------------------------------------------------------------

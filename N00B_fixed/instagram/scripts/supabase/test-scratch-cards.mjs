@@ -42,10 +42,7 @@ const data = read('src/components/Scratch/scratchData.ts');
 check(/'scratch_feed'/.test(data) && /'scratch_react'/.test(data) && /'scratch_comment'/.test(data) && /'scratch_save'/.test(data) && /'scratch_create'/.test(data), 'the screens call the real server functions');
 check(/uploadMediaFile\(file, 'posts'/.test(data), 'the picture is uploaded like any NOOB post picture');
 check(!/localStorage[\s\S]{0,40}scratch_posts|INITIAL_POSTS|unsplash[\s\S]{0,40}authorAvatar/.test(data), 'no made-up posts in the code');
-const page = read('src/components/Scratch/ScratchPage.tsx');
-check(/aria-label="Back to the menu"/.test(page) && /onClick=\{onClose\}/.test(page), 'a back arrow takes the person back to the menu');
-check(/NOOB SOCIALS: SCRATCH-TO-REVEAL ENGINE/.test(page) && /Swipe your finger or mouse over the foil to unveil secret photos/.test(page) && /No secret cards in this category yet!/.test(page), 'the original texts are kept');
-check(/Escape/.test(page), 'Escape closes the page');
+check(!fs.existsSync('src/components/Scratch/ScratchPage.tsx'), 'the separate Scratch page is gone: the cards live on Home');
 const card = read('src/components/Scratch/ScratchCard.tsx');
 for (const k of ['heart', 'thumb', 'flame', 'rocket', 'skull']) check(card.includes(`kind: '${k}'`), `reaction ${k}`);
 check(/Chalk Notes &amp; Clues/.test(read('src/components/Scratch/ScratchNotes.tsx')) && /Write a scratch clue or reaction\.\.\./.test(read('src/components/Scratch/ScratchNotes.tsx')), 'the notes sheet keeps its texts');
@@ -57,7 +54,10 @@ check(/\/brand\/doodle-white\.webp/.test(canvas), 'the foil wears the NOOB doodl
 // ---- the menu
 const feed = read('src/components/Feed/FeedView.tsx');
 const prof = read('src/components/Profile/ProfileView.tsx');
-check(/data-testid="profile-scratch"/.test(prof) && /useFeatureOn\('scratch'\)/.test(prof) && /<ScratchPage onClose=\{\(\) => setShowScratch\(false\)\}/.test(prof) && !/ScratchPage/.test(feed), 'Scratch Reveal is a button (with its icon) on the profile page and opens the page; it is no longer in the Home menu');
+const mixSrc = read('src/components/Feed/HomeMix.tsx');
+check(!/ScratchPage|profile-scratch/.test(prof) && !/ScratchPage/.test(feed), 'no Scratch page button on the profile or the Home menu any more');
+check(/kind: 'scratch'/.test(mixSrc) && /loadScratchFeed/.test(mixSrc) && /shuffled\(/.test(mixSrc) && /featOn\('scratch'\)/.test(feed), 'scratch cards are shuffled into the Home mix, behind the admin switch');
+check(/'scratch'/.test(read('src/components/PostCreation/CreateChooser.tsx')) && /ScratchUpload/.test(read('src/App.tsx')), 'a Scratch card row in Create opens the upload sheet');
 check(/key: 'scratch'/.test(read('src/utils/features.ts')), 'the administrator can switch the page off (Pages tab)');
 check(/'scratch'/.test(read('src/components/Feed/MenuBanner.tsx')) && /scratch: \{ border/.test(read('src/components/Feed/MenuBanner.tsx')), 'the menu button has its own colours');
 check(/images\.unsplash\.com/.test(read('public/_headers')), 'the preset pictures may be fetched (security policy)');

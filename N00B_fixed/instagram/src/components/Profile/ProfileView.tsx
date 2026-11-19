@@ -121,7 +121,7 @@ import { useFeatureOn } from '../../utils/featureFlags';
 import { BoothIcon } from '../Booth/BoothIcon';
 import { openBooth, preloadBooth } from '../Booth/boothStore';
 import { openLenses } from '../Lenses/lensStore';
-import { AvatarsIcon, LensesIcon, ScratchIcon } from './ProfileToolIcons';
+import { AvatarsIcon, LensesIcon } from './ProfileToolIcons';
 import { QrScannerPage } from './QrScannerPage';
 import { TranslatorPage } from './TranslatorPage';
 import { ExportDataModal } from './ExportDataModal';
@@ -145,7 +145,6 @@ import { openReportProblem } from '../Common/ReportProblemSheet';
 // the same underlying chunk, so this doesn't double-load anything.
 const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
 const AvatarPicker = React.lazy(() => import('../Avatars/AvatarPicker'));
-const ScratchPage = React.lazy(() => import('../Scratch/ScratchPage').then((m) => ({ default: m.ScratchPage })));
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 // While a window that is loaded on demand arrives: NOOB's burger, for exactly as long as it takes (no minimum, no maximum time).
@@ -276,8 +275,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const lensesOn = useFeatureOn('lenses');   // NOOB Lenses and Scratch Reveal: opened from here now (no longer from the menu on Home); the administrator can still switch each off
-  const scratchOn = useFeatureOn('scratch');
-  const [showScratch, setShowScratch] = useState(false);
   const boothOn = useFeatureOn('booth');   // the administrator can switch the Buddy Booth off for users
   const [showQrScannerPage, setShowQrScannerPage] = useState(false);
   // Export Data: the readable text of the person's own details (utils/exportMyData.ts); null while the window is closed
@@ -738,18 +735,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
           >
             <LensesIcon size={26} />
-          </button>
-        )}
-        {isOwnProfile && scratchOn && (
-          <button
-            type="button"
-            onClick={() => setShowScratch(true)}
-            data-testid="profile-scratch"
-            title="Scratch Reveal"
-            aria-label="Scratch Reveal: scratch the foil to unveil secret photos"
-            className="shrink-0 w-9 h-9 max-[420px]:w-8 max-[420px]:h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-zinc-700 via-zinc-600 to-amber-500 hover:brightness-110 cursor-pointer ring-1 ring-white/25 shadow-md transition active:scale-90"
-          >
-            <ScratchIcon size={26} />
           </button>
         )}
         {isOwnProfile && (
@@ -1689,7 +1674,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
-      {showScratch && <React.Suspense fallback={null}><ScratchPage onClose={() => setShowScratch(false)} onNavigateToProfile={(u) => onNavigateToUserProfile?.(u)} /></React.Suspense>}
 
       {exportText !== null && <ExportDataModal text={exportText} onClose={() => setExportText(null)} />}
 

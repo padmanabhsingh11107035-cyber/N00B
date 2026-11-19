@@ -298,7 +298,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, currentUser.id));
   const [refreshNonce, setRefreshNonce] = useState(0);
   // Anonymous thoughts and public polls are part of Home: they sit between the posts of the plain "For You" feed (not in a topic, Following or Favourites)
-  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce);
+  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('scratch'));
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
   const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
   const lastRefreshNonceRef = useRef(0);

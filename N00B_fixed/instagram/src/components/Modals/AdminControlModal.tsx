@@ -2,7 +2,6 @@ import { MAIN_SITE } from '../../utils/siteUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import './adminUserDetail.css';
 import { useIsPhone, usePhoneItems, PhoneTopBar, PhoneHome, PhoneBottomBar } from './AdminPhone';
-import { GrowthCard, growthStats } from './AdminGrowth';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import {
   ShieldAlert,
@@ -1261,7 +1260,6 @@ They will not be told.`)) return;
         )}
 
         {/* Stats Row — each stat jumps straight to the list it's counting */}
-        {!phone && canOpenAccounts && (<div className="px-4 pt-3 bg-zinc-900/50"><GrowthCard growth={growthStats(usersList.map((u) => (u as any).createdAt))} /></div>)}
         {!phone && (
         <div className="grid grid-cols-4 divide-x divide-zinc-800/80 bg-zinc-900/50 border-b border-zinc-800 text-center py-2.5 px-3">
           <button
@@ -1712,7 +1710,7 @@ They will not be told.`)) return;
         {/* Modal Body */}
         {phone && phoneView === 'home' ? (
           <div className="overflow-y-auto flex-1">
-            <PhoneHome items={phoneItems} stats={{ accounts: usersList.length, suspended: suspendedCount, reports: reportsList.length, role: main ? 'Main admin' : 'Team' }} canAccounts={canOpenAccounts} canReports={canHandleReports} growth={growthStats(usersList.map((u) => (u as any).createdAt))} onOpen={openPhoneSection} onStat={(k) => { if (k === 'reports') { openPhoneSection('reports'); } else { setSuspendedOnlyFilter(k === 'suspended'); openPhoneSection('users'); } }} />
+            <PhoneHome items={phoneItems} stats={{ accounts: usersList.length, suspended: suspendedCount, reports: reportsList.length, role: main ? 'Main admin' : 'Team' }} canAccounts={canOpenAccounts} canReports={canHandleReports} onOpen={openPhoneSection} onStat={(k) => { if (k === 'reports') { openPhoneSection('reports'); } else { setSuspendedOnlyFilter(k === 'suspended'); openPhoneSection('users'); } }} />
           </div>
         ) : (
         <>

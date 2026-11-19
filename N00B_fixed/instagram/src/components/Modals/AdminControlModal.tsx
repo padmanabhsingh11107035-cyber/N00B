@@ -1,7 +1,7 @@
 import { MAIN_SITE } from '../../utils/siteUrl';
 import React, { useState, useEffect, useRef } from 'react';
 import './adminUserDetail.css';
-import './adminMobile.css';
+import { useIsPhone, usePhoneItems, PhoneTopBar, PhoneHome, PhoneBottomBar } from './AdminPhone';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import {
   ShieldAlert,
@@ -210,14 +210,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   }, [main]);
   const [showUserData, setShowUserData] = useState(false);   // the full-screen "User's data" map page (a page of its own, not a tab: it covers the whole screen)
   const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
-  // Phones: the 29 sections live in a menu (the button above the list shows the current one) instead of one long strip that scrolls sideways.
-  const [navOpen, setNavOpen] = useState(false);
-  const [navLabel, setNavLabel] = useState('Accounts');
-  useEffect(() => {
-    const el = Array.from(document.querySelectorAll('#admin-tabs button')).find((b) => !/border-transparent/.test((b as HTMLElement).className));
-    if (el) setNavLabel((el.textContent || '').replace(/\s*\(\d+\)\s*$/, '').trim());
-    setNavOpen(false);
-  }, [activeTab]);
+  // Phones: a bottom bar, a home screen and one page per section (AdminPhone.tsx). The sections are read from the hidden tab strip, so nothing is listed twice.
+  const phone = useIsPhone();
+  const [phoneView, setPhoneView] = useState<'home' | 'section'>('home');
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const phoneItems = usePhoneItems(String(phone));
+  const phoneTitle = phoneItems.find((i) => i.key === activeTab)?.label || 'Admin';
+  const openPhoneSection = (key: string) => { setActiveTab(key as AdminTab); setPhoneView('section'); setExpandedUserId(null); };
   const [usersList, setUsersList] = useState<User[]>([]);
 
   // Admin team (main admin only): who has which powers, and the editor for ticking them
@@ -1186,6 +1185,10 @@ They will not be told.`)) return;
         }
       >
         {/* Modal Header */}
+        {phone ? (
+          <PhoneTopBar home={phoneView === 'home'} title={phoneTitle} subtitle={`@${currentUser.username} · ${main ? 'Master admin' : 'Admin team'}`} onBack={() => setPhoneView('home')} fullPage={!!fullPage} onClose={onClose} onUseAsUser={onUseAsUser} onLogout={onLogout} />
+        ) : (
+        <>
         <div className="p-3 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 shrink-0 rounded-[24%] overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
@@ -1227,6 +1230,8 @@ They will not be told.`)) return;
             </button>
           )}
         </div>
+        </>
+        )}
 
         {/* Status Toast */}
         {statusMessage && (
@@ -1255,6 +1260,7 @@ They will not be told.`)) return;
         )}
 
         {/* Stats Row — each stat jumps straight to the list it's counting */}
+        {!phone && (
         <div className="grid grid-cols-4 divide-x divide-zinc-800/80 bg-zinc-900/50 border-b border-zinc-800 text-center py-2.5 px-3">
           <button
             onClick={() => {
@@ -1287,17 +1293,13 @@ They will not be told.`)) return;
             <span className="text-sm font-black text-noob block"><span className="sm:hidden">{main ? 'Main' : 'Team'}</span><span className="hidden sm:inline">{main ? 'Authorized' : 'Delegate'}</span></span>
           </button>
         </div>
+        )}
 
         {/* Tab Navigation */}
-        <button type="button" className="admin-nav-toggle" aria-expanded={navOpen} aria-controls="admin-tabs" onClick={() => setNavOpen((o) => !o)} data-testid="admin-nav-toggle">
-          <span aria-hidden="true">☰</span>
-          <span className="admin-nav-cur">{navLabel}</span>
-          <span className="admin-nav-chev" aria-hidden="true">{navOpen ? '▲' : '▼'}</span>
-        </button>
-        <div id="admin-tabs" data-open={navOpen ? '1' : '0'} onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setNavOpen(false); }} className="flex items-center gap-1.5 px-4 pt-3 border-b border-zinc-800 bg-zinc-950 overflow-x-auto scrollbar-none">
+        <div id="admin-tabs" className={`${phone ? 'hidden ' : ''}flex items-center gap-1.5 px-4 pt-3 border-b border-zinc-800 bg-zinc-950 overflow-x-auto scrollbar-none`}>
           {canOpenAccounts && (
             <button
-              onClick={() => setActiveTab('users')}
+              onClick={() => setActiveTab('users')} data-admin-tab="users"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'users'
                   ? 'border-noob text-noob'
@@ -1310,7 +1312,7 @@ They will not be told.`)) return;
 
           {canHandleReports && (
             <button
-              onClick={() => setActiveTab('reports')}
+              onClick={() => setActiveTab('reports')} data-admin-tab="reports"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'reports'
                   ? 'border-amber-400 text-amber-400'
@@ -1323,7 +1325,7 @@ They will not be told.`)) return;
 
           {canNotify && (
             <button
-              onClick={() => setActiveTab('notify')}
+              onClick={() => setActiveTab('notify')} data-admin-tab="notify"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'notify'
                   ? 'border-noob text-noob'
@@ -1336,7 +1338,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('staff')}
+              onClick={() => setActiveTab('staff')} data-admin-tab="staff"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'staff'
                   ? 'border-sky-400 text-sky-400'
@@ -1349,7 +1351,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('activity')}
+              onClick={() => setActiveTab('activity')} data-admin-tab="activity"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'activity'
                   ? 'border-sky-400 text-sky-400'
@@ -1362,7 +1364,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('content')}
+              onClick={() => setActiveTab('content')} data-admin-tab="content"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'content'
                   ? 'border-noob text-noob'
@@ -1375,7 +1377,7 @@ They will not be told.`)) return;
 
           {canManageStore && (
             <button
-              onClick={() => setActiveTab('orders')}
+              onClick={() => setActiveTab('orders')} data-admin-tab="orders"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'orders'
                   ? 'border-noob text-noob'
@@ -1388,7 +1390,7 @@ They will not be told.`)) return;
 
           {canManageStore && (
             <button
-              onClick={() => setActiveTab('foodStall')}
+              onClick={() => setActiveTab('foodStall')} data-admin-tab="foodStall"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'foodStall'
                   ? 'border-noob text-noob'
@@ -1401,7 +1403,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('noobAi')}
+              onClick={() => setActiveTab('noobAi')} data-admin-tab="noobAi"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'noobAi'
                   ? 'border-noob text-noob'
@@ -1419,7 +1421,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('grievances')}
+              onClick={() => setActiveTab('grievances')} data-admin-tab="grievances"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'grievances'
                   ? 'border-rose-400 text-rose-300'
@@ -1435,7 +1437,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('suggestions')}
+              onClick={() => setActiveTab('suggestions')} data-admin-tab="suggestions"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'suggestions'
                   ? 'border-amber-400 text-amber-300'
@@ -1453,7 +1455,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('signIn')}
+              onClick={() => setActiveTab('signIn')} data-admin-tab="signIn"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'signIn'
                   ? 'border-noob text-noob'
@@ -1466,7 +1468,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('joinRequests')}
+              onClick={() => setActiveTab('joinRequests')} data-admin-tab="joinRequests"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'joinRequests'
                   ? 'border-violet-400 text-violet-300'
@@ -1479,7 +1481,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('sparkxRequests')}
+              onClick={() => setActiveTab('sparkxRequests')} data-admin-tab="sparkxRequests"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'sparkxRequests'
                   ? 'border-orange-400 text-orange-300'
@@ -1492,7 +1494,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('accountRequests')}
+              onClick={() => setActiveTab('accountRequests')} data-admin-tab="accountRequests"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'accountRequests'
                   ? 'border-rose-400 text-rose-300'
@@ -1505,7 +1507,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('team')}
+              onClick={() => setActiveTab('team')} data-admin-tab="team"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'team'
                   ? 'border-amber-400 text-amber-300'
@@ -1521,7 +1523,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('analytics')}
+              onClick={() => setActiveTab('analytics')} data-admin-tab="analytics"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'analytics'
                   ? 'border-amber-400 text-amber-300'
@@ -1534,7 +1536,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('daily')}
+              onClick={() => setActiveTab('daily')} data-admin-tab="daily"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'daily'
                   ? 'border-amber-400 text-amber-300'
@@ -1547,7 +1549,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('storage')}
+              onClick={() => setActiveTab('storage')} data-admin-tab="storage"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'storage'
                   ? 'border-amber-400 text-amber-300'
@@ -1560,7 +1562,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('errors')}
+              onClick={() => setActiveTab('errors')} data-admin-tab="errors"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'errors'
                   ? 'border-amber-400 text-amber-300'
@@ -1574,7 +1576,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('ads')}
+              onClick={() => setActiveTab('ads')} data-admin-tab="ads"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'ads'
                   ? 'border-amber-400 text-amber-300'
@@ -1588,7 +1590,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('moderation')}
+              onClick={() => setActiveTab('moderation')} data-admin-tab="moderation"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'moderation'
                   ? 'border-amber-400 text-amber-300'
@@ -1602,7 +1604,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('gifts')}
+              onClick={() => setActiveTab('gifts')} data-admin-tab="gifts"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'gifts'
                   ? 'border-amber-400 text-amber-300'
@@ -1616,7 +1618,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('pages')}
+              onClick={() => setActiveTab('pages')} data-admin-tab="pages"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'pages'
                   ? 'border-amber-400 text-amber-300'
@@ -1630,7 +1632,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('signupSources')}
+              onClick={() => setActiveTab('signupSources')} data-admin-tab="signupSources"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'signupSources'
                   ? 'border-amber-400 text-amber-300'
@@ -1644,7 +1646,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('userLogs')}
+              onClick={() => setActiveTab('userLogs')} data-admin-tab="userLogs"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'userLogs'
                   ? 'border-amber-400 text-amber-300'
@@ -1657,7 +1659,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('accounts')}
+              onClick={() => setActiveTab('accounts')} data-admin-tab="accounts"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'accounts'
                   ? 'border-amber-400 text-amber-300'
@@ -1670,7 +1672,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('visitors')}
+              onClick={() => setActiveTab('visitors')} data-admin-tab="visitors"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'visitors'
                   ? 'border-amber-400 text-amber-300'
@@ -1693,7 +1695,7 @@ They will not be told.`)) return;
 
           {main && (
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => setActiveTab('settings')} data-admin-tab="settings"
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'settings'
                   ? 'border-amber-400 text-amber-300'
@@ -1706,7 +1708,13 @@ They will not be told.`)) return;
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+        {phone && phoneView === 'home' ? (
+          <div className="overflow-y-auto flex-1">
+            <PhoneHome items={phoneItems} stats={{ accounts: usersList.length, suspended: suspendedCount, reports: reportsList.length, role: main ? 'Main admin' : 'Team' }} canAccounts={canOpenAccounts} canReports={canHandleReports} onOpen={openPhoneSection} onStat={(k) => { if (k === 'reports') { openPhoneSection('reports'); } else { setSuspendedOnlyFilter(k === 'suspended'); openPhoneSection('users'); } }} />
+          </div>
+        ) : (
+        <>
+        <div className={`p-4 sm:p-5 overflow-y-auto flex-1 space-y-4${phone ? ' apx-page' : ''}`}>
           {!(main || canOpenAccounts || canHandleReports || canNotify) ? (
             <div className="py-12 px-4 text-center space-y-2">
               <ShieldCheck className="w-8 h-8 text-sky-400 mx-auto" />
@@ -1741,7 +1749,7 @@ They will not be told.`)) return;
               </div>
 
               {/* Who has notifications switched on */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 apx-chips">
                 {([
                   ['all', 'Everyone', usersList.length],
                   ['on', 'Notifications on', notifOnCount],
@@ -1914,7 +1922,8 @@ They will not be told.`)) return;
                         </div>
 
                         {/* Action buttons */}
-                        <div className="sm:shrink-0 flex flex-wrap items-center gap-1.5">
+                        {phone && (<button type="button" className="apx-manage" aria-expanded={expandedUserId === user.id} onClick={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)} data-testid="apx-manage">{expandedUserId === user.id ? 'Hide actions' : 'Actions'}</button>)}
+                        <div className={`sm:shrink-0 flex flex-wrap items-center gap-1.5${phone ? (expandedUserId === user.id ? ' apx-actions' : ' hidden') : ''}`}>
                           <button
                             onClick={() => copyLink(`profile:${user.id}`, profileLinkFor(user.username))}
                             title={`Copy @${user.username}'s profile link`}
@@ -2017,7 +2026,7 @@ They will not be told.`)) return;
                                   title={main ? 'Permanently delete this account and their content' : 'Ask the NOOB administrator to delete this account'}
                                   className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3.5 h-3.5" /><span className="sm:hidden ml-1.5 font-bold text-xs">{main ? 'Delete account' : 'Ask to delete'}</span>
                                 </button>
                               )}
                               {!canSuspend && !canDelete && !canAdjustPoints && !canViewAccounts && (
@@ -3343,8 +3352,11 @@ They will not be told.`)) return;
             <div className="py-12 text-center text-xs text-zinc-500">You do not have access to this section.</div>
           )}
         </div>
+        </>
+        )}
 
         {/* Modal Footer */}
+        {!phone && (
         <div className="p-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">
           <span>NOOB Admin Engine v2.0 • Real-time Account Oversight</span>
           {!fullPage && (
@@ -3353,6 +3365,8 @@ They will not be told.`)) return;
             </button>
           )}
         </div>
+        )}
+        {phone && <PhoneBottomBar items={phoneItems} view={phoneView} activeKey={activeTab} onHome={() => setPhoneView('home')} onOpen={openPhoneSection} />}
       </div>
 
       {/* Confirmation Sub-Modal for Suspending */}

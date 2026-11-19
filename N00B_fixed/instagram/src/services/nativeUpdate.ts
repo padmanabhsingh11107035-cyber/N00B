@@ -102,13 +102,6 @@ export interface NativeUpdateInfo {
 }
 
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
-  // An app installed from Google Play has a small version number (1, 2, 3 ...); the app files made by the build workflow carry the time of the build (a very large number).
-  // A Google Play app is updated by Google Play only, so it is never offered an app file of its own, even when it has no installer of its own inside.
-  try {
-    const { App } = await import('@capacitor/app');
-    const b = Number((await App.getInfo()).build);
-    if (Number.isFinite(b) && b > 0 && b < 1_000_000) return { supported: false, canInstall: false, installed: b, latest: b, state: 'newest' };
-  } catch { /* not the Android app, or no way to ask: go on as before */ }
   let installed: number | null = null;
   let supported = true;
   let canInstall = false;
@@ -118,6 +111,15 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
     // Google Play's rules: a copy of the app that came from Google Play is updated by Google Play only. It never looks for, offers or installs an app file of its own.
     if (i.fromPlay) return { supported: false, canInstall: false, installed, latest: installed, state: 'newest' };
   } catch { supported = false; }
+  // (Fixed 2026-11-19: the version number used to decide this. The app files made by the build workflow carry the build's run number (about 287), a small number like a Play one,
+  // so every one of them was treated as a Google Play app and never offered an update. Only an app WITHOUT its own installer inside falls back to the small-number rule.)
+  if (!supported) {
+    try {
+      const { App } = await import('@capacitor/app');
+      const b = Number((await App.getInfo()).build);
+      if (Number.isFinite(b) && b > 0 && b < 1_000_000) return { supported: false, canInstall: false, installed: b, latest: b, state: 'newest' };
+    } catch { /* not the Android app, or no way to ask: go on as before */ }
+  }
   // the app asks for the newest build itself; the release page (which has a request limit per address) is only the second way
   let latest: number | null = null;
   try { latest = (await AppUpdater.getLatest()).build || null; } catch { /* an older app, or no connection */ }

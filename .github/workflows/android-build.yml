@@ -97,9 +97,10 @@ jobs:
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
           grep -q UPDATE_PACKAGES_WITHOUT_USER_ACTION android/app/src/main/AndroidManifest.xml
           # Without these the WebView cannot hand camera or microphone access to the app at all (Go Live, Live Lounge): the Android permission has to exist before the WebView can ask for it
-          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.CAMERA" /> <uses-permission android:name="android.permission.RECORD_AUDIO" /> <uses-feature android:name="android.hardware.camera" android:required="false" /> <uses-feature android:name="android.hardware.microphone" android:required="false" />#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.CAMERA" /> <uses-permission android:name="android.permission.RECORD_AUDIO" /> <uses-permission android:name="android.permission.READ_CONTACTS" /> <uses-feature android:name="android.hardware.camera" android:required="false" /> <uses-feature android:name="android.hardware.microphone" android:required="false" />#' android/app/src/main/AndroidManifest.xml
           grep -q android.permission.CAMERA android/app/src/main/AndroidManifest.xml
           grep -q android.permission.RECORD_AUDIO android/app/src/main/AndroidManifest.xml
+          grep -q android.permission.READ_CONTACTS android/app/src/main/AndroidManifest.xml   # "Find friends" reads the phone's contacts: without this line Android refuses at once and the feature can never work (2026-11-19)
           # the app's data (chat keys, saved logins) is not copied to a cloud backup
           sed -i 's#android:allowBackup="true"#android:allowBackup="false"#' android/app/src/main/AndroidManifest.xml
           grep -q 'allowBackup="false"' android/app/src/main/AndroidManifest.xml

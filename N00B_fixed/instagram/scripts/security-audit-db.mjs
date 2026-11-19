@@ -27,7 +27,6 @@ const OPEN_TO_VISITORS = {
   login_approval_needed: 'login: says whether a User ID asks for an approval by email (the login has to know)',
   get_ui_translations: 'the app\'s own translated words, public',
   public_platform_settings: 'the public switches (maintenance, sign-up open ...), public',
-  study_public_status: 'whether NOOB STUDY is on, public',
   noob_ai_feedback_for_user: 'called by the NOOB AI server with a shared secret that is checked inside',
   noob_ai_profile_for_user: 'called by the NOOB AI server with a shared secret that is checked inside',
   submit_noob_ai_feedback: 'called by the NOOB AI server with a shared secret that is checked inside',

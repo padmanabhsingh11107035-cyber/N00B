@@ -23,14 +23,14 @@ public class MainActivity extends BridgeActivity {
     // Does this build have Firebase? The web app asks before it registers for phone notifications (without Firebase that registration stops the whole app).
     registerPlugin(PushGuardPlugin.class);
     super.onCreate(savedInstanceState);
-    hideStatusBar();
+    hideSystemBars();
   }
 
-  // Full screen like a game: no clock, battery or network bar at the top. Swiping down from the top edge shows them for a moment (Android's own rule), then they hide again.
-  private void hideStatusBar() {
+  // Full screen like a game: no clock, battery or network bar at the top and no three buttons at the bottom. Swiping from the edge shows them for a moment (Android's own rule), then they hide again.
+  private void hideSystemBars() {
     try {
       WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-      c.hide(WindowInsetsCompat.Type.statusBars());
+      c.hide(WindowInsetsCompat.Type.systemBars());   // the clock/battery bar at the top AND the three buttons at the bottom
       c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
     } catch (Throwable ignored) { /* a phone that refuses just keeps its normal status bar */ }
   }
@@ -38,6 +38,6 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onWindowFocusChanged(boolean hasFocus) {
     super.onWindowFocusChanged(hasFocus);
-    if (hasFocus) hideStatusBar();   // comes back to full screen after a dialog, the keyboard or the app switcher
+    if (hasFocus) hideSystemBars();   // comes back to full screen after a dialog, the keyboard or the app switcher
   }
 }

@@ -99,6 +99,8 @@ export interface NativeUpdateInfo {
   installed: number | null;
   latest: number | null;
   state: NativeUpdateState;
+  /** this copy came from Google Play (Google Play updates it, never the app itself) */
+  fromPlay?: boolean;
 }
 
 export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
@@ -109,7 +111,7 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
     const i = await AppUpdater.getInfo();
     installed = i.versionCode || null; canInstall = !!i.canInstall;
     // Google Play's rules: a copy of the app that came from Google Play is updated by Google Play only. It never looks for, offers or installs an app file of its own.
-    if (i.fromPlay) return { supported: false, canInstall: false, installed, latest: installed, state: 'newest' };
+    if (i.fromPlay) return { supported: false, canInstall: false, installed, latest: installed, state: 'newest', fromPlay: true };
   } catch { supported = false; }
   // (Fixed 2026-11-19: the version number used to decide this. The app files made by the build workflow carry the build's run number (about 287), a small number like a Play one,
   // so every one of them was treated as a Google Play app and never offered an update. Only an app WITHOUT its own installer inside falls back to the small-number rule.)
@@ -124,7 +126,7 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
   let latest: number | null = null;
   try { latest = (await AppUpdater.getLatest()).build || null; } catch { /* an older app, or no connection */ }
   if (!latest) latest = await fetchLatestNativeBuild();
-  return { supported, canInstall, installed, latest, state: nativeUpdateState(installed, latest) };
+  return { supported, canInstall, installed, latest, state: nativeUpdateState(installed, latest), fromPlay: false };
 }
 
 /** The address the installer should download from: the website tells it (an app from before a change still needs the address it knows). */

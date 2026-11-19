@@ -53,6 +53,7 @@ export const UpdatePage: React.FC<PageProps> = ({ back }) => {
             note="Now and then something changes inside the app itself (for example the screenshot block). Those updates need a new app file. NOOB starts the update by itself when you open the app, downloads it and hands it to Android's installer; where Android still wants a tap, its own update screen opens by itself and you tap Update. The first time, Android asks you to allow NOOB to install apps. Your account and chats stay as they are."
           >
             <Row icon={Smartphone} label="Your app" value={app.checking ? 'Checking…' : info?.installed ? `build ${info.installed}` : 'older app'} testId="update-app-installed" />
+            <Row icon={ShieldCheck} label="Installed from" value={app.checking ? 'Checking…' : info?.fromPlay ? 'Google Play' : 'A downloaded file'} testId="update-app-source" />
             <Row icon={RefreshCw} label="Newest app" value={app.checking ? 'Checking…' : info?.latest ? `build ${info.latest}` : 'Could not check'} testId="update-app-latest" />
             <Row
               icon={Download}
@@ -66,7 +67,8 @@ export const UpdatePage: React.FC<PageProps> = ({ back }) => {
             )}
             <Row icon={ShieldCheck} label="Screenshots" sub="The newest app blocks screenshots and screen recordings" />
           </Section>
-          {!app.checking && appState === 'newest' && <Note tone="good">Your app is the newest one: there is no app file to install right now. When one comes, a bar at the top of the app and this page will offer it.</Note>}
+          {!app.checking && info?.fromPlay && <Note>This copy came from Google Play, so Google Play updates it (usually by itself, in the background). The app never installs its own file over a Google Play copy.</Note>}
+          {!app.checking && appState === 'newest' && !info?.fromPlay && <Note tone="good">Your app is the newest one: there is no app file to install right now. When one comes, a bar at the top of the app and this page will offer it.</Note>}
         </>
       )}
 

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { LifeBuoy, BadgeCheck, Brain, Camera, ChevronDown, FileText, Gamepad2, Handshake, Info, Instagram, KeyRound, Lock, MessageCircle, MessageSquarePlus, Package, Radio, ShieldCheck, ShoppingBag, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
+import { LifeBuoy, BadgeCheck, Brain, Camera, ChevronDown, FileText, Gamepad2, Handshake, Info, Instagram, KeyRound, Lock, MessageCircle, MessageSquarePlus, Package, Radio, ShieldCheck, ShoppingBag, Sparkles, Trash2, Users, Wallet , Mail } from 'lucide-react';
 import { PageShell, Section, Row, Note, Spinner } from '../kit';
 import type { PageProps } from '../types';
 const OrdersView = lazy(() => import('../../Store/OrdersView').then((m) => ({ default: m.OrdersView })));
@@ -49,6 +49,9 @@ export const HelpPage: React.FC<PageProps> = ({ ctx, back }) => {
           {ideasOn && <Row icon={MessageSquarePlus} label="Report a problem or send an idea" sub="Goes straight to the NOOB team" onClick={ctx.actions.openSuggestionBox} testId="help-feedback" />}
         </Section>
       )}
+      <Section title="Email us">
+        <Row icon={Mail} label="Email us" sub="support@noobsocials.com" onClick={() => { window.location.href = 'mailto:support@noobsocials.com?subject=NOOB%20support'; }} testId="help-email-us" />
+      </Section>
       <Section title="Common questions">
         {FAQ.map(([q, a], i) => (
           <div key={q}>

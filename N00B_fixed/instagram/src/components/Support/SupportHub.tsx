@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, ArrowLeft, ChevronRight, Scale, Star, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ChevronRight, Mail, Scale, Star, X } from 'lucide-react';
 import { CallTileIcon, ChatTileIcon, FaqTileIcon, IdeaTileIcon, PaymentTileIcon, ReportTileIcon, TicketTileIcon } from './SupportIcons';
 import { useFeatureOn } from '../../utils/featureFlags';
 import './suggestionBox.css';
@@ -105,6 +105,12 @@ export const SupportHub: React.FC<HubProps> = ({ username, rating, onOpen, onPay
           <ChevronRight className="sd-chev" />
         </button>
       )}
+
+      <a className="sd-idea sd-idea-alt" href="mailto:support@noobsocials.com?subject=NOOB%20support" data-no-inapp data-testid="support-tile-email">
+        <span className="sd-idea-ic" style={{ background: '#e6f6ec', color: '#15803d' }}><Mail /></span>
+        <span><strong>Email us</strong><small>support@noobsocials.com</small></span>
+        <ChevronRight className="sd-chev" />
+      </a>
 
       <h2 className="sd-section">Popular topics</h2>
       <div className="sd-rows" data-testid="support-topics">

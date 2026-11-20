@@ -83,6 +83,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <p className="relative text-zinc-300 text-sm leading-relaxed">
                   This screen ran into an unexpected error. Your account and data are safe — just reload to continue.
                 </p>
+                {this.state.errorMessage && (
+                  <p className="relative text-zinc-500 text-[10px] leading-snug break-words [overflow-wrap:anywhere]" data-testid="error-code">Error code: {String(this.state.errorMessage).slice(0, 160)}</p>
+                )}
                 <button
                   onClick={this.handleReload}
                   style={{ background: 'linear-gradient(100deg, var(--color-noob) 0%, var(--color-noob-strong) 100%)', color: 'var(--on-accent)' }}

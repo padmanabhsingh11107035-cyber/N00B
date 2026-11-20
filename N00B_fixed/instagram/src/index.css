@@ -876,52 +876,30 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
    full colour with a heavier icon and a bold label (the picture, for "You", gets a ring). The colour is the accent (--color-noob: white in the dark
    modes, black in Light), so it follows the theme; on the Reels page the bar is the near-black of that page in both modes.
    --nav-h is the bar's height (with the phone's bottom gesture area), for everything that has to stay clear of it. */
-:root { --nav-b: max(env(safe-area-inset-bottom, 0px) - 6px, 12px); --nav-h: calc(56px + var(--nav-b) + 8px); }
-/* FLOATING: the bar is a rounded glass pill that hovers above the page (like Instagram's), the page's own colours (dark in the dark modes, white in Light),
-   with a soft highlight that slides to the icon that is chosen. The bar element itself lets touches through; only the pill takes them. */
+:root { --nav-h: calc(54px + max(env(safe-area-inset-bottom, 0px) - 14px, 10px)); }
 #floating-bottom-nav {
-  height: auto;
-  padding: 0 12px var(--nav-b);
-  background: transparent;
-  border: 0;
-  pointer-events: none !important;
+  height: var(--nav-h);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px) - 14px, 10px);   /* the icons sit lower (14px less empty strip above the home bar), never less than 10px */
+  background-color: var(--page);
+  border-top: 1px solid color-mix(in srgb, var(--color-noob) 14%, transparent);
 }
-#floating-bottom-nav .nav-row {
-  pointer-events: auto;
-  height: 56px;
-  border-radius: 28px;
-  padding: 0 4px;
-  align-items: center;
-  /* the grey of Instagram's bar: a frosted grey glass, lighter grey in Light */
-  background-color: rgba(58, 58, 62, 0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.2);
-  transform-origin: 50% 100%;
-  will-change: transform;
-  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.5s ease;
-}
-:root[data-theme="light"] #floating-bottom-nav .nav-row { background-color: rgba(228, 228, 232, 0.78); border-color: rgba(0, 0, 0, 0.08); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1); }
-#floating-bottom-nav[data-compact="1"] .nav-row { transform: translateY(8px) scale(0.78); box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.5); }
-@media (prefers-reduced-motion: reduce) { #floating-bottom-nav .nav-row { transition: none; } }
 #floating-bottom-nav[data-tab="reels"] {
   --color-noob: #ffffff;
+  background-color: #0f0f11;
 }
-#floating-bottom-nav[data-tab="reels"] .nav-row { background-color: rgba(40, 40, 44, 0.72); }
-#floating-bottom-nav .nav-slider {
-  position: absolute;
-  left: 4px;
-  top: 6px;
-  bottom: 6px;
-  box-sizing: border-box;
-  border-radius: 22px;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--color-noob) 15%, transparent);
-  transition: transform 0.42s cubic-bezier(0.34, 1.32, 0.5, 1), opacity 0.2s ease;
-}
-@media (prefers-reduced-motion: reduce) { #floating-bottom-nav .nav-slider { transition: opacity 0.2s ease; } }
+#floating-bottom-nav .nav-row { height: 52px; align-items: center; }
 #floating-bottom-nav .nav-lbl { display: none; }   /* icons only: the names stay for screen readers (aria-label on each button) */
+/* Create: a bright gradient circle with a white plus, like Instagram's */
+#floating-bottom-nav .nav-create-orb {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9999px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 52%, #fb923c 100%);
+  box-shadow: 0 6px 18px -4px rgba(236, 72, 153, 0.65);
+  transition: transform 0.18s ease;
+}
+#floating-bottom-nav .nav-create-orb svg { width: 22px; height: 22px; }
+#floating-bottom-nav .nav-item:active .nav-create-orb { transform: scale(0.9); }
+#floating-bottom-nav .nav-dot { box-shadow: 0 0 0 2px var(--page); }
+#floating-bottom-nav[data-tab="reels"] .nav-dot { box-shadow: 0 0 0 2px #0f0f11; }
 #floating-bottom-nav .nav-item {
   color: color-mix(in srgb, var(--color-noob) 72%, transparent);
   -webkit-tap-highlight-color: transparent;

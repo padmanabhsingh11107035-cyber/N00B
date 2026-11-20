@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Home, Compass, Film, MessageSquare, Gamepad2, SquarePlus } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Home, Compass, Gamepad2 } from 'lucide-react';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { useKeyboardOpen } from '../../utils/useVisualViewport';
 import { DOUBLE_TAP_MS, quickSwitchLinked } from '../../utils/quickSwitch';
@@ -30,11 +30,35 @@ interface NavButtonProps {
 }
 
 // The red dot with the number of updates on a page's icon (99+ when there are many).
-const NavBadge: React.FC<{ count: number }> = ({ count }) => (count > 0 ? (
+const NavBadge: React.FC<{ count: number; dot?: boolean }> = ({ count, dot }) => (count > 0 && dot ? (
+  <span className="nav-badge nav-dot absolute -top-0.5 -right-0.5 w-[11px] h-[11px] bg-red-500 rounded-full" data-testid="nav-badge" aria-label={`${count} new`} />
+) : count > 0 ? (
   <span className="nav-badge absolute -top-1.5 -right-2.5 px-1 min-w-[15px] h-[15px] bg-red-500 text-white font-black text-[8px] rounded-full flex items-center justify-center shadow-sm" data-testid="nav-badge" aria-label={`${count} new`}>
     {count > 99 ? '99+' : count}
   </span>
 ) : null);
+
+// The three icons drawn like Instagram's: Reels (a rounded square with the clapper stripe and a play triangle), Chat (a round speech bubble with three dots), and Create (a bright gradient circle with a white plus).
+const ReelsIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <path d="M3.5 8.5h17M9.2 3.2l3 5.3M14.8 3.2l3 5.3" />
+    <path d="M10.2 12.3v4.4a.7.7 0 0 0 1.05.6l3.6-2.2a.7.7 0 0 0 0-1.2l-3.6-2.2a.7.7 0 0 0-1.05.6Z" fill="currentColor" stroke="none" />
+  </svg>
+);
+const ChatIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3Z" />
+    <circle cx="8.4" cy="12" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="15.6" cy="12" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+);
+const CreateIcon: React.FC = () => (
+  <span className="nav-create-orb" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5.5v13M5.5 12h13" /></svg>
+  </span>
+);
 
 // One column of the bar: a line icon with a small label under it (the label is left out for the Create button, which is only a circled plus).
 // The open page is the one in full colour with a heavier icon and bold label; the colours and weights live in index.css (#floating-bottom-nav .nav-item).
@@ -66,41 +90,11 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   // a page that the administrator has switched off for users has no button (the others share the width)
   const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games'), showVideos = useFeatureOn('videos');
   const columns = 2 + [showExplore, showReels, showVideos, showCreate, showChat, showGames].filter(Boolean).length;
-  // the sliding highlight: one soft pill behind the open page's icon that glides to the next one (Create is never "open", so the pill rests while it is used)
-  const order: NavTab[] = (['feed', showExplore && 'explore', showReels && 'reels', showVideos && 'videos', showCreate && 'post', showChat && 'chat', showGames && 'games', 'profile'] as Array<NavTab | false>).filter((t): t is NavTab => !!t);
-  const slot = order.indexOf(activeTab);
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
   const count = (tab: NavTab): number => (tab === 'chat' ? (unreadChatCount > 0 ? unreadChatCount : 0) : badges[tab] || 0);
   const lastProfileTap = useRef(0);
-  // Like Instagram's: scrolling DOWN a page shrinks the bar to a small pill, scrolling UP (or reaching the top, or choosing another page) brings it back.
-  // Any scrolling box of the page counts (the window or a page's own scroller); the Reels pager keeps the bar full size.
-  const [compact, setCompact] = useState(false);
-  useEffect(() => { setCompact(false); }, [activeTab]);
-  useEffect(() => {
-    const last = new WeakMap<object, number>();
-    let acc = 0, dir = 0;
-    const onScroll = (e: Event) => {
-      const t = e.target as Element | Document;
-      const el = (t === document ? document.scrollingElement : t) as HTMLElement | null;
-      if (!el || (el.closest && el.closest('#floating-bottom-nav'))) return;
-      if (el.scrollHeight - el.clientHeight < 120) return;   // too short to scroll: ignore (menus, small lists)
-      const y = el.scrollTop;
-      const prev = last.get(el);
-      last.set(el, y);
-      if (prev === undefined) return;
-      const d = y - prev;
-      if (y < 24) { acc = 0; dir = 0; setCompact(false); return; }
-      if (d === 0) return;
-      const sign = d > 0 ? 1 : -1;
-      if (sign !== dir) { dir = sign; acc = 0; }
-      acc += Math.abs(d);
-      if (acc > 28) setCompact(sign > 0);   // a short drag one way is enough, a flick back opens it again
-    };
-    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    return () => document.removeEventListener('scroll', onScroll, true);
-  }, []);
   const tapProfile = () => {
     const now = Date.now();
     const twice = now - lastProfileTap.current < DOUBLE_TAP_MS;
@@ -112,20 +106,18 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
     <nav
       id="floating-bottom-nav"
       data-tab={activeTab}
-      data-compact={compact && activeTab !== 'reels' ? '1' : undefined}
       className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-2xl pointer-events-auto md:hidden ${
         hideOnMobile ? 'max-md:hidden' : ''
       } ${keyboardOpen ? 'hidden' : ''}`}
     >
       <div
-        className="nav-row relative grid grid-cols-7 items-stretch"
+        className="nav-row grid grid-cols-7 items-stretch"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         onPointerDown={(e) => {
           const id = (e.target as HTMLElement).closest('button')?.id || '';
           if (id.startsWith('nav-item-')) onPressTab?.(id.slice('nav-item-'.length) as NavTab);
         }}
       >
-        <span className="nav-slider" aria-hidden="true" style={{ width: `calc((100% - 8px) / ${columns})`, transform: `translateX(${Math.max(slot, 0) * 100}%)`, opacity: slot < 0 || activeTab === 'post' ? 0 : 1 }} />
         <NavButton id="nav-item-feed" label="Home" title="Home" active={activeTab === 'feed'} onClick={() => onSelectTab('feed')}>
           <div className="relative">
             <Home className="nav-ico w-7 h-7" />
@@ -145,7 +137,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {showReels && (
           <NavButton id="nav-item-reels" label="Reels" title="Reels" active={activeTab === 'reels'} onClick={() => onSelectTab('reels')}>
             <div className="relative">
-              <Film className="nav-ico w-7 h-7" />
+              <ReelsIcon className="nav-ico w-7 h-7" />
               <NavBadge count={count('reels')} />
             </div>
           </NavButton>
@@ -168,15 +160,15 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {/* Create: opens the post / reel / story picker, never a page of its own, so it is never the "open" one */}
         {showCreate && (
           <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
-            <SquarePlus className="nav-ico nav-create w-7 h-7" />
+            <CreateIcon />
           </NavButton>
         )}
 
         {showChat && (
           <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>
             <div className="relative">
-              <MessageSquare className="nav-ico w-7 h-7" />
-              <NavBadge count={count('chat')} />
+              <ChatIcon className="nav-ico w-7 h-7" />
+              <NavBadge count={count('chat')} dot />
             </div>
           </NavButton>
         )}

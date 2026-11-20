@@ -456,17 +456,31 @@ export const PostCard: React.FC<PostCardProps> = ({
     } catch { setTranslateNote('Could not translate right now.'); }
     finally { setTranslating(false); }
   };
-  // the grey Follow pill in the header (only for other people that this person does not follow yet)
-  const [followedHere, setFollowedHere] = useState(false);
+  // the grey Follow / Following pill in the header (other people only). Following -> tap once to arm "Unfollow", tap again to unfollow.
+  const [followOverride, setFollowOverride] = useState<boolean | null>(null);
   const [followRequested, setFollowRequested] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
-  const showFollowPill = !!onToggleFollowUser && post.userId !== currentUser.id && !post.isSponsored && !followedHere && !(currentUser.followingIds || []).includes(post.userId);
+  const [unfollowArmed, setUnfollowArmed] = useState(false);
+  const armTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(armTimer.current), []);
+  const isFollowingAuthor = followOverride !== null ? followOverride : (currentUser.followingIds || []).includes(post.userId);
+  const showFollowPill = !!onToggleFollowUser && post.userId !== currentUser.id && !post.isSponsored;
   const followFromPost = async () => {
     if (followBusy || !onToggleFollowUser) return;
+    if (isFollowingAuthor && !unfollowArmed) {
+      setUnfollowArmed(true);
+      window.clearTimeout(armTimer.current);
+      armTimer.current = window.setTimeout(() => setUnfollowArmed(false), 3000);
+      return;
+    }
+    setUnfollowArmed(false);
     setFollowBusy(true);
     try {
       const r = await onToggleFollowUser(post.userId);
-      if (r && r.success) { if (r.isFollowRequested) setFollowRequested(true); else if (r.isFollowing) setFollowedHere(true); }
+      if (r && r.success) {
+        setFollowRequested(!!r.isFollowRequested);
+        setFollowOverride(!!r.isFollowing);
+      }
     } finally { setFollowBusy(false); }
   };
   const goToProfile = async (userId: string) => {
@@ -717,8 +731,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Follow: a grey pill, only for people this person does not follow yet */}
         {showFollowPill && (
-          <button type="button" onClick={() => void followFromPost()} disabled={followBusy} className="hv-follow shrink-0 ml-auto" data-testid="post-follow-pill">
-            {followRequested ? 'Requested' : 'Follow'}
+          <button type="button" onClick={() => void followFromPost()} disabled={followBusy} className={`hv-follow shrink-0 ml-auto ${unfollowArmed ? 'is-warn' : ''}`} data-testid="post-follow-pill">
+            {isFollowingAuthor ? (unfollowArmed ? 'Unfollow' : 'Following') : followRequested ? 'Requested' : 'Follow'}
           </button>
         )}
         {/* Options Menu Toggle */}

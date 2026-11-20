@@ -89,3 +89,43 @@
     window.addEventListener('vite:preloadError', heal);
   } catch (e) { /* nothing to heal with */ }
 })();
+
+// Stay current without reinstalling. An installed app (iPhone Home Screen, Android) can sit in the background for days on the page it loaded, and when a new version is published
+// the files that old page needs are gone (it turns into plain unstyled text). So when the person comes BACK to the app (never while they are using it), it asks the site which
+// main file is current; if that is not the one this page runs, the page reloads itself once to get the new version. No change, no reload; a failed question changes nothing.
+(function () {
+  try {
+    var mainOf = function (html) { var m = /\/assets\/main-[A-Za-z0-9_-]+\.js/.exec(html); return m ? m[0] : ''; };
+    var mine = function () {
+      var s = document.querySelector('script[src*="/assets/main-"]');
+      if (!s) return '';
+      var src = s.getAttribute('src') || '';
+      var m = /\/assets\/main-[A-Za-z0-9_-]+\.js/.exec(src);
+      return m ? m[0] : '';
+    };
+    var current = mine();
+    if (!current) return;   // dev server or a page without the built files: nothing to compare
+    var leftAt = 0, busy = false;
+    var check = function () {
+      if (busy) return;
+      busy = true;
+      fetch('/?fresh=' + Date.now(), { cache: 'no-store', credentials: 'omit' })
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (html) {
+          var live = mainOf(html);
+          if (live && live !== current) {
+            var n = Number(sessionStorage.getItem('noob_upd') || '0');
+            if (n < 3) { sessionStorage.setItem('noob_upd', String(n + 1)); window.location.reload(); }
+          }
+        })
+        .catch(function () { /* offline or a hiccup: try again next time */ })
+        .then(function () { busy = false; });
+    };
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { leftAt = Date.now(); return; }
+      if (leftAt && Date.now() - leftAt > 20000) check();   // back after more than 20 seconds away
+    });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) check(); });   // restored from the phone's page memory
+    window.setTimeout(function () { sessionStorage.removeItem('noob_upd'); }, 15000);   // a page that stayed up is not stuck in a loop
+  } catch (e) { /* nothing to update with */ }
+})();

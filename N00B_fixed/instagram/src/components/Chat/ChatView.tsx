@@ -266,6 +266,19 @@ function renderMessageWithLinks(text: string, members: User[] = [], onOpen?: (u:
 // Chat colours saved before the black-and-white look (the old orange) are shown as white now.
 const oldAccent = (c?: string | null): string | undefined => (c && c.toLowerCase() === '#d97757' ? '#ffffff' : c || undefined);
 
+/** WhatsApp-style day heading above the first message of each day: "Today", "Yesterday", "Mon, 17 Nov" this week, "17 Nov 2026" before that. Empty when the day is the same as the message before. */
+function chatDayHeading(iso: string | undefined, prevIso: string | null): string {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  if (prevIso) { const p = new Date(prevIso); if (!isNaN(p.getTime()) && day(p) === day(d)) return ''; }
+  const diff = Math.round((day(new Date()) - day(d)) / 86400000);
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export const ChatView: React.FC<ChatViewProps> = ({
   currentUser,
   onPlayGame,
@@ -2128,7 +2141,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
 
-            {filteredMessages.map((m) => {
+            {filteredMessages.map((m, mIdx) => {
+              const dayHeading = chatDayHeading(m.createdAt, mIdx > 0 ? filteredMessages[mIdx - 1].createdAt : null);
               const isMine =
                 m.senderId === currentUser.id ||
                 m.senderId === 'u_me' ||
@@ -2161,6 +2175,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   key={m.id}
                   className={`relative flex flex-col group ${isMine ? 'items-end' : 'items-start'}`}
                 >
+                  {dayHeading && <div className="self-center my-1 px-3 py-1 rounded-lg bg-black/45 text-white text-[11.5px] font-semibold" data-testid="chat-day-heading">{dayHeading}</div>}
                   <div
                     className="swipe-reply-icon absolute inset-y-0 right-0 flex items-center pr-1 text-noob pointer-events-none"
                     style={{ opacity: 0 }}

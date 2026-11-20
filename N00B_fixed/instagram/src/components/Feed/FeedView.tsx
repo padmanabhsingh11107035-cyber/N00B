@@ -63,6 +63,7 @@ import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
 import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
 import { PostCard } from './PostCard';
+import { notInterestedIds } from '../../utils/feedInterest';
 import { HomeMixCard, useHomeMix, useCanManagePolls, mixKey } from './HomeMix';
 import { holdSongs } from '../../utils/songSound';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
@@ -419,6 +420,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // the Favourites tab only exists while there are favourites: if the last one is removed, go back to For You
   useEffect(() => { if (activeFeedFilter === 'favourites' && favouriteCount() === 0) setActiveFeedFilter('foryou'); }, [listsVersion, activeFeedFilter]);
   filteredPosts = filteredPosts.filter((p) => p.userId === currentUser.id || !isPostMuted(p.userId));
+  { const noInterest = notInterestedIds('post'); if (noInterest.size) filteredPosts = filteredPosts.filter((p) => !noInterest.has(p.id)); }   // "Not interested" in the three-dot sheet
 
   // Reposts of the people you follow (Following tab only): the original is shown as an ordinary card with a "Reposted by" line (see utils/repostFeed.ts).
   const likeLedgerVersion = useLikeLedgerVersion();   // redraw when a heart is pressed on a repost-only card

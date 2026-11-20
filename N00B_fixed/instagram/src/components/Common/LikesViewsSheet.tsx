@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Eye, Search, UserPlus, UserCheck, Clock, Heart } from 'lucide-react';
+import { X, Loader2, Eye, Search, Heart } from 'lucide-react';
+import './likesSheet.css';
 import { User } from '../../types';
 import { predictFollowToggle } from '../../utils/followPredict';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -146,119 +147,66 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
   // portal this "fullscreen" sheet gets trapped inside that ancestor's own
   // (much smaller) box instead of covering the viewport.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={drag.sheetRef}
-        className="relative w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-3xl h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
-      >
-        {/* Handle: the grey bar and the title row (drag down to close) */}
-        <SheetGrip drag={drag} barClassName="bg-neutral-700">
-        <div className="flex items-center justify-between px-4 pb-3 sm:pt-3">
-          <h3 className="text-sm font-bold text-white tracking-tight">
-            {hasBoth ? 'Likes and views' : activeSource?.label}
-            {!hasBoth && !loading && !error && <span className="text-xs text-gray-400 font-normal"> ({users.length})</span>}
-          </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer`}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="lv-layer" role="dialog" aria-modal="true" aria-label={hasBoth ? 'Likes and views' : activeSource?.label}>
+      <div ref={drag.backdropRef} className="lv-back" onClick={onClose} aria-hidden="true" />
+      <div ref={drag.sheetRef} className="lv-sheet" data-testid="likes-sheet">
+        {/* the grey bar and the title (drag down to close) */}
+        <SheetGrip drag={drag} alwaysBar barClassName="bg-transparent" className="relative">
+          <div className="lv-bar" aria-hidden="true"><span /></div>
+          <div className="lv-head">
+            <h3>{hasBoth ? 'Likes and views' : activeSource?.label}</h3>
+            <button onClick={onClose} aria-label="Close" className={`lv-x ${CLOSE_X_CLASS}`}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </SheetGrip>
 
-        {/* View-count headline stat + privacy note (only when both likes & views are given) */}
+        {/* the number of views, and who may see the likes (only when both are shown) */}
         {hasBoth && typeof viewsCount === 'number' && (
-          <div className="px-4 pb-4 border-b border-neutral-800 shrink-0 text-center">
-            <div className="flex items-center justify-center gap-2 text-2xl font-black text-white">
-              <Eye className="w-5 h-5 text-zinc-300" />
-              {Intl.NumberFormat('en', { notation: 'compact' }).format(viewsCount)}
-            </div>
-            <p className="text-xs text-zinc-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
+          <div className="lv-stat">
+            <b><Eye className="w-5 h-5" />{Intl.NumberFormat('en', { notation: 'compact' }).format(viewsCount)}</b>
+            <p>
               Only {ownerUsername ? `@${ownerUsername}` : 'the owner'} can see the total number of likes on this{' '}
               {likes?.label?.toLowerCase().includes('reel') ? 'reel' : 'post'}.
             </p>
           </div>
         )}
 
-        {/* Search */}
         {!loading && !error && (
-          <div className="px-4 pt-3 pb-2 shrink-0">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search"
-                className="w-full bg-zinc-900 text-xs text-white pl-8 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-zinc-600 placeholder:text-zinc-500"
-              />
-            </div>
+          <div className="lv-search">
+            <label>
+              <Search />
+              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search" />
+            </label>
           </div>
         )}
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="lv-list">
           {loading ? (
-            <div className="py-14 flex flex-col items-center justify-center gap-2 text-zinc-500">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="text-xs">Loading...</span>
-            </div>
+            <div className="lv-load"><Loader2 className="w-6 h-6 animate-spin" /><span>Loading...</span></div>
           ) : error ? (
-            <div className="py-14 text-center text-xs text-zinc-500 px-6">{error}</div>
+            <div className="lv-empty">{error}</div>
           ) : filteredUsers.length === 0 ? (
-            <div className="py-14 text-center text-xs text-zinc-500 px-6">{query ? 'No matches.' : 'No one yet.'}</div>
+            <div className="lv-empty">{query ? 'No matches.' : 'No one yet.'}</div>
           ) : (
             filteredUsers.map((u) => {
               const fs = followState[u.id];
               const isSelf = currentUserId && u.id === currentUserId;
               return (
-                <div key={u.id} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
-                  <button
-                    onClick={() => onNavigateToUser?.(u)}
-                    className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer"
-                  >
-                    <img
-                      src={u.avatar || '/noob-logo.svg.jpeg'}
-                      alt={u.username}
-                      className="w-11 h-11 rounded-full object-cover border border-zinc-800 shrink-0"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-bold text-white truncate" translate="no">{u.username}</span>
-                        {u.isVerified && <VerifiedBadge size="xs" />}
-                      </div>
-                      {u.displayName && <span className="text-[11px] text-zinc-500 truncate block">{u.displayName}</span>}
-                    </div>
+                <div key={u.id} className="lv-row">
+                  <button onClick={() => onNavigateToUser?.(u)} className="lv-who">
+                    <span className="lv-ava">
+                      <img src={u.avatar || '/noob-logo.svg.jpeg'} alt="" referrerPolicy="no-referrer" />
+                      {hasBoth && likedIds.has(u.id) && <span className="lv-heart" aria-label="Liked"><Heart /></span>}
+                    </span>
+                    <span className="lv-id">
+                      <span className="u"><span translate="no">{u.username}</span>{u.isVerified && <VerifiedBadge size="xs" />}</span>
+                      {u.displayName && <span className="n">{u.displayName}</span>}
+                    </span>
                   </button>
-                  {likedIds.has(u.id) && (
-                    <Heart className="w-4 h-4 text-red-500 fill-red-500 shrink-0" aria-label="Liked" />
-                  )}
                   {onToggleFollowUser && !isSelf && (
-                    <button
-                      onClick={() => handleFollowClick(u)}
-                      disabled={followBusy === u.id}
-                      className={`shrink-0 px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-60 ${
-                        fs?.isFollowing
-                          ? 'bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700'
-                          : fs?.isFollowRequested
-                          ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
-                          : 'bg-[#0095F6] text-white hover:bg-[#1877c9]'
-                      }`}
-                    >
-                      {followBusy === u.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : fs?.isFollowing ? (
-                        <UserCheck className="w-3.5 h-3.5" />
-                      ) : fs?.isFollowRequested ? (
-                        <Clock className="w-3.5 h-3.5" />
-                      ) : (
-                        <UserPlus className="w-3.5 h-3.5" />
-                      )}
-                      {fs?.isFollowing ? 'Noobed' : fs?.isFollowRequested ? 'Requested' : 'Noob'}
+                    <button onClick={() => handleFollowClick(u)} disabled={followBusy === u.id} className={`lv-btn ${fs?.isFollowing || fs?.isFollowRequested ? 'is-on' : ''}`}>
+                      {followBusy === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : fs?.isFollowing ? 'Noobed' : fs?.isFollowRequested ? 'Requested' : 'Noob'}
                     </button>
                   )}
                 </div>

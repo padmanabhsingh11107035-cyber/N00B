@@ -8,29 +8,7 @@ import { FeedVideoSlot } from './FeedVideoSlot';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
-import {
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-  Music2,
-  Flag,
-  MapPin,
-  Sparkles,
-  ExternalLink,
-  Volume2,
-  Tag,
-  ShieldCheck,
-  Archive,
-  Pin,
-  MessageSquareOff,
-  EyeOff,
-  Trash2,
-  Pencil,
-  Link2,
-  VolumeX,
-  Music
-} from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark, Music2, Flag, MapPin, Sparkles, ExternalLink, Volume2, Tag, ShieldCheck, Archive, Pin, MessageSquareOff, EyeOff, Trash2, Pencil, Link2, VolumeX, Music, Info, CircleCheck, CircleX } from 'lucide-react';
 import { Post, PostSlide, User } from '../../types';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -45,6 +23,8 @@ import { EditCaptionSheet } from '../Common/EditCaptionSheet';
 import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
+import { createPortal } from 'react-dom';
+import { setInterest, interested as isInterestedIn } from '../../utils/feedInterest';
 import { translateOne } from '../../i18n/contentTranslator';
 import { getLanguage } from '../../i18n/engine';
 import { formatCompactCount } from '../../utils/repostBatcher';
@@ -118,6 +98,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   const videoMayAutoplay = shouldAutoplayVideo(devicePrefs);   // Settings > Media quality: Wi-Fi only / never / data saver
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [menuView, setMenuView] = useState<'menu' | 'why'>('menu');   // the three-dot sheet: the list, or "Why you're seeing this post"
+  const [hiddenByMe, setHiddenByMe] = useState(false);   // "Not interested": the post folds away
+  const [interestNote, setInterestNote] = useState('');
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   // the "AI info" label: tapping it says why (the person said so, or NOOB found a marker in the file); asked only then
   const [aiInfoOpen, setAiInfoOpen] = useState(false);
@@ -482,6 +465,13 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
     } finally { setFollowBusy(false); setUnfollowArmed(false); }
   };
+  // "Why you're seeing this post": plain reasons from what is known about this post and this person
+  const whyLines: string[] = [];
+  if (isFollowingAuthor) whyLines.push(`You noob @${post.username}, so their posts show on your Home.`);
+  else whyLines.push(`@${post.username} is not someone you noob: NOOB suggests posts that many people like.`);
+  if (post.category) whyLines.push(`It is in "${post.category}", a topic that is popular on NOOB.`);
+  if ((post.likesCount || 0) > 20 || (post.commentsCount || 0) > 5) whyLines.push('Many people have liked, commented on or reposted it.');
+  if (isInterestedIn('post', post.id)) whyLines.push('You told us you are interested in it.');
   const goToProfile = async (userId: string) => {
     if (!onNavigateToProfile || !userId) return;
     const known = allUsers.find((u) => u.id === userId);
@@ -638,6 +628,13 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  if (hiddenByMe) {
+    return (
+      <article ref={articleRef} data-post-card="" id={`post-card-${post.id}`} className="hv-card w-full mb-4">
+        <div className="pm-folded" data-testid="post-folded"><span>Thanks. You will see fewer posts like this.</span><button type="button" onClick={() => { setInterest('post', post.id, null); setHiddenByMe(false); }}>Undo</button></div>
+      </article>
+    );
+  }
   return (
     <article
       ref={articleRef}
@@ -738,7 +735,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         <div className="relative shrink-0 ml-2">
           <button
             id={`post-options-btn-${post.id}`}
-            onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+            onClick={() => { setMenuView('menu'); setShowOptionsMenu(!showOptionsMenu); }}
             className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Post options"
           >
@@ -746,7 +743,21 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
 
           {showOptionsMenu && (
-            <div className="absolute right-0 top-8 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl">
+            createPortal(<div className="pm-layer" role="dialog" aria-modal="true" aria-label="Post options"><div className="pm-back" onClick={() => setShowOptionsMenu(false)} aria-hidden="true" /><div className="pm-sheet" data-testid="post-menu-sheet"><div className="pm-bar" aria-hidden="true"><span /></div>
+              {menuView === 'why' ? (
+                <div className="pm-why" data-testid="post-why">
+                  <h3>Why you're seeing this post</h3>
+                  {whyLines.map((l) => <p key={l}>{l}</p>)}
+                  <button type="button" onClick={() => setMenuView('menu')} className="pm-solo">Back</button>
+                </div>
+              ) : (<div className="pm-group">
+              {!isOwner && !post.isSponsored && (
+                <>
+                  <button type="button" onClick={() => setMenuView('why')} data-testid="post-why-btn"><Info className="w-6 h-6" /> Why you're seeing this post</button>
+                  <button type="button" onClick={() => { setInterest('post', post.id, 'yes'); setInterestNote('Thanks. We will show you more posts like this.'); setShowOptionsMenu(false); }} data-testid="post-interested"><CircleCheck className="w-6 h-6" /> Interested</button>
+                  <button type="button" onClick={() => { setInterest('post', post.id, 'no'); setHiddenByMe(true); setShowOptionsMenu(false); }} data-testid="post-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
+                </>
+              )}
               {post.isSponsored && onHideAd && (
                 <button
                   onClick={() => {
@@ -770,7 +781,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               {!isOwner && (
                 <button
                   onClick={() => { setShowOptionsMenu(false); openContentReport({ type: 'post', id: post.id }); }}
-                  className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                  className="pm-danger w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                   data-testid="post-report"
                 >
                   <Flag className="w-4 h-4" /> Report
@@ -851,7 +862,8 @@ export const PostCard: React.FC<PostCardProps> = ({
               >
                 <Tag className="w-4 h-4 text-blue-400" /> Copy Link
               </button>
-            </div>
+              </div>)}
+            </div></div>, document.body)
           )}
         </div>
       </header>
@@ -1083,6 +1095,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               title={post.isLiked ? 'Unlike' : 'Like'}
             >
               <Heart className={`w-6 h-6 ${post.isLiked ? 'fill-current stroke-red-500' : 'stroke-current'}`} />
+              {!likeCountHidden && post.likesCount > 0 && <span className="hv-count">{formatCompactCount(post.likesCount)}</span>}
               <LikeReactionBurst emoji={reactionEmoji} burstKey={likeBurstKey} />
             </button>
 
@@ -1229,6 +1242,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* "17 hours ago · See Translation" (the exact date and time is the tooltip) */}
+        {interestNote && <p className="hv-time mt-1.5" role="status" data-testid="post-interest-note">{interestNote}</p>}
         <div className="hv-time mt-1.5 pb-1 text-left" title={formatExactDateTime(post.createdAt)}>
           <span>{agoText(post.createdAt)}</span>
           {(shownCaption || '').trim().length > 0 && (

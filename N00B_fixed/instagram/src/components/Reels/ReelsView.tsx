@@ -13,34 +13,11 @@ import { LoadingPage } from '../Common/LoadingPages';
 import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
-import {
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-  Music,
-  ExternalLink,
-  Sparkles,
-  Globe,
-  Check,
-  Film,
-  ArrowLeft,
-  Trash2,
-  Pencil,
-  MoreVertical,
-  Flag,
-  Link2,
-  Pin,
-  MessageSquareOff,
-  EyeOff,
-  CornerDownRight,
-  ChevronDown,
-  ChevronUp,
-  Volume2,
-  VolumeX
-} from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark, Music, ExternalLink, Sparkles, Globe, Check, Film, ArrowLeft, Trash2, Pencil, MoreVertical, Flag, Link2, Pin, MessageSquareOff, EyeOff, CornerDownRight, ChevronDown, ChevronUp, Volume2, VolumeX, Info, CircleCheck, CircleX } from 'lucide-react';
 import { Reel, User } from '../../types';
 import { openContentReport } from '../Common/ContentReportSheet';
+import { setInterest, notInterestedIds } from '../../utils/feedInterest';
+const dropNotInterested = <T extends { id: string }>(list: T[]): T[] => { const no = notInterestedIds('reel'); return no.size ? list.filter((r) => !no.has(r.id)) : list; };
 import { ContentAiBadge } from '../Common/ContentAiBadge';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
@@ -145,6 +122,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [likeBurstKey, setLikeBurstKey] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
+  const [reelMenuView, setReelMenuView] = useState<'menu' | 'why'>('menu');
+  const [reelNote, setReelNote] = useState('');
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
   const [showShareSheet, setShowShareSheet] = useState(false);
@@ -199,10 +178,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       // first, with the rest of the feed shuffled behind it.
       const target = reels.find((r) => r.id === initialReelId);
       const rest = reels.filter((r) => r.id !== initialReelId);
-      setLocalReels(target ? [target, ...orderUnseenFirst(rest, currentUser.id, 'reels')] : orderUnseenFirst(reels, currentUser.id, 'reels'));
+      setLocalReels(dropNotInterested(target ? [target, ...orderUnseenFirst(rest, currentUser.id, 'reels')] : orderUnseenFirst(reels, currentUser.id, 'reels')));
     } else {
       // Reels this person hasn't watched yet come first (newest first), the rest shuffled behind them.
-      setLocalReels(orderUnseenFirst(reels, currentUser.id, 'reels'));
+      setLocalReels(dropNotInterested(orderUnseenFirst(reels, currentUser.id, 'reels')));
     }
     setCurrentIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1107,6 +1086,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setReelMenuView('menu');
                   setShowReelOptionsMenu((v) => !v);
                 }}
                 className="p-1 text-white cursor-pointer"
@@ -1117,12 +1097,25 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               </button>
 
               {isCur && showReelOptionsMenu && (
-                <>
-                  <div className="absolute -inset-[200vmax] z-30" onClick={(e) => { e.stopPropagation(); setShowReelOptionsMenu(false); }} />
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 bottom-10 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
-                  >
+                createPortal(<div className="pm-layer" role="dialog" aria-modal="true" aria-label="Reel options" onClick={(e) => e.stopPropagation()}>
+                  <div className="pm-back" onClick={(e) => { e.stopPropagation(); setShowReelOptionsMenu(false); }} aria-hidden="true" />
+                  <div className="pm-sheet" data-testid="reel-menu-sheet">
+                    <div className="pm-bar" aria-hidden="true"><span /></div>
+                    {reelMenuView === 'why' ? (
+                      <div className="pm-why" data-testid="reel-why">
+                        <h3>Why you're seeing this reel</h3>
+                        <p>{currentUser.followingIds?.includes(currentReel.userId) ? `You noob @${currentReel.username}, so their reels show for you.` : `@${currentReel.username} is not someone you noob: NOOB suggests reels that many people watch and like.`}</p>
+                        {(currentReel.likesCount || 0) > 20 && <p>Many people have liked or reposted it.</p>}
+                        <button type="button" onClick={() => setReelMenuView('menu')} className="pm-solo">Back</button>
+                      </div>
+                    ) : (<div className="pm-group">
+                    {!isReelOwner && currentReel && (
+                      <>
+                        <button type="button" onClick={() => setReelMenuView('why')} data-testid="reel-why-btn"><Info className="w-6 h-6" /> Why you're seeing this reel</button>
+                        <button type="button" onClick={() => { setInterest('reel', currentReel.id, 'yes'); setReelNote('Thanks. We will show you more reels like this.'); window.setTimeout(() => setReelNote(''), 2600); setShowReelOptionsMenu(false); }} data-testid="reel-interested"><CircleCheck className="w-6 h-6" /> Interested</button>
+                        <button type="button" onClick={() => { setInterest('reel', currentReel.id, 'no'); setReelNote('Thanks. You will see fewer reels like this.'); window.setTimeout(() => setReelNote(''), 2600); setShowReelOptionsMenu(false); }} data-testid="reel-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         setShowReelOptionsMenu(false);
@@ -1148,7 +1141,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     {!isReelOwner && currentReel && (
                       <button
                         onClick={() => { setShowReelOptionsMenu(false); openContentReport({ type: 'reel', id: currentReel.id }); }}
-                        className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                        className="pm-danger w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                         data-testid="reel-report"
                       >
                         <Flag className="w-4 h-4" /> Report
@@ -1223,9 +1216,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                         <Trash2 className="w-4 h-4" /> Delete Reel
                       </button>
                     )}
+                    </div>)}
                   </div>
-                </>
+                </div>, document.body)
               )}
+              {isCur && reelNote && createPortal(<div className="pm-toast" role="status" data-testid="reel-interest-note">{reelNote}</div>, document.body)}
             </div>
             {soundCover('rv-disc w-[38px] h-[38px]')}
           </div>

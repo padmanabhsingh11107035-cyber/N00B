@@ -96,7 +96,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
       >
         <NavButton id="nav-item-feed" label="Home" title="Home" active={activeTab === 'feed'} onClick={() => onSelectTab('feed')}>
           <div className="relative">
-            <Home className="nav-ico w-6 h-6" />
+            <Home className="nav-ico w-7 h-7" />
             <NavBadge count={count('feed')} />
           </div>
         </NavButton>
@@ -104,7 +104,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {showExplore && (
           <NavButton id="nav-item-explore" label="Explore" title="Explore" active={activeTab === 'explore'} onClick={() => onSelectTab('explore')}>
             <div className="relative">
-              <Compass className="nav-ico w-6 h-6" />
+              <Compass className="nav-ico w-7 h-7" />
               <NavBadge count={count('explore')} />
             </div>
           </NavButton>
@@ -113,7 +113,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {showReels && (
           <NavButton id="nav-item-reels" label="Reels" title="Reels" active={activeTab === 'reels'} onClick={() => onSelectTab('reels')}>
             <div className="relative">
-              <Film className="nav-ico w-6 h-6" />
+              <Film className="nav-ico w-7 h-7" />
               <NavBadge count={count('reels')} />
             </div>
           </NavButton>
@@ -122,14 +122,14 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {/* Create: opens the post / reel / story picker, never a page of its own, so it is never the "open" one */}
         {showCreate && (
           <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
-            <CirclePlus className="nav-ico nav-create w-10 h-10" />
+            <CirclePlus className="nav-ico nav-create w-11 h-11" />
           </NavButton>
         )}
 
         {showChat && (
           <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>
             <div className="relative">
-              <MessageSquare className="nav-ico w-6 h-6" />
+              <MessageSquare className="nav-ico w-7 h-7" />
               <NavBadge count={count('chat')} />
             </div>
           </NavButton>
@@ -138,7 +138,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {showGames && (
           <NavButton id="nav-item-games" label="Games" title="Mini-Games Arena" active={activeTab === 'games'} onClick={() => onSelectTab('games')}>
             <div className="relative">
-              <Gamepad2 className="nav-ico w-6 h-6" />
+              <Gamepad2 className="nav-ico w-7 h-7" />
               <NavBadge count={count('games')} />
             </div>
           </NavButton>
@@ -146,7 +146,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
 
         <NavButton id="nav-item-profile" label="You" title="My Profile" active={activeTab === 'profile'} onClick={tapProfile}>
           <span className="relative block">
-            <span className="nav-ava block w-6 h-6 rounded-full overflow-hidden">
+            <span className="nav-ava block w-7 h-7 rounded-full overflow-hidden">
               <img
                 src={userAvatar || '/noob-logo.svg.jpeg'}
                 alt="You"

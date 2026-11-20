@@ -70,7 +70,7 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 .hv-card .hv-music { font-size: 12.5px !important; color: var(--hv-text) !important; opacity: .85; }
 .hv-card .hv-who { font-size: 15.5px !important; font-weight: 800 !important; text-decoration: none !important; color: var(--hv-text) !important; letter-spacing: -.01em; }
 .hv-card .hv-sub { font-size: 11.5px !important; color: var(--hv-muted) !important; }
-.hv-card .hv-media { margin: 0; width: 100% !important; border-radius: 0; box-shadow: none; }
+.hv-card .hv-media { margin: 0; width: 100% !important; border-radius: 24px; box-shadow: none; }
 .hv-card .hv-body { padding: 12px 14px 0 !important; }
 .hv-card .hv-actions > div:first-child { gap: 18px !important; align-items: center; }
 .hv-card .hv-actions button { min-width: 30px; height: 36px; display: inline-flex; align-items: center; gap: 6px; background: none; color: var(--hv-text) !important; font-size: 16px; font-weight: 800; transition: transform .15s; }

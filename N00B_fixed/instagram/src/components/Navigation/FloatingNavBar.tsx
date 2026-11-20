@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Home, Compass, Gamepad2 } from 'lucide-react';
+import { FeedIcon } from '../Common/FeedIcon';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { useKeyboardOpen } from '../../utils/useVisualViewport';
 import { DOUBLE_TAP_MS, quickSwitchLinked } from '../../utils/quickSwitch';
@@ -147,11 +148,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {showVideos && (
           <NavButton id="nav-item-videos" label="Feed" title="Feed: long videos and live streams" active={activeTab === 'videos'} onClick={() => onSelectTab('videos')}>
             <div className="relative">
-              <svg className="nav-ico w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="6" width="22" height="15" rx="4.5" />
-                <path d="M11.6 10.4v6.2a.8.8 0 0 0 1.2.7l5.2-3.1a.8.8 0 0 0 0-1.4l-5.2-3.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" stroke="none" />
-                <path d="M9 24.2h10" />
-              </svg>
+              <FeedIcon className="nav-ico w-7 h-7" />
               <NavBadge count={count('videos')} />
             </div>
           </NavButton>

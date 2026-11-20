@@ -4,8 +4,8 @@ const read = (p) => fs.readFileSync(new URL('../../' + p, import.meta.url), 'utf
 let passed = 0, failed = 0;
 const check = (ok, name) => { if (ok) { passed++; console.log('  ok   ' + name); } else { failed++; console.log('  FAIL ' + name); } };
 const feed = read('src/components/Feed/FeedView.tsx'), mix = read('src/components/Feed/HomeMix.tsx'), chooser = read('src/components/PostCreation/CreateChooser.tsx'), app = read('src/App.tsx'), css = read('src/components/Feed/home.css'), poll = read('src/components/Feed/PollComposer.tsx');
-check(/data-testid="feed-videos-button"/.test(feed) && /className="hv-feed-btn [^"]*text-white/.test(feed) && /className="hv-feed-ico"/.test(feed) && /\.hv-feed-btn \{[^}]*background: none !important/.test(css), 'the Feed button of the top bar is a plain white icon without a plate');
-check(/@media \(max-width: 430px\) \{\s*header\.hv-top \{ gap: 3px !important;[^}]*\}\s*header\.hv-top \.hv-feed-btn \{ width: 32px; height: 34px; \}/.test(css), 'on a narrow phone the top bar buttons get smaller so nothing overlaps');
+check(!/feed-videos-button|hv-feed-btn/.test(feed + css) && /FeedIcon/.test(read('src/components/Navigation/FloatingNavBar.tsx')), 'the Feed icon is gone from the top bar of Home and lives on the bottom bar');
+check(/@media \(max-width: 430px\) \{\s*header\.hv-top \{ gap: 3px !important;/.test(css), 'on a narrow phone the top bar buttons get smaller so nothing overlaps');
 check(/const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';/.test(feed) && /mixOn \? mix\.slots\.indexOf\(i\) : -1/.test(feed) && /mix\.items\[slot\]/.test(feed), 'thoughts and polls sit between the posts of the plain For You feed only');
 check(!/id: 'anonymous', entryId/.test(feed) && /f\.id !== 'polls'\)/.test(feed) && !/id: 'report', entryId/.test(feed), 'the two pages (and "Report a problem", now in Customer Support) are gone from the three-line menu for everyone');
 check(/useHomeMix\(featOn\('anonymous'\), featOn\('fun-polls'\), refreshNonce\)/.test(feed), 'the page switches of the administrator still decide whether they show, and a refresh of Home loads them again');

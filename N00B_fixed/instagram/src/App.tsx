@@ -22,7 +22,6 @@ import {
   UserCheck,
   UserPlus,
   Plus,
-  Youtube,
   CirclePlus,
   PanelLeftOpen,
   PanelLeftClose
@@ -77,6 +76,7 @@ import {
   noteSignupDevice
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
+import { FeedIcon } from './components/Common/FeedIcon';
 import { HintedScroll } from './components/Feed/ScrollMoreHint';
 import { FeedView } from './components/Feed/FeedView';
 // Statically imported before, which meant every single page load of the whole app (not just opening
@@ -1969,7 +1969,7 @@ export default function App() {
         { id: 'home', label: 'Home', icon: <Home />, active: pageTab === 'feed', badge: navBadges.feed > 0 ? navBadges.feed : undefined, onClick: () => handleSelectNavTab('feed'), testId: 'side-home' },
         featOn('explore') && { id: 'explore', label: 'Explore', icon: <Compass />, active: pageTab === 'explore', onClick: () => handleSelectNavTab('explore'), testId: 'side-explore' },
         featOn('reels') && { id: 'reels', label: 'Reels', icon: <Film />, active: pageTab === 'reels', badge: navBadges.reels > 0 ? navBadges.reels : undefined, onClick: () => handleSelectNavTab('reels'), testId: 'side-reels' },
-        featOn('videos') && { id: 'videos', label: 'Feed', icon: <Youtube />, active: pageTab === 'videos', onClick: () => handleSelectNavTab('videos'), testId: 'side-videos' },
+        featOn('videos') && { id: 'videos', label: 'Feed', icon: <FeedIcon />, active: pageTab === 'videos', onClick: () => handleSelectNavTab('videos'), testId: 'side-videos' },
         featOn('create') && { id: 'create', label: 'Create', icon: <CirclePlus />, onClick: () => handleSelectNavTab('post'), testId: 'side-create' },
         featOn('chat') && { id: 'chat', label: 'Chat', icon: <MessageSquare />, active: pageTab === 'chat', badge: unreadChatCount > 0 ? unreadChatCount : undefined, onClick: () => handleSelectNavTab('chat'), testId: 'side-chat' },
         featOn('games') && { id: 'games', label: 'Mini-Games', icon: <Gamepad2 />, active: pageTab === 'games', badge: navBadges.games > 0 ? navBadges.games : undefined, onClick: () => handleSelectNavTab('games'), testId: 'side-games' },

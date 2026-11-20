@@ -818,24 +818,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <Rocket className="w-4 h-4" />
           </button>
 
-          {/* The Feed page (long videos and live streams): a plain white icon, no plate. It used to be a row of the three-line menu. */}
-          {onOpenTab && featOn('videos') && (
-            <button
-              onClick={() => onOpenTab('videos')}
-              data-testid="feed-videos-button"
-              data-no-hit="1"
-              className="hv-feed-btn shrink-0 flex items-center justify-center text-white cursor-pointer active:scale-90 transition-transform"
-              title="Feed"
-              aria-label="Feed: long videos and live streams"
-            >
-              <svg className="hv-feed-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-                <rect x="3" y="6" width="22" height="15" rx="4.5" stroke="currentColor" strokeWidth="2" />
-                <path d="M11.6 10.4v6.2a.8.8 0 0 0 1.2.7l5.2-3.1a.8.8 0 0 0 0-1.4l-5.2-3.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" />
-                <path d="M9 24.2h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <circle cx="23.6" cy="6" r="3.1" className="hv-feed-dot" />
-              </svg>
-            </button>
-          )}
+          {/* The Feed page (long videos and live streams) is on the bottom bar now, not here. */}
 
           {/* The Music page (Create is the circled plus in the middle of the bottom bar); not drawn while the administrator has the page hidden */}
           {onOpenTab && !musicHidden && (

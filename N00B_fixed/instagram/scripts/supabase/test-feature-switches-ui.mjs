@@ -75,7 +75,7 @@ section('5. The menu on Home');
 for (const k of ['draw', 'studio', 'team', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'drinks', 'creations']) {
   check(new RegExp(`featOn\\('${k}'\\) && (isMainAdmin\\(currentUser\\) && )?\\{ id: `).test(feed),`${k}: its entry is drawn only while the page is on`);
 }
-check(/onOpenTab && featOn\('videos'\)/.test(feed), 'the Feed (long videos) button too');
+check(/useFeatureOn\('videos'\)/.test(read('src/components/Navigation/FloatingNavBar.tsx')), 'the Feed (long videos) button of the bottom bar follows the switch too');
 check(/FUN_FEATURES\.filter\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)[^\n]*?\)\.map/.test(feed), 'the fun pages are listed one by one, each only while its page is on');
 check(/const featuresOff = useFeaturesOff\(\);/.test(feed), 'the menu reads the list from the app');
 

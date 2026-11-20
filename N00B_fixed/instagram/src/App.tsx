@@ -2367,7 +2367,7 @@ export default function App() {
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
         badges={navBadges}
-        hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0}
+        hideOnMobile={(activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0) || (activeTab === 'reels' && pageLayers.layers.length === 0)}
       />
 
       {activeTab !== 'chat' && activeTab !== 'reels' && <BackToTop />}

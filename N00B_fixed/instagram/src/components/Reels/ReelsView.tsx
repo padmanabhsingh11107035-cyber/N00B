@@ -1379,6 +1379,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         floating bottom nav if that element starts at y=0, which it doesn't
         here, so it still overlapped the nav until this switched to `fixed`. */}
     <div data-noob-keep="1" className="edge-own fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-[var(--nav-h)]">
+      {/* the bottom of the Reels page (where the bottom bar is on the other pages): one big comment bar, like the reply bar of a story */}
+      <div className="rv-cbar-wrap">
+        <button
+          type="button"
+          className="rv-cbar"
+          data-testid="reels-comment-bar"
+          disabled={!currentReel || !!currentReel.isCommentsDisabled}
+          onClick={() => { if (currentReel && !currentReel.isCommentsDisabled) setShowComments(true); }}
+          aria-label="Comments"
+        >
+          <img src={currentUser.avatar || '/noob-logo.svg.jpeg'} alt="" className="rv-cbar-ava" referrerPolicy="no-referrer" />
+          <span className="rv-cbar-txt">{currentReel?.isCommentsDisabled ? 'Comments are turned off' : 'Add a comment…'}</span>
+          {!currentReel?.isCommentsDisabled && <span className="rv-cbar-ico"><MessageCircle className="w-7 h-7" strokeWidth={1.8} />{currentReel && currentReel.commentsCount > 0 && <b>{currentReel.commentsCount}</b>}</span>}
+        </button>
+      </div>
       <div
         id="reels-page-container"
         className="relative w-full h-full sm:max-h-[860px] sm:max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden select-none sm:shadow-2xl sm:border border-neutral-800"

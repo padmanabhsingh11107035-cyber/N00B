@@ -876,6 +876,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
    full colour with a heavier icon and a bold label (the picture, for "You", gets a ring). The colour is the accent (--color-noob: white in the dark
    modes, black in Light), so it follows the theme; on the Reels page the bar is the near-black of that page in both modes.
    --nav-h is the bar's height (with the phone's bottom gesture area), for everything that has to stay clear of it. */
+:root { --noob-css: 1; }   /* a marker public/theme-init.js looks for: if it is missing, the stylesheet did not load and is asked for again */
 :root { --nav-h: calc(54px + max(env(safe-area-inset-bottom, 0px) - 14px, 10px)); }
 #floating-bottom-nav {
   height: var(--nav-h);

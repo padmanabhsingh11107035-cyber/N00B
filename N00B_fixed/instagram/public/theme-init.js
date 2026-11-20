@@ -65,6 +65,38 @@
   } catch (e) { /* stays on */ }
 })();
 
+// Stylesheet rescue. On some phones the app's main stylesheet is not applied (the page shows as plain text, giant pictures, no design) - e.g. when the phone or the network kept a wrong answer for that
+// file's address. The stylesheet sets a marker (--noob-css in index.css); if the marker is missing shortly after the page loaded, or the stylesheet's link reports an error, the same file is asked for again
+// under a new address (?cb=...), which no phone or network has a saved answer for. Done at most twice; if that does not help either, the page reloads once.
+(function () {
+  try {
+    var KEY = 'noob_css_rescue';
+    var ok = function () { try { return getComputedStyle(document.documentElement).getPropertyValue('--noob-css').replace(/\s/g, '') === '1'; } catch (e) { return true; } };
+    var rescue = function () {
+      var links = document.querySelectorAll('link[rel="stylesheet"][href*="/assets/"]');
+      var n = Number(sessionStorage.getItem(KEY) || '0');
+      if (!links.length) return;
+      if (n >= 2) { return; }
+      sessionStorage.setItem(KEY, String(n + 1));
+      for (var i = 0; i < links.length; i++) {
+        var old = links[i];
+        var href = (old.getAttribute('href') || '').replace(/[?&]cb=\d+/, '');
+        var fresh = document.createElement('link');
+        fresh.rel = 'stylesheet';
+        fresh.href = href + (href.indexOf('?') < 0 ? '?' : '&') + 'cb=' + Date.now() + i;
+        document.head.appendChild(fresh);
+      }
+      window.setTimeout(function () { if (!ok()) rescue(); else sessionStorage.removeItem(KEY); }, 3500);
+    };
+    var check = function () { if (!ok()) rescue(); };
+    window.addEventListener('load', function () { window.setTimeout(check, 600); });
+    window.addEventListener('error', function (e) {
+      var t = e && e.target;
+      if (t && t.tagName && String(t.tagName).toUpperCase() === 'LINK' && /\/assets\/.*\.css/.test(String(t.href || ''))) window.setTimeout(check, 300);
+    }, true);
+  } catch (e) { /* nothing to rescue with */ }
+})();
+
 // Self-heal after an update. When a new version is published while the app is open (or kept in memory), the files the old page asks for no longer exist: the page then loses its stylesheet
 // and shows up as plain unstyled text and giant pictures. If a file of the app (/assets/...) fails to load, the app reloads itself to get the new page: at most twice a minute, so it can never loop.
 (function () {

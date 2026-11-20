@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Plus, Check, Clock, Volume2 } from 'lucide-react';
+import { Plus, UserPlus, Check, Clock, Volume2 } from 'lucide-react';
 import { User, StatusNote } from '../../types';
 import { predictFollowToggle } from '../../utils/followPredict';
 import { StatusNoteViewerModal } from '../Modals/StatusNoteViewerModal';
@@ -47,11 +47,11 @@ const FollowBadge: React.FC<{ username: string; state: 'none' | 'following' | 'r
     disabled={state !== 'none' || busy || disabled}
     title={state === 'following' ? 'Noobed' : state === 'requested' ? 'Requested' : `Noob ${username}`}
     aria-label={state === 'following' ? `Noobed ${username}` : state === 'requested' ? `Noob requested for ${username}` : `Noob ${username}`}
-    className={`${state === 'none' ? 'hv-badge ' : ''}absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
+    className={`${state === 'none' ? 'hv-follow-chip ' : ''}absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
       state === 'following' ? 'bg-emerald-500' : state === 'requested' ? 'bg-zinc-600' : 'bg-sky-500 hover:bg-sky-400 cursor-pointer'
     } ${busy ? 'opacity-60' : ''}`}
   >
-    {state === 'following' ? <Check className="w-3 h-3 stroke-[3]" /> : state === 'requested' ? <Clock className="w-3 h-3 stroke-[3]" /> : <Plus className="w-3 h-3 stroke-[3]" />}
+    {state === 'following' ? <Check className="w-3 h-3 stroke-[3]" /> : state === 'requested' ? <Clock className="w-3 h-3 stroke-[3]" /> : <UserPlus className="w-3 h-3 stroke-[2.6]" />}
   </button>
 );
 

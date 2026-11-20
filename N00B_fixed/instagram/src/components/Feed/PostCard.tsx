@@ -473,7 +473,6 @@ export const PostCard: React.FC<PostCardProps> = ({
       armTimer.current = window.setTimeout(() => setUnfollowArmed(false), 3000);
       return;
     }
-    setUnfollowArmed(false);
     setFollowBusy(true);
     try {
       const r = await onToggleFollowUser(post.userId);
@@ -481,7 +480,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         setFollowRequested(!!r.isFollowRequested);
         setFollowOverride(!!r.isFollowing);
       }
-    } finally { setFollowBusy(false); }
+    } finally { setFollowBusy(false); setUnfollowArmed(false); }
   };
   const goToProfile = async (userId: string) => {
     if (!onNavigateToProfile || !userId) return;

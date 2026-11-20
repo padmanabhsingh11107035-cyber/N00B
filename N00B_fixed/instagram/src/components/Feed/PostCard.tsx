@@ -873,9 +873,9 @@ export const PostCard: React.FC<PostCardProps> = ({
               onDoubleClick={(e) => e.stopPropagation()}
               title={speakerOn ? 'Sound on' : 'Sound off'}
               aria-label={speakerOn ? 'Turn sound off' : 'Turn sound on'}
-              className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
+              className="absolute bottom-3 right-3 z-20 p-2.5 rounded-full bg-zinc-700/80 hover:bg-zinc-700 text-white backdrop-blur-md transition-colors cursor-pointer"
             >
-              {speakerOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {speakerOn ? <Volume2 className="w-[18px] h-[18px]" /> : <VolumeX className="w-[18px] h-[18px]" />}
             </button>
           )}
 
@@ -998,7 +998,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
           {/* Product / LiDAR Tag Indicator */}
           {currentSlide.productTags && currentSlide.productTags.length > 0 && (
-            <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md border border-green-500/40 rounded-xl px-2.5 py-1 text-[10px] text-noob flex items-center gap-1.5 shadow-lg">
+            <div className="absolute bottom-16 right-3 bg-black/80 backdrop-blur-md border border-green-500/40 rounded-xl px-2.5 py-1 text-[10px] text-noob flex items-center gap-1.5 shadow-lg">
               <Tag className="w-3 h-3" />
               <span>{currentSlide.productTags[0].name} ({currentSlide.productTags[0].price})</span>
             </div>

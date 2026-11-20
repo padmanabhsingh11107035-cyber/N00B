@@ -13,7 +13,7 @@ import {
   MessageCircle,
   Send,
   Bookmark,
-  MoreHorizontal,
+  Music2,
   Flag,
   MapPin,
   Sparkles,
@@ -45,6 +45,9 @@ import { EditCaptionSheet } from '../Common/EditCaptionSheet';
 import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
+import { translateOne } from '../../i18n/contentTranslator';
+import { getLanguage } from '../../i18n/engine';
+import { formatCompactCount } from '../../utils/repostBatcher';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
@@ -52,6 +55,21 @@ import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { lookStyle, lookRatio, lookAlt } from '../../utils/slideLook';
 import { fetchPostAiInfo } from '../../services/api';
 import { reportSongVisibility, forgetSong, holdSongs, toggleFeedSound, subscribeFeedSong, getFeedSongView } from '../../utils/songSound';
+
+/** "just now", "17 minutes ago", "17 hours ago", "3 days ago", then the date */
+function agoText(iso: string | undefined): string {
+  const t = iso ? new Date(iso).getTime() : NaN;
+  if (!Number.isFinite(t)) return '';
+  const m = Math.max(0, Math.floor((Date.now() - t) / 60000));
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} ${m === 1 ? 'minute' : 'minutes'} ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ${h === 1 ? 'hour' : 'hours'} ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} ${d === 1 ? 'day' : 'days'} ago`;
+  return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+}
+
 
 interface ToggleFollowResult {
   success: boolean;
@@ -402,6 +420,55 @@ export const PostCard: React.FC<PostCardProps> = ({
   // Tap the author's name or @handle (on a post or its comments) -> their real, full profile.
   // It opens AT ONCE with what the app already knows about that person (the list of users it loaded), and the newest details are fetched quietly and swapped in; only a
   // person that is not in that list is waited for.
+  // "Liked by <name> and others": one request per card that is on screen (cached by the API layer), skipped for big counts
+  const [likedByName, setLikedByName] = useState('');
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el || post.likesCount < 1 || post.likesCount > 300 || likeCountHidden) { setLikedByName(''); return; }
+    let alive = true;
+    const run = () => {
+      void fetchPostLikers(post.id).then((res) => {
+        const users = res?.users;
+        if (!alive || !users || !users.length) return;
+        const mine = new Set(currentUser.followingIds || []);
+        const pick = users.find((u) => mine.has(u.id) && u.id !== currentUser.id) || users.find((u) => u.id !== currentUser.id) || users[0];
+        setLikedByName(pick.username || pick.displayName || '');
+      }).catch(() => undefined);
+    };
+    if (typeof IntersectionObserver === 'undefined') { run(); return () => { alive = false; }; }
+    const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) { io.disconnect(); run(); } }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => { alive = false; io.disconnect(); };
+  }, [post.id, post.likesCount > 0, post.likesCount > 300]); // eslint-disable-line react-hooks/exhaustive-deps
+  // "See Translation": into the language of the app
+  const [translated, setTranslated] = useState('');
+  const [showTranslated, setShowTranslated] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translateNote, setTranslateNote] = useState('');
+  const seeTranslation = async () => {
+    if (showTranslated) { setShowTranslated(false); return; }
+    if (translated) { setShowTranslated(true); return; }
+    setTranslating(true); setTranslateNote('');
+    try {
+      const r = await translateOne(shownCaption || '', getLanguage());
+      if (r.text && r.text.trim() && r.text.trim() !== (shownCaption || '').trim()) { setTranslated(r.text); setShowTranslated(true); }
+      else setTranslateNote(r.busy ? 'Translation is busy. Try again in a moment.' : 'Nothing to translate: it is already in your language.');
+    } catch { setTranslateNote('Could not translate right now.'); }
+    finally { setTranslating(false); }
+  };
+  // the grey Follow pill in the header (only for other people that this person does not follow yet)
+  const [followedHere, setFollowedHere] = useState(false);
+  const [followRequested, setFollowRequested] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const showFollowPill = !!onToggleFollowUser && post.userId !== currentUser.id && !post.isSponsored && !followedHere && !(currentUser.followingIds || []).includes(post.userId);
+  const followFromPost = async () => {
+    if (followBusy || !onToggleFollowUser) return;
+    setFollowBusy(true);
+    try {
+      const r = await onToggleFollowUser(post.userId);
+      if (r && r.success) { if (r.isFollowRequested) setFollowRequested(true); else if (r.isFollowing) setFollowedHere(true); }
+    } finally { setFollowBusy(false); }
+  };
   const goToProfile = async (userId: string) => {
     if (!onNavigateToProfile || !userId) return;
     const known = allUsers.find((u) => u.id === userId);
@@ -572,7 +639,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <div className="relative flex items-center shrink-0">
             <div
               onClick={() => setShowFullscreenAvatar(true)}
-              className="hv-ring w-9 h-9 rounded-full p-[1.5px] cursor-pointer hover:scale-105 transition-transform"
+              className="hv-ring w-9 h-9 rounded-full cursor-pointer"
               title="View full-size avatar"
             >
               <AvatarMedia
@@ -604,7 +671,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
                 onClick={() => goToProfile(post.userId)}
-                className="hv-who min-w-0 text-xs font-bold text-white tracking-tight cursor-pointer break-words [overflow-wrap:anywhere]"
+                className="hv-who min-w-0 text-xs font-bold text-white tracking-tight cursor-pointer break-words [overflow-wrap:anywhere]" data-testid="post-author-name"
               >
                 {post.displayName || post.username}
               </span>
@@ -622,6 +689,12 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
 
             {/* the @username is shown once, in front of the caption under the picture - here only the place and the category (if any) go under the name */}
+            {post.audioTrack?.title && (
+              <div className="hv-sub hv-music flex items-center gap-1.5 text-[10px] text-zinc-400 min-w-0" data-testid="post-music-line">
+                <Music2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{post.audioTrack.artist || post.username} · {post.audioTrack.title}</span>
+              </div>
+            )}
             {(post.location || post.category) && (
               <div className="hv-sub flex items-center gap-2 text-[10px] text-zinc-400">
                 {post.location && (
@@ -642,6 +715,12 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
 
+        {/* Follow: a grey pill, only for people this person does not follow yet */}
+        {showFollowPill && (
+          <button type="button" onClick={() => void followFromPost()} disabled={followBusy} className="hv-follow shrink-0 ml-auto" data-testid="post-follow-pill">
+            {followRequested ? 'Requested' : 'Follow'}
+          </button>
+        )}
         {/* Options Menu Toggle */}
         <div className="relative shrink-0 ml-2">
           <button
@@ -650,7 +729,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Post options"
           >
-            <MoreHorizontal className="w-5 h-5" />
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M4 8h16M9 16h11" /></svg>
           </button>
 
           {showOptionsMenu && (
@@ -1003,6 +1082,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 title="View & Add Comments"
               >
                 <MessageCircle className="w-6 h-6 stroke-current" />
+                {post.commentsCount > 0 && <span className="hv-count">{formatCompactCount(post.commentsCount)}</span>}
               </button>
             )}
 
@@ -1046,21 +1126,25 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
         </div>
 
-        {/* Like Counts */}
+        {/* "Liked by anuj and others": a person you follow when there is one, else the first; only asked for when the card is on screen */}
         {!likeCountHidden && (
           <button
             onClick={() => setShowLikesSheet(true)}
             disabled={post.likesCount === 0}
             className="hv-likes mt-2 text-xs font-bold text-white tracking-tight hover:underline disabled:hover:no-underline cursor-pointer disabled:cursor-default text-left"
+            data-testid="post-likes-line"
           >
-            {post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}
+            {likedByName
+              ? <><span className="hv-likedby">Liked by</span> {likedByName}{post.likesCount > 1 && <span className="hv-likedby"> and </span>}{post.likesCount > 1 && 'others'}</>
+              : <>{post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}</>}
           </button>
         )}
 
         {/* Captions with Formatted Line Breaks */}
         <div className="hv-caption mt-1.5 text-xs text-zinc-200">
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
-            {linkify(shownCaption || '')}
+            <b className="hv-cap-name cursor-pointer" onClick={() => goToProfile(post.userId)}>{post.username}</b>{' '}
+            {showTranslated && translated ? linkify(translated) : linkify(shownCaption || '')}
           </span>
           {(shownCaption || '').length > 90 && (
             <button
@@ -1131,10 +1215,18 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
         )}
 
-        {/* Timestamp — exact date/time, not a relative "2h ago" that goes
-            stale the moment you stop looking at the screen. */}
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1 pb-1 text-right">
-          {formatExactDateTime(post.createdAt)}
+        {/* "17 hours ago · See Translation" (the exact date and time is the tooltip) */}
+        <div className="hv-time mt-1.5 pb-1 text-left" title={formatExactDateTime(post.createdAt)}>
+          <span>{agoText(post.createdAt)}</span>
+          {(shownCaption || '').trim().length > 0 && (
+            <>
+              <span aria-hidden="true"> · </span>
+              <button type="button" onClick={() => void seeTranslation()} disabled={translating} className="hv-translate" data-testid="post-see-translation">
+                {translating ? 'Translating…' : showTranslated ? 'See Original' : 'See Translation'}
+              </button>
+            </>
+          )}
+          {translateNote && <span className="block text-[11px] text-zinc-500">{translateNote}</span>}
         </div>
       </div>
 

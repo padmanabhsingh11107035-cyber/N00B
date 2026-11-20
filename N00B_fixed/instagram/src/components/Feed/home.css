@@ -58,21 +58,31 @@ header.hv-top [data-testid="noob-menu-button"] { background: var(--hv-surface); 
 /* ---- a post: no box. The name row, a big rounded picture, a row of round buttons, then the words ---- */
 article.hv-card { background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; margin-bottom: 26px !important; }
 .hv-card .hv-head { border: 0 !important; padding: 6px 14px 10px !important; }
-.hv-card .hv-ring { width: 42px; height: 42px; padding: 2.5px; background: conic-gradient(from 210deg, #7c5cff, #ff4d8d, #ffae42, #7c5cff) !important; border-radius: 9999px; }
-.hv-card .hv-ring img, .hv-card .hv-ring video { border: 2px solid var(--hv-ring-gap); }
-.hv-card .hv-who { font-size: 14.5px !important; font-weight: 800 !important; text-decoration: none !important; color: var(--hv-text) !important; letter-spacing: -.01em; }
+.hv-card .hv-ring { width: 38px; height: 38px; padding: 0; background: none !important; border-radius: 9999px; overflow: hidden; }
+.hv-card .hv-ring img, .hv-card .hv-ring video { border: 0; }
+.hv-card .hv-follow { height: 32px; padding: 0 16px; border-radius: 9px; background: var(--hv-surface); color: var(--hv-text); font-size: 13.5px; font-weight: 800; letter-spacing: -.01em; cursor: pointer; transition: transform .15s; }
+.hv-card .hv-follow:active { transform: scale(.94); }
+.hv-card .hv-follow:disabled { opacity: .6; }
+.hv-card .hv-music { font-size: 12.5px !important; color: var(--hv-text) !important; opacity: .85; }
+.hv-card .hv-who { font-size: 15.5px !important; font-weight: 800 !important; text-decoration: none !important; color: var(--hv-text) !important; letter-spacing: -.01em; }
 .hv-card .hv-sub { font-size: 11.5px !important; color: var(--hv-muted) !important; }
-.hv-card .hv-media { margin: 0 10px; width: calc(100% - 20px) !important; border-radius: 28px; box-shadow: 0 22px 40px -26px rgba(0, 0, 0, .8); }
-:root[data-theme="light"] .hv-card .hv-media { box-shadow: 0 22px 40px -28px rgba(60, 40, 120, .55); }
-.hv-card .hv-body { padding: 12px 18px 0 !important; }
-.hv-card .hv-actions > div:first-child { gap: 8px !important; }
-.hv-card .hv-actions button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 9999px; background: var(--hv-surface); color: var(--hv-text) !important; transition: transform .15s, background .15s; }
+.hv-card .hv-media { margin: 0; width: 100% !important; border-radius: 0; box-shadow: none; }
+.hv-card .hv-body { padding: 12px 14px 0 !important; }
+.hv-card .hv-actions > div:first-child { gap: 18px !important; align-items: center; }
+.hv-card .hv-actions button { min-width: 30px; height: 36px; display: inline-flex; align-items: center; gap: 6px; background: none; color: var(--hv-text) !important; font-size: 16px; font-weight: 800; transition: transform .15s; }
+.hv-card .hv-actions svg { width: 28px; height: 28px; }
+.hv-card .hv-actions .hv-count { font-size: 16px; font-weight: 800; }
 .hv-card .hv-actions button:active { transform: scale(.9); }
-.hv-card .hv-actions button.hv-liked { background: var(--hv-grad); color: #fff !important; box-shadow: 0 8px 18px -8px rgba(255, 77, 141, .8); }
-.hv-card .hv-actions button.hv-liked svg { fill: #fff; stroke: #fff; }
-.hv-card .hv-actions button.hv-saved { background: var(--hv-surface-2); }
-.hv-card .hv-likes { font-size: 13.5px !important; font-weight: 800 !important; color: var(--hv-text) !important; margin-top: 10px !important; }
-.hv-card .hv-caption { font-size: 14px !important; line-height: 1.45; color: var(--hv-text) !important; }
+.hv-card .hv-actions button.hv-liked { color: #ff2d55 !important; }
+.hv-card .hv-actions button.hv-liked svg { fill: #ff2d55; stroke: #ff2d55; }
+.hv-card .hv-actions button.hv-saved { color: var(--hv-text) !important; }
+.hv-card .hv-actions button.hv-saved svg { fill: currentColor; stroke: currentColor; }
+.hv-card .hv-likedby { font-weight: 600; }
+.hv-card .hv-cap-name { font-weight: 800; margin-right: 2px; }
+.hv-card .hv-time { font-size: 13.5px; color: var(--hv-muted); }
+.hv-card .hv-translate { font-weight: 800; color: var(--hv-text); cursor: pointer; }
+.hv-card .hv-likes { font-size: 16px !important; font-weight: 800 !important; color: var(--hv-text) !important; margin-top: 10px !important; }
+.hv-card .hv-caption { font-size: 16px !important; line-height: 1.45; color: var(--hv-text) !important; }
 .hv-card .hv-meta { color: var(--hv-muted) !important; }
 
 /* ---- the story viewer's bottom bar: a roomy glass pill and a round heart ---- */

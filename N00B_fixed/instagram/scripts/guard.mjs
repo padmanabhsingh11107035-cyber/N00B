@@ -50,7 +50,6 @@ const CHECKS = [
   ['Birthday gifts', ['node', 'scripts/supabase/test-birthday-gifts.mjs']],
   ['Page switches (admin)', ['node', 'scripts/supabase/test-music-page-hide-ui.mjs']],
   ['Settings hub', ['node', 'scripts/supabase/test-settings-hub-ui.mjs']],
-  ['Scratch cards', ['node', 'scripts/supabase/test-scratch-cards.mjs']],
   ['Lenses', ['node', 'scripts/supabase/test-lenses.mjs']],
   ['Sign-up security check (Turnstile): off = unchanged, fail open', ['node', 'scripts/supabase/test-turnstile.mjs']],
   ['Family map', ['node', 'scripts/supabase/test-family.mjs']],

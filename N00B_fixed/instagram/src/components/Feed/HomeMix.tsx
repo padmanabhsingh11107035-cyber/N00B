@@ -33,15 +33,13 @@ import { resolveMedia } from '../../services/supabase';
 import { funShareUrl } from '../../utils/funRoutes';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
-import { loadFeed as loadScratchFeed, failed as scratchFailed, type ScratchCard as ScratchCardData } from '../Scratch/scratchData';
 import { useCommentsBox } from '../../utils/useVisualViewport';
 
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
 
-export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'scratch'; at: string; card: ScratchCardData };
-export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : 'scratch-' + i.card.id);
-const ScratchMixCard = React.lazy(() => import('../Scratch/ScratchMixCard').then((m) => ({ default: m.ScratchMixCard })));
+export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll };
+export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : 'poll-' + i.poll.id);
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -88,41 +86,39 @@ export function loadStats(k: MixKind, ids: string[]): void {
 }
 
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
-export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, scratchOn = false) {
+export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number) {
   const [items, setItems] = useState<MixItem[]>([]);
   const [slots, setSlots] = useState<number[]>([]);   // after which posts each item is shown: uneven gaps, new every load
   useEffect(() => {
     let alive = true;
     void Promise.all([
       anonOn ? fetchAnonMessages({ limit: 20 }).then((r) => r.messages).catch(() => [] as AnonMessage[]) : Promise.resolve([] as AnonMessage[]),
-      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[]),
-      scratchOn ? loadScratchFeed({ limit: 10 }).then((r) => (scratchFailed(r) ? [] : r.cards)).catch(() => [] as ScratchCardData[]) : Promise.resolve([] as ScratchCardData[])
-    ]).then(([anon, polls, scratch]) => {
+      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[])
+    ]).then(([anon, polls]) => {
       if (!alive) return;
-      // thoughts, polls and scratch cards are shuffled together, so each refresh of Home brings them in a different order
+      // thoughts and polls are shuffled together, so each refresh of Home brings them in a different order
       setItems(shuffled([
         ...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })),
-        ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
-        ...scratch.map((c): MixItem => ({ kind: 'scratch', at: c.createdAt, card: c }))
+        ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p }))
       ]));
       let at = Math.floor(Math.random() * 3);   // the first one comes after the 1st, 2nd or 3rd post
       const next: number[] = [];
-      for (let n = 0; n < anon.length + polls.length + scratch.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
+      for (let n = 0; n < anon.length + polls.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
       setSlots(next);
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
     });
     return () => { alive = false; };
-  }, [anonOn, pollsOn, scratchOn, refreshKey]);
+  }, [anonOn, pollsOn, refreshKey]);
   useEffect(() => {
     const onNew = (e: Event) => {
       const item = (e as CustomEvent<MixItem>).detail;
-      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn) || (item.kind === 'scratch' && !scratchOn)) return;
+      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn)) return;
       setItems((prev) => [item, ...prev.filter((x) => mixKey(x) !== mixKey(item))]);
     };
     window.addEventListener(HOME_MIX_NEW_EVENT, onNew);
     return () => window.removeEventListener(HOME_MIX_NEW_EVENT, onNew);
-  }, [anonOn, pollsOn, scratchOn]);
+  }, [anonOn, pollsOn]);
   const remove = useCallback((key: string) => setItems((prev) => prev.filter((x) => mixKey(x) !== key)), []);
   const updatePoll = useCallback((p: Poll) => setItems((prev) => prev.map((x) => (x.kind === 'poll' && x.poll.id === p.id ? { ...x, poll: p } : x))), []);
   return { items, slots, remove, updatePoll };
@@ -456,8 +452,6 @@ export function useCanManagePolls(enabled: boolean): boolean {
 export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile }) =>
   item.kind === 'anon'
     ? <AnonCard m={item.anon} currentUser={currentUser} canManage={canManage} onRemoved={() => onRemoved(mixKey(item))} />
-    : item.kind === 'scratch'
-    ? <React.Suspense fallback={null}><ScratchMixCard initial={item.card} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} /></React.Suspense>
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;
 
 // ---- writing an anonymous thought (opened from the Create sheet) ----------------------------------------------------------------------------------------

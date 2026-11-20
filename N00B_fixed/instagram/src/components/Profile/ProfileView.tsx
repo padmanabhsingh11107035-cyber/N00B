@@ -274,7 +274,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showDevices, setShowDevices] = useState(false);
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
-  const lensesOn = useFeatureOn('lenses');   // NOOB Lenses and Scratch Reveal: opened from here now (no longer from the menu on Home); the administrator can still switch each off
+  const lensesOn = useFeatureOn('lenses');   // NOOB Lenses: opened from here now (no longer from the menu on Home); the administrator can still switch each off
   const boothOn = useFeatureOn('booth');   // the administrator can switch the Buddy Booth off for users
   const [showQrScannerPage, setShowQrScannerPage] = useState(false);
   // Export Data: the readable text of the person's own details (utils/exportMyData.ts); null while the window is closed

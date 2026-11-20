@@ -1,13 +1,13 @@
 import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect } from 'react';
-import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2, ScanFace, VenetianMask, BarChart3, Sparkles } from 'lucide-react';
+import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2, ScanFace, VenetianMask, BarChart3 } from 'lucide-react';
 
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import '../Common/nzPage.css';
 import { ScrollMoreHint, useScrollMore } from '../Feed/ScrollMoreHint';
 
-export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'anon' | 'poll' | 'scratch' | 'studio' | 'lenses';
+export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'anon' | 'poll' | 'studio' | 'lenses';
 
 interface CreateChooserProps {
   onClose: () => void;
@@ -27,7 +27,6 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
   { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' },
   { kind: 'anon', title: 'Anonymous post', blurb: 'Words or a picture on Home, without your name', Icon: VenetianMask, tint: 'text-white' },
   { kind: 'poll', title: 'Poll', blurb: 'Ask everyone a question; shown with your name', Icon: BarChart3, tint: 'text-white' },
-  { kind: 'scratch', title: 'Scratch card', blurb: 'A picture under foil on Home that people scratch away', Icon: Sparkles, tint: 'text-amber-300' },
   { kind: 'lenses', title: 'Lenses', blurb: 'Face filters: take a picture, save it or share it anywhere', Icon: ScanFace, tint: 'text-amber-300' },
   { kind: 'studio', title: 'Edit in Studio', blurb: 'Edit photos and videos first, then share them', Icon: Wand2, tint: 'text-fuchsia-300' }
 ];
@@ -36,7 +35,6 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
   const liveOn = useFeatureOn('live');
   const anonOn = useFeatureOn('anonymous');
   const pollsOn = useFeatureOn('fun-polls');
-  const scratchOn = useFeatureOn('scratch');
   const more = useScrollMore(true);   // the sheet covers 70 % of the screen: a hint shows while more ways to create are below
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   useEffect(() => {
@@ -90,7 +88,7 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
 
         <div className="cs-wrap">
         <ul className="cs-list" ref={more.ref as React.RefObject<HTMLUListElement>}>
-          {ROWS.filter((r) => (r.kind !== 'live' || (liveOn && !live)) && (r.kind !== 'anon' || anonOn) && (r.kind !== 'poll' || pollsOn) && (r.kind !== 'scratch' || scratchOn)).map(({ kind, title, blurb, Icon, tint }) => (
+          {ROWS.filter((r) => (r.kind !== 'live' || (liveOn && !live)) && (r.kind !== 'anon' || anonOn) && (r.kind !== 'poll' || pollsOn)).map(({ kind, title, blurb, Icon, tint }) => (
             <li key={kind}>
               <button
                 type="button"

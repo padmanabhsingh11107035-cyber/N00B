@@ -37,7 +37,6 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'ai', label: 'NOOB AI', blurb: 'The voice assistant', group: 'Home menu' },
   { key: 'drinks', label: 'NOOB Cold Drinks', blurb: 'The 3D cans page', group: 'Home menu' },
   { key: 'creations', label: 'More of our creations', blurb: 'Our other websites', group: 'Home menu' },
-  { key: 'scratch', label: 'Scratch Reveal', blurb: 'Scratch cards shuffled into the Home feed (and the Scratch card row in Create)', group: 'Fun & community' },
   { key: 'forms', label: 'NOOB Forms', blurb: 'Making forms and answering them (also by link, without an account)', group: 'Home menu' },
 
   { key: 'fun-this-or-that', label: 'This or That', blurb: 'Pick a side and see what everyone chose', group: 'Fun & community' },

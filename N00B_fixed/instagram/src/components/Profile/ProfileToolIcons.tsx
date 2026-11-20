@@ -13,20 +13,6 @@ export const LensesIcon: React.FC<{ size?: number }> = ({ size = 22 }) => (
   </svg>
 );
 
-/** The icon of Scratch Reveal (the profile page's button): a foil card with a scratched-away stripe showing a heart underneath. */
-export const ScratchIcon: React.FC<{ size?: number }> = ({ size = 22 }) => (
-  <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true" focusable="false">
-    <defs>
-      <linearGradient id="scrIcoA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f4f4f6" /><stop offset=".5" stopColor="#b9bcc6" /><stop offset="1" stopColor="#e8e9ee" /></linearGradient>
-    </defs>
-    <rect x="4" y="6" width="24" height="20" rx="3.5" fill="url(#scrIcoA)" />
-    <path d="M7 21.5L16 9.5l7.5 0-9 12z" fill="#1a1a1f" opacity=".92" />
-    <path d="M17.2 19.2c-2.4-1.6-3.6-2.7-3.6-4.1 0-1 .8-1.8 1.8-1.8.8 0 1.4.4 1.8 1 .4-.6 1-1 1.8-1 1 0 1.8.8 1.8 1.8 0 1.4-1.2 2.5-3.6 4.1z" fill="#ff6fa5" transform="translate(-1.4 .2)" />
-    <path d="M6.6 11.2l2.2 1.4M8 8.6l1.6 2M25 24l-2-1.6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity=".8" />
-    <path className="animate-pulse" d="M26.5 2.2l1.15 2.75 2.75 1.15-2.75 1.15-1.15 2.75-1.15-2.75-2.75-1.15 2.75-1.15z" fill="#ffe27a" />
-  </svg>
-);
-
 /** The icon of Choose avatar (the profile page's button): a round character head with a little crown of sparkles. */
 export const AvatarsIcon: React.FC<{ size?: number }> = ({ size = 22 }) => (
   <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true" focusable="false">

@@ -19,14 +19,11 @@ check(K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0.75)', fal
 check(!K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0)', false), 'a plain wrapper with no colour of its own does not');
 check(!K.coversPage({ width: 390, height: 400 }, view, 'rgb(9, 9, 11)', false), 'a half-height sheet does not');
 check(K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0)', true), 'a page painted with a gradient or a picture does');
-const notes = read('src/components/Scratch/ScratchNotes.tsx');
-check(/bg-black\/75/.test(notes) && /fixed inset-0/.test(notes), 'the Chalk Notes sheet is a dimmed full-screen layer, so it is covered');
 
 console.log('\n2. The wiring');
-const css = read('src/index.css'), main = read('src/main.tsx'), up = read('src/components/Scratch/ScratchUpload.tsx');
+const css = read('src/index.css'), main = read('src/main.tsx');
 check(/html\[data-cover-app\] #root \{ visibility: hidden; \}/.test(css) && /html\[data-cover-app\] \[data-cover-layer\] \{ visibility: visible; \}/.test(css), 'while it is on, the page under is hidden and the full-screen layer stays visible');
 check(/installKeyboardCover\(\);/.test(main), 'it is switched on when the app starts');
-check(/bg-zinc-950 sm:bg-black\/75/.test(up) && /h-full sm:h-auto/.test(up), 'the Scratch create page is a solid full page on a phone');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

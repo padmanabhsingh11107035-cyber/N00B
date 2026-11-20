@@ -37,6 +37,15 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     console.error('Uncaught render error:', error, info.componentStack);
     reportError('boundary', error);
+    // A page that is out of date after an update asks for files that no longer exist ("Failed to fetch dynamically imported module"): that is not a bug to show as "Something went wrong",
+    // loading the new version fixes it. Reloaded once a minute at most, so it can never loop.
+    try {
+      const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+      if (/dynamically imported module|importing a module script failed|loading chunk|chunkloaderror|error loading dynamically/i.test(text)) {
+        const last = Number(sessionStorage.getItem('noob_chunk_reload') || '0');
+        if (Date.now() - last > 60000) { sessionStorage.setItem('noob_chunk_reload', String(Date.now())); hardReload(); }
+      }
+    } catch { /* the page below offers the reload button */ }
   }
 
   handleReload = () => {

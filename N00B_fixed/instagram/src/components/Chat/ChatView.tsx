@@ -1766,6 +1766,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const light = document.documentElement.getAttribute('data-theme') === 'light';
     forceStripColour(stripOn ? (mobileView === 'chat' ? (light ? '#ffffff' : '#000000') : headColour) : null);   // an open chat: black (white in light); the Messages list keeps its green
   }, [mobileView, stripOn, headColour]);
+  // Light theme on a phone: the Messages list has a dark coloured top, but the phone puts a LIGHT grey fade over the area behind the clock (it picks the fade from the page's colour scheme).
+  // While that coloured top is on screen the page tells the phone it is dark, so the fade is the same colour as the top; everywhere else the page stays light.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const light = root.getAttribute('data-theme') === 'light';
+    const on = stripOn && mobileView !== 'chat' && light && root.classList.contains('phone-edge');
+    if (on) root.style.setProperty('color-scheme', 'dark', 'important'); else root.style.removeProperty('color-scheme');
+    return () => { root.style.removeProperty('color-scheme'); };
+  }, [mobileView, stripOn]);
   useEffect(() => () => forceStripColour(null), []);
   // coming back from a chat on a phone: the page itself may have been left scrolled by the chat's keyboard
   useLayoutEffect(() => { if (mobileView === 'list') { try { window.scrollTo(0, 0); } catch { /* ignore */ } } }, [mobileView]);

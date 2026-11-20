@@ -90,103 +90,6 @@ interface AuthViewProps {
   hint?: string;
 }
 
-// Generate a random 6-character captcha code that's guaranteed to mix a
-// digit, an uppercase letter, and a lowercase letter — a fixed charset (even
-// a big one) can still be typed by copy-pasting/matching case loosely, so
-// the code always contains all three categories and is checked case-
-// sensitively, forcing a real character-by-character read of the image
-// instead of a same-case guess. Visually similar characters (0/O/o, 1/l/I)
-// are excluded from every category to keep it actually readable.
-const CAPTCHA_DIGITS = '23456789';
-const CAPTCHA_UPPER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-const CAPTCHA_LOWER = 'abcdefghjkmnpqrstuvwxyz';
-const CAPTCHA_ALL = CAPTCHA_DIGITS + CAPTCHA_UPPER + CAPTCHA_LOWER;
-const randomChar = (pool: string) => pool.charAt(Math.floor(Math.random() * pool.length));
-
-const generateCaptchaCode = (): string => {
-  const required = [randomChar(CAPTCHA_DIGITS), randomChar(CAPTCHA_UPPER), randomChar(CAPTCHA_LOWER)];
-  const rest = Array.from({ length: 3 }, () => randomChar(CAPTCHA_ALL));
-  const chars = [...required, ...rest];
-  // Shuffle so the guaranteed digit/upper/lower aren't always in the same
-  // first three positions.
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join('');
-};
-
-// Rendered as pixels on a <canvas>, never as literal DOM text — a scripted or DOM-reading bot
-// (including a text-only AI agent handed the page's HTML) can no longer just read the code out of
-// the element; it would need real image/OCR vision. Per-character rotation, skew and jitter, plus
-// noise curves both behind and in front of the glyphs and speckle dots, are classic CAPTCHA
-// hardening that also degrades OCR and vision-model reading accuracy — not unbeatable against a
-// capable multimodal model, but a meaningfully higher bar than static colored text ever was.
-const CAPTCHA_COLORS = ['#22d3ee', '#00FF66', '#818cf8', '#facc15', '#c084fc'];
-const rand = (min: number, max: number) => min + Math.random() * (max - min);
-
-function drawCaptcha(canvas: HTMLCanvasElement, code: string) {
-  const dpr = window.devicePixelRatio || 1;
-  const W = 168;
-  const H = 52;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = `${W}px`;
-  canvas.style.height = `${H}px`;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.scale(dpr, dpr);
-
-  ctx.fillStyle = '#0a0a0d';
-  ctx.fillRect(0, 0, W, H);
-
-  // Noise curves behind the glyphs
-  for (let i = 0; i < 5; i++) {
-    ctx.strokeStyle = `${CAPTCHA_COLORS[i % CAPTCHA_COLORS.length]}33`;
-    ctx.lineWidth = rand(1, 2);
-    ctx.beginPath();
-    ctx.moveTo(rand(0, W), rand(0, H));
-    ctx.quadraticCurveTo(rand(0, W), rand(0, H), rand(0, W), rand(0, H));
-    ctx.stroke();
-  }
-
-  // Each character gets its own random rotation, skew-ish scale and jitter — no two renders
-  // segment the same way, which is what defeats naive per-glyph OCR.
-  const n = code.length;
-  const slot = W / n;
-  for (let i = 0; i < n; i++) {
-    ctx.save();
-    const cx = slot * i + slot / 2 + rand(-4, 4);
-    const cy = H / 2 + rand(-6, 6);
-    ctx.translate(cx, cy);
-    ctx.rotate(rand(-0.45, 0.45));
-    ctx.scale(rand(0.9, 1.15), rand(0.85, 1.25));
-    ctx.font = `${Math.floor(rand(24, 30))}px "Segoe UI", Arial, sans-serif`;
-    ctx.fillStyle = CAPTCHA_COLORS[Math.floor(Math.random() * CAPTCHA_COLORS.length)];
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(code[i], 0, 0);
-    ctx.restore();
-  }
-
-  // Noise curves in front of the glyphs, breaking clean OCR segmentation further
-  for (let i = 0; i < 4; i++) {
-    ctx.strokeStyle = `rgba(255,255,255,${rand(0.08, 0.18)})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(rand(0, W), rand(0, H));
-    ctx.quadraticCurveTo(rand(0, W), rand(0, H), rand(0, W), rand(0, H));
-    ctx.stroke();
-  }
-
-  // Speckle
-  for (let i = 0; i < 60; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${rand(0.04, 0.14)})`;
-    ctx.beginPath();
-    ctx.arc(rand(0, W), rand(0, H), rand(0.4, 1.1), 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
 
 // Country Options with Flag + Name + Number Code
 export const COUNTRY_OPTIONS = [
@@ -492,26 +395,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // Honeypot field for bot attack proofing (invisible to humans, bots will fill it)
   const [honeypotValue, setHoneypotValue] = useState('');
 
-  // Captcha state (random captcha only while creating account)
-  const [captchaCode, setCaptchaCode] = useState<string>('');
-  const [userCaptchaInput, setUserCaptchaInput] = useState<string>('');
-  const captchaCanvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Generate captcha on mount or when mode changes to signup
-  useEffect(() => {
-    setCaptchaCode(generateCaptchaCode());
-  }, [mode]);
-
-  // Redraws the canvas every time the code changes — the code itself never appears as DOM text.
-  useEffect(() => {
-    if (captchaCode && captchaCanvasRef.current) drawCaptcha(captchaCanvasRef.current, captchaCode);
-  }, [captchaCode]);
-
-  const handleRefreshCaptcha = () => {
-    setCaptchaCode(generateCaptchaCode());
-    setUserCaptchaInput('');
-  };
-
   // Bumped by the "Shuffle" button to force fresh random suggestions without
   // requiring the name to change.
   const [suggestionSeed, setSuggestionSeed] = useState(0);
@@ -711,14 +594,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       return;
     }
 
-    // Verify Captcha — case-sensitive now that the code mixes upper/lower
-    // case on purpose; matching case-insensitively would make that pointless.
-    if (!userCaptchaInput.trim() || userCaptchaInput.trim() !== captchaCode) {
-      setErrorMessage('Security Captcha does not match. Please enter the exact 6-character code, matching uppercase/lowercase.');
-      handleRefreshCaptcha();
-      return;
-    }
-
     if (!agreedToTerms) {
       setErrorMessage("Please check the box to agree to NOOB's general terms and privacy policy.");
       return;
@@ -752,11 +627,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // the edge function checks the code, runs the same checks signupUser used to run separately, and
   // creates the account itself, instead of the app doing a second full request after the first one
   // just to find out the code was right.
+  const verifyingRef = useRef(false);   // the code is sent by itself at the sixth digit and by the button: only one request at a time, or the second one is told "already used" although the first made the account
   const handleVerifySignupOtp = async () => {
+    if (verifyingRef.current) return;
     if (!signupOtpCode.trim()) {
       setSignupOtpError('Please enter the code from your email.');
       return;
     }
+    verifyingRef.current = true;
     setSignupOtpLoading(true);
     setSignupOtpError(null);
     setSignupOtpSlow(false);
@@ -787,6 +665,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       language
     });
     window.clearTimeout(slowTimer);
+    verifyingRef.current = false;
     setSignupOtpLoading(false);
     setSignupOtpSlow(false);
 
@@ -1704,50 +1583,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     !bio.trim() ? 'border-cyan-500/40 focus:border-cyan-400' : 'border-white/10 focus:border-cyan-400'
                   } outline-none transition-all placeholder:text-zinc-600`}
                 />
-              </div>
-
-              {/* Row 10: Bot Attack Proof Security Captcha */}
-              <div className="p-3.5 bg-zinc-900 border border-white/10 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-noob" />
-                    <span>Security Captcha</span>
-                    <span className="text-cyan-400">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleRefreshCaptcha}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold cursor-pointer"
-                    title="Generate new captcha"
-                  >
-                    <RefreshCw className="w-3 h-3" /> New Code
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <canvas
-                    ref={captchaCanvasRef}
-                    onClick={handleRefreshCaptcha}
-                    className="rounded-xl border border-zinc-700/80 select-none cursor-pointer shadow-inner shrink-0"
-                    title="Click to refresh captcha"
-                    aria-label="Security captcha image"
-                  />
-
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      value={userCaptchaInput}
-                      onChange={(e) => setUserCaptchaInput(e.target.value)}
-                      placeholder="Type the 6-char code exactly"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className="w-full bg-zinc-900 text-sm font-mono tracking-widest text-white px-3 py-2.5 rounded-xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* Row 11: Mandatory Terms Checkbox */}

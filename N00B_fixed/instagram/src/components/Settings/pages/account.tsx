@@ -138,7 +138,7 @@ export const PrivacyPage: React.FC<PageProps> = ({ ctx, back }) => {
       {business && <Note>Business accounts are always public. Switch to a personal account (Account type and tools) to make it private.</Note>}
       {isPrivate && (
         <Section title="Noob requests" note="Anyone who asks to noob you is accepted straight away. You do not noob them back automatically.">
-          <ToggleRow label="Accept noob requests automatically" on={priv.autoAcceptFollowRequests ?? true} disabled={busy} onChange={(v) => apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Noob requests are accepted automatically.' : 'You will approve noob requests yourself.')} />
+          <ToggleRow label="Accept noob requests automatically" on={priv.autoAcceptFollowRequests ?? false} disabled={busy} onChange={(v) => apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Noob requests are accepted automatically.' : 'You will approve noob requests yourself.')} />
         </Section>
       )}
       <Section title="Hide your profile" note="People you hide your profile from cannot see you, your posts or your stories.">

@@ -204,6 +204,21 @@ function dataUriToFile(uri: string, name = 'photo'): File | null {
   }
 }
 
+// The profile of the person who just signed in. A slow or sleepy phone connection sometimes answers this first call with nothing (or fails it) although the sign-in itself worked,
+// which used to show up as "Authentication failed" or a sign-up that seemed to fail: so it is asked up to three times before giving up.
+async function fetchMyUserWithRetry(): Promise<any> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const u = await rpc<any>('get_my_user');
+      if (u && u.id) return u;
+    } catch (e) { lastErr = e; }
+    await new Promise((r) => setTimeout(r, 500 + i * 700));
+  }
+  if (lastErr) throw lastErr;
+  return null;
+}
+
 // Before an account is created: a 6-digit code emailed to the address just typed in, proving it's
 // really theirs and really reachable. Verifying does not sign anyone in by itself — check_signup /
 // handle_new_user on the database side refuse to create the account at all unless this specific
@@ -253,31 +268,71 @@ export interface SignupPayload {
 // client-side either way, since the file itself only ever lives in this tab's memory pre-login.
 export async function verifySignupOtp(code: string, payload: SignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string; stage?: 'code' | 'form' }> {
   const unavailable = 'Could not verify that code right now. Please try again later.';
+  const createdButNotIn = 'Your account was created. Please log in with your User ID and password.';
   try {
     const t0 = performance.now();
     const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
-    const { data, error } = await supabase.functions.invoke('recover-account', {
-      body: { action: 'signup-otp-verify', email: payload.email, code, signup: { ...payload, avatar, language: cleanLanguageCode(payload.language) } }
-    });
-    if (error) {
-      let body: any = null;
-      try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
-      return { success: false, error: body?.error || unavailable, suspended: body?.suspended, message: body?.message, stage: body?.stage };
+    // The server uses the code up and creates the account in the same request. If the answer is then lost (a weak or sleeping phone connection) or the code is tried a second time,
+    // the person would be told "wrong code" although the account exists. Signing in with the User ID and password they just typed settles it: it can only succeed for their own new account.
+    let signedInId: string | undefined;
+    const signInWithPassword = async (): Promise<boolean> => {
+      try {
+        const email = await rpc<string>('resolve_login_email', { identifier: payload.username });
+        const { data: si, error: siErr } = await supabase.auth.signInWithPassword({ email, password: payload.password });
+        if (siErr) return false;
+        signedInId = si?.user?.id;
+        return !!si?.session;
+      } catch { return false; }
+    };
+    let tokenHash = '';
+    let viaPassword = false;
+    let answer: any = null;
+    let failure: { error?: string; suspended?: boolean; message?: string; stage?: 'code' | 'form'; status?: number } | null = null;
+    try {
+      const { data, error } = await supabase.functions.invoke('recover-account', {
+        body: { action: 'signup-otp-verify', email: payload.email, code, signup: { ...payload, avatar, language: cleanLanguageCode(payload.language) } }
+      });
+      if (error) {
+        let body: any = null;
+        try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+        failure = { error: body?.error || unavailable, suspended: body?.suspended, message: body?.message, stage: body?.stage, status: (error as any)?.context?.status };
+      } else if (!data?.success) {
+        failure = { error: data?.error || unavailable, suspended: data?.suspended, message: data?.message, stage: data?.stage };
+      } else {
+        answer = data;
+      }
+    } catch (e) {
+      failure = { error: errorText(e, unavailable) };   // no answer at all: the request may still have created the account
     }
-    if (!data?.success) return { success: false, error: data?.error || unavailable, suspended: data?.suspended, message: data?.message, stage: data?.stage };
-    if (!data.tokenHash) return { success: false, error: unavailable };
+    if (failure) {
+      const uncertain = !failure.suspended && failure.stage !== 'form' && (failure.status === undefined || failure.status >= 500 || /expired|already used/i.test(failure.error || ''));
+      if (!(uncertain && (await signInWithPassword()))) return { success: false, ...failure, error: failure.error };
+      viaPassword = true;
+    } else if (!answer?.tokenHash) {
+      if (!(await signInWithPassword())) return { success: false, error: unavailable };
+      viaPassword = true;
+    } else {
+      tokenHash = answer.tokenHash;
+    }
     const t1 = performance.now();
-    const { data: signedIn, error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
-    if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+    if (!viaPassword) {
+      let ok = false;
+      for (let i = 0; i < 2 && !ok; i++) {
+        const { data: signedIn, error: signInError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
+        if (!signInError) { ok = true; signedInId = signedIn?.user?.id; } else await new Promise((r) => setTimeout(r, 700));
+      }
+      if (!ok && !(await signInWithPassword())) return { success: false, error: createdButNotIn };
+    }
     const t2 = performance.now();
 
     // The account exists and the person is signed in. Only one thing is still needed to show the app: their profile. The profile photo (an upload and a second save),
     // the welcome email and the chat keys finish in the background; until the photo is saved, the phone's own copy of it is shown.
-    const signedInId = signedIn?.user?.id;
     const preview = pendingKey ? pendingAvatarPreview(pendingKey) : '';
     void uploadPendingSignupAvatar(pendingKey).then((key) => { if (key && signedInId) announceOwnAvatar(signedInId, resolveMedia(key)); });
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
-    const user = await rpc<any>('get_my_user');
+    let user: any;
+    try { user = await fetchMyUserWithRetry(); } catch { user = null; }
+    if (!user) return { success: false, error: createdButNotIn };
     const shown = mapUser(user);
     if (preview && shown) shown.avatar = preview;
     markAskSource(shown?.id);   // "where did you hear about NOOB?" is asked once, for this new account only
@@ -714,7 +769,12 @@ export async function loginUser(payload: {
       }
       return { success: false, error: 'Incorrect password. Please check your credentials.' };
     }
-    const user = await rpc<any>('get_my_user');
+    const user = await fetchMyUserWithRetry();
+    if (!user) {
+      // the password was right but the profile did not come back (a weak connection): say so, instead of the misleading "Authentication failed"
+      await supabase.auth.signOut({ scope: 'local' });
+      return { success: false, error: 'You are signed in, but your profile could not be loaded. Please check your connection and try again.' };
+    }
     if (user?.isSuspended) {
       await supabase.auth.signOut({ scope: 'local' });
       return {

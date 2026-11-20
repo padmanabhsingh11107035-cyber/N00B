@@ -160,23 +160,23 @@ await db.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)', [c
 await expectFail(() => rpc(a, 'toggle_follow', c), /can't follow this account/, 'a blocked person can not follow the blocker');
 await db.query('delete from blocks where blocker_id = $1', [c]);
 
-// Auto-accept follow requests (private accounts only) — ON by default for every account now, so
-// priv2 (which has never touched this setting) auto-accepts without anyone switching anything on.
+// Auto-accept follow requests (private accounts only) — OFF by default since 2026-11-20 (migration 20261120000001): priv2, which has never touched the setting, gets a request.
 {
   let r = await rpc(a, 'toggle_follow', priv2);
-  check(r.isFollowing === true && r.isFollowRequested === false, 'auto-accept is ON by default, so a private account that never touched the setting still auto-follows');
-  check((await n('select count(*)::int n from follow_requests where requester_id = $1 and target_id = $2', [a, priv2])) === 0, 'and no follow_requests row is left behind');
-  check((await n(`select count(*)::int n from notifications where type = 'new_follower' and target_user_id = $1 and actor_id = $2`, [priv2, a])) === 1, 'it notifies as a normal new-follower, not a pending request');
+  check(r.isFollowing === false && r.isFollowRequested === true, 'auto-accept is OFF by default, so a private account that never touched the setting gets a request');
+  check((await n('select count(*)::int n from follow_requests where requester_id = $1 and target_id = $2', [a, priv2])) === 1, 'and a follow_requests row waits for the answer');
+  check((await n(`select count(*)::int n from notifications where type = 'follow_request_received' and target_user_id = $1 and actor_id = $2`, [priv2, a])) === 1, 'it notifies as a pending request');
+  r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === false && r.isFollowRequested === false, 'tapping again cancels the request');
+
+  // Switched on by the person themselves, the same account accepts at once.
+  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": true}'::jsonb where id = $1`, [priv2]);
+  r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === true && r.isFollowRequested === false, 'switched on, the same account auto-follows');
   r = await rpc(a, 'toggle_follow', priv2);
   check(r.isFollowing === false, 'unfollowing afterwards still works normally');
-
-  // Switching it off is sticky: it stays off (even across an unrelated profile edit) until switched back on.
-  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": false}'::jsonb where id = $1`, [priv2]);
-  r = await rpc(a, 'toggle_follow', priv2);
-  check(r.isFollowing === false && r.isFollowRequested === true, 'switched off, the same account now just gets a request');
   await rpc(priv2, 'update_my_profile', { bio: 'unrelated edit' });
-  check((await n(`select count(*)::int n from profiles where id = $1 and (privacy_settings->>'autoAcceptFollowRequests')::boolean = false`, [priv2])) === 1, '...and an unrelated profile edit does not turn it back on');
-  await rpc(a, 'toggle_follow', priv2); // cancel the request, back to a clean slate
+  check((await n(`select count(*)::int n from profiles where id = $1 and (privacy_settings->>'autoAcceptFollowRequests')::boolean = true`, [priv2])) === 1, '...and an unrelated profile edit does not change it');
   await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": true}'::jsonb where id = $1`, [priv2]);
 }
 

@@ -65,12 +65,6 @@
   } catch (e) { /* stays on */ }
 })();
 
-// Reloading so the NEW version really arrives: a plain reload on an iPhone Home-Screen app can be answered with the saved page, so the page is asked for under a new address (?_r=time; the app removes it again).
-function freshPage() {
-  try { var u = new URL(window.location.href); u.searchParams.set('_r', String(Date.now())); window.location.replace(u.toString()); }
-  catch (e) { window.location.reload(); }
-}
-
 // Stylesheet rescue. On some phones the app's main stylesheet is not applied (the page shows as plain text, giant pictures, no design) - e.g. when the phone or the network kept a wrong answer for that
 // file's address. The stylesheet sets a marker (--noob-css in index.css); if the marker is missing shortly after the page loaded, or the stylesheet's link reports an error, the same file is asked for again
 // under a new address (?cb=...), which no phone or network has a saved answer for. Done at most twice; if that does not help either, the page reloads once.
@@ -101,69 +95,4 @@ function freshPage() {
       if (t && t.tagName && String(t.tagName).toUpperCase() === 'LINK' && /\/assets\/.*\.css/.test(String(t.href || ''))) window.setTimeout(check, 300);
     }, true);
   } catch (e) { /* nothing to rescue with */ }
-})();
-
-// Self-heal after an update. When a new version is published while the app is open (or kept in memory), the files the old page asks for no longer exist: the page then loses its stylesheet
-// and shows up as plain unstyled text and giant pictures. If a file of the app (/assets/...) fails to load, the app reloads itself to get the new page: at most twice a minute, so it can never loop.
-(function () {
-  try {
-    var KEY = 'noob_heal';
-    var heal = function () {
-      var now = Date.now();
-      var at = Number(sessionStorage.getItem(KEY + '_t') || '0');
-      var n = now - at > 60000 ? 0 : Number(sessionStorage.getItem(KEY) || '0');
-      if (n >= 2) return;
-      sessionStorage.setItem(KEY, String(n + 1));
-      sessionStorage.setItem(KEY + '_t', String(now));
-      freshPage();
-    };
-    window.addEventListener('error', function (e) {
-      var t = e && e.target;
-      if (!t || !t.tagName) return;
-      var tag = String(t.tagName).toUpperCase();
-      var url = String(t.href || t.src || '');
-      if ((tag === 'LINK' || tag === 'SCRIPT') && /\/assets\//.test(url)) heal();
-    }, true);
-    window.addEventListener('vite:preloadError', heal);
-  } catch (e) { /* nothing to heal with */ }
-})();
-
-// Stay current without reinstalling. An installed app (iPhone Home Screen, Android) can sit in the background for days on the page it loaded, and when a new version is published
-// the files that old page needs are gone (it turns into plain unstyled text). So when the person comes BACK to the app (never while they are using it), it asks the site which
-// main file is current; if that is not the one this page runs, the page reloads itself once to get the new version. No change, no reload; a failed question changes nothing.
-(function () {
-  try {
-    var mainOf = function (html) { var m = /\/assets\/main-[A-Za-z0-9_-]+\.js/.exec(html); return m ? m[0] : ''; };
-    var mine = function () {
-      var s = document.querySelector('script[src*="/assets/main-"]');
-      if (!s) return '';
-      var src = s.getAttribute('src') || '';
-      var m = /\/assets\/main-[A-Za-z0-9_-]+\.js/.exec(src);
-      return m ? m[0] : '';
-    };
-    var current = mine();
-    if (!current) return;   // dev server or a page without the built files: nothing to compare
-    var leftAt = 0, busy = false;
-    var check = function () {
-      if (busy) return;
-      busy = true;
-      fetch('/?fresh=' + Date.now(), { cache: 'no-store', credentials: 'omit' })
-        .then(function (r) { return r.ok ? r.text() : ''; })
-        .then(function (html) {
-          var live = mainOf(html);
-          if (live && live !== current) {
-            var n = Number(sessionStorage.getItem('noob_upd') || '0');
-            if (n < 3) { sessionStorage.setItem('noob_upd', String(n + 1)); freshPage(); }
-          }
-        })
-        .catch(function () { /* offline or a hiccup: try again next time */ })
-        .then(function () { busy = false; });
-    };
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') { leftAt = Date.now(); return; }
-      if (leftAt && Date.now() - leftAt > 20000) check();   // back after more than 20 seconds away
-    });
-    window.addEventListener('pageshow', function (e) { if (e.persisted) check(); });   // restored from the phone's page memory
-    window.setTimeout(function () { sessionStorage.removeItem('noob_upd'); }, 15000);   // a page that stayed up is not stuck in a loop
-  } catch (e) { /* nothing to update with */ }
 })();

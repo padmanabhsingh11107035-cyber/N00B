@@ -64,3 +64,28 @@
     if (localStorage.getItem('noob_nodeskchat') === '1') document.documentElement.setAttribute('data-nodeskchat', '1');
   } catch (e) { /* stays on */ }
 })();
+
+// Self-heal after an update. When a new version is published while the app is open (or kept in memory), the files the old page asks for no longer exist: the page then loses its stylesheet
+// and shows up as plain unstyled text and giant pictures. If a file of the app (/assets/...) fails to load, the app reloads itself to get the new page: at most twice a minute, so it can never loop.
+(function () {
+  try {
+    var KEY = 'noob_heal';
+    var heal = function () {
+      var now = Date.now();
+      var at = Number(sessionStorage.getItem(KEY + '_t') || '0');
+      var n = now - at > 60000 ? 0 : Number(sessionStorage.getItem(KEY) || '0');
+      if (n >= 2) return;
+      sessionStorage.setItem(KEY, String(n + 1));
+      sessionStorage.setItem(KEY + '_t', String(now));
+      window.location.reload();
+    };
+    window.addEventListener('error', function (e) {
+      var t = e && e.target;
+      if (!t || !t.tagName) return;
+      var tag = String(t.tagName).toUpperCase();
+      var url = String(t.href || t.src || '');
+      if ((tag === 'LINK' || tag === 'SCRIPT') && /\/assets\//.test(url)) heal();
+    }, true);
+    window.addEventListener('vite:preloadError', heal);
+  } catch (e) { /* nothing to heal with */ }
+})();

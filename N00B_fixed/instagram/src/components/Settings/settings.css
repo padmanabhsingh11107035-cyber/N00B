@@ -113,6 +113,8 @@ button.nst-row:active .nst-chev { transform: translateX(6px); }
 .nst-page { animation: nst-in-fwd 0.4s var(--nst-ease) both; }
 .nst-page.back { animation-name: nst-in-back; }
 
+html.mood-switching, html.mood-switching *, html.mood-switching *::before, html.mood-switching *::after { transition: none !important; }
+
 /* ---------- the circle that washes over the app when the mood changes (the browser's own view transition, only while one runs) */
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(root) { z-index: 1; }

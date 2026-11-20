@@ -18,7 +18,13 @@ function changeMood(next: 'dark' | 'light', x: number, y: number): void {
   const calm = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!doc.startViewTransition || calm) { setThemePreference(next); return; }
   const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  // while the change runs nothing may fade on its own (the page's 0.25 s colour fade made the snapshot of the new mood grey and the top strip flash): everything switches at once, the circle does the showing
+  const root = document.documentElement;
+  root.classList.add('mood-switching');
   const transition = doc.startViewTransition(() => setThemePreference(next));
+  const done = () => root.classList.remove('mood-switching');
+  const finished = (transition as unknown as { finished?: Promise<unknown> }).finished;
+  if (finished) void finished.then(done, done); else window.setTimeout(done, 1200);
   void transition.ready.then(() => {
     (document.documentElement as unknown as { animate: (k: unknown, o: unknown) => unknown }).animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },

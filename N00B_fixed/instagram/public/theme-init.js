@@ -45,6 +45,7 @@
     if (vp && !/viewport-fit=cover/.test(vp.getAttribute('content') || '')) vp.setAttribute('content', (vp.getAttribute('content') || '') + ', viewport-fit=cover');
     var apply = function () {
       var light = root.getAttribute('data-theme') === 'light';
+      if (ios) root.classList.add('phone-ios');   // an iPhone's installed app: its own spacing rules below
       root.classList.add('phone-edge');   // Dark AND Light, on iPhone too: with it only in Dark the Light pages were drawn under the clock with nothing holding them down, and switching mode made the whole page jump
       if (android) root.classList.add('phone-android');   // the Android app: its status strip is ours to colour, so an open chat keeps it as its own separate bar
       if (android) { try { cap.Plugins.SystemBars.setStyle({ style: light ? 'LIGHT' : 'DARK' }); } catch (e) { /* keeps the style from the app's settings */ } }

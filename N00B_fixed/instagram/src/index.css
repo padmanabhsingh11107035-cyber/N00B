@@ -1696,6 +1696,8 @@ html body [class*="sticky"][class*="top-0"][class*="bg-zinc-9"][class*="backdrop
 /* ---- Phones only (html.phone-edge, set in public/theme-init.js): the page is drawn under the clock / camera and nothing of its own sits behind them, so everything that scrolls passes through that area.
    --sat is the height of that area; everything that used to start below it is pushed down by --sat. ---- */
 html.phone-edge { --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
+/* iPhone, Light mode: the clock area (the phone's own blur) swallows taps, so every page starts a little lower: at least 50 px (what the phone reports can be less on a zoomed screen) and 8 px more */
+html.phone-ios[data-theme="light"] { --sat: calc(max(max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)), 50px) + 8px); }
 html.phone-edge body { padding-top: var(--sat); box-sizing: border-box; }
 /* full-screen pages and pop-ups start just below the clock (their top edge moves down; nothing is added inside them). The ones that keep room for it themselves (.edge-own, own env() padding) are left alone. */
 html.phone-edge .fixed.inset-0:not(.edge-own):not(.lg-root):not(.pm-root):not(.nt):not(.bb-root):not(.sd-root):not(.nz-page):not(.lp-root):not(.gd-root):not([data-noob-page]):not([data-noob-sheet]):not(:has([class*="safe-area-inset-top"], [style*="safe-area-inset-top"], .nz-head, .lp-head, .ff-bar, .sd-head, .lg-bar)) { top: var(--sat) !important; }

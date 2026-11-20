@@ -731,7 +731,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Follow: a grey pill, only for people this person does not follow yet */}
         {showFollowPill && (
           <button type="button" onClick={() => void followFromPost()} disabled={followBusy} className={`hv-follow shrink-0 ml-auto ${unfollowArmed ? 'is-warn' : ''}`} data-testid="post-follow-pill">
-            {isFollowingAuthor ? (unfollowArmed ? 'Unfollow' : 'Following') : followRequested ? 'Requested' : 'Follow'}
+            {isFollowingAuthor ? (unfollowArmed ? 'Unnoob' : 'Noobed') : followRequested ? 'Requested' : 'Noob'}
           </button>
         )}
         {/* Options Menu Toggle */}

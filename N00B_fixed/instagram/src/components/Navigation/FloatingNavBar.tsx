@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Home, Compass, Film, MessageSquare, Gamepad2, CirclePlus } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Home, Compass, Film, MessageSquare, Gamepad2, SquarePlus } from 'lucide-react';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { useKeyboardOpen } from '../../utils/useVisualViewport';
 import { DOUBLE_TAP_MS, quickSwitchLinked } from '../../utils/quickSwitch';
@@ -74,6 +74,33 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
   const count = (tab: NavTab): number => (tab === 'chat' ? (unreadChatCount > 0 ? unreadChatCount : 0) : badges[tab] || 0);
   const lastProfileTap = useRef(0);
+  // Like Instagram's: scrolling DOWN a page shrinks the bar to a small pill, scrolling UP (or reaching the top, or choosing another page) brings it back.
+  // Any scrolling box of the page counts (the window or a page's own scroller); the Reels pager keeps the bar full size.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => { setCompact(false); }, [activeTab]);
+  useEffect(() => {
+    const last = new WeakMap<object, number>();
+    let acc = 0, dir = 0;
+    const onScroll = (e: Event) => {
+      const t = e.target as Element | Document;
+      const el = (t === document ? document.scrollingElement : t) as HTMLElement | null;
+      if (!el || (el.closest && el.closest('#floating-bottom-nav'))) return;
+      if (el.scrollHeight - el.clientHeight < 120) return;   // too short to scroll: ignore (menus, small lists)
+      const y = el.scrollTop;
+      const prev = last.get(el);
+      last.set(el, y);
+      if (prev === undefined) return;
+      const d = y - prev;
+      if (y < 24) { acc = 0; dir = 0; setCompact(false); return; }
+      if (d === 0) return;
+      const sign = d > 0 ? 1 : -1;
+      if (sign !== dir) { dir = sign; acc = 0; }
+      acc += Math.abs(d);
+      if (acc > 28) setCompact(sign > 0);   // a short drag one way is enough, a flick back opens it again
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener('scroll', onScroll, true);
+  }, []);
   const tapProfile = () => {
     const now = Date.now();
     const twice = now - lastProfileTap.current < DOUBLE_TAP_MS;
@@ -85,6 +112,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
     <nav
       id="floating-bottom-nav"
       data-tab={activeTab}
+      data-compact={compact && activeTab !== 'reels' ? '1' : undefined}
       className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-2xl pointer-events-auto md:hidden ${
         hideOnMobile ? 'max-md:hidden' : ''
       } ${keyboardOpen ? 'hidden' : ''}`}
@@ -140,7 +168,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         {/* Create: opens the post / reel / story picker, never a page of its own, so it is never the "open" one */}
         {showCreate && (
           <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
-            <CirclePlus className="nav-ico nav-create w-11 h-11" />
+            <SquarePlus className="nav-ico nav-create w-7 h-7" />
           </NavButton>
         )}
 

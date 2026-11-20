@@ -14,7 +14,7 @@ section('1. What is on the bar');
 const ids = [...nav.matchAll(/id="nav-item-(\w+)"/g)].map((m) => m[1]);
 check(ids.join(',') === 'feed,explore,reels,videos,post,chat,games,profile', 'Home, Explore, Reels, Feed, Create, Chat, Games, You — in that order', ids.join(','));
 check(/grid-cols-7/.test(nav) && /gridTemplateColumns/.test(nav), 'equal columns (the count follows the pages that are switched on)');
-check(/CirclePlus/.test(nav) && /id="nav-item-post"[^>]*title="Create a post, reel or story"[^>]*onClick=\{\(\) => onSelectTab\('post'\)\}/.test(nav), 'Create is a circled plus with no label, and opens the same picker as before');
+check(/SquarePlus/.test(nav) && /id="nav-item-post"[^>]*title="Create a post, reel or story"[^>]*onClick=\{\(\) => onSelectTab\('post'\)\}/.test(nav), 'Create is a plus in a rounded square, the same size as the other icons, with no label, and opens the same picker as before');
 check(!/id="nav-item-post"[^>]*active=/.test(nav), 'Create is never the "open" page');
 check(/label="You" title="My Profile"/.test(nav) && /nav-ava/.test(nav), 'the last one is "You", with the person\'s own picture');
 check(/unreadChatCount > 0/.test(nav), 'the unread count stays on Chat');
@@ -24,12 +24,13 @@ check(/aria-current=\{active \? 'page' : undefined\}/.test(nav), 'the open page 
 section('2. The look');
 check(/className=\{`fixed bottom-0 left-1\/2 -translate-x-1\/2 z-40 w-full max-w-\[480px\] md:max-w-2xl[^`]*md:hidden/.test(nav), 'flat, at the very bottom, the full width of the page, and hidden from 768 px wide, where the long strip on the left takes over');
 check(/#floating-bottom-nav \.nav-row \{\s*pointer-events: auto;\s*height: 56px;\s*border-radius: 28px;/.test(css), 'the bar is a rounded pill (56 px high) that floats; only the pill takes touches');
-check(/text-\[10px\]/.test(nav) && /w-7 h-7/.test(nav) && /nav-create w-11 h-11/.test(nav), 'bigger icons (28 pixels, labels hidden by CSS) and a larger (44-pixel) circled plus');
-check(/#floating-bottom-nav \{\s*height: auto;\s*padding: 0 12px var\(--nav-b\);/.test(css) && /backdrop-filter: blur\(22px\)/.test(css) && /color-mix\(in srgb, var\(--page\) 82%, transparent\)/.test(css), 'glass pill in the page own colours, 12px from the sides, clear of the screen bottom edge');
+check(/w-7 h-7/.test(nav) && /nav-create w-7 h-7/.test(nav) && !/w-11 h-11/.test(nav), 'every icon (including Create and the picture) is the same 28 pixels');
+check(/#floating-bottom-nav \{\s*height: auto;\s*padding: 0 12px var\(--nav-b\);/.test(css) && /backdrop-filter: blur\(24px\)/.test(css) && /background-color: rgba\(58, 58, 62, 0\.72\)/.test(css) && /\[data-theme="light"\] #floating-bottom-nav \.nav-row \{ background-color: rgba\(228, 228, 232/.test(css), 'grey glass pill (lighter grey in Light), 12px from the sides, clear of the screen bottom edge');
+check(/data-compact=\{compact && activeTab !== 'reels'/.test(nav) && /\[data-compact="1"\] \.nav-row \{ transform: translateY\(8px\) scale\(0\.78\)/.test(css) && /addEventListener\('scroll', onScroll, \{ capture: true/.test(nav), 'scrolling down shrinks the bar, scrolling up (or the top) brings it back; Reels keeps it full size');
 check(/--nav-b: max\(env\(safe-area-inset-bottom, 0px\) - 6px, 12px\); --nav-h: calc\(56px \+ var\(--nav-b\) \+ 8px\)/.test(css), 'the bar height (with its gap) is one variable everything else can use');
 check(/\.nav-slider \{[^}]*transition: transform 0\.42s cubic-bezier/.test(css) && /translateX\(\$\{Math\.max\(slot, 0\) \* 100\}%\)/.test(nav), 'a soft highlight slides to the icon that is chosen');
 check(/\.nav-item\.is-active \.nav-ico \{ stroke-width: 2\.4; \}/.test(css) && /\.nav-item\.is-active \.nav-lbl \{ font-weight: 700; \}/.test(css), 'the open page has a heavier icon and a bold label');
-check(/\.nav-create \{ stroke-width: 1\.3; \}/.test(css), 'the circled plus is thin');
+check(/\.nav-create \{ stroke-width: 1\.6; \}/.test(css), 'the plus is as thin as the other icons');
 check(/#floating-bottom-nav\[data-tab="reels"\] \{\s*--color-noob: #ffffff;\s*\}/.test(css) && /data-tab=\{activeTab\}/.test(nav), 'on Reels the pill is near-black with white icons');
 
 section('3. Everything else stays clear of it');

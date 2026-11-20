@@ -891,16 +891,24 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
   height: 56px;
   border-radius: 28px;
   padding: 0 4px;
-  background-color: color-mix(in srgb, var(--page) 82%, transparent);
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  border: 1px solid color-mix(in srgb, var(--color-noob) 14%, transparent);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.18);
+  align-items: center;
+  /* the grey of Instagram's bar: a frosted grey glass, lighter grey in Light */
+  background-color: rgba(58, 58, 62, 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform-origin: 50% 100%;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.5s ease;
 }
+:root[data-theme="light"] #floating-bottom-nav .nav-row { background-color: rgba(228, 228, 232, 0.78); border-color: rgba(0, 0, 0, 0.08); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1); }
+#floating-bottom-nav[data-compact="1"] .nav-row { transform: translateY(8px) scale(0.78); box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.5); }
+@media (prefers-reduced-motion: reduce) { #floating-bottom-nav .nav-row { transition: none; } }
 #floating-bottom-nav[data-tab="reels"] {
   --color-noob: #ffffff;
 }
-#floating-bottom-nav[data-tab="reels"] .nav-row { background-color: rgba(18, 18, 20, 0.78); }
+#floating-bottom-nav[data-tab="reels"] .nav-row { background-color: rgba(40, 40, 44, 0.72); }
 #floating-bottom-nav .nav-slider {
   position: absolute;
   left: 4px;
@@ -922,7 +930,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
 #floating-bottom-nav .nav-item:active { opacity: 0.6; }
 #floating-bottom-nav .nav-item.is-active { color: var(--color-noob); }
 #floating-bottom-nav .nav-ico { stroke-width: 1.6; }
-#floating-bottom-nav .nav-create { stroke-width: 1.3; }
+#floating-bottom-nav .nav-create { stroke-width: 1.6; }
 #floating-bottom-nav .nav-item.is-active .nav-ico { stroke-width: 2.4; }
 #floating-bottom-nav .nav-item.is-active .nav-lbl { font-weight: 700; }
 #floating-bottom-nav .nav-ava { box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-noob) 25%, transparent); }

@@ -11,6 +11,7 @@ import {defineConfig} from 'vite';
 // written to a small static version.json the running app can re-fetch and compare against, so it
 // can tell the person a new version is ready instead of silently staying stale forever.
 const buildId = String(Date.now());
+const buildSalt = Number(buildId).toString(36).slice(-6);   // part of every script and style file name, see rollupOptions.output below
 
 export default defineConfig(() => {
   return {
@@ -66,6 +67,14 @@ export default defineConfig(() => {
       rollupOptions: {
         // four pages: the app (index.html), NOOB Lenses (lenses.html), the Buddy Booth (booth.html) and the Family Map (family.html)
         input: { main: path.resolve(__dirname, 'index.html'), lenses: path.resolve(__dirname, 'lenses.html'), booth: path.resolve(__dirname, 'booth.html'), family: path.resolve(__dirname, 'family.html') }
+        // Every build gives its scripts and styles NEW names (the build's own number is part of the name). A file name that stays the same from one build to the next can be
+        // answered with the site's home page for a moment during an update; the phone (or the data centre) then keeps that wrong answer for the name for a year ("immutable"), and the
+        // page that needs that file is broken until the cache is cleared. With a new name for every build, a wrong answer can only ever sit under a name that is never asked for again.
+        ,output: {
+          entryFileNames: `assets/[name]-[hash]-${buildSalt}.js`,
+          chunkFileNames: `assets/[name]-[hash]-${buildSalt}.js`,
+          assetFileNames: (info: { names?: string[]; name?: string }) => (/\.css$/.test((info.names && info.names[0]) || info.name || '') ? `assets/[name]-[hash]-${buildSalt}[extname]` : 'assets/[name]-[hash][extname]')
+        }
       }
     },
     resolve: {

@@ -41,9 +41,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     // loading the new version fixes it. Reloaded once a minute at most, so it can never loop.
     try {
       const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
-      if (/dynamically imported module|importing a module script failed|loading chunk|chunkloaderror|error loading dynamically/i.test(text)) {
+      if (/dynamically imported module|importing a module script failed|not a valid javascript mime type|loading chunk|chunkloaderror|error loading dynamically/i.test(text)) {
         const last = Number(sessionStorage.getItem('noob_chunk_reload') || '0');
-        if (Date.now() - last > 60000) { sessionStorage.setItem('noob_chunk_reload', String(Date.now())); hardReload(); }
+        if (Date.now() - last > 60000) {
+          sessionStorage.setItem('noob_chunk_reload', String(Date.now()));
+          // the phone may have kept the site's home page as its copy of that script ("'text/html' is not a valid JavaScript MIME type ... '<address>'"): ask for the script again, bypassing the saved copy
+          const m = /(https?:\/\/[^\s'"]+\/assets\/[^\s'"]+\.(?:js|css))/.exec(text);
+          if (m && m[1].startsWith(window.location.origin)) {
+            void fetch(m[1], { cache: 'reload' }).catch(() => undefined).then(() => hardReload());
+          } else hardReload();
+        }
       }
     } catch { /* the page below offers the reload button */ }
   }

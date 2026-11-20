@@ -90,6 +90,7 @@ export function loadStats(k: MixKind, ids: string[]): void {
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
 export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, scratchOn = false) {
   const [items, setItems] = useState<MixItem[]>([]);
+  const [slots, setSlots] = useState<number[]>([]);   // after which posts each item is shown: uneven gaps, new every load
   useEffect(() => {
     let alive = true;
     void Promise.all([
@@ -104,6 +105,10 @@ export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number
         ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
         ...scratch.map((c): MixItem => ({ kind: 'scratch', at: c.createdAt, card: c }))
       ]));
+      let at = Math.floor(Math.random() * 3);   // the first one comes after the 1st, 2nd or 3rd post
+      const next: number[] = [];
+      for (let n = 0; n < anon.length + polls.length + scratch.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
+      setSlots(next);
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
     });
@@ -120,7 +125,7 @@ export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number
   }, [anonOn, pollsOn, scratchOn]);
   const remove = useCallback((key: string) => setItems((prev) => prev.filter((x) => mixKey(x) !== key)), []);
   const updatePoll = useCallback((p: Poll) => setItems((prev) => prev.map((x) => (x.kind === 'poll' && x.poll.id === p.id ? { ...x, poll: p } : x))), []);
-  return { items, remove, updatePoll };
+  return { items, slots, remove, updatePoll };
 }
 
 const ANON_REASONS = ['Spam or advertising', 'Harassment or hate', 'Self-harm or danger', 'Something else'];

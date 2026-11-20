@@ -1015,7 +1015,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
           <>
             {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={(p) => renderPostCard(postsById.get(p.id) ?? p)} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
             {paginatedPosts.map((post, i) => {
-              const extra = mixOn && i % 3 === 0 ? mix.items[i / 3] : undefined;   // one after the first post, then one after every third
+              const slot = mixOn ? mix.slots.indexOf(i) : -1;
+              const extra = slot >= 0 ? mix.items[slot] : undefined;   // shuffled items at uneven gaps (see useHomeMix)
               return (
                 <React.Fragment key={post.id}>
                   {renderPostCard(post)}

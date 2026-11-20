@@ -63,10 +63,10 @@ const React = (await import('react')).default;
 const { renderToStaticMarkup } = await import('react-dom/server');
 const bar = (off) => renderToStaticMarkup(React.createElement(FeatureFlagsContext.Provider, { value: new Set(off) }, React.createElement(FloatingNavBar, { activeTab: 'feed', onSelectTab: () => {}, userAvatar: '' })));
 const all = bar([]);
-check(['feed', 'explore', 'reels', 'post', 'chat', 'games', 'profile'].every((t) => all.includes(`id="nav-item-${t}"`)) && all.includes('repeat(7, minmax(0, 1fr))'), 'nothing off: seven buttons in seven columns, as before');
+check(['feed', 'explore', 'reels', 'videos', 'post', 'chat', 'games', 'profile'].every((t) => all.includes(`id="nav-item-${t}"`)) && all.includes('repeat(8, minmax(0, 1fr))'), 'nothing off: eight buttons in eight columns');
 const some = bar(['chat', 'games']);
-check(!some.includes('id="nav-item-chat"') && !some.includes('id="nav-item-games"') && some.includes('id="nav-item-reels"') && some.includes('repeat(5, minmax(0, 1fr))'), 'Chat and Games off: those two buttons are gone and the other five share the width');
-const bare = bar(['explore', 'reels', 'create', 'chat', 'games']);
+check(!some.includes('id="nav-item-chat"') && !some.includes('id="nav-item-games"') && some.includes('id="nav-item-reels"') && some.includes('repeat(6, minmax(0, 1fr))'), 'Chat and Games off: those two buttons are gone and the other six share the width');
+const bare = bar(['explore', 'reels', 'videos', 'create', 'chat', 'games']);
 check(bare.includes('id="nav-item-feed"') && bare.includes('id="nav-item-profile"') && bare.includes('repeat(2, minmax(0, 1fr))') && !bare.includes('nav-item-explore'), 'every page off: Home and the profile are still there, in two columns');
 fs.rmSync(navOut, { force: true });
 

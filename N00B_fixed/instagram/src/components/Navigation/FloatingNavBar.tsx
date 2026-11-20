@@ -64,8 +64,8 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   onPressTab
 }) => {
   // a page that the administrator has switched off for users has no button (the others share the width)
-  const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games');
-  const columns = 2 + [showExplore, showReels, showCreate, showChat, showGames].filter(Boolean).length;
+  const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games'), showVideos = useFeatureOn('videos');
+  const columns = 2 + [showExplore, showReels, showVideos, showCreate, showChat, showGames].filter(Boolean).length;
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
@@ -115,6 +115,20 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
             <div className="relative">
               <Film className="nav-ico w-7 h-7" />
               <NavBadge count={count('reels')} />
+            </div>
+          </NavButton>
+        )}
+
+        {/* Feed: long videos and live streams (the same page and icon as the Feed button at the top of Home) */}
+        {showVideos && (
+          <NavButton id="nav-item-videos" label="Feed" title="Feed: long videos and live streams" active={activeTab === 'videos'} onClick={() => onSelectTab('videos')}>
+            <div className="relative">
+              <svg className="nav-ico w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="6" width="22" height="15" rx="4.5" />
+                <path d="M11.6 10.4v6.2a.8.8 0 0 0 1.2.7l5.2-3.1a.8.8 0 0 0 0-1.4l-5.2-3.1a.8.8 0 0 0-1.2.7Z" fill="currentColor" stroke="none" />
+                <path d="M9 24.2h10" />
+              </svg>
+              <NavBadge count={count('videos')} />
             </div>
           </NavButton>
         )}

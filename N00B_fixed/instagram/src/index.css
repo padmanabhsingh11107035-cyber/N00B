@@ -876,18 +876,43 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
    full colour with a heavier icon and a bold label (the picture, for "You", gets a ring). The colour is the accent (--color-noob: white in the dark
    modes, black in Light), so it follows the theme; on the Reels page the bar is the near-black of that page in both modes.
    --nav-h is the bar's height (with the phone's bottom gesture area), for everything that has to stay clear of it. */
-:root { --nav-h: calc(47px + max(env(safe-area-inset-bottom, 0px) - 14px, 10px)); }
+:root { --nav-b: max(env(safe-area-inset-bottom, 0px) - 6px, 12px); --nav-h: calc(56px + var(--nav-b) + 8px); }
+/* FLOATING: the bar is a rounded glass pill that hovers above the page (like Instagram's), the page's own colours (dark in the dark modes, white in Light),
+   with a soft highlight that slides to the icon that is chosen. The bar element itself lets touches through; only the pill takes them. */
 #floating-bottom-nav {
-  height: var(--nav-h);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px) - 14px, 10px);   /* the icons sit lower (14px less empty strip above the home bar), never less than 10px, so the labels stay clear of the screen's bottom edge / the home bar */
-  background-color: var(--page);
-  border-top: 1px solid color-mix(in srgb, var(--color-noob) 14%, transparent);
+  height: auto;
+  padding: 0 12px var(--nav-b);
+  background: transparent;
+  border: 0;
+  pointer-events: none !important;
+}
+#floating-bottom-nav .nav-row {
+  pointer-events: auto;
+  height: 56px;
+  border-radius: 28px;
+  padding: 0 4px;
+  background-color: color-mix(in srgb, var(--page) 82%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  border: 1px solid color-mix(in srgb, var(--color-noob) 14%, transparent);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 #floating-bottom-nav[data-tab="reels"] {
   --color-noob: #ffffff;
-  background-color: #0f0f11;
 }
-#floating-bottom-nav .nav-row { height: 46px; }
+#floating-bottom-nav[data-tab="reels"] .nav-row { background-color: rgba(18, 18, 20, 0.78); }
+#floating-bottom-nav .nav-slider {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  box-sizing: border-box;
+  border-radius: 22px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-noob) 15%, transparent);
+  transition: transform 0.42s cubic-bezier(0.34, 1.32, 0.5, 1), opacity 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) { #floating-bottom-nav .nav-slider { transition: opacity 0.2s ease; } }
 #floating-bottom-nav .nav-lbl { display: none; }   /* icons only: the names stay for screen readers (aria-label on each button) */
 #floating-bottom-nav .nav-item {
   color: color-mix(in srgb, var(--color-noob) 72%, transparent);

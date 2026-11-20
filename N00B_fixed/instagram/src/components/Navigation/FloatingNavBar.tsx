@@ -66,6 +66,9 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   // a page that the administrator has switched off for users has no button (the others share the width)
   const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games'), showVideos = useFeatureOn('videos');
   const columns = 2 + [showExplore, showReels, showVideos, showCreate, showChat, showGames].filter(Boolean).length;
+  // the sliding highlight: one soft pill behind the open page's icon that glides to the next one (Create is never "open", so the pill rests while it is used)
+  const order: NavTab[] = (['feed', showExplore && 'explore', showReels && 'reels', showVideos && 'videos', showCreate && 'post', showChat && 'chat', showGames && 'games', 'profile'] as Array<NavTab | false>).filter((t): t is NavTab => !!t);
+  const slot = order.indexOf(activeTab);
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
@@ -87,13 +90,14 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
       } ${keyboardOpen ? 'hidden' : ''}`}
     >
       <div
-        className="nav-row grid grid-cols-7 items-stretch"
+        className="nav-row relative grid grid-cols-7 items-stretch"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         onPointerDown={(e) => {
           const id = (e.target as HTMLElement).closest('button')?.id || '';
           if (id.startsWith('nav-item-')) onPressTab?.(id.slice('nav-item-'.length) as NavTab);
         }}
       >
+        <span className="nav-slider" aria-hidden="true" style={{ width: `calc((100% - 8px) / ${columns})`, transform: `translateX(${Math.max(slot, 0) * 100}%)`, opacity: slot < 0 || activeTab === 'post' ? 0 : 1 }} />
         <NavButton id="nav-item-feed" label="Home" title="Home" active={activeTab === 'feed'} onClick={() => onSelectTab('feed')}>
           <div className="relative">
             <Home className="nav-ico w-7 h-7" />

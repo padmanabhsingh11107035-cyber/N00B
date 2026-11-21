@@ -6,6 +6,7 @@ import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
 import { EmojiPanel } from '../Chat/EmojiPanel';
+import { StickerTray } from './StickerTray';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
@@ -108,6 +109,8 @@ interface CreateStoryModalProps {
   allUsers?: User[];
   // A picture that was just finished in NOOB Studio: the story opens with it already picked
   initialFile?: File | null;
+  /** the person's own picture (the Avatar sticker) */
+  avatar?: string;
 }
 
 const POLL_BG_COLORS = ['#00FF66', '#7C3AED', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899', '#000000', '#FFFFFF'];
@@ -116,7 +119,7 @@ const MIN_POLL_OPTIONS = 2;
 const MAX_POLL_OPTIONS = 8;
 const MAX_OPTION_LENGTH = 40;
 
-export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory, allUsers = [], initialFile = null }) => {
+export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory, allUsers = [], initialFile = null, avatar }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedImageObjectKey, setSelectedImageObjectKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -1365,65 +1368,22 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             </div>
           )}
 
-          {/* Sticker / emoji / GIF picker */}
+          {/* The sticker tray, like Instagram's (Stories/StickerTray.tsx) */}
           {showStickerPicker && (
-            <div
-              className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-3 py-2.5">
-                <button
-                  onClick={() => setShowStickerPicker(false)}
-                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="flex items-center gap-1.5 bg-black/60 rounded-full p-1 overflow-x-auto no-scrollbar max-w-[70%]">
-                  {(['emoji', 'animated', 'gif', 'upload'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setStickerTab(tab)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer shrink-0 ${
-                        stickerTab === tab ? 'bg-noob text-black' : 'text-gray-300 hover:text-white'
-                      }`}
-                    >
-                      {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : tab === 'gif' ? 'GIF' : 'Upload'}
-                    </button>
-                  ))}
-                </div>
-                <div className="w-7" />
-              </div>
-              <div className="flex-1 overflow-y-auto px-3 pb-4">
-                {stickerTab === 'emoji' && <EmojiPanel onPick={(emoji) => addStickerLayer('emoji', emoji)} />}
-                {stickerTab === 'animated' && (
-                  <AnimatedStickerPanel onPick={(url) => addStickerLayer('image', url)} />
-                )}
-                {stickerTab === 'gif' && <GifPanel curated={[]} onPick={(url) => addStickerLayer('image', url)} />}
-                {stickerTab === 'upload' && (
-                  <div className="flex flex-col items-center justify-center h-full gap-3 py-10">
-                    <button
-                      type="button"
-                      onClick={() => stickerUploadInputRef.current?.click()}
-                      disabled={isUploadingSticker}
-                      className="flex flex-col items-center gap-2.5 px-6 py-8 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-noob text-zinc-400 hover:text-noob transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {isUploadingSticker ? <Loader2 className="w-8 h-8 animate-spin" /> : <ImagePlus className="w-8 h-8" />}
-                      <span className="text-xs font-bold">
-                        {isUploadingSticker ? 'Uploading...' : 'Upload your own sticker or GIF'}
-                      </span>
-                    </button>
-                    {stickerUploadError && <p className="text-[11px] text-red-400 text-center">{stickerUploadError}</p>}
-                    <input
-                      ref={stickerUploadInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleUploadCustomSticker}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <StickerTray
+              avatar={avatar}
+              onClose={() => setShowStickerPicker(false)}
+              onEmoji={(emoji) => addStickerLayer('emoji', emoji)}
+              onImage={(url) => addStickerLayer('image', url)}
+              onLocation={() => { setShowStickerPicker(false); setShowLocationInput(true); }}
+              onMention={() => { setShowStickerPicker(false); setShowMentionPicker(true); }}
+              onMusic={() => { setShowStickerPicker(false); setShowMusicPicker(true); }}
+              onPoll={() => { setShowStickerPicker(false); setShowPollInput(true); }}
+              onQuestions={() => { setShowStickerPicker(false); openNewQuestionLayer(); }}
+              onLink={() => { setShowStickerPicker(false); openNewLinkLayer(); }}
+              onHashtag={() => { setShowStickerPicker(false); openNewHashtagLayer(); }}
+              onCountdown={() => { setShowStickerPicker(false); openNewCountdownLayer(); }}
+            />
           )}
 
           {/* Mention picker */}

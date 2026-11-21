@@ -2497,6 +2497,7 @@ export default function App() {
       {showCreateStoryModal && (
         <React.Suspense fallback={null}><CreateStoryModal
           initialFile={studioStoryFile}
+          avatar={currentUser.avatar}
           onClose={() => { setShowCreateStoryModal(false); setStudioStoryFile(null); }}
           onSubmitStory={handleCreateStory}
           allUsers={registeredUsers}

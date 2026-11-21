@@ -466,6 +466,7 @@ const VideoMixCard: React.FC<{ video: LongVideo; onOpen: (id: string) => void; o
     <article className="hm-card hm-vid" data-testid="home-video-card" aria-label={`Video: ${video.title}`}>
       <button type="button" className="hm-vid-media" onClick={() => onOpen(video.id)} aria-label={`Play ${video.title}`}>
         {video.thumbnailUrl ? <img src={resolveMedia(video.thumbnailUrl)} alt="" loading="lazy" decoding="async" /> : <video src={resolveMedia(video.videoUrl)} muted playsInline preload="metadata" />}
+        <span className="hm-vid-tag" data-testid="home-video-tag">Video</span>
         <span className="hm-vid-time">{mins}:{String(secs).padStart(2, '0')}</span>
       </button>
       <div className="hm-vid-info">

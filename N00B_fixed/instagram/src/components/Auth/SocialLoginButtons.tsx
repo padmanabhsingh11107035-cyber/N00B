@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { fetchEnabledSocialProviders, cachedSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
 import { ButtonDoodles } from './ButtonDoodles';
-import { isOnOtherNoobAddress, MAIN_SITE } from '../../utils/siteUrl';
+import { isOnOtherNoobAddress, isNativeApp, MAIN_SITE } from '../../utils/siteUrl';
 import { SystemPage } from '../Common/SystemPage';
 
 // "Continue with …" buttons. Only the providers that are switched on in the sign-in settings are shown, so a button appears
@@ -165,6 +165,8 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError, variant = 'list' 
       return;
     }
     const res = await signInWithProvider(p);
+    // inside the Android app the page does not leave: the provider opened in the phone's own browser tab, so the button must not keep turning (the return is picked up by the sign-in screen)
+    if (res.success && isNativeApp()) setBusy(null);
     if (!res.success) {
       setBusy(null);
       if (res.unavailable) { setUnavailable(true); return; }

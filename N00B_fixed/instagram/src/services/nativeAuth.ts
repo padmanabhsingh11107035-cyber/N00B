@@ -69,6 +69,8 @@ export function listenForNativeAuthReturn(): void {
           if (back.kind === 'tokens') await supabase.auth.setSession({ access_token: back.accessToken, refresh_token: back.refreshToken });
           else if (back.kind === 'code') await supabase.auth.exchangeCodeForSession(back.code);
         } catch { /* the sign-in screen is still there to try again */ }
+        // tell the sign-in screen (it only looks once, when it opens): the login is saved now, go on with it
+        try { window.dispatchEvent(new CustomEvent('noob-oauth-return', { detail: { error: back.kind === 'error' ? back.message : '' } })); } catch { /* nothing is listening */ }
       });
     } catch { /* not inside the app */ }
   })();

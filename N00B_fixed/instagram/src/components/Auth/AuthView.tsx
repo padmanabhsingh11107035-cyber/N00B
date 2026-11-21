@@ -219,16 +219,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [oauthChecking, setOauthChecking] = useState(() => !!tabSessions.currentAccount());
   useEffect(() => {
     let alive = true;
-    void checkOAuthSignIn()
-      .then((res) => {
-        if (!alive) return;
-        if (res.status === 'new') setOauthPending({ pending: true, email: res.email, fullName: res.fullName, pictureUrl: res.pictureUrl });
-        else if (res.status === 'choose') setOauthChoices(res.accounts);
-        else if (res.status === 'signed-in') void proceedAfterAuth(res.user);
-        else if (res.status === 'error') setErrorMessage(res.error);
-      })
-      .finally(() => { if (alive) setOauthChecking(false); });
-    return () => { alive = false; };
+    const run = (afterReturn = false) => {
+      void checkOAuthSignIn()
+        .then((res) => {
+          if (!alive) return;
+          // back from the phone's browser tab with a login that already has its NOOB profile: start the app again, it opens straight into the account
+          if (afterReturn && res.status === 'none') { window.location.reload(); return; }
+          if (res.status === 'new') setOauthPending({ pending: true, email: res.email, fullName: res.fullName, pictureUrl: res.pictureUrl });
+          else if (res.status === 'choose') setOauthChoices(res.accounts);
+          else if (res.status === 'signed-in') void proceedAfterAuth(res.user);
+          else if (res.status === 'error') setErrorMessage(res.error);
+        })
+        .finally(() => { if (alive) setOauthChecking(false); });
+    };
+    run();
+    // The Android app: the provider opened in the phone's own browser tab and this screen stayed where it was. When the tab hands back (services/nativeAuth.ts) look again, now that the login is saved.
+    const onReturn = (e: Event) => {
+      const err = (e as CustomEvent<{ error?: string }>).detail?.error;
+      if (err) { setErrorMessage(err); return; }
+      setOauthChecking(true);
+      run(true);
+    };
+    window.addEventListener('noob-oauth-return', onReturn);
+    return () => { alive = false; window.removeEventListener('noob-oauth-return', onReturn); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

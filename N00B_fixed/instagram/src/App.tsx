@@ -172,7 +172,7 @@ import { readDiag, explainSessionEnd } from './services/authDiag';
 import { installContentProtection } from './utils/contentProtection';
 import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
-import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
+import { fetchPublicPlatformSettings, recoverPendingSignupAvatar, type PlatformSettings } from './services/api';
 import { setVisibleInterval } from './utils/visibleInterval';
 import { feedCache, clearFeedCache } from './utils/feedCache';
 import { createFeedPager, mergePages, shouldLoadMore, countUnseen, FULL_LIST_CAP } from './utils/feedPaging';
@@ -787,6 +787,14 @@ export default function App() {
       resumePendingPush();   // a "turn on notifications" that was cut short (phone offline, app closed) finishes by itself now
     }
   }, [currentUser?.id]);
+
+  // A sign-up photo that did not finish saving (app closed, bad connection) is kept on the phone: save it now.
+  const ownId = currentUser?.id;
+  const ownHasAvatar = !!currentUser?.avatar;
+  useEffect(() => {
+    if (!ownId || ownHasAvatar) return;
+    void recoverPendingSignupAvatar(ownId).then((avatar) => { if (avatar) setCurrentUser((u) => (u && u.id === ownId ? { ...u, avatar } : u)); });
+  }, [ownId, ownHasAvatar]);
 
   // A new account's profile photo is saved in the background right after sign-up; when it is, the copy shown meanwhile is swapped for the saved one.
   useEffect(() => {

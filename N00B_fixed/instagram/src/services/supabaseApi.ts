@@ -187,6 +187,8 @@ export async function fetchHealth(): Promise<{ status: string; usersCount?: numb
 // A photo chosen on the sign-up screen is picked BEFORE the account exists, so there is nobody to
 // upload it as yet. It waits here and is uploaded the moment the account is created.
 const pendingAvatarFiles = new Map<string, File>();
+const pendingAvatarData = new Map<string, string>();
+const PENDING_AVATAR_KEY = 'noob.pendingAvatar.';
 
 // A photo that came back as an inline "data:" string (the screens' fallback when an upload fails) is turned
 // back into a real file, so it is uploaded properly instead of being stored inside the database.
@@ -328,7 +330,9 @@ export async function verifySignupOtp(code: string, payload: SignupPayload): Pro
     // The account exists and the person is signed in. Only one thing is still needed to show the app: their profile. The profile photo (an upload and a second save),
     // the welcome email and the chat keys finish in the background; until the photo is saved, the phone's own copy of it is shown.
     const preview = pendingKey ? pendingAvatarPreview(pendingKey) : '';
-    void uploadPendingSignupAvatar(pendingKey).then((key) => { if (key && signedInId) announceOwnAvatar(signedInId, resolveMedia(key)); });
+    // the photo is also kept on the phone until it is saved, so a closed app or a lost connection does not lose it (see recoverPendingSignupAvatar)
+    if (pendingKey && signedInId) { try { localStorage.setItem(PENDING_AVATAR_KEY + signedInId, pendingAvatarData.get(pendingKey) || ''); } catch { /* storage full or blocked */ } }
+    void uploadPendingSignupAvatar(pendingKey, signedInId).then((key) => { if (key && signedInId) announceOwnAvatar(signedInId, resolveMedia(key)); });
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
     let user: any;
     try { user = await fetchMyUserWithRetry(); } catch { user = null; }
@@ -354,6 +358,7 @@ function prepareSignupAvatar(avatarInput: string | undefined): { avatar: string;
     if (file) {
       input = `pending:${crypto.randomUUID()}`;
       pendingAvatarFiles.set(input, file);
+      pendingAvatarData.set(input, avatarInput || '');
     } else {
       input = '';
     }
@@ -377,7 +382,7 @@ function announceOwnAvatar(userId: string, avatar: string): void {
   try { window.dispatchEvent(new CustomEvent('noob:own-avatar', { detail: { userId, avatar } })); } catch { /* nothing is listening */ }
 }
 
-async function uploadPendingSignupAvatar(pendingKey: string): Promise<string | null> {
+async function uploadPendingSignupAvatar(pendingKey: string, userId?: string): Promise<string | null> {
   if (!pendingKey) return null;
   const file = pendingAvatarFiles.get(pendingKey);
   pendingAvatarFiles.delete(pendingKey);
@@ -394,11 +399,25 @@ async function uploadPendingSignupAvatar(pendingKey: string): Promise<string | n
         await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
       }
     }
+    if (userId) { try { localStorage.removeItem(PENDING_AVATAR_KEY + userId); } catch { /* nothing to clear */ } }
     return uploaded.objectKey;
   } catch (err) {
     console.error('Profile photo upload after sign-up failed — the account keeps the default photo:', err);
     return null;
   }
+}
+
+// Called once the app knows the signed-in person has no saved photo: if their sign-up photo was kept on this phone (the app was closed before it uploaded), save it now.
+export async function recoverPendingSignupAvatar(userId: string): Promise<string | null> {
+  let data = '';
+  try { data = localStorage.getItem(PENDING_AVATAR_KEY + userId) || ''; } catch { return null; }
+  if (!data.startsWith('data:')) return null;
+  const file = dataUriToFile(data, 'avatar');
+  if (!file) return null;
+  const key = `pending:${crypto.randomUUID()}`;
+  pendingAvatarFiles.set(key, file);
+  const saved = await uploadPendingSignupAvatar(key, userId);
+  return saved ? resolveMedia(saved) : null;
 }
 
 // (There is no sign-up call that talks to the login service directly any more: an account can only be made by the emailed-code flow above, where the server checks the code and creates the

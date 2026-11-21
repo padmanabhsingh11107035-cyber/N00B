@@ -1,4 +1,5 @@
 import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
+import { showErrorDialog } from '../../utils/errorDialog';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
 import { setChatMutedFor, fetchChatMuteUntil, muteExpired, muteUntilLabel } from '../../services/chatMuteApi';
@@ -895,7 +896,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     // Private chats are limited to users with a follow relationship in
     // either direction (matches the "Connected Friends" list rules).
     if (!canStartChatWith(user)) {
-      setChatBlockedNotice(`You can only message @${user.username} if you noob them or they noob you.`);
+      showErrorDialog(`Follow @${user.username} to chat with them. You can only message someone if you noob them or they noob you.`, { title: 'Follow to chat' });
       return;
     }
     setChatBlockedNotice('');
@@ -923,7 +924,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setSearchQuery('');
     } catch (err) {
       console.error('Failed to start chat:', err);
-      setChatBlockedNotice('Could not start the chat. Please try again.');
+      showErrorDialog('Could not start the chat. Please try again.');
     } finally {
       creatingChatWithRef.current.delete(user.id);
     }
@@ -1808,11 +1809,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           : 'edge-own max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:bottom-[var(--nav-h)] max-md:z-30 md:relative md:h-[calc(100dvh-var(--nav-h))] lg:h-[calc(100dvh-1.5rem-var(--nav-h))] xl:h-[calc(100dvh-1.5rem)] md:min-h-[460px] rounded-none border-0 shadow-none'
       }`}
     >
-      {chatBlockedNotice && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-rose-500/40 text-rose-300 text-xs font-semibold shadow-2xl max-w-[90%] text-center">
-          {chatBlockedNotice}
-        </div>
-      )}
 
       {/* WhatsApp/Signal Style Main Container */}
       <div className="flex-1 flex overflow-hidden relative">

@@ -112,6 +112,8 @@ export function rewriteDirectMedia(value: string): string {
 
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
+  // a sign-up photo that never finished uploading leaves this placeholder: show no picture (the default avatar) instead of a broken one
+  if (value.startsWith('pending:')) return '';
   // inside the Android app the website's own /m/ route needs the full address (see utils/siteUrl.ts); on the website mediaOrigin() is empty
   if (value.startsWith('/m/')) return mediaOrigin() + value;
   // an older saved address of the same file (/media/<key>, or Supabase's own address) goes through the same cached route

@@ -71,6 +71,7 @@ export {
   fetchPostsPage,
   fetchPostById,
   fetchLikedPosts,
+  recoverPendingSignupAvatar,
   fetchSavedPosts,
   fetchArchivedPosts,
   createPost,

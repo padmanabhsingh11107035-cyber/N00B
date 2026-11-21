@@ -3,6 +3,7 @@ import { Scissors, SlidersHorizontal, Loader2, MapPin, AtSign, Music2, Search, P
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { uploadMediaFile } from '../../services/api';
+import { personCutoutSticker } from './personCutout';
 import { photoSticker, polaroidSticker, photostripSticker, timeSticker, temperatureSticker, pillSticker, cutoutSticker, currentTemperature, type CutoutShape } from './stickerMaker';
 import { showErrorDialog } from '../../utils/errorDialog';
 import { useSheetDrag } from '../../utils/sheetDrag';
@@ -32,7 +33,7 @@ type Pill = { key: string; label: string; Icon: React.ElementType; tint: string;
 export const StickerTray: React.FC<Props> = (p) => {
   const drag = useSheetDrag(p.onClose);   // drag the grey bar down to close
   const [view, setView] = useState<'home' | 'emoji' | 'animated' | 'gif' | 'cutouts' | 'slider'>('home');
-  const [shape, setShape] = useState<CutoutShape>('circle');
+  const [shape, setShape] = useState<CutoutShape | 'person'>('circle');
   const [sliderQ, setSliderQ] = useState('How much do you like it?');
   const [sliderEmoji, setSliderEmoji] = useState('😍');
   const cutRef = useRef<HTMLInputElement | null>(null);
@@ -96,10 +97,10 @@ export const StickerTray: React.FC<Props> = (p) => {
           {view === 'cutouts' && (
             <div className="px-2 pt-2" data-testid="sticker-cutouts">
               <h3 className="text-xl font-extrabold text-white mb-1">Cutouts</h3>
-              <p className="text-white/60 text-sm mb-4">Pick a shape, then a picture. The picture is cut into that shape with a white edge.</p>
-              <div className="grid grid-cols-4 gap-3 mb-5">
-                {([['circle', 'Circle'], ['heart', 'Heart'], ['star', 'Star'], ['square', 'Rounded']] as Array<[CutoutShape, string]>).map(([k, label]) => (
-                  <button key={k} type="button" onClick={() => setShape(k)} aria-pressed={shape === k} className={`h-20 rounded-2xl text-sm font-bold cursor-pointer ${shape === k ? 'bg-white text-black' : 'bg-white/12 text-white'}`}>{label}</button>
+              <p className="text-white/60 text-sm mb-4">Pick a shape, then a picture. The picture is cut into that shape with a white edge. "Person" removes the background and keeps only the person.</p>
+              <div className="grid grid-cols-5 gap-2 mb-5">
+                {([['person', 'Person'], ['circle', 'Circle'], ['heart', 'Heart'], ['star', 'Star'], ['square', 'Rounded']] as Array<[CutoutShape | 'person', string]>).map(([k, label]) => (
+                  <button key={k} type="button" onClick={() => setShape(k)} aria-pressed={shape === k} className={`h-20 rounded-2xl text-[13px] font-bold cursor-pointer ${shape === k ? 'bg-white text-black' : 'bg-white/12 text-white'}`}>{label}</button>
                 ))}
               </div>
               <button type="button" onClick={() => cutRef.current?.click()} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer">Choose a picture</button>
@@ -147,7 +148,7 @@ export const StickerTray: React.FC<Props> = (p) => {
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickOne(photoRef, photoSticker, 'photo')} />
         <input ref={frameRef} type="file" accept="image/*" className="hidden" onChange={pickOne(frameRef, polaroidSticker, 'frame')} />
         <input ref={stripRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const fs: File[] = Array.from(e.target.files || []).slice(0, 4) as File[]; e.target.value = ''; if (fs.length) void place(() => photostripSticker(fs), 'photostrip'); }} />
-        <input ref={cutRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void place(() => cutoutSticker(f, shape), 'cutout'); }} />
+        <input ref={cutRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void place(() => (shape === 'person' ? personCutoutSticker(f) : cutoutSticker(f, shape)), 'cutout'); }} />
         <input ref={ownRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void place(async () => f, 'sticker'); }} />
       </div>
     </div>

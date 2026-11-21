@@ -17,33 +17,33 @@ const ld = (src) => JSON.parse(src.match(/<script type="application\/ld\+json">(
 
 section('1. The home page (what shows for "noobsocials")');
 const title = html.match(/<title>([\s\S]*?)<\/title>/)[1].replace(/&amp;/g, '&');
-check(/NOOB Socials/.test(title) && /Student-run/i.test(title) && title.length <= 70, 'the title names the site and says it is student-run', title);
+check(/NOOB Socials/.test(title) && /free social app/i.test(title) && !/student/i.test(title) && title.length <= 70, 'the title names the site and says it is a free social app (no student wording)', title);
 const desc = html.match(/<meta name="description" content="([^"]*)"/)[1];
-check(/NOOB Socials/.test(desc) && /noobsocials\.com/.test(desc) && /students/i.test(desc) && desc.length >= 90 && desc.length <= 175, 'the description says who we are and what it does, in a length search results show', String(desc.length));
+check(/NOOB Socials/.test(desc) && /noobsocials\.com/.test(desc) && /Padmanabh Singh Vaghela/.test(desc) && !/student/i.test(desc) && desc.length >= 90 && desc.length <= 250, 'the description says who we are and what it does, in a length search results show', String(desc.length));
 check(/<link rel="canonical" href="https:\/\/noobsocials\.com\/" \/>/.test(html), 'one canonical address, so noobsocials.com and the older address count as one site');
 check(/<meta name="robots" content="index, follow, max-image-preview:large(, noai, noimageai)?" \/>/.test(html) && !/noindex|nofollow/i.test(html.replace('index, follow', '')), 'search engines are invited in');
-check(/og:site_name" content="NOOB Socials"/.test(html) && /og:title" content="NOOB Socials \| The student-run social app"/.test(html), 'link previews use the same name');
+check(/og:site_name" content="NOOB Socials"/.test(html) && /og:title" content="NOOB Socials \| The free social app for fun"/.test(html), 'link previews use the same name');
 check(/og:image" content="https:\/\/noobsocials\.com\/brand\/og-card\.png"/.test(html) && /og:image:width" content="1200"/.test(html) && /og:image:height" content="630"/.test(html), 'and a proper 1200x630 share card');
 const g = ld(html)['@graph'];
 const org = g.find((x) => x['@type'] === 'Organization'), site = g.find((x) => x['@type'] === 'WebSite'), app = g.find((x) => x['@type'] === 'WebApplication');
-check(org && org.name === 'NOOB Socials' && org.alternateName.includes('noobsocials') && org.alternateName.includes('NOOB') && /student/.test(org.description) && org.founder && org.founder.name === "Padmanabh Singh Vaghela", 'structured data: the organisation is "NOOB Socials", also known as NOOB / noobsocials, run by students');
-check(org.sameAs.includes('https://www.instagram.com/nooob.xyz') && !/[?&]utm_|vrfl/.test(JSON.stringify(org.sameAs)), 'structured data: our official Instagram is linked to the organisation (clean address, no tracking)');
+check(org && org.name === 'NOOB Socials' && org.alternateName.includes('noobsocials') && org.alternateName.includes('NOOB') && !/student/i.test(org.description) && org.founder && org.founder.name === "Padmanabh Singh Vaghela", 'structured data: the organisation is "NOOB Socials", also known as NOOB / noobsocials, made by Padmanabh Singh Vaghela');
+check(org.sameAs.includes('https://www.instagram.com/noobsocials') && !/[?&]utm_|vrfl/.test(JSON.stringify(org.sameAs)), 'structured data: our official Instagram is linked to the organisation (clean address, no tracking)');
 check(org.alternateName.includes('noob socials') && site.alternateName.includes('noob socials'), 'the spaced spelling "noob socials" is a known name too');
 check(site && site.name === 'NOOB Socials' && site.alternateName.includes('noobsocials') && site.url === 'https://noobsocials.com/', 'structured data: the site name search results should show');
 check(app && app.applicationCategory === 'SocialNetworkingApplication' && app.offers.price === '0' && app.featureList.length >= 8, 'structured data: a free social app with its list of features');
 check(app.featureList.some((f) => /Ludo/.test(f)) && app.featureList.some((f) => /Daily NOOB/.test(f)), '... that names the real features');
-check(/<noscript>[\s\S]*<h1>NOOB Socials<\/h1>[\s\S]*student/.test(html) && /<a href="\/about">/.test(html), 'a visitor (or crawler) without scripts still reads who we are, with a link to the About page');
+check(/<noscript>[\s\S]*<h1>NOOB Socials<\/h1>/.test(html) && !/student-run/i.test((html.match(/<noscript>[\s\S]*?<\/noscript>/) || [''])[0]) && /<a href="\/about">/.test(html), 'a visitor (or crawler) without scripts still reads who we are, with a link to the About page');
 check(/<script type="module" src="\/src\/main\.tsx"><\/script>/.test(html) && /id="root"/.test(html), 'the app itself is untouched');
 
 section('2. The About page');
 check(/<link rel="canonical" href="https:\/\/noobsocials\.com\/about" \/>/.test(about) && /<meta name="robots" content="index, follow/.test(about), 'its own canonical address, open to search engines');
-check(/<title>About NOOB Socials/.test(about) && /<h1>|class="tag">The student-run social app/.test(about) && /built and run by students/.test(about), 'it says plainly that it is student-run');
+check(/<title>About NOOB Socials/.test(about) && /class="tag">The free social app for fun/.test(about) && !/student-run|built and run by students/i.test(about), 'it says what NOOB is, with no student wording');
 const aboutLd = ld(about)['@graph'];
 check(aboutLd.some((x) => x['@type'] === 'AboutPage') && aboutLd.some((x) => x['@type'] === 'BreadcrumbList'), 'structured data for an About page with a breadcrumb');
 for (const feature of ['Reels', 'Stories', 'Voice and video calls', 'Ludo', 'Chess', 'Monopoly', 'Guess the Song', 'Live streaming', 'NOOB Rooms', 'Daily NOOB', 'Anonymous Messages', 'Ask Me Anything', 'This or That', 'Mood Status', 'public polls', 'NOOB AI', 'NOOB Draw', 'Shop NOOB', 'Food Stall', 'NOOB Points', 'NOOB Pro', 'Suggestion Box', 'end-to-end encrypted']) {
   check(new RegExp(feature, 'i').test(about), `lists ${feature}`);
 }
-check(/href="https:\/\/www\.instagram\.com\/nooob\.xyz"/.test(about) && !/utm_source|vrfl/.test(about), 'the About page links to the Instagram, without tracking codes');
+check(/href="https:\/\/www\.instagram\.com\/noobsocials"/.test(about) && !/utm_source|vrfl/.test(about), 'the About page links to the Instagram, without tracking codes');
 check(/href="\/\?join=team"/.test(about) && /href="\/privacy"/.test(about) && /href="\/terms"/.test(about) && /href="\/data-deletion"/.test(about), 'links to joining the team, privacy, terms and deleting your data');
 check(!/<script>/.test(about) && (about.match(/<script src="[^"]+"/g) || []).join() === '<script src="/back-button.js"' && /<style>/.test(about), 'its only script is the small Back button file from the site itself (nothing written inside the page)');
 check(fs.existsSync('public/brand/noob-wordmark.png'), 'its logo file exists');

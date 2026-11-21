@@ -34,7 +34,7 @@ check(R.readPending(fake) === false, 'and cleared');
 check(R.readPending({ getItem() { throw new Error('private mode'); } }) === false, 'a browser that refuses storage does not break it');
 
 section('2. Notifications: "Turn on" closes the prompt at once');
-check(/const handleEnable = \(\) => \{\s*startEnablingPush\(\);\s*dismiss\(\);\s*\};/.test(prompt) && !/handleEnable = async/.test(prompt), 'the tap starts the job and closes the prompt in the same moment; nothing is waited for');
+check(/const handleEnable = \(\) => \{\s*if \(Capacitor\.isNativePlatform\(\)\) void enableNativePush\(\);\s*else startEnablingPush\(\);\s*dismiss\(\);\s*\};/.test(prompt) && !/handleEnable = async/.test(prompt), 'the tap starts the job and closes the prompt in the same moment; nothing is waited for');
 check(!/Enabling…/.test(prompt) && !/disabled=\{loading\}/.test(prompt) && !/useState/.test(prompt), 'there is no "Enabling…" state that could stay on the screen');
 const start = prompt.slice(prompt.indexOf('export function startEnablingPush'), prompt.indexOf('export function resumePendingPush'));
 check(/try \{ asked = Promise\.resolve\(Notification\.requestPermission\(\)\); \}/.test(start) && start.indexOf('requestPermission') < start.indexOf('.then('), "the browser's own question is asked inside the tap itself, before anything else (an iPhone refuses it otherwise)");

@@ -279,7 +279,7 @@ section('13. Wired into the screens');
   check(!/new Audio\(/.test(post), 'a post no longer needs a tap on its tag to start (no per-post audio, the shared player plays)');
   check(/data-testid="post-sound-button"/.test(post) && !/data-testid="post-tap-for-sound"/.test(post) && /data-testid="post-song-tag"/.test(post), 'speaker button and the song tag are on the post (no "Tap for sound" hint)');
   check(/onDoubleClick=\{\(e\) => e\.stopPropagation\(\)\}/.test(post), 'double-tapping the speaker does not like the post');
-  check(/holdSongs\(\)/.test(post) && /onVolumeChange/.test(post), 'a post\'s own video being un-muted silences its song');
+  check(/holdSongs\(\)/.test(post) && /onSound=\{setVideoUnmuted\}/.test(post), 'a post own video being un-muted silences its song');
   check(/useSyncExternalStore\(subscribeFeedSong, getFeedSongView, getFeedSongView\)/.test(post), 'the post shows live state of the song player');
   check(/audioTrack\?\.audioUrl/.test(reels) && /loadSong\(songUrl\)/.test(reels) && /playReel\(song, soundWantedRef\.current\)/.test(reels), 'a reel plays the song attached to it');
   check(/playReel\(video, false\)/.test(reels), '... while its picture plays silently');

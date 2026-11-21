@@ -206,3 +206,25 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 .pm-folded button { font-weight: 800; color: var(--hv-text); cursor: pointer; background: transparent; border: 0; }
 
 .pm-toast { position: fixed; left: 50%; bottom: calc(var(--nav-h, 70px) + 16px); transform: translateX(-50%); z-index: 9100; max-width: 90vw; padding: 12px 18px; border-radius: 9999px; background: #2b2b2e; color: #f5f5f5; font-size: 14px; font-weight: 600; text-align: center; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
+
+/* ---- long videos and live streams between the posts of Home ---- */
+.hm-vid { padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.hm-vid-media { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 24px; overflow: hidden; background: #000; border: 0; padding: 0; cursor: pointer; }
+.hm-vid-media img, .hm-vid-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hm-vid-time { position: absolute; right: 10px; bottom: 10px; padding: 3px 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 13px; font-weight: 700; }
+.hm-vid-info { display: flex; gap: 12px; padding: 12px 6px 4px; align-items: flex-start; }
+.hm-vid-ava { flex: none; width: 40px; height: 40px; border-radius: 9999px; overflow: hidden; background: var(--hv-surface); border: 0; padding: 0; cursor: pointer; }
+.hm-vid-ava img { width: 100%; height: 100%; object-fit: cover; }
+.hm-vid-txt { flex: 1; min-width: 0; text-align: left; background: transparent; border: 0; padding: 0; color: var(--hv-text); cursor: pointer; }
+.hm-vid-txt b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; line-height: 1.3; font-weight: 700; }
+.hm-vid-txt small { display: block; margin-top: 3px; font-size: 13px; color: var(--hv-muted); }
+.hm-live { padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.hm-live-box { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 22px; background: linear-gradient(120deg, rgba(220, 38, 38, 0.22), rgba(220, 38, 38, 0.06)); border: 1px solid rgba(248, 113, 113, 0.4); color: var(--hv-text); text-align: left; cursor: pointer; position: relative; }
+.hm-live-box > img, .hm-live-ph { flex: none; width: 54px; height: 54px; border-radius: 9999px; object-fit: cover; box-shadow: 0 0 0 3px #ef4444; background: var(--hv-surface); }
+.hm-live-badge { position: absolute; top: -9px; left: 14px; display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 9999px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; }
+.hm-live-badge i { width: 6px; height: 6px; border-radius: 9999px; background: #fff; animation: pm-pulse 1.4s ease-in-out infinite; }
+@keyframes pm-pulse { 50% { opacity: 0.3; } }
+.hm-live-txt { flex: 1; min-width: 0; }
+.hm-live-txt b { display: block; font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-live-txt small { display: block; font-size: 13px; color: var(--hv-muted); }
+.hm-live-go { flex: none; padding: 8px 16px; border-radius: 9999px; background: #ef4444; color: #fff; font-size: 14px; font-weight: 800; }

@@ -15,7 +15,7 @@ const sql = read('supabase/migrations/20261015000001_music_page_toggle.sql');
 
 section('1. The bottom bar and the menu on Home');
 const feed = read('src/components/Feed/FeedView.tsx');
-check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && /nav-item-videos/.test(nav), 'the bottom bar carries no Music; it carries the Feed (videos) page since 2026-11-20');
+check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && !/nav-item-videos/.test(nav), 'the bottom bar carries neither Music nor the Feed page (the Feed is merged into Home)');
 check(/musicHidden\?: boolean/.test(feed) && /\{onOpenTab && !musicHidden && \(\s*<button\s+onClick=\{\(\) => onOpenTab\('music'\)\}/.test(feed), 'the Music button at the top of Home is drawn only while the page is shown');
 check(!/setShowNoobMenu\(false\); onOpenTab\('music'\)/.test(feed), 'the three-line menu no longer lists Music (the top button is the way in)');
 check(!/testId: 'menu-videos'/.test(feed) && !/feed-videos-button/.test(feed), 'the Videos feed is not in the top bar of Home or the menu: it is on the bottom bar');

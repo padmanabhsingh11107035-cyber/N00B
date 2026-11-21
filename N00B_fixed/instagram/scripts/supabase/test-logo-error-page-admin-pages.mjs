@@ -71,7 +71,7 @@ check(/'admin_media_purge_take', \{ p_limit: 50 \}/.test(api) && /supabase\.stor
 check(/supabase\.rpc\('poke_media_cleanup'\)/.test(api) && /export function pokeMediaCleanup\(\): void/.test(api), 'the app can nudge the server\'s cleanup');
 check(/useEffect\(\(\) => \{ if \(currentUser\?\.id\) pokeMediaCleanup\(\); \}, \[currentUser\?\.id\]\);/.test(app), '... once a person is signed in');
 check(!/purgedMediaKeys/.test(api) && !/storage\.from\(MEDIA_BUCKET\)\.remove\(res\.mediaKey|remove\(\[res\.mediaKey\]\)/.test(api), 'the phone no longer tries to delete other people\'s Daily NOOB files itself (it never could)');
-check(/adminFetchDailyOverview,\s*adminFetchStorageOverview,\s*(?:adminFetchClientErrors,\s*adminClearClientErrors,\s*)?adminSetMediaCleanup,\s*adminScanUnusedMedia,\s*adminQueueUnusedMedia,\s*adminCancelMediaQueue,\s*adminRemoveDueMediaNow,\s*pokeMediaCleanup,/.test(apiIndex), 'all exported from the API index');
+check(/adminFetchDailyOverview,\s*adminFetchStorageOverview,\s*(?:adminFetchStorageByPerson,\s*)?(?:adminFetchClientErrors,\s*adminClearClientErrors,\s*)?adminSetMediaCleanup,\s*adminScanUnusedMedia,\s*adminQueueUnusedMedia,\s*adminCancelMediaQueue,\s*adminRemoveDueMediaNow,\s*pokeMediaCleanup,/.test(apiIndex), 'all exported from the API index');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

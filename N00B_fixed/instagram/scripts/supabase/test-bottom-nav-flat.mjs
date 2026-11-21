@@ -12,7 +12,7 @@ const app = read('src/App.tsx');
 
 section('1. What is on the bar');
 const ids = [...nav.matchAll(/id="nav-item-(\w+)"/g)].map((m) => m[1]);
-check(ids.join(',') === 'feed,explore,reels,videos,post,chat,games,profile', 'Home, Explore, Reels, Feed, Create, Chat, Games, You — in that order', ids.join(','));
+check(ids.join(',') === 'feed,explore,reels,post,chat,games,profile', 'Home, Explore, Reels, Create, Chat, Games, You — in that order (the Feed is on Home)', ids.join(','));
 check(/grid-cols-7/.test(nav) && /gridTemplateColumns/.test(nav), 'equal columns (the count follows the pages that are switched on)');
 check(/CreateIcon/.test(nav) && /nav-create-orb/.test(nav) && /id="nav-item-post"[^>]*title="Create a post, reel or story"[^>]*onClick=\{\(\) => onSelectTab\('post'\)\}/.test(nav), 'Create is a gradient circle with a white plus, no label, and opens the same picker as before');
 check(!/id="nav-item-post"[^>]*active=/.test(nav), 'Create is never the "open" page');

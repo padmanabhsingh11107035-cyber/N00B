@@ -138,6 +138,7 @@ interface FeedViewProps {
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
   onNavigateToVideo?: (videoId: string) => void;
+  onNavigateToLive?: (stream: import('../../services/supabaseApi').LiveStreamSummary) => void;
   // A specific post to scroll to and highlight (e.g. tapped from a profile grid or Explore) — the
   // feed is shuffled and paginated, so without this the target post may not even be rendered yet.
   initialPostId?: string;
@@ -192,6 +193,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToPost,
   onNavigateToReel,
   onNavigateToVideo,
+  onNavigateToLive,
   onNavigateToProfile,
   onOpenFunPage,
   onOpenTab,
@@ -300,7 +302,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [refreshNonce, setRefreshNonce] = useState(0);
   // Anonymous thoughts and public polls are part of Home: they sit between the posts of the plain "For You" feed (not in a topic, Following or Favourites)
   const noInterestFrozen = useMemo(() => notInterestedIds('post'), [refreshNonce]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
-  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce);
+  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('videos'), featOn('live'));
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
   const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
   const lastRefreshNonceRef = useRef(0);
@@ -982,7 +984,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {/* 4. Feed Posts Stack */}
       <main ref={postListRef} className="w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 && mixOn && mix.items.length > 0 ? (
-          <>{mix.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} />)}</>
+          <>{mix.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} onOpenVideo={onNavigateToVideo} onOpenLive={onNavigateToLive} />)}</>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
@@ -1006,7 +1008,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               return (
                 <React.Fragment key={post.id}>
                   {renderPostCard(post)}
-                  {extra && <HomeMixCard key={mixKey(extra)} item={extra} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} />}
+                  {extra && <HomeMixCard key={mixKey(extra)} item={extra} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} onOpenVideo={onNavigateToVideo} onOpenLive={onNavigateToLive} />}
                 </React.Fragment>
               );
             })}

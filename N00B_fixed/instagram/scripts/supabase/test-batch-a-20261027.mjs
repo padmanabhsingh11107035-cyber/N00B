@@ -12,7 +12,7 @@ section('1. Category chips, install button, vanish mode');
 const feed = read('src/components/Feed/FeedView.tsx');
 check(/data-testid="feed-topic-chips"/.test(feed) && /flex-nowrap[^"]*overflow-x-auto/.test(feed) && /\{categories\.map/.test(feed), 'the topic chips sit on ONE full-width line that scrolls sideways when the screen is narrow (2026-10-28)');
 const auth = read('src/components/Auth/AuthView.tsx');
-check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\)\)/.test(auth) && /\{hideInstall \? null :/.test(auth), 'the install button is hidden once the app is installed and on iPhone / iPad');
+check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\) \|\| isAndroidWeb\(\)\)/.test(auth) && /\{hideInstall \? /.test(auth), 'the install button is hidden once the app is installed and on iPhone / iPad (and the Android website, which has its own button)');
 const pd = read('src/utils/platformDetect.ts');
 check(/iphone\|ipad\|ipod/.test(pd) && /MacIntel/.test(pd) && /export function isAppleMobile/.test(pd), 'an iPad that calls itself a Mac is found by its touch screen');
 const chat = read('src/components/Chat/ChatView.tsx');

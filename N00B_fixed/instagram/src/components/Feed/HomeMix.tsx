@@ -12,6 +12,8 @@ import {
   reportAnonMessage,
   adminRemoveAnonMessage,
   fetchPolls,
+  fetchLongVideos,
+  fetchLiveStreams,
   fetchPoll,
   votePoll,
   removePoll,
@@ -30,6 +32,10 @@ import {
   type MixComment
 } from '../../services/api';
 import { resolveMedia } from '../../services/supabase';
+import type { LiveStreamSummary } from '../../services/supabaseApi';
+import type { LongVideo } from '../../types';
+import { formatRelativeTime } from '../../utils/formatTime';
+import { formatCompactCount } from '../../utils/repostBatcher';
 import { funShareUrl } from '../../utils/funRoutes';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -38,8 +44,8 @@ import { useCommentsBox } from '../../utils/useVisualViewport';
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
 
-export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll };
-export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : 'poll-' + i.poll.id);
+export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'video'; at: string; video: LongVideo } | { kind: 'live'; at: string; stream: LiveStreamSummary };
+export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : i.kind === 'video' ? 'video-' + i.video.id : 'live-' + i.stream.id);
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -86,39 +92,43 @@ export function loadStats(k: MixKind, ids: string[]): void {
 }
 
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
-export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number) {
+export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, videosOn = false, liveOn = false) {
   const [items, setItems] = useState<MixItem[]>([]);
   const [slots, setSlots] = useState<number[]>([]);   // after which posts each item is shown: uneven gaps, new every load
   useEffect(() => {
     let alive = true;
     void Promise.all([
       anonOn ? fetchAnonMessages({ limit: 20 }).then((r) => r.messages).catch(() => [] as AnonMessage[]) : Promise.resolve([] as AnonMessage[]),
-      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[])
-    ]).then(([anon, polls]) => {
+      pollsOn ? fetchPolls({ tab: 'active', limit: 10 }).then((r) => r.polls).catch(() => [] as Poll[]) : Promise.resolve([] as Poll[]),
+      videosOn ? fetchLongVideos().then((l) => l.slice().sort(() => Math.random() - 0.5).slice(0, 8)).catch(() => [] as LongVideo[]) : Promise.resolve([] as LongVideo[]),
+      liveOn ? fetchLiveStreams().then((r) => (r.success ? r.streams : [])).catch(() => [] as LiveStreamSummary[]) : Promise.resolve([] as LiveStreamSummary[])
+    ]).then(([anon, polls, videos, lives]) => {
       if (!alive) return;
       // thoughts and polls are shuffled together, so each refresh of Home brings them in a different order
       setItems(shuffled([
         ...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })),
-        ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p }))
+        ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
+        ...videos.map((v): MixItem => ({ kind: 'video', at: v.createdAt, video: v })),
+        ...lives.map((st): MixItem => ({ kind: 'live', at: st.startedAt, stream: st }))
       ]));
       let at = Math.floor(Math.random() * 3);   // the first one comes after the 1st, 2nd or 3rd post
       const next: number[] = [];
-      for (let n = 0; n < anon.length + polls.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
+      for (let n = 0; n < anon.length + polls.length + videos.length + lives.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
       setSlots(next);
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
     });
     return () => { alive = false; };
-  }, [anonOn, pollsOn, refreshKey]);
+  }, [anonOn, pollsOn, videosOn, liveOn, refreshKey]);
   useEffect(() => {
     const onNew = (e: Event) => {
       const item = (e as CustomEvent<MixItem>).detail;
-      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn)) return;
+      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn) || (item.kind === 'video' && !videosOn) || (item.kind === 'live' && !liveOn)) return;
       setItems((prev) => [item, ...prev.filter((x) => mixKey(x) !== mixKey(item))]);
     };
     window.addEventListener(HOME_MIX_NEW_EVENT, onNew);
     return () => window.removeEventListener(HOME_MIX_NEW_EVENT, onNew);
-  }, [anonOn, pollsOn]);
+  }, [anonOn, pollsOn, videosOn, liveOn]);
   const remove = useCallback((key: string) => setItems((prev) => prev.filter((x) => mixKey(x) !== key)), []);
   const updatePoll = useCallback((p: Poll) => setItems((prev) => prev.map((x) => (x.kind === 'poll' && x.poll.id === p.id ? { ...x, poll: p } : x))), []);
   return { items, slots, remove, updatePoll };
@@ -449,9 +459,47 @@ export function useCanManagePolls(enabled: boolean): boolean {
   return can;
 }
 
-export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile }) =>
+// A long video between the posts: its picture with the length in a corner, then the title and who posted it. Tapping it opens the player.
+const VideoMixCard: React.FC<{ video: LongVideo; onOpen: (id: string) => void; onOpenProfile?: (u: User) => void }> = ({ video, onOpen, onOpenProfile }) => {
+  const mins = Math.floor((video.durationSeconds || 0) / 60), secs = Math.floor((video.durationSeconds || 0) % 60);
+  return (
+    <article className="hm-card hm-vid" data-testid="home-video-card" aria-label={`Video: ${video.title}`}>
+      <button type="button" className="hm-vid-media" onClick={() => onOpen(video.id)} aria-label={`Play ${video.title}`}>
+        {video.thumbnailUrl ? <img src={resolveMedia(video.thumbnailUrl)} alt="" loading="lazy" decoding="async" /> : <video src={resolveMedia(video.videoUrl)} muted playsInline preload="metadata" />}
+        <span className="hm-vid-time">{mins}:{String(secs).padStart(2, '0')}</span>
+      </button>
+      <div className="hm-vid-info">
+        <button type="button" className="hm-vid-ava" onClick={() => onOpenProfile?.({ id: video.userId, username: video.username, displayName: video.username, avatar: video.userAvatar } as unknown as User)} aria-label={`Open ${video.username}'s profile`}>
+          {video.userAvatar ? <img src={resolveMedia(video.userAvatar)} alt="" referrerPolicy="no-referrer" /> : <span />}
+        </button>
+        <button type="button" className="hm-vid-txt" onClick={() => onOpen(video.id)}>
+          <b>{video.title}</b>
+          <small>@{video.username} · {formatCompactCount(video.viewsCount || 0)} views · {formatRelativeTime(video.createdAt)}</small>
+        </button>
+      </div>
+    </article>
+  );
+};
+
+// A live stream that is on right now.
+const LiveMixCard: React.FC<{ stream: LiveStreamSummary; onOpen: (s: LiveStreamSummary) => void }> = ({ stream, onOpen }) => (
+  <article className="hm-card hm-live" data-testid="home-live-card" aria-label={`Live: ${stream.title || stream.host.username}`}>
+    <button type="button" className="hm-live-box" onClick={() => onOpen(stream)}>
+      <span className="hm-live-badge"><i />LIVE</span>
+      {stream.host.avatar ? <img src={resolveMedia(stream.host.avatar)} alt="" referrerPolicy="no-referrer" /> : <span className="hm-live-ph" />}
+      <span className="hm-live-txt"><b>{stream.title || `${stream.host.displayName || stream.host.username} is live`}</b><small>@{stream.host.username} · {stream.viewerCount.toLocaleString()} watching</small></span>
+      <span className="hm-live-go">Watch</span>
+    </button>
+  </article>
+);
+
+export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void; onOpenVideo?: (id: string) => void; onOpenLive?: (s: LiveStreamSummary) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile, onOpenVideo, onOpenLive }) =>
   item.kind === 'anon'
     ? <AnonCard m={item.anon} currentUser={currentUser} canManage={canManage} onRemoved={() => onRemoved(mixKey(item))} />
+    : item.kind === 'video'
+    ? <VideoMixCard video={item.video} onOpen={(id) => onOpenVideo?.(id)} onOpenProfile={onOpenProfile} />
+    : item.kind === 'live'
+    ? <LiveMixCard stream={item.stream} onOpen={(st) => onOpenLive?.(st)} />
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;
 
 // ---- writing an anonymous thought (opened from the Create sheet) ----------------------------------------------------------------------------------------

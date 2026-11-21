@@ -1,6 +1,6 @@
 import { applyLikes, useLikeLedgerVersion } from '../../utils/likeLedger';
 import { useFeatureOn } from '../../utils/featureFlags';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { AdBanner } from '../Ads/AdBanner';
 import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon, Flag } from 'lucide-react';
 import { openContentReport } from '../Common/ContentReportSheet';
@@ -55,6 +55,11 @@ interface HomeVideoFeedViewProps {
   refreshKey?: number; // bumped by the parent right after a successful upload, to refetch
   initialOpenVideoId?: string; // a "?video=<id>" deep link or a shared-video chat card tap
   onInitialOpenVideoIdHandled?: () => void;
+  /** a live stream picked on Home */
+  initialOpenLive?: LiveStreamSummary;
+  onInitialOpenLiveHandled?: () => void;
+  /** this page is only the player now (Home shows the videos): when nothing is open, or the player is closed, go back to Home */
+  onLeave?: () => void;
 }
 
 const formatDuration = (totalSeconds: number): string => {
@@ -97,7 +102,10 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   onNavigateToProfile,
   refreshKey,
   initialOpenVideoId,
-  onInitialOpenVideoIdHandled
+  onInitialOpenVideoIdHandled,
+  initialOpenLive,
+  onInitialOpenLiveHandled,
+  onLeave
 }) => {
   const isMasterAdmin = can(currentUser, 'moderate_content');
   const pinnedItems = usePinnedFeedItems();
@@ -109,6 +117,15 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [openVideo, setOpenVideo] = useState<LongVideo | null>(null);
   useScreenAwake(!!openVideo);   // a video that is open: the screen must not dim and switch off while it plays
   const [openLive, setOpenLive] = useState<LiveStreamSummary | null>(null);
+  // Home shows the videos and the live streams now, so this page is only the player: a video or live picked on Home opens here, and closing it (or arriving with nothing to play) goes back to Home
+  const cameFromHome = useRef(false);
+  useEffect(() => {
+    if (initialOpenLive) { cameFromHome.current = true; setOpenLive(initialOpenLive); onInitialOpenLiveHandled?.(); }
+  }, [initialOpenLive]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (initialOpenVideoId) cameFromHome.current = true;
+    else if (!initialOpenLive) onLeave?.();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [filter, setFilter] = useState<FilterChip>('all');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -527,7 +544,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
           followingIds={currentUser.followingIds || []}
           currentUserAvatar={currentUser.avatar}
           canModerate={canModerate(openVideo)}
-          onClose={() => setOpenVideo(null)}
+          onClose={() => { setOpenVideo(null); if (cameFromHome.current) onLeave?.(); }}
           onMore={() => { setActionVideo(openVideo); setShowOptionsMenu(true); }}
           onToggleLike={() => handleToggleLike(openVideo)}
           onToggleSave={() => { void handleToggleSave(openVideo); }}
@@ -543,7 +560,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
 
       {openLive && (
         <React.Suspense fallback={null}>
-          <LiveStreamView currentUser={currentUser} mode="view" stream={openLive} onClose={() => setOpenLive(null)} />
+          <LiveStreamView currentUser={currentUser} mode="view" stream={openLive} onClose={() => { setOpenLive(null); if (cameFromHome.current) onLeave?.(); }} />
         </React.Suspense>
       )}
 

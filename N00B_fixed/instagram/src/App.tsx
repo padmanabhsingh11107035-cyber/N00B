@@ -76,7 +76,8 @@ import {
   noteSignupDevice
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
-import { FeedIcon } from './components/Common/FeedIcon';
+import { announceMixItem } from './components/Feed/HomeMix';
+import type { LiveStreamSummary } from './services/supabaseApi';
 import { HintedScroll } from './components/Feed/ScrollMoreHint';
 import { FeedView } from './components/Feed/FeedView';
 // Statically imported before, which meant every single page load of the whole app (not just opening
@@ -190,6 +191,7 @@ const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
 const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
+const StoryCameraScreen = React.lazy(() => import('./components/Stories/StoryCameraScreen').then((m) => ({ default: m.StoryCameraScreen })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
 const CreateChooser = React.lazy(() => import('./components/PostCreation/CreateChooser').then((m) => ({ default: m.CreateChooser })));
@@ -515,6 +517,7 @@ export default function App() {
   const [activeStoryViewerIndex, setActiveStoryViewerIndex] = useState<number | null>(null);
   const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [showStoryCamera, setShowStoryCamera] = useState(false);   // the camera screen that comes before the story editor
   // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
@@ -1204,6 +1207,9 @@ export default function App() {
     setActiveTab(previousTabRef.current);
   };
 
+  // Home shows long videos and live streams between the posts; tapping one opens the player (kept in the 'videos' tab, which is no longer a page of its own) and closing it comes back to Home
+  const [selectedLive, setSelectedLive] = useState<LiveStreamSummary | undefined>(undefined);
+  const handleNavigateToLive = (stream: LiveStreamSummary) => { setSelectedLive(stream); setActiveTab('videos'); };
   const handleNavigateToVideo = async (videoId: string) => {
     setSelectedVideoId(videoId);
     setActiveTab('videos');
@@ -1969,7 +1975,6 @@ export default function App() {
         { id: 'home', label: 'Home', icon: <Home />, active: pageTab === 'feed', badge: navBadges.feed > 0 ? navBadges.feed : undefined, onClick: () => handleSelectNavTab('feed'), testId: 'side-home' },
         featOn('explore') && { id: 'explore', label: 'Explore', icon: <Compass />, active: pageTab === 'explore', onClick: () => handleSelectNavTab('explore'), testId: 'side-explore' },
         featOn('reels') && { id: 'reels', label: 'Reels', icon: <Film />, active: pageTab === 'reels', badge: navBadges.reels > 0 ? navBadges.reels : undefined, onClick: () => handleSelectNavTab('reels'), testId: 'side-reels' },
-        featOn('videos') && { id: 'videos', label: 'Feed', icon: <FeedIcon />, active: pageTab === 'videos', onClick: () => handleSelectNavTab('videos'), testId: 'side-videos' },
         featOn('create') && { id: 'create', label: 'Create', icon: <CirclePlus />, onClick: () => handleSelectNavTab('post'), testId: 'side-create' },
         featOn('chat') && { id: 'chat', label: 'Chat', icon: <MessageSquare />, active: pageTab === 'chat', badge: unreadChatCount > 0 ? unreadChatCount : undefined, onClick: () => handleSelectNavTab('chat'), testId: 'side-chat' },
         featOn('games') && { id: 'games', label: 'Mini-Games', icon: <Gamepad2 />, active: pageTab === 'games', badge: navBadges.games > 0 ? navBadges.games : undefined, onClick: () => handleSelectNavTab('games'), testId: 'side-games' },
@@ -2075,7 +2080,7 @@ export default function App() {
             onDeletePost={handleDeletePost}
             onDeleteSlide={handleDeleteSlide}
             onOpenStoryViewer={handleOpenStoryViewer}
-            onOpenCreateStory={() => setShowCreateStoryModal(true)}
+            onOpenCreateStory={() => setShowStoryCamera(true)}
             onOpenPostCreation={() => setShowPostCreationModal(true)}
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
@@ -2085,6 +2090,7 @@ export default function App() {
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
             onNavigateToVideo={handleNavigateToVideo}
+            onNavigateToLive={handleNavigateToLive}
             onNavigateToProfile={handleNavigateToUserProfile}
             onOpenFunPage={openFun}
             onOpenTab={handleSelectNavTab}
@@ -2153,6 +2159,9 @@ export default function App() {
               refreshKey={videosRefreshKey}
               initialOpenVideoId={selectedVideoId}
               onInitialOpenVideoIdHandled={() => setSelectedVideoId(undefined)}
+              initialOpenLive={selectedLive}
+              onInitialOpenLiveHandled={() => setSelectedLive(undefined)}
+              onLeave={() => setActiveTab('feed')}
             />
           </React.Suspense>
         )}
@@ -2473,6 +2482,18 @@ export default function App() {
       <AppLockGate user={currentUser} activeTab={activeTab} onLeave={() => setActiveTab('feed')} />
 
       {/* 2. Story Creation Modal */}
+      {showStoryCamera && (
+        <React.Suspense fallback={null}><StoryCameraScreen
+          onClose={() => setShowStoryCamera(false)}
+          onFile={(file) => { setStudioStoryFile(file); setShowStoryCamera(false); setShowCreateStoryModal(true); }}
+          onSwitchMode={(mode) => {
+            setShowStoryCamera(false);
+            if (mode === 'post') setCreateKind('post');
+            else { try { sessionStorage.setItem('noob_open_instant', '1'); } catch { /* the chat page opens normally */ } setActiveTab('chat'); window.dispatchEvent(new CustomEvent('noob-open-instant')); }
+          }}
+        /></React.Suspense>
+      )}
+
       {showCreateStoryModal && (
         <React.Suspense fallback={null}><CreateStoryModal
           initialFile={studioStoryFile}
@@ -2492,7 +2513,7 @@ export default function App() {
           onPick={(kind) => {
             setShowPostCreationModal(false);
             if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
-            else if (kind === 'story') setShowCreateStoryModal(true);
+            else if (kind === 'story') setShowStoryCamera(true);
             else if (kind === 'studio') { if (featOn('studio')) openStudio(); }
             else if (kind === 'lenses') { if (featOn('lenses')) openLenses(); }
             else if (kind === 'video') setShowUploadVideoModal(true);
@@ -2521,9 +2542,10 @@ export default function App() {
         <React.Suspense fallback={<LazyFallback />}>
           <UploadVideoModal
             onClose={() => setShowUploadVideoModal(false)}
-            onUploaded={() => {
+            onUploaded={(video) => {
               setShowUploadVideoModal(false);
               setVideosRefreshKey((k) => k + 1);
+              if (video) { setActiveTab('feed'); announceMixItem({ kind: 'video', at: video.createdAt || new Date().toISOString(), video }); }   // the new video shows at the top of Home
             }}
           />
         </React.Suspense>

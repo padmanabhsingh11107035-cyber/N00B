@@ -306,6 +306,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   // Instants — camera-only photos shared with Friends/Close Friends, view once, gone in 24h
   const [showInstantCamera, setShowInstantCamera] = useState(false);
+  // the INSTANT word on the story camera opens this page with the Instants camera (a flag when the page was not open yet, an event when it was)
+  useEffect(() => {
+    const open = () => { try { sessionStorage.removeItem('noob_open_instant'); } catch { /* nothing to clear */ } setShowInstantCamera(true); };
+    try { if (sessionStorage.getItem('noob_open_instant') === '1') open(); } catch { /* storage blocked */ }
+    window.addEventListener('noob-open-instant', open);
+    return () => window.removeEventListener('noob-open-instant', open);
+  }, []);
   const [instantViewerQueue, setInstantViewerQueue] = useState<InstantInboxItem[] | null>(null);
   const [showInstantsArchive, setShowInstantsArchive] = useState(false);
   const [showCloseFriendsPicker, setShowCloseFriendsPicker] = useState(false);

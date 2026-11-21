@@ -22,7 +22,7 @@ check(/e\.stopPropagation\(\);\s*\n\s*const now = performance\.now\(\);/.test(ca
 section('2. What belongs to a picture travels with it');
 check(/const renderSlide = \(slide: PostSlide, isCur: boolean\) =>/.test(card) && /slide\.stickers\?\.map\(\(sticker, idx\)/.test(card) && !/currentSlide\.stickers/.test(card), 'text / sticker / mention layers are drawn with their own picture, so they slide in with it');
 check(/ref=\{isCur \? slideImgRef : undefined\}/.test(card) && /if \(isCur && img\.naturalWidth/.test(card), 'the shape of the box still follows the picture that is shown');
-check(/<video\s+key="live"/.test(card) && /<video key="peek"[^>]*muted playsInline preload="metadata"/.test(card), 'only the shown video plays (with its controls); a neighbour video is just a still, and starts properly once it is the shown one');
+check(/<FeedVideoSlot\s+key="live"/.test(card) && /<video key="peek"[^>]*muted playsInline preload="metadata"/.test(card), 'only the shown video plays (with its controls); a neighbour video is just a still, and starts properly once it is the shown one');
 
 section('3. Keys and the rest of the post card are as before');
 check(/if \(dir === 'right'\) slideByRef\.current\(1\);\s*\n\s*else if \(dir === 'left'\) slideByRef\.current\(-1\);/.test(card), 'the A / D and arrow keys slide too');

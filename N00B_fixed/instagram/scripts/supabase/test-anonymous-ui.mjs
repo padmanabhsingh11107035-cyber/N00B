@@ -15,10 +15,8 @@ const css = read('src/index.css');
 const sql = read('supabase/migrations/20261015000002_anonymous_messages.sql');
 
 section('1. The Home menu entry and the address');
-check(/label: 'Anonymous Messages'/.test(feed) && /hint: 'Your words, without your name'/.test(feed), 'the three-line menu has an "Anonymous Messages" entry');
-check(/go\('anonymous', openAnonymous\)/.test(feed) && /const go = \(id: string, open: \(\) => void\) => \(\) => \{ markMenuEntry\(id\); setShowNoobMenu\(false\); open\(\); \};/.test(feed), 'it closes the menu and opens the page (and remembers the button, to come back to it)');
-check(/React\.lazy\(\(\) => loadAnonymousPage\(\)/.test(feed) && /onPointerDown: \(\) => \{ void loadAnonymousPage\(\); \}/.test(feed), 'the page is loaded on demand (and starts loading the moment the entry is pressed)');
-check(/window\.location\.pathname\.replace\(\/\\\/\+\$\/, ''\) === '\/anonymous'/.test(feed) && /replaceState\(null, '', '\/anonymous'/.test(feed) && /replaceState\(null, '', '\/' \+ window\.location\.search\)/.test(feed), '/anonymous opens it directly, and closing goes back to the home address');
+check(!/label: 'Anonymous Messages'/.test(feed) && /featOn\('anonymous'\)/.test(feed), 'anonymous thoughts are on Home now (the page switch still decides), no longer an entry of the three-line menu');
+check(/!== '\/anonymous'/.test(feed) && /replaceState\(null, '', '\/' \+ window\.location\.search\)/.test(feed), '/anonymous goes to the home address (the thoughts are on Home)');
 check(/\{showAnonymous && \(\s*<ErrorBoundary showErrorDetails>\s*<React\.Suspense fallback=\{<LazyFallback \/>\}>\s*<AnonymousMessagesPage currentUser=\{currentUser\} onClose=\{closeAnonymous\} \/>/.test(feed), 'the page sits in an error boundary, so a fault there can never take Home down');
 check(/<OurTeamPage/.test(feed) && /showOurTeam/.test(feed), 'the existing menu pages are untouched');
 
@@ -28,7 +26,7 @@ check(/if \(!currentUser\) \{[\s\S]*?if \(anonPublic\) \{[\s\S]*?<AnonymousMessa
 check(/<AuthView onAuthSuccess/.test(app), 'the normal login screen is still there for everyone else');
 
 section('3. Nothing about an author reaches the page');
-check(/export interface AnonMessage \{ id: string; body: string; createdAt: string \}/.test(api), 'the public message type is {id, body, createdAt} and nothing else');
+check(/export interface AnonMessage \{ id: string; body: string; createdAt: string;/.test(api) && !/(author|userId|username)/i.test((api.match(/export interface AnonMessage \{[^}]*\}/) || [''])[0]), 'the public message type has no author field (id, body, createdAt, pictures)');
 const NL = String.fromCharCode(10);
 const code = page.split(NL).filter((l) => !/^\s*(\/\/|\{\/\*)/.test(l) && /[<>{}=;(]/.test(l)).join(NL).replace(/'[^'\n]*'|`[^`\n]*`|>[^<>{}\n]*</g, '""');
 check(!/\b(author|authorId|author_id|userId|user_id|username|avatar|email)\b/i.test(code.replace(/currentUser|isMainAdmin/g, '')), 'the page code never reads an author, username, picture, e-mail or user id from a message');
@@ -59,7 +57,7 @@ check(/rpc<AnonPage<AnonMessage>>\('anon_messages_feed', \{\s*p_limit: opts\.lim
 check(/rpc<AnonMessage & \{ duplicate\?: boolean \}>\('anon_message_post', \{ p_body: body, p_client_key: clientKey \}\)/.test(api), 'publishing sends only the text and a one-time key');
 check(/'anon_message_report', \{ p_message: messageId, p_reason: reason \}/.test(api), 'reporting sends the message and a reason');
 check(/'admin_anon_message_remove'/.test(api) && /'admin_anon_message_dismiss'/.test(api) && /'anon_messages_admin_feed'/.test(api), 'the administrator calls exist');
-check(/fetchAnonMessages,\s*postAnonMessage,\s*reportAnonMessage/.test(apiIndex) && /AnonMessage,\s*AnonAdminMessage,\s*AnonPage/.test(apiIndex), 'the API index exports them');
+check(/fetchAnonMessages,\s*fetchAnonMessage,\s*postAnonMessage,\s*postAnonPost,\s*reportAnonMessage/.test(apiIndex) && /AnonAdminMessage/.test(apiIndex), 'the API index exports them');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

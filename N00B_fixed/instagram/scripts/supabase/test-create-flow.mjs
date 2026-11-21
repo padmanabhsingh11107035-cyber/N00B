@@ -18,16 +18,16 @@ const L = await import(pathToFileURL(path.resolve('src/utils/slideLook.ts')).hre
 
 section('1. The chooser');
 const kinds = [...chooser.matchAll(/\{ kind: '(\w+)', title: '([^']+)'/g)].map((m) => `${m[1]}:${m[2]}`);
-check(kinds.join(',') === 'post:Post,reel:Reel,story:Story,video:Video,live:Live,thought:Thought,lenses:Lenses,studio:Edit in Studio', 'Post, Reel, Story, Video, Live, Thought, Lenses and Edit in Studio', kinds.join(','));
+check(kinds.join(',') === 'post:Post,reel:Reel,story:Story,video:Video,live:Live,thought:Thought,anon:Anonymous post,poll:Poll,lenses:Lenses,studio:Edit in Studio', 'Post, Reel, Story, Video, Live, Thought, Anonymous post, Poll, Lenses and Edit in Studio', kinds.join(','));
 check(/data-testid=\{`create-\$\{kind\}`\}/.test(chooser) && /e\.key === 'Escape'/.test(chooser), 'each row can be tested and Escape closes it');
 check(/<CreateChooser\s*\n\s*live=\{[^\n]*\n\s*onClose=\{\(\) => setShowPostCreationModal\(false\)\}/.test(app), '"+" (bottom bar, side menu, the Home bonus banner) opens the chooser');
-check(/kind === 'post' \|\| kind === 'reel' \|\| kind === 'thought'\) setCreateKind\(kind\)/.test(app) && /kind === 'story'\) setShowCreateStoryModal\(true\)/.test(app) && /kind === 'video'\) setShowUploadVideoModal\(true\)/.test(app) && /kind === 'live'\) handleGoLiveTap\(\)/.test(app), 'each choice opens its own creator');
+check(/kind === 'post' \|\| kind === 'reel' \|\| kind === 'thought'\) setCreateKind\(kind\)/.test(app) && /kind === 'story'\) setShowStoryCamera\(true\)/.test(app) && /kind === 'video'\) setShowUploadVideoModal\(true\)/.test(app) && /kind === 'live'\) handleGoLiveTap\(\)/.test(app), 'each choice opens its own creator (Story opens the story camera first)');
 check(/<PostCreationModal\s*\n\s*key=\{createKind\}\s*\n\s*initialType=\{createKind\}/.test(app), 'a Post, Reel or Thought opens the creator on that type');
 
 section('2. Three steps');
 check(/useState<'select' \| 'edit' \| 'details' \| 'done'>\(initialType === 'thought' \? 'details' : 'select'\)/.test(modal), 'it starts on "select" (a Thought starts on the details)');
 check(/if \(added > 0\) setStep\('edit'\)/.test(modal) && /if \(res\.url \|\| res\.objectKey\) setStep\('edit'\)/.test(modal), 'once the pictures or the video are in, it goes on to editing by itself');
-check(/Select from device/.test(modal) && /Drag photos and videos here/.test(modal) && /onDrop=/.test(modal) && /capture="environment"/.test(modal), 'pick from the device, drag and drop, or the camera');
+check(/Select from device/.test(modal) && /Drag photos or a video/.test(modal) && /onDrop=/.test(modal) && /capture="environment"/.test(modal), 'pick from the device, drag and drop, or the camera');
 check(/or write a thought, with no picture/.test(modal), 'a picture-less thought is still possible');
 check(/onClick=\{\(\) => setStep\('details'\)\}/.test(modal) && /\{isPublishing \? 'Sharing\.\.\.' : 'Share'\}/.test(modal) && /\{step === 'edit' && \(/.test(modal), '"Next" on the edit step and "Share" on the last one, in the header');
 check(/window\.confirm\('Discard what you picked and start over\?'\)/.test(modal), 'going back from editing asks before throwing the pictures away');
@@ -54,7 +54,7 @@ section('4. The details');
 check(/CAPTION_LIMIT = 2200/.test(modal) && /maxLength=\{CAPTION_LIMIT\}/.test(modal) && /data-testid="caption-count"/.test(modal), 'the caption holds 2,200 characters and shows how many are used');
 check(/<EmojiPanel onPick=\{insertCaptionEmoji\}/.test(modal), 'an emoji button for the caption');
 check(/placeholder="Add location"/.test(modal) && /Tag people/.test(modal) && /'Add music'/.test(modal) && /Advanced settings/.test(modal), 'location, tag people, music and advanced settings');
-check(['Hide like and view counts', 'Turn off commenting', 'Label as AI generated'].every((t) => modal.includes(`label="${t}"`)) && /role="switch"/.test(modal), 'advanced settings are on / off switches');
+check(['Hide like and view counts', 'Turn off commenting'].every((t) => modal.includes(`label="${t}"`)) && /role="switch"/.test(modal), 'advanced settings are on / off switches');
 check(/Schedule for later/.test(modal) && /placeholder="https:\/\/example\.com"/.test(modal), 'a link and a schedule');
 check((modal.match(/\{creationType === 'post' && \(/g) || []).length >= 3 && /placeholder="Add location"/.test(modal), 'a reel only shows what a reel can keep (caption, music, category, hashtags): no location or advanced switches that would be ignored');
 check(/disabled=\{!isReadyToSubmit \|\| isUploadingMedia \|\| isPublishing\}/.test(modal) && /Choose a category to share/.test(modal), 'the category is still required before Share');
@@ -79,7 +79,7 @@ section('6. It shows the same everywhere the post is shown');
 check(/lookStyle\(slide\.filter\)/.test(card) && /lookRatio\(currentSlide\.filter\)/.test(card), 'the feed card uses the look and the chosen shape');
 const thumb = read('src/components/Common/PostThumbnailMedia.tsx');
 check(/filter\?: string \| null;/.test(thumb) && (thumb.match(/lookStyle\(filter\)/g) || []).length === 2, 'grid thumbnails (profile, explore, saved) do too');
-check((read('src/components/Profile/ProfileView.tsx').match(/filter=\{post\.slides\?\.\[0\]\?\.filter\}/g) || []).length === 4 && /filter=\{post\.slides\?\.\[0\]\?\.filter\}/.test(read('src/components/Explore/ExploreView.tsx')), 'every grid hands it the picture\'s filter text');
+check((read('src/components/Profile/ProfileView.tsx').match(/filter=\{(?:e\.)?post\.slides\?\.\[0\]\?\.filter\}/g) || []).length === 4 && /filter=\{post\.slides\?\.\[0\]\?\.filter\}/.test(read('src/components/Explore/ExploreView.tsx')), 'every grid hands it the picture filter text');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

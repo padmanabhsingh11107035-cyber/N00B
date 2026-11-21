@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { Home, Compass, Gamepad2 } from 'lucide-react';
-import { FeedIcon } from '../Common/FeedIcon';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { useKeyboardOpen } from '../../utils/useVisualViewport';
 import { DOUBLE_TAP_MS, quickSwitchLinked } from '../../utils/quickSwitch';
@@ -89,8 +88,8 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   onPressTab
 }) => {
   // a page that the administrator has switched off for users has no button (the others share the width)
-  const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games'), showVideos = useFeatureOn('videos');
-  const columns = 2 + [showExplore, showReels, showVideos, showCreate, showChat, showGames].filter(Boolean).length;
+  const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games');
+  const columns = 2 + [showExplore, showReels, showCreate, showChat, showGames].filter(Boolean).length;
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
@@ -140,16 +139,6 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
             <div className="relative">
               <ReelsIcon className="nav-ico w-7 h-7" />
               <NavBadge count={count('reels')} />
-            </div>
-          </NavButton>
-        )}
-
-        {/* Feed: long videos and live streams (the same page and icon as the Feed button at the top of Home) */}
-        {showVideos && (
-          <NavButton id="nav-item-videos" label="Feed" title="Feed: long videos and live streams" active={activeTab === 'videos'} onClick={() => onSelectTab('videos')}>
-            <div className="relative">
-              <FeedIcon className="nav-ico w-7 h-7" />
-              <NavBadge count={count('videos')} />
             </div>
           </NavButton>
         )}

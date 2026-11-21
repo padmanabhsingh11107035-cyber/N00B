@@ -47,7 +47,7 @@ check(/const key = TAB_FEATURE\[activeTab\];\s*if \(key && featuresOff\.has\(key
 check(/const offKey = TAB_FEATURE\[tab\];\s*if \(offKey && featuresOff\.has\(offKey\)\) return;/.test(app), 'a tab that is off can not be opened from anywhere that picks a tab');
 
 section('3. The side menu on computers');
-for (const [k, tab] of [['explore', 'explore'], ['reels', 'reels'], ['videos', 'videos'], ['create', 'post'], ['chat', 'chat'], ['games', 'games']]) {
+for (const [k, tab] of [['explore', 'explore'], ['reels', 'reels'], ['create', 'post'], ['chat', 'chat'], ['games', 'games']]) {
   check(new RegExp(`featOn\\('${k}'\\) && \\{ id: '[a-z]+', label: '[^']+', icon: <[A-Za-z0-9]+ />,[^\\n]*handleSelectNavTab\\('${tab}'\\)`).test(app), `the ${k} button is drawn only while the page is on`);
 }
 check(/featOn\('lounge'\) && \{ id: 'lounge'/.test(read('src/components/Feed/FeedView.tsx')) && /featOn\('ai'\) && \{ id: 'ai'/.test(read('src/components/Feed/FeedView.tsx')), 'so are Live Lounge and NOOB AI (they are in the same list as the three-line menu)');
@@ -63,9 +63,9 @@ const React = (await import('react')).default;
 const { renderToStaticMarkup } = await import('react-dom/server');
 const bar = (off) => renderToStaticMarkup(React.createElement(FeatureFlagsContext.Provider, { value: new Set(off) }, React.createElement(FloatingNavBar, { activeTab: 'feed', onSelectTab: () => {}, userAvatar: '' })));
 const all = bar([]);
-check(['feed', 'explore', 'reels', 'videos', 'post', 'chat', 'games', 'profile'].every((t) => all.includes(`id="nav-item-${t}"`)) && all.includes('repeat(8, minmax(0, 1fr))'), 'nothing off: eight buttons in eight columns');
+check(['feed', 'explore', 'reels', 'post', 'chat', 'games', 'profile'].every((t) => all.includes(`id="nav-item-${t}"`)) && !all.includes('nav-item-videos') && all.includes('repeat(7, minmax(0, 1fr))'), 'nothing off: seven buttons in seven columns (Feed is on Home now, no button)');
 const some = bar(['chat', 'games']);
-check(!some.includes('id="nav-item-chat"') && !some.includes('id="nav-item-games"') && some.includes('id="nav-item-reels"') && some.includes('repeat(6, minmax(0, 1fr))'), 'Chat and Games off: those two buttons are gone and the other six share the width');
+check(!some.includes('id="nav-item-chat"') && !some.includes('id="nav-item-games"') && some.includes('id="nav-item-reels"') && some.includes('repeat(5, minmax(0, 1fr))'), 'Chat and Games off: those two buttons are gone and the other five share the width');
 const bare = bar(['explore', 'reels', 'videos', 'create', 'chat', 'games']);
 check(bare.includes('id="nav-item-feed"') && bare.includes('id="nav-item-profile"') && bare.includes('repeat(2, minmax(0, 1fr))') && !bare.includes('nav-item-explore'), 'every page off: Home and the profile are still there, in two columns');
 fs.rmSync(navOut, { force: true });
@@ -75,7 +75,7 @@ section('5. The menu on Home');
 for (const k of ['draw', 'studio', 'team', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'drinks', 'creations']) {
   check(new RegExp(`featOn\\('${k}'\\) && (isMainAdmin\\(currentUser\\) && )?\\{ id: `).test(feed),`${k}: its entry is drawn only while the page is on`);
 }
-check(/useFeatureOn\('videos'\)/.test(read('src/components/Navigation/FloatingNavBar.tsx')), 'the Feed (long videos) button of the bottom bar follows the switch too');
+check(/featOn\('videos'\)/.test(read('src/components/Feed/FeedView.tsx')), 'the long videos on Home follow the page switch');
 check(/FUN_FEATURES\.filter\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)[^\n]*?\)\.map/.test(feed), 'the fun pages are listed one by one, each only while its page is on');
 check(/const featuresOff = useFeaturesOff\(\);/.test(feed), 'the menu reads the list from the app');
 

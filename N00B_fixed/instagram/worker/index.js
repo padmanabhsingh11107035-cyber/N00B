@@ -364,7 +364,8 @@ export default {
     }
     // www.noobsocials.com is only a second name for the same site: a permanent redirect to the address without www, path and query kept (first of all, before anything else is looked at).
     // Only reading requests are redirected; every other address (the games address, /__geo, /m/ ...) is untouched.
-    if (url.hostname === 'www.noobsocials.com' && (request.method === 'GET' || request.method === 'HEAD')) {
+    // The one exception is /login-approval: the buttons of the "Is this you?" email point at www., a different address from the installed app's, so a tap on them opens a plain browser page and never the installed app.
+    if (url.hostname === 'www.noobsocials.com' && url.pathname !== '/login-approval' && (request.method === 'GET' || request.method === 'HEAD')) {
       return new Response(null, { status: 301, headers: { Location: 'https://noobsocials.com' + url.pathname + url.search, 'Cache-Control': 'public, max-age=3600' } });
     }
     // The NOOB AI address (worker/aiSite.js): its public pages come from the website's files (so they are online even when NOOB AI's own computer is off); every other address there is passed on to NOOB AI.

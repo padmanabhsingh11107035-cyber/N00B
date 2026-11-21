@@ -21,7 +21,7 @@ interface Props {
 }
 
 type Phase = 'waiting' | 'denied' | 'expired' | 'suspended';
-const POLL_MS = 2000;
+const POLL_MS = 1000;
 const RESEND_AFTER_MS = 20000;
 
 const clock = (ms: number) => {

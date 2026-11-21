@@ -302,7 +302,9 @@ const sendAccountDeletedEmail = (email: string, name: string, username: string) 
 
 // ---- Login approval by email: "Is this you?" with two buttons. The buttons are links to the app's own /login-approval page (the secret is after the # so it never reaches a server log);
 // that page makes the one tap count. See supabase/migrations/20261022000001_login_approval.sql for what is checked and stored.
-const approvalLink = (id: string, secret: string, answer: 'yes' | 'no') => `${SITE_URL}/login-approval#c=${id}&t=${secret}&a=${answer}`;
+// The buttons point at www.noobsocials.com (the Worker serves only this one page there, every other www address goes to the main address): a different address from the installed app's, so tapping a button opens a plain browser page and never the installed app.
+const APPROVAL_SITE = SITE_URL === NEW_SITE ? 'https://www.noobsocials.com' : SITE_URL;
+const approvalLink = (id: string, secret: string, answer: 'yes' | 'no') => `${APPROVAL_SITE}/login-approval#c=${id}&t=${secret}&a=${answer}`;
 
 function approvalButtons(yes: string, no: string): string {
   const btn = (href: string, label: string, bg: string) =>

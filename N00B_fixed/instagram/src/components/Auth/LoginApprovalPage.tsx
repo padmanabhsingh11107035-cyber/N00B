@@ -65,7 +65,7 @@ const LoginApprovalPage: React.FC = () => {
       <>
         {icon('good', <CheckCircle2 className="w-8 h-8" />)}
         <h1 className="mt-4 text-2xl font-black text-emerald-400">Approved</h1>
-        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">You can leave this tab now: the device that was waiting is being logged in to NOOB by itself, no need to do anything else.</p>
+        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">Done. The device that was waiting is being logged in right now, by itself. You can close this tab.</p>
       </>
     );
   } else if (step === 'denied') {
@@ -129,9 +129,6 @@ const LoginApprovalPage: React.FC = () => {
         <span className="text-xl font-black tracking-tight">NOOB</span>
       </div>
       <div className={card} role="status" aria-live="polite">{body}</div>
-      {step !== 'ready' && step !== 'sending' && (
-        <a href="/" className="mt-5 text-xs text-zinc-400 underline hover:text-white">Open NOOB</a>
-      )}
     </div>
   );
 };

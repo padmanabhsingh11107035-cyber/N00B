@@ -33,7 +33,7 @@ const status = fn.slice(fn.indexOf("body?.action === 'login-approval-status'"), 
 check(/res\.status === 'approved' && res\.redeem/.test(status) && /issueSignInToken/.test(status), 'the sign-in token is made only for an approved question, once (the database says redeem only the first time)');
 check(/is_suspended/.test(status), 'and never for an account suspended in the meantime');
 check(!fn.includes("'login-approval-enable'") && !/kind === 'enable'/.test(fn) && /p_purpose: 'login'/.test(fn), 'the function sends only one kind of email, the login question: switching the setting on sends none');
-check(/#c=\$\{id\}&t=\$\{secret\}&a=\$\{answer\}/.test(fn) && /\$\{SITE_URL\}\/login-approval#/.test(fn), 'the buttons open the app\'s /login-approval page, with the secret after the # (never in a server log)');
+check(/#c=\$\{id\}&t=\$\{secret\}&a=\$\{answer\}/.test(fn) && /\$\{APPROVAL_SITE\}\/login-approval#/.test(fn) && /https:\/\/www\.noobsocials\.com/.test(fn), 'the buttons open the /login-approval page on www. (a plain browser page, never the installed app), with the secret after the # (never in a server log)');
 check(/Yes, it&#8217;s me/.test(fn) && /No, it&#8217;s not me/.test(fn), 'the email has exactly the two buttons: "Yes, it\'s me" and "No, it\'s not me"');
 check(!/\bcode\b[^\n]*approv|approv[^\n]*\bOTP\b/i.test(fn.slice(fn.indexOf('const sendApprovalEmail'), fn.indexOf('async function startApproval'))), 'no code is sent or asked for');
 check(/'Is this you logging in to NOOB\?'/.test(fn) && /IP address/.test(fn) && /Device:/.test(fn), 'the email says who is asking (device, time, address) so the owner can tell');
@@ -56,7 +56,7 @@ check(/rpc<any>\('login_approval_turn_off', \{ p_password: password \}\)/.test(a
 section('3. The login screen');
 check(/<LoginApprovalWait/.test(auth) && /else if \(res\.approval\)/.test(auth) && /device: getDeviceLabel\(\)/.test(auth), 'the login screen waits on the new screen when the server asks for an approval');
 check(/onApproved=\{\(user\) => \{ setApproval\(null\); void proceedAfterAuth\(user\); \}\}/.test(auth), 'an approval goes through the same steps as any login (one device at a time)');
-check(/checkLoginApproval\(ticket, password\)/.test(wait) && /POLL_MS = 2000/.test(wait) && /visibilitychange/.test(wait), 'it asks every 2 seconds, and at once when the tab comes back');
+check(/checkLoginApproval\(ticket, password\)/.test(wait) && /POLL_MS = 1000/.test(wait) && /visibilitychange/.test(wait), 'it asks every second, and at once when the tab comes back');
 check(/Access denied/.test(wait) && /data-testid="approval-denied"/.test(wait) && /No, it&rsquo;s not me/.test(wait.replace(/“No, it&rsquo;s not me”/, 'No, it&rsquo;s not me')), '"No" shows "Access denied"');
 check(/Yes, it&rsquo;s me/.test(wait) && /Logging you in…/.test(wait), '"Yes" logs in straight away');
 check(/startLoginApproval\(\{ identifier, password, device \}\)/.test(wait) && /RESEND_AFTER_MS = 20000/.test(wait), 'the email can be sent again after 20 seconds');

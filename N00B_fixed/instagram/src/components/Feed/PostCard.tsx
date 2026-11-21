@@ -23,7 +23,7 @@ import { EditCaptionSheet } from '../Common/EditCaptionSheet';
 import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvents';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
-import { createPortal } from 'react-dom';
+import { OptionsSheet } from '../Common/OptionsSheet';
 import { setInterest, interested as isInterestedIn } from '../../utils/feedInterest';
 import { translateOne } from '../../i18n/contentTranslator';
 import { getLanguage } from '../../i18n/engine';
@@ -743,7 +743,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
 
           {showOptionsMenu && (
-            createPortal(<div className="pm-layer" role="dialog" aria-modal="true" aria-label="Post options"><div className="pm-back" onClick={() => setShowOptionsMenu(false)} aria-hidden="true" /><div className="pm-sheet" data-testid="post-menu-sheet"><div className="pm-bar" aria-hidden="true"><span /></div>
+            <OptionsSheet label="Post options" testId="post-menu-sheet" onClose={() => setShowOptionsMenu(false)}>
               {menuView === 'why' ? (
                 <div className="pm-why" data-testid="post-why">
                   <h3>Why you're seeing this post</h3>
@@ -863,7 +863,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <Tag className="w-4 h-4 text-blue-400" /> Copy Link
               </button>
               </div>)}
-            </div></div>, document.body)
+            </OptionsSheet>
           )}
         </div>
       </header>

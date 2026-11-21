@@ -16,6 +16,7 @@ import { can, isMainAdmin } from '../../adminAccess';
 import { Heart, MessageCircle, Send, Bookmark, Music, ExternalLink, Sparkles, Globe, Check, Film, ArrowLeft, Trash2, Pencil, MoreVertical, Flag, Link2, Pin, MessageSquareOff, EyeOff, CornerDownRight, ChevronDown, ChevronUp, Volume2, VolumeX, Info, CircleCheck, CircleX } from 'lucide-react';
 import { Reel, User } from '../../types';
 import { openContentReport } from '../Common/ContentReportSheet';
+import { OptionsSheet } from '../Common/OptionsSheet';
 import { setInterest, notInterestedIds } from '../../utils/feedInterest';
 const dropNotInterested = <T extends { id: string }>(list: T[]): T[] => { const no = notInterestedIds('reel'); return no.size ? list.filter((r) => !no.has(r.id)) : list; };
 import { ContentAiBadge } from '../Common/ContentAiBadge';
@@ -1097,10 +1098,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               </button>
 
               {isCur && showReelOptionsMenu && (
-                createPortal(<div className="pm-layer" role="dialog" aria-modal="true" aria-label="Reel options" onClick={(e) => e.stopPropagation()}>
-                  <div className="pm-back" onClick={(e) => { e.stopPropagation(); setShowReelOptionsMenu(false); }} aria-hidden="true" />
-                  <div className="pm-sheet" data-testid="reel-menu-sheet">
-                    <div className="pm-bar" aria-hidden="true"><span /></div>
+                <OptionsSheet label="Reel options" testId="reel-menu-sheet" onClose={() => setShowReelOptionsMenu(false)}>
                     {reelMenuView === 'why' ? (
                       <div className="pm-why" data-testid="reel-why">
                         <h3>Why you're seeing this reel</h3>
@@ -1217,8 +1215,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                       </button>
                     )}
                     </div>)}
-                  </div>
-                </div>, document.body)
+                </OptionsSheet>
               )}
               {isCur && reelNote && createPortal(<div className="pm-toast" role="status" data-testid="reel-interest-note">{reelNote}</div>, document.body)}
             </div>

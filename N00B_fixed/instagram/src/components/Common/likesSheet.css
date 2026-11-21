@@ -7,7 +7,7 @@
   position: relative; width: 100%; height: 70vh; height: 70dvh; display: flex; flex-direction: column; overflow: hidden;
   background: var(--lv-bg); color: var(--lv-text);
   border-radius: 28px 28px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
-  animation: lv-up 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation: lv-up 0.26s cubic-bezier(0.32, 0.72, 0, 1) backwards;
 }
 :root[data-theme="light"] .lv-sheet { --lv-bg: #ffffff; --lv-text: #111111; --lv-muted: #737373; --lv-line: rgba(0, 0, 0, 0.09); --lv-field: #efefef; --lv-btn: #efefef; --lv-btn-text: #111111; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.2); }
 @keyframes lv-up { from { transform: translateY(100%); } to { transform: none; } }

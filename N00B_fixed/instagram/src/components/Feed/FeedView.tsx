@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { orderUnseenFirst, mergeIntoOrder, getSeenSet } from '../../utils/seenContent';
 import { mergeIntoOrderPaged, NEAR_END } from '../../utils/feedPaging';
@@ -299,6 +299,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, currentUser.id));
   const [refreshNonce, setRefreshNonce] = useState(0);
   // Anonymous thoughts and public polls are part of Home: they sit between the posts of the plain "For You" feed (not in a topic, Following or Favourites)
+  const noInterestFrozen = useMemo(() => notInterestedIds('post'), [refreshNonce]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
   const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce);
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
   const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
@@ -420,7 +421,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // the Favourites tab only exists while there are favourites: if the last one is removed, go back to For You
   useEffect(() => { if (activeFeedFilter === 'favourites' && favouriteCount() === 0) setActiveFeedFilter('foryou'); }, [listsVersion, activeFeedFilter]);
   filteredPosts = filteredPosts.filter((p) => p.userId === currentUser.id || !isPostMuted(p.userId));
-  { const noInterest = notInterestedIds('post'); if (noInterest.size) filteredPosts = filteredPosts.filter((p) => !noInterest.has(p.id)); }   // "Not interested" in the three-dot sheet
+  if (noInterestFrozen.size) filteredPosts = filteredPosts.filter((p) => !noInterestFrozen.has(p.id));   // "Not interested" in the three-dot sheet
 
   // Reposts of the people you follow (Following tab only): the original is shown as an ordinary card with a "Reposted by" line (see utils/repostFeed.ts).
   const likeLedgerVersion = useLikeLedgerVersion();   // redraw when a heart is pressed on a repost-only card

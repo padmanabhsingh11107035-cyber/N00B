@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Film, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { X, Film, Image as ImageIcon, RefreshCw, ChevronDown } from 'lucide-react';
 import { uploadMediaFile, createLongVideo } from '../../services/api';
 import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
@@ -94,6 +94,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [showMoreVideoOptions, setShowMoreVideoOptions] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => { if (error) showErrorDialog(error, { onOk: () => setError('') }); }, [error]);   // a problem opens in a box with an OK button
   const [isChecking, setIsChecking] = useState(false);
@@ -149,6 +150,10 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
       setError('Pick a video to upload first.');
       return;
     }
+    if (!title.trim()) {
+      setError('Please give your video a title, then press Upload.');
+      return;
+    }
     setError('');
     setIsUploading(true);
     const abort = new AbortController();
@@ -184,15 +189,15 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
       {isUploading && progress && <UploadProgressPage progress={progress} onCancel={() => abortRef.current?.abort()} />}
-      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
-          <h3 className="text-sm font-bold text-white">Upload a Video</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer">
+      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-3xl rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden" data-testid="upload-video-modal">
+        <div className="flex items-center justify-between px-5 py-4 shrink-0">
+          <h3 className="text-lg font-extrabold text-white tracking-tight">New video</h3>
+          <button onClick={onClose} aria-label="Close" className="text-gray-300 hover:text-white p-1.5 rounded-full hover:bg-neutral-800 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-5">
           <input
             ref={videoInputRef}
             type="file"
@@ -200,96 +205,113 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
             className="sr-only"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) void handlePickVideo(f); e.target.value = ''; }}
           />
+
+          {/* 1. the video */}
           {videoPreviewUrl ? (
-            <div className="relative rounded-xl overflow-hidden bg-black border border-neutral-800">
-              <video src={videoPreviewUrl} controls className="w-full max-h-56" />
+            <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800">
+              <video src={videoPreviewUrl} controls className="w-full max-h-60" />
               <button
                 onClick={() => videoInputRef.current?.click()}
-                className="absolute top-2 right-2 text-[11px] font-bold text-white bg-black/70 px-2.5 py-1 rounded-full cursor-pointer"
+                className="absolute top-2 right-2 text-xs font-bold text-white bg-black/70 px-3 py-1.5 rounded-full cursor-pointer"
               >
-                Change
+                Change video
               </button>
             </div>
           ) : (
             <button
               onClick={() => videoInputRef.current?.click()}
               disabled={isChecking}
-              className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer disabled:opacity-60"
+              data-testid="upload-choose-video"
+              className="w-full flex flex-col items-center justify-center gap-3 py-14 rounded-3xl bg-zinc-900 text-white hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-60"
             >
-              {isChecking ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Film className="w-6 h-6" />}
-              <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : `Tap to choose a video (up to about ${describeSeconds(FIT_SECONDS)})`}</span>
+              <span className="w-16 h-16 rounded-full bg-noob text-black flex items-center justify-center">
+                {isChecking ? <RefreshCw className="w-7 h-7 animate-spin" /> : <Film className="w-7 h-7" />}
+              </span>
+              <span className="text-base font-bold">{isChecking ? 'Checking your video…' : 'Choose a video'}</span>
+              {!isChecking && <span className="text-xs text-zinc-400 px-6 text-center">Up to about {describeSeconds(FIT_SECONDS)}. You can pick it from your phone or computer.</span>}
             </button>
           )}
 
           {videoFile && (
             <>
+              {/* 2. the title (the only thing that must be filled in) */}
               <div>
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Title</label>
+                <label htmlFor="upload-title" className="text-sm font-bold text-white block mb-2">Title</label>
                 <input
+                  id="upload-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={150}
-                  placeholder="Give your video a title"
-                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob"
+                  placeholder="What is your video called?"
+                  className="w-full bg-zinc-900 rounded-2xl px-4 py-3.5 text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-noob/60"
                 />
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Thumbnail (optional)</label>
-                <input
-                  ref={thumbInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePickThumbnail(f); e.target.value = ''; }}
-                />
-                {thumbnailPreviewUrl ? (
-                  <div className="relative w-32 aspect-video rounded-lg overflow-hidden border border-neutral-800">
-                    <img src={thumbnailPreviewUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => thumbInputRef.current?.click()}
-                      className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center text-[10px] font-bold text-white cursor-pointer transition-opacity"
-                    >
-                      Change
-                    </button>
+              {/* 3. everything else, when the person wants it */}
+              <button
+                type="button"
+                onClick={() => setShowMoreVideoOptions((v) => !v)}
+                aria-expanded={showMoreVideoOptions}
+                data-testid="upload-more-options"
+                className="w-full flex items-center justify-between rounded-2xl bg-zinc-900 px-4 py-3.5 text-left cursor-pointer"
+              >
+                <span>
+                  <span className="block text-sm font-bold text-white">More options</span>
+                  <span className="block text-xs text-zinc-400">Cover picture and description (optional)</span>
+                </span>
+                <ChevronDown className={`w-5 h-5 text-zinc-300 transition-transform ${showMoreVideoOptions ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showMoreVideoOptions && (
+                <div className="space-y-5">
+                  <div>
+                    <span className="text-sm font-bold text-white block mb-2">Cover picture</span>
+                    <input
+                      ref={thumbInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePickThumbnail(f); e.target.value = ''; }}
+                    />
+                    {thumbnailPreviewUrl ? (
+                      <div className="relative w-40 aspect-video rounded-xl overflow-hidden border border-neutral-800">
+                        <img src={thumbnailPreviewUrl} alt="Cover" className="w-full h-full object-cover" />
+                        <button onClick={() => thumbInputRef.current?.click()} className="absolute inset-0 bg-black/55 opacity-0 hover:opacity-100 flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-opacity">Change</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => thumbInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 text-white text-sm font-semibold cursor-pointer">
+                        <ImageIcon className="w-4 h-4" /> Add a cover picture
+                      </button>
+                    )}
+                    <p className="text-xs text-zinc-500 mt-2">No cover? We pick a picture from your video.</p>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => thumbInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" /> Add a thumbnail
-                  </button>
-                )}
-              </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Description (optional)</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={2000}
-                  rows={3}
-                  placeholder="What's this video about?"
-                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob resize-none"
-                />
-              </div>
+                  <div>
+                    <label htmlFor="upload-desc" className="text-sm font-bold text-white block mb-2">Description</label>
+                    <textarea
+                      id="upload-desc"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="What is this video about?"
+                      className="w-full bg-zinc-900 rounded-2xl px-4 py-3 text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-noob/60 resize-none"
+                    />
+                  </div>
+                </div>
+              )}
             </>
-          )}
-
-          {error && (
-            <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{error}</div>
           )}
         </div>
 
-        <div className="p-3.5 border-t border-neutral-800 shrink-0">
+        <div className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shrink-0">
           <button
             onClick={handleUpload}
             disabled={!videoFile || isUploading}
-            className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-4 rounded-2xl bg-noob text-black font-extrabold text-base disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
           >
             {isUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-            {isUploading ? 'Uploading…' : 'Upload Video'}
+            {isUploading ? 'Uploading…' : 'Upload'}
           </button>
         </div>
       </div>

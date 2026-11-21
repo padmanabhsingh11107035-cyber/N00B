@@ -1,4 +1,5 @@
 import { buildPaymentReceipt, showPaymentReceipt } from '../../utils/paymentReceipt';
+import { showErrorDialog } from '../../utils/errorDialog';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio, Camera, MonitorUp, ChevronDown } from 'lucide-react';
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack, IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
@@ -72,6 +73,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   const [heartKey, setHeartKey] = useState(0);
   const [giftSheetOpen, setGiftSheetOpen] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => { if (error && phase === 'setup') showErrorDialog(error, { onOk: () => setError('') }); }, [error, phase]);   // a problem while setting up opens in a box with an OK button
   const [micOn, setMicOn] = useState(true);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const isMasterAdmin = can(currentUser, 'moderate_content');
@@ -336,41 +338,42 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'setup') {
     return (
-      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center px-6 gap-5">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
-        <Radio className="w-10 h-10 text-red-500" />
-        <h2 className="text-white text-lg font-semibold">Go Live</h2>
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center px-6 gap-6" data-testid="live-setup">
+        <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 text-white/80 p-2"><X className="w-6 h-6" /></button>
+        <span className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center shadow-[0_10px_30px_-8px_rgba(220,38,38,0.8)]"><Radio className="w-10 h-10 text-white" /></span>
+        <div className="text-center">
+          <h2 className="text-white text-2xl font-extrabold tracking-tight">Go live</h2>
+          <p className="text-white/60 text-sm mt-1.5 max-w-xs">People can watch you right now and write to you while you are live.</p>
+        </div>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={80}
           placeholder="Add a title (optional)"
-          className="w-full max-w-sm bg-white/10 text-white placeholder-white/40 rounded-full px-4 py-3 text-sm outline-none"
+          aria-label="Title"
+          className="w-full max-w-sm bg-white/10 text-white placeholder-white/40 rounded-2xl px-5 py-4 text-base outline-none focus:ring-2 focus:ring-white/30"
         />
-        <div className="w-full max-w-sm grid grid-cols-2 gap-2">
+        <div className="w-full max-w-sm grid grid-cols-2 gap-3">
           <button
             onClick={() => setVideoSource('camera')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition ${
-              videoSource === 'camera' ? 'bg-white text-black' : 'bg-white/10 text-white/70'
-            }`}
+            aria-pressed={videoSource === 'camera'}
+            className={`flex flex-col items-center justify-center gap-2 py-5 rounded-2xl text-sm font-bold transition active:scale-95 ${videoSource === 'camera' ? 'bg-white text-black' : 'bg-white/10 text-white/75'}`}
           >
-            <Camera className="w-4 h-4" /> Camera
+            <Camera className="w-7 h-7" /> Camera
           </button>
           <button
             onClick={() => setVideoSource('screen')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition ${
-              videoSource === 'screen' ? 'bg-white text-black' : 'bg-white/10 text-white/70'
-            }`}
+            aria-pressed={videoSource === 'screen'}
+            className={`flex flex-col items-center justify-center gap-2 py-5 rounded-2xl text-sm font-bold transition active:scale-95 ${videoSource === 'screen' ? 'bg-white text-black' : 'bg-white/10 text-white/75'}`}
           >
-            <MonitorUp className="w-4 h-4" /> Screen
+            <MonitorUp className="w-7 h-7" /> Screen
           </button>
         </div>
         {videoSource === 'screen' && (
-          <p className="text-white/50 text-[11px] max-w-sm text-center">Your browser will ask which screen, window, or tab to share — your mic stays on so you can talk over it.</p>
+          <p className="text-white/50 text-xs max-w-sm text-center">Your browser will ask which screen, window or tab to share. Your microphone stays on so you can talk over it.</p>
         )}
-        {error && <p className="text-red-400 text-xs">{error}</p>}
-        <button onClick={handleGoLive} className="w-full max-w-sm bg-red-600 text-white font-semibold rounded-full py-3 active:scale-95 transition">
-          Start Streaming
+        <button onClick={handleGoLive} className="w-full max-w-sm bg-red-600 text-white font-extrabold text-base rounded-2xl py-4 active:scale-95 transition" data-testid="live-start">
+          Go live now
         </button>
       </div>
     );

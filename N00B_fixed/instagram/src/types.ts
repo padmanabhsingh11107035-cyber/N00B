@@ -145,6 +145,7 @@ export type NotificationType =
   | 'noob_draw_ready'
   | 'admin_broadcast'
   | 'admin_direct'
+  | 'story_reminder'
   | 'new_follower'
   | 'follow_request_accepted'
   | 'follow_request_received'

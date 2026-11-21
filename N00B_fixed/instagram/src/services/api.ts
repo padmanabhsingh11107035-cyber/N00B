@@ -131,6 +131,8 @@ export {
   fetchFeedReposts,
   fetchUserReposts,
   fetchStoryPollResults,
+  fetchStoryNotifyStatus,
+  toggleStoryNotify,
   voteStoryPoll,
   answerStoryQuestion,
   fetchStoryQuestionResults,

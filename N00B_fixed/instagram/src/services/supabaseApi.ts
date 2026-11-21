@@ -2216,6 +2216,19 @@ export async function voteStoryPoll(storyId: string, stickerIndex: number, optio
   }
 }
 
+// Story "Notify me" sticker (migration 20261121000003): tap to get a notification when the time on the sticker comes.
+export interface StoryNotifyState { mine: boolean; count: number }
+export async function fetchStoryNotifyStatus(storyId: string): Promise<Record<string, StoryNotifyState>> {
+  try { return (await rpc<Record<string, StoryNotifyState>>('story_notify_status', { p_story: storyId })) || {}; } catch { return {}; }
+}
+export async function toggleStoryNotify(storyId: string, stickerIndex: number, on: boolean): Promise<{ success: boolean; mine?: boolean; count?: number; error?: string }> {
+  try {
+    return await rpc('story_notify_toggle', { p_story: storyId, p_sticker: stickerIndex, p_on: on });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not set the reminder. Please try again.') };
+  }
+}
+
 // Story Questions sticker (migration 20260930000001): free-text answers, private to the story's
 // owner — never shown to other viewers, unlike poll results which everyone sees aggregated.
 export interface StoryQuestionAnswer {

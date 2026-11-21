@@ -4,7 +4,7 @@ import { can } from '../../adminAccess';
 import { Repeat2, X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask, Flag } from 'lucide-react';
 import { Story, User } from '../../types';
 import { sendLike } from '../../utils/likeSync';
-import { toggleRepost, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
+import { toggleRepost, recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, fetchStoryNotifyStatus, toggleStoryNotify, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import { repostStates } from '../../utils/repostState';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -105,6 +105,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   // Real poll results from the database, keyed `${storyId}:${stickerIndex}` (they used to be made up).
   const [pollResults, setPollResults] = useState<Record<string, StoryPollResult>>({});
+  const [notifyState, setNotifyState] = useState<Record<string, { mine: boolean; count: number }>>({});   // the "Notify me" stickers: whether you tapped, and how many did
+  const [notifyError, setNotifyError] = useState('');
   const [pollError, setPollError] = useState('');
   // Questions sticker: your own in-progress answer text, keyed the same way as pollResults, plus
   // which ones you've already sent. The owner instead sees `questionResults` — everyone else's
@@ -160,6 +162,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   useEffect(() => {
     setProgress(0);
     setPollError('');
+    setNotifyError('');
     setQuestionError('');
     setQuizSelected(null);
     setSliderVal(75);
@@ -184,6 +187,32 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       alive = false;
     };
   }, [story?.id]);
+
+  // Load who tapped "Notify me" (you included) whenever a story with that sticker comes up.
+  useEffect(() => {
+    if (!story || !story.stickers?.some((s) => s.type === 'notify')) return;
+    let alive = true;
+    const id = story.id;
+    fetchStoryNotifyStatus(id).then((res) => {
+      if (!alive) return;
+      setNotifyState((prev) => { const next = { ...prev }; for (const [idx, r] of Object.entries(res)) next[`${id}:${idx}`] = r; return next; });
+    });
+    return () => { alive = false; };
+  }, [story?.id]);
+
+  const handleToggleNotify = (stickerIndex: number) => {
+    const id = story.id;
+    const key = `${id}:${stickerIndex}`;
+    const before = notifyState[key] || { mine: false, count: 0 };
+    const on = !before.mine;
+    setNotifyError('');
+    setNotifyState((prev) => ({ ...prev, [key]: { mine: on, count: Math.max(0, before.count + (on ? 1 : -1)) } }));
+    if (on) confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
+    toggleStoryNotify(id, stickerIndex, on).then((res) => {
+      if (res.success) setNotifyState((prev) => ({ ...prev, [key]: { mine: !!res.mine, count: res.count ?? 0 } }));
+      else { setNotifyState((prev) => ({ ...prev, [key]: before })); setNotifyError(res.error || 'Could not set the reminder.'); }
+    });
+  };
 
   // The owner's own question stickers: the answers that came in are read quietly when the story opens, so the sticker can say how many there are.
   useEffect(() => {
@@ -910,6 +939,43 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
                     </button>
                   </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'highlight') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <span className="inline-flex items-center gap-1.5 bg-black/70 backdrop-blur-md border border-amber-400/50 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap">
+                      <span className="text-amber-300 text-xs">★</span>
+                      <span className="text-xs font-bold text-white max-w-[180px] truncate">{sticker.data?.title}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'notify') {
+              const ns = notifyState[`${story.id}:${idx}`];
+              const when = sticker.data?.whenIso ? new Date(sticker.data.whenIso) : null;
+              const passed = !!when && when.getTime() <= Date.now();
+              return (
+                <div key={idx} className="absolute z-30 max-w-[230px] w-full bg-black/85 backdrop-blur-md border border-red-500/40 rounded-xl p-3 shadow-xl pointer-events-auto text-center" style={layerStyle} data-testid="story-notify">
+                  <p className="text-xs font-bold text-white">{sticker.data?.title}</p>
+                  {when && <p className="text-[10px] text-white/60 mb-2">{when.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>}
+                  {isOwnStory ? (
+                    <p className="text-[11px] font-semibold text-white/80">🔔 {ns?.count || 0} {(ns?.count || 0) === 1 ? 'person wants' : 'people want'} a reminder</p>
+                  ) : passed ? (
+                    <p className="text-[11px] font-semibold text-white/60">This time has passed</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleToggleNotify(idx); }}
+                      className={`inline-block rounded-full text-xs font-extrabold px-3.5 py-1.5 cursor-pointer ${ns?.mine ? 'bg-emerald-400 text-black' : 'bg-white text-black'}`}
+                    >{ns?.mine ? '✓ Reminder set' : '🔔 Notify me'}</button>
+                  )}
+                  {notifyError && <p className="mt-1.5 text-[10px] text-red-300">{notifyError}</p>}
                 </div>
               );
             }

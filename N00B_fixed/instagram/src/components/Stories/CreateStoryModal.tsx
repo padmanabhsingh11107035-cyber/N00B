@@ -3,7 +3,7 @@ import { detectAiMedia } from '../../utils/aiDetect';
 import React, { useState, useRef, useEffect } from 'react';
 import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon, MoreHorizontal, ChevronUp } from 'lucide-react';
 import { Story, User } from '../../types';
-import { uploadMediaFile } from '../../services/api';
+import { uploadMediaFile, fetchHighlights, addToHighlight, createManualHighlight } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { StickerTray } from './StickerTray';
@@ -127,6 +127,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [uploadError, setUploadError] = useState('');
   const [showMoreStoryTools, setShowMoreStoryTools] = useState(false);
   const [sliderSticker, setSliderSticker] = useState<{ question: string; emoji: string } | null>(null);   // the emoji slider (one per story)
+  const [highlightPick, setHighlightPick] = useState<{ id: string; title: string } | null>(null);   // the story is added to this highlight when posted (id empty = a new one)
+  const [notifySticker, setNotifySticker] = useState<{ title: string; whenIso: string } | null>(null);   // the "Notify me" button (one per story)
+  const [highlightChoices, setHighlightChoices] = useState<Array<{ id: string; title: string }>>([]);
   useEffect(() => { if (uploadError) showErrorDialog(uploadError, { onOk: () => setUploadError('') }); }, [uploadError]);   // a problem opens in a box with an OK button
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
@@ -187,6 +190,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   // Emoji / animated-sticker / GIF layers — same drag/resize/rotate engine as text layers.
   const [stickerLayers, setStickerLayers] = useState<StickerLayer[]>([]);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  useEffect(() => { if (showStickerPicker && highlightChoices.length === 0) void fetchHighlights().then((list) => setHighlightChoices((list || []).filter((h) => h.id && h.title).map((h) => ({ id: h.id, title: h.title })))).catch(() => undefined); }, [showStickerPicker]); // eslint-disable-line react-hooks/exhaustive-deps
   const [stickerTab, setStickerTab] = useState<'emoji' | 'animated' | 'gif' | 'upload'>('emoji');
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
   const [stickerUploadError, setStickerUploadError] = useState('');
@@ -658,6 +662,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: layer.rotation
         });
       });
+      if (highlightPick) mainStickers.push({ type: 'highlight', data: { title: highlightPick.title }, x: 50, y: 12, width: 40, rotation: 0 });
+      if (notifySticker) mainStickers.push({ type: 'notify', data: { title: notifySticker.title, whenIso: notifySticker.whenIso }, x: 50, y: 58, width: 60, rotation: 0 });
       if (sliderSticker) mainStickers.push({ type: 'slider', data: { question: sliderSticker.question, emoji: sliderSticker.emoji }, x: 50, y: 72, width: 60, rotation: 0 });
       stickerLayers.forEach((layer) => {
         mainStickers.push({
@@ -791,6 +797,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
       stories.push(mainStory);
 
       onSubmitStory(stories);
+      if (highlightPick) {
+        const item = [{ mediaUrl: mainStory.mediaUrl as string, mediaType: 'image' as const }];
+        const pick = highlightPick;
+        void (pick.id ? addToHighlight(pick.id, item) : createManualHighlight(pick.title, item)).then((res) => {
+          if (!res.success) showErrorDialog(`Your story was posted, but it could not be added to the highlight "${pick.title}". ${res.error || ''}`.trim());
+        });
+      }
       onClose();
     } catch (err) {
       console.error('Story publish failed:', err);
@@ -1299,6 +1312,21 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             </div>
           )}
 
+          {highlightPick && (
+            <div className="absolute left-1/2 z-30 inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-amber-400/50 rounded-full px-3 py-1.5 shadow-lg" style={{ top: '12%', transform: 'translate(-50%, -50%)' }}>
+              <span className="text-amber-300 text-xs">★</span><span className="text-xs font-bold text-white max-w-[160px] truncate">{highlightPick.title}</span>
+              <button type="button" onClick={() => setHighlightPick(null)} aria-label="Remove the highlight sticker" className="text-red-300 text-xs font-bold cursor-pointer ml-1">✕</button>
+            </div>
+          )}
+          {notifySticker && (
+            <div className="absolute left-1/2 z-30 w-[62%] max-w-[240px] bg-black/85 backdrop-blur-md border border-red-500/40 rounded-xl p-3 text-center shadow-xl" style={{ top: '58%', transform: 'translate(-50%, -50%)' }}>
+              <p className="text-xs font-bold text-white">{notifySticker.title}</p>
+              <p className="text-[10px] text-white/60 mb-2">{new Date(notifySticker.whenIso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
+              <span className="inline-block rounded-full bg-white text-black text-xs font-extrabold px-3 py-1">🔔 Notify me</span>
+              <button type="button" onClick={() => setNotifySticker(null)} className="block mx-auto mt-2 text-[10px] font-bold text-red-300 cursor-pointer">Remove</button>
+            </div>
+          )}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -1382,6 +1410,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           {showStickerPicker && (
             <StickerTray
               avatar={avatar}
+              highlightChoices={highlightChoices}
+              onHighlight={(id, title) => { setHighlightPick({ id, title }); setShowStickerPicker(false); }}
+              onNotify={(title, whenIso) => { setNotifySticker({ title, whenIso }); setShowStickerPicker(false); }}
               onClose={() => setShowStickerPicker(false)}
               onEmoji={(emoji) => addStickerLayer('emoji', emoji)}
               onImage={(url) => addStickerLayer('image', url)}

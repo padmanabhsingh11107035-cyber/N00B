@@ -192,6 +192,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     switch (type) {
       case 'noob_draw_ready':
         return <Gift className="w-3.5 h-3.5 text-pink-400" />;
+      case 'story_reminder':
+        return <Bell className="w-3.5 h-3.5 text-amber-400" />;
       case 'admin_broadcast':
       case 'admin_direct':
         return <Shield className="w-3.5 h-3.5 text-noob" />;

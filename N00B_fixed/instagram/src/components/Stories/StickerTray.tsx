@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Scissors, SlidersHorizontal, Loader2, MapPin, AtSign, Music2, Search, PlusSquare, Image as ImageIcon, Camera, LayoutPanelTop, HelpCircle, ListChecks, Link2, Hash, Timer, Smile, UserRound, Thermometer, Clock, ImagePlus } from 'lucide-react';
+import { Scissors, SlidersHorizontal, Loader2, MapPin, AtSign, Music2, Search, PlusSquare, Image as ImageIcon, Camera, LayoutPanelTop, HelpCircle, ListChecks, Link2, Hash, Timer, Smile, UserRound, Thermometer, Clock, ImagePlus, Star, Bell } from 'lucide-react';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { uploadMediaFile } from '../../services/api';
@@ -27,12 +27,21 @@ interface Props {
   onCountdown: () => void;
   /** an emoji slider (a question and an emoji the viewers slide) */
   onSlider: (question: string, emoji: string) => void;
+  /** the story is added to this highlight when it is posted (id empty = a new highlight with this name) */
+  onHighlight: (id: string, title: string) => void;
+  /** your own highlights, to pick from */
+  highlightChoices: Array<{ id: string; title: string }>;
+  /** a "Notify me" button: viewers tap it and are told at this time */
+  onNotify: (title: string, whenIso: string) => void;
 }
 type Pill = { key: string; label: string; Icon: React.ElementType; tint: string; run: () => void };
 
 export const StickerTray: React.FC<Props> = (p) => {
   const drag = useSheetDrag(p.onClose);   // drag the grey bar down to close
-  const [view, setView] = useState<'home' | 'emoji' | 'animated' | 'gif' | 'cutouts' | 'slider'>('home');
+  const [view, setView] = useState<'home' | 'emoji' | 'animated' | 'gif' | 'cutouts' | 'slider' | 'highlight' | 'notify'>('home');
+  const [hlName, setHlName] = useState('');
+  const [notifyTitle, setNotifyTitle] = useState('');
+  const [notifyWhen, setNotifyWhen] = useState(() => { const d = new Date(Date.now() + 3600_000); d.setMinutes(0, 0, 0); const z = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; });
   const [shape, setShape] = useState<CutoutShape | 'person'>('circle');
   const [sliderQ, setSliderQ] = useState('How much do you like it?');
   const [sliderEmoji, setSliderEmoji] = useState('😍');
@@ -68,6 +77,8 @@ export const StickerTray: React.FC<Props> = (p) => {
     { key: 'strip', label: 'Photostrip', Icon: LayoutPanelTop, tint: 'text-sky-500', run: () => stripRef.current?.click() },
     { key: 'photo', label: 'Photo', Icon: ImageIcon, tint: 'text-emerald-500', run: () => photoRef.current?.click() },
     { key: 'cutouts', label: 'Cutouts', Icon: Scissors, tint: 'text-green-500', run: () => setView('cutouts') },
+    { key: 'highlight', label: 'Highlight', Icon: Star, tint: 'text-amber-500', run: () => setView('highlight') },
+    { key: 'notify', label: 'Notify', Icon: Bell, tint: 'text-red-500', run: () => setView('notify') },
     { key: 'slider', label: 'Slider', Icon: SlidersHorizontal, tint: 'text-rose-500', run: () => setView('slider') },
     { key: 'questions', label: 'Questions', Icon: HelpCircle, tint: 'text-pink-500', run: p.onQuestions },
     { key: 'avatar', label: 'Avatar', Icon: UserRound, tint: 'text-orange-500', run: () => { if (p.avatar) p.onImage(p.avatar); else showErrorDialog('You have no profile picture to use yet.'); } },
@@ -104,6 +115,31 @@ export const StickerTray: React.FC<Props> = (p) => {
                 ))}
               </div>
               <button type="button" onClick={() => cutRef.current?.click()} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer">Choose a picture</button>
+            </div>
+          )}
+          {view === 'highlight' && (
+            <div className="px-2 pt-2" data-testid="sticker-highlight">
+              <h3 className="text-xl font-extrabold text-white mb-1">Highlight</h3>
+              <p className="text-white/60 text-sm mb-4">When you post this story, it is also added to the highlight you pick. It stays on your profile after the 24 hours.</p>
+              {p.highlightChoices.length > 0 && (
+                <div className="flex flex-col gap-2 mb-5">
+                  {p.highlightChoices.map((h) => (
+                    <button key={h.id} type="button" onClick={() => p.onHighlight(h.id, h.title)} className="h-12 rounded-2xl bg-white/12 text-white text-base font-bold px-4 text-left truncate cursor-pointer">{h.title}</button>
+                  ))}
+                </div>
+              )}
+              <p className="text-white/60 text-sm mb-2">Or start a new highlight</p>
+              <input value={hlName} onChange={(e) => setHlName(e.target.value)} maxLength={30} placeholder="Name of the highlight" aria-label="Name of the new highlight" className="w-full h-12 rounded-2xl bg-white/12 px-4 text-base text-white outline-none mb-3" />
+              <button type="button" disabled={!hlName.trim()} onClick={() => p.onHighlight('', hlName.trim())} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer disabled:opacity-40">Add to a new highlight</button>
+            </div>
+          )}
+          {view === 'notify' && (
+            <div className="px-2 pt-2" data-testid="sticker-notify">
+              <h3 className="text-xl font-extrabold text-white mb-1">Notify me</h3>
+              <p className="text-white/60 text-sm mb-4">People who watch your story tap the button and get a notification at the time you choose.</p>
+              <input value={notifyTitle} onChange={(e) => setNotifyTitle(e.target.value)} maxLength={60} placeholder="What is it? (new video, live, sale...)" aria-label="What to remind about" className="w-full h-12 rounded-2xl bg-white/12 px-4 text-base text-white outline-none mb-3" />
+              <input type="datetime-local" value={notifyWhen} onChange={(e) => setNotifyWhen(e.target.value)} aria-label="When" className="w-full h-12 rounded-2xl bg-white/12 px-4 text-base text-white outline-none mb-5" style={{ colorScheme: 'dark' }} />
+              <button type="button" disabled={!notifyTitle.trim() || !notifyWhen} onClick={() => { const t = new Date(notifyWhen); if (isNaN(t.getTime()) || t.getTime() <= Date.now()) { showErrorDialog('Pick a time that has not passed yet.'); return; } p.onNotify(notifyTitle.trim(), t.toISOString()); }} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer disabled:opacity-40">Add the Notify me button</button>
             </div>
           )}
           {view === 'slider' && (

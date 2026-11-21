@@ -101,6 +101,11 @@ jobs:
           grep -q android.permission.CAMERA android/app/src/main/AndroidManifest.xml
           grep -q android.permission.RECORD_AUDIO android/app/src/main/AndroidManifest.xml
           grep -q android.permission.READ_CONTACTS android/app/src/main/AndroidManifest.xml   # "Find friends" reads the phone's contacts: without this line Android refuses at once and the feature can never work (2026-11-19)
+          # A plugin (location) declares that the GPS chip is REQUIRED, so Google Play hides the app from phones without one. The GPS is only used by the live-location rooms and always optional, so it is declared optional here (2026-11-21)
+          sed -i 's#<manifest #<manifest xmlns:tools="http://schemas.android.com/tools" #' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-feature android:name="android.hardware.location.gps" android:required="false" tools:node="replace" />#' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.hardware.location.gps" android:required="false"' android/app/src/main/AndroidManifest.xml
+          grep -q 'xmlns:tools=' android/app/src/main/AndroidManifest.xml
           # the app's data (chat keys, saved logins) is not copied to a cloud backup
           sed -i 's#android:allowBackup="true"#android:allowBackup="false"#' android/app/src/main/AndroidManifest.xml
           grep -q 'allowBackup="false"' android/app/src/main/AndroidManifest.xml

@@ -185,7 +185,7 @@ export const AVATARS: ReadonlyArray<Avatar> = [
   }
 ];
 
-export const avatarUrl = (id: string, kind: '' | 'top' | 'pants' | 'boots' = '', origin = ''): string => `${origin}/avatars/${id}${kind ? '-' + kind : ''}.webp`;
+export const avatarUrl = (id: string, kind: '' | 'top' | 'pants' | 'boots' = '', origin = ''): string => `${origin}/avatars/${id}${kind ? '-' + kind : ''}.webp?v=2`;
 /** what is saved as the profile picture: the full web address, so it also works in emails, notifications and the Android app */
 export const avatarStoredUrl = (id: string): string => `${MAIN_SITE}/avatars/${id}.webp`;
 export const avatarIdOf = (value?: string | null): string | null => {

@@ -1,13 +1,18 @@
 package com.noob.social;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.webkit.PermissionRequest;
 import android.view.WindowManager;
 
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
   @Override
@@ -24,6 +29,31 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(PushGuardPlugin.class);
     super.onCreate(savedInstanceState);
     hideSystemBars();
+  }
+
+  // The camera and the microphone are asked for ONCE, like Instagram: when Android has already let the app use them, a page asking for the camera (the story camera, Instants, a call) is answered
+  // yes at once, with no question each time. The first time (nothing allowed yet) the normal question is asked.
+  @Override
+  public void onStart() {
+    super.onStart();
+    try {
+      getBridge().getWebView().setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
+        @Override
+        public void onPermissionRequest(final PermissionRequest request) {
+          try {
+            boolean wantsCamera = false, wantsMic = false;
+            for (String r : request.getResources()) {
+              if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) wantsCamera = true;
+              if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) wantsMic = true;
+            }
+            boolean cameraOk = !wantsCamera || ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+            boolean micOk = !wantsMic || ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+            if ((wantsCamera || wantsMic) && cameraOk && micOk) { request.grant(request.getResources()); return; }
+          } catch (Throwable ignored) { /* the normal question below */ }
+          super.onPermissionRequest(request);
+        }
+      });
+    } catch (Throwable ignored) { /* the app keeps its normal behaviour */ }
   }
 
   // Full screen like a game: no clock, battery or network bar at the top and no three buttons at the bottom. Swiping from the edge shows them for a moment (Android's own rule), then they hide again.

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, RotateCcw, Send, Loader2, SwitchCamera, Users, UserPlus } from 'lucide-react';
 import { User } from '../../types';
 import { sendInstant, deleteInstant, fetchCloseFriends } from '../../services/api';
@@ -12,7 +13,7 @@ interface InstantCameraProps {
 
 // Camera-only, like Instagram's Instants — no gallery picker, no video, just a quick photo. Capture ->
 // caption -> pick Friends or Close Friends -> Send, with a short "Undo" window right after.
-export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClose, onSent }) => {
+const InstantCameraInner: React.FC<InstantCameraProps> = ({ currentUser, onClose, onSent }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -236,3 +237,6 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
     </div>
   );
 };
+
+// Drawn straight on the page, not inside the chat page: inside it the camera stopped above the bottom bar and the shutter button was hidden behind the bar.
+export const InstantCamera: React.FC<InstantCameraProps> = (props) => createPortal(<InstantCameraInner {...props} />, document.body);

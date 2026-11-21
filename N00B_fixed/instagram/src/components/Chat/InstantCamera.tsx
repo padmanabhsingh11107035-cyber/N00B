@@ -136,7 +136,7 @@ const InstantCameraInner: React.FC<InstantCameraProps> = ({ currentUser, onClose
 
   return (
     <div className="fixed inset-0 z-[80] bg-black media-dark flex flex-col">
-      <div className="flex items-center justify-between p-4 shrink-0">
+      <div className="flex items-center justify-between px-4 pb-3 shrink-0" style={{ paddingTop: 'calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 14px)' }}>
         <button onClick={onClose} className="p-2 rounded-full bg-black/50 text-white cursor-pointer">
           <X className="w-5 h-5" />
         </button>
@@ -170,7 +170,7 @@ const InstantCameraInner: React.FC<InstantCameraProps> = ({ currentUser, onClose
         )}
       </div>
 
-      <div className="p-4 space-y-3 shrink-0">
+      <div className="px-4 pt-4 space-y-3 shrink-0" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
         {photoBlob && (
           <>
             <input

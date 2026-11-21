@@ -15,7 +15,7 @@ export const OptionsSheet: React.FC<{ onClose: () => void; label: string; testId
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return createPortal(
     <div className="pm-layer" role="dialog" aria-modal="true" aria-label={label} onClick={stop} onPointerDown={stop} onTouchStart={stop} onDoubleClick={stop} data-noob-keep="1">
-      <div ref={drag.backdropRef} className="pm-back" onPointerUp={onClose} aria-hidden="true" />
+      <div ref={drag.backdropRef} className="pm-backdrop" onPointerUp={onClose} aria-hidden="true" />
       <div ref={drag.sheetRef} className="pm-sheet" data-testid={testId}>
         <SheetGrip drag={drag} alwaysBar barClassName="bg-transparent">
           <div className="pm-bar" aria-hidden="true"><span /></div>

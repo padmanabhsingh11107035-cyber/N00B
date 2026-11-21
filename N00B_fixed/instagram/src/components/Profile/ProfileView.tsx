@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { showErrorDialog } from '../../utils/errorDialog';
 import { linkify } from '../Common/Linkified';
 import { SocialLinkButtons } from './SocialLinkButtons';
 import { ProfileCover, coverTopColour, coverValue } from './ProfileCover';
@@ -1207,9 +1208,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 )}
               </button>
 
-              {onNavigateToChatWithUser && canMessageTarget && (
+              {onNavigateToChatWithUser && (
                 <button
-                  onClick={() => onNavigateToChatWithUser(targetUser)}
+                  onClick={() => (canMessageTarget ? onNavigateToChatWithUser(targetUser) : showErrorDialog(`Follow @${targetUser.username} to chat with them.`, { title: 'Follow to chat' }))}
                   className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                 >
                   <MessageSquare className="w-4 h-4" /> Message

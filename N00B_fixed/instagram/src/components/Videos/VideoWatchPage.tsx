@@ -167,7 +167,7 @@ export const VideoWatchPage: React.FC<VideoWatchPageProps> = ({ video, allVideos
         </div>
       ) : (
         <>
-          <div className={landscapePhone ? 'bg-black' : 'sticky top-0 z-30 bg-black'}>{player}</div>
+          <div className={landscapePhone ? 'bg-black' : 'sticky top-0 z-30 bg-black'} style={landscapePhone ? undefined : { paddingTop: 'max(var(--sat, 0px), env(safe-area-inset-top, 0px))' }}>{player}</div>
           {details}
           {suggestedList}
         </>

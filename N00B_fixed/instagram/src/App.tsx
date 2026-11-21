@@ -1,4 +1,5 @@
 import { LoginApprovalNudge } from './components/Common/LoginApprovalNudge';
+import { showErrorDialog } from './utils/errorDialog';
 import { SignupSourceCard } from './components/Common/SignupSourceCard';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
@@ -2123,6 +2124,13 @@ export default function App() {
               handleNavigateToReel(reel.id);
             }}
             onStartChat={(user) => {
+              // A private account you do not follow (and who does not follow you) cannot be messaged: say so instead of opening a chat that will refuse
+              const connected = !!user.isFollowing || !!user.followingIds?.includes(currentUser.id);
+              if (user.accountType === 'private' && !connected) {
+                showErrorDialog(`@${user.username} has a private account. Follow this person to chat with them.`, { title: 'Follow to chat' });
+                return;
+              }
+              setPendingChatUser(user);
               setActiveTab('chat');
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}

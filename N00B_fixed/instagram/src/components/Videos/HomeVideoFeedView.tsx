@@ -166,7 +166,8 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [showHistory, setShowHistory] = useState(false);
   const [showLikedVideos, setShowLikedVideos] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
-  useEffect(() => { if (pageFromMenu.current && !showHistory && !showPlaylists && !showLikedVideos) { pageFromMenu.current = false; onLeave?.(); } }, [showHistory, showPlaylists, showLikedVideos]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pageWasShown = useRef(false);
+  useEffect(() => { if (showHistory || showPlaylists || showLikedVideos) { pageWasShown.current = true; } else if (pageFromMenu.current && pageWasShown.current) { pageFromMenu.current = false; pageWasShown.current = false; onLeave?.(); } }, [showHistory, showPlaylists, showLikedVideos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // "Add to playlist" picker, opened from the "⋮" options sheet.
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);

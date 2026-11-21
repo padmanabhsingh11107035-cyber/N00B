@@ -5119,6 +5119,15 @@ export async function adminSetVerification(targetUserId: string, verified: boole
   }
 }
 
+// The main administrator starts (tier + days) or ends (tier null) a NOOB Pro subscription for any account, free. Needs migration 20261121000002.
+export async function adminSetPro(targetUserId: string, tier: string | null, days = 30): Promise<{ success: boolean; proTier?: string | null; proRenewsAt?: string; message?: string; error?: string }> {
+  try {
+    return await rpc('admin_set_pro', { p_target: targetUserId, p_tier: tier, p_days: days });
+  } catch (err) {
+    return failWith(err, tier ? 'Could not start the subscription.' : 'Could not end the subscription.');
+  }
+}
+
 // The NOOB administrator changes the type of any account (public / private / business). The person is NOT told. Needs migration 20261116000004.
 export async function adminSetAccountType(targetUserId: string, accountType: 'public' | 'private' | 'business'): Promise<{ success: boolean; accountType?: string; message?: string; error?: string }> {
   try {

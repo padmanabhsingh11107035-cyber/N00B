@@ -100,7 +100,7 @@ import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import { AdminGrievancesPanel } from './AdminGrievancesPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
-  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification, adminSetAccountType,
+  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification, adminSetPro, adminSetAccountType,
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentPage, deletePost, deleteReel, deleteStory, deleteLongVideo,
@@ -1084,6 +1084,23 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       void loadUsers();
     } else {
       setStatusMessage({ text: res.error || 'Could not change the badge.', type: 'error' });
+    }
+  };
+
+  // Start (or end) a NOOB Pro subscription for someone, free, like the verified badge. The person is told by notification.
+  const [proTierPick, setProTierPick] = useState('pro');
+  const [proDaysPick, setProDaysPick] = useState('30');
+  const handleSetPro = async (target: User, tier: string | null) => {
+    if (!tier && !confirm(`End the NOOB Pro subscription of @${target.username}?`)) return;
+    setActionLoading(target.id);
+    const res = await adminSetPro(target.id, tier, Math.max(1, Math.min(3650, Math.floor(Number(proDaysPick)) || 30)));
+    setActionLoading(null);
+    if (res.success) {
+      setStatusMessage({ text: res.message || (tier ? 'Subscription started.' : 'Subscription ended.'), type: 'success' });
+      setSelectedUserForDetails((cur) => (cur && cur.id === target.id ? { ...cur, proTier: tier || undefined, proRenewsAt: res.proRenewsAt } : cur));
+      void loadUsers();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not change the subscription.', type: 'error' });
     }
   };
 
@@ -3729,6 +3746,32 @@ They will not be told.`)) return;
                       {actionLoading === selectedUserForDetails.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
                       {selectedUserForDetails.isVerified ? 'Remove verified badge' : 'Verify this account (badge + notification + e-mail)'}
                     </button>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">NOOB Pro</span>
+                    <span className="text-xs text-white font-medium capitalize">{selectedUserForDetails.proTier ? `${selectedUserForDetails.proTier}${selectedUserForDetails.proRenewsAt ? ` · until ${new Date(selectedUserForDetails.proRenewsAt).toLocaleDateString()}` : ''}` : 'None'}</span>
+                  </div>
+                  {main && (
+                    <div className="space-y-2" data-testid="admin-pro-controls">
+                      <div className="flex gap-2">
+                        <select value={proTierPick} onChange={(e) => setProTierPick(e.target.value)} aria-label="Pro plan" className="flex-1 min-w-0 px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white">
+                          {['starter', 'plus', 'pro', 'elite', 'ultimate'].map((t) => <option key={t} value={t}>{t[0].toUpperCase() + t.slice(1)}</option>)}
+                        </select>
+                        <input value={proDaysPick} onChange={(e) => setProDaysPick(e.target.value.replace(/\D/g, '').slice(0, 4))} inputMode="numeric" aria-label="Days" className="w-20 px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-white text-center" />
+                        <span className="self-center text-[11px] text-zinc-500">days</span>
+                      </div>
+                      <button
+                        onClick={() => handleSetPro(selectedUserForDetails, proTierPick)}
+                        disabled={actionLoading === selectedUserForDetails.id}
+                        className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 bg-white text-black hover:bg-zinc-200 transition-colors"
+                      >
+                        {actionLoading === selectedUserForDetails.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                        {selectedUserForDetails.proTier ? 'Change / extend the subscription (free, with notification)' : 'Start a subscription (free, with notification)'}
+                      </button>
+                      {selectedUserForDetails.proTier && (
+                        <button onClick={() => handleSetPro(selectedUserForDetails, null)} disabled={actionLoading === selectedUserForDetails.id} className="w-full py-2 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700 transition-colors">End the subscription</button>
+                      )}
+                    </div>
                   )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500 flex items-center gap-1">

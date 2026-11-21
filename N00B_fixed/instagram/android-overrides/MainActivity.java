@@ -2,7 +2,13 @@ package com.noob.social;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewTreeObserver;
+import android.webkit.WebView;
 import android.webkit.PermissionRequest;
 import android.view.WindowManager;
 
@@ -51,6 +57,45 @@ public class MainActivity extends BridgeActivity {
             if ((wantsCamera || wantsMic) && cameraOk && micOk) { request.grant(request.getResources()); return; }
           } catch (Throwable ignored) { /* the normal question below */ }
           super.onPermissionRequest(request);
+        }
+      });
+    } catch (Throwable ignored) { /* the app keeps its normal behaviour */ }
+    calmKeyboardPaint();
+  }
+
+  // Some phones (Samsung Galaxy M20 / M40 seen) do not repaint the page while the keyboard opens and resizes it: what shows instead is the colour BEHIND the page, which is the
+  // yellow of the launch screen, so a big yellow square covered the page. Two fixes, harmless on every other phone (the page always paints over them):
+  //  1. once the app has started (the launch screen is long gone) the colour behind the page is the dark of the app, not yellow;
+  //  2. when the visible height changes (the keyboard opening or closing) the page is asked to lay out and paint again, a moment later and once more.
+  private boolean keyboardPaintReady = false;
+  private int lastVisibleHeight = -1;
+  private void calmKeyboardPaint() {
+    if (keyboardPaintReady) return;
+    try {
+      final WebView web = getBridge().getWebView();
+      final View root = getWindow().getDecorView();
+      keyboardPaintReady = true;
+      web.postDelayed(new Runnable() {
+        @Override public void run() {
+          try {
+            web.setBackgroundColor(Color.parseColor("#0B0B0F"));
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#0B0B0F")));
+          } catch (Throwable ignored) { /* the launch colour stays */ }
+        }
+      }, 3500);
+      root.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        @Override public void onGlobalLayout() {
+          try {
+            Rect r = new Rect();
+            root.getWindowVisibleDisplayFrame(r);
+            int h = r.height();
+            if (lastVisibleHeight != -1 && h != lastVisibleHeight) {
+              Runnable again = new Runnable() { @Override public void run() { try { web.requestLayout(); web.invalidate(); } catch (Throwable ignored) { /* nothing to repaint */ } } };
+              web.postDelayed(again, 120);
+              web.postDelayed(again, 450);
+            }
+            lastVisibleHeight = h;
+          } catch (Throwable ignored) { /* the page behaves as before */ }
         }
       });
     } catch (Throwable ignored) { /* the app keeps its normal behaviour */ }

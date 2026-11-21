@@ -9,8 +9,8 @@ const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).jo
 console.log('1. The characters');
 check(AVATARS.length === 20 && new Set(AVATARS.map((a) => a.id)).size === 20 && new Set(AVATARS.map((a) => a.name)).size === 20, 'twenty avatars, each with its own id and name (no repeats)');
 check(AVATARS.every((a) => /^#[0-9a-f]{6}$/i.test(a.bg) && a.role && a.tagline && a.intro.length > 120 && a.clothing.length === 3 && a.extras.length >= 2 && a.traits.length === 3 && a.info.age >= 18 && a.info.height && a.info.from && a.info.colour), 'every avatar has a colour, a role, an introduction, three clothes, extras, three traits and its info');
-check(AVATARS.every((a) => ['', 'top', 'pants', 'boots'].every((k) => fs.existsSync(`public${avatarUrl(a.id, k)}`))), 'every avatar has its picture and the three close-ups of the clothes');
-check(AVATARS.every((a) => fs.statSync(`public${avatarUrl(a.id)}`).size < 200_000), 'and the pictures are small enough for a phone (under 200 KB)');
+check(AVATARS.every((a) => ['', 'top', 'pants', 'boots'].every((k) => fs.existsSync(`public${avatarUrl(a.id, k).split("?")[0]}`))), 'every avatar has its picture and the three close-ups of the clothes');
+check(AVATARS.every((a) => fs.statSync(`public${avatarUrl(a.id).split("?")[0]}`).size < 200_000), 'and the pictures are small enough for a phone (under 200 KB)');
 check(avatarIdOf('https://noobsocials.com/avatars/nova.webp') === 'nova' && avatarIdOf('/avatars/zane.webp?x=1') === 'zane' && avatarIdOf('/avatars/hacker.webp') === null && avatarIdOf(null) === null, 'a saved profile picture is recognised as an avatar (and only a real one)');
 
 console.log('\n2. The page and where it is opened');

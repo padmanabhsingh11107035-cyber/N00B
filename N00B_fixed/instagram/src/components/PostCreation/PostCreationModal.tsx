@@ -113,6 +113,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   // Creation Mode: Post (Image Only) vs Reel (Video Only)
   const [creationType, setCreationType] = useState<'post' | 'reel'>(initialType === 'reel' ? 'reel' : 'post');
   // Three steps, like Instagram: pick the picture(s) or video, edit them, then write the details and share
+  const [showMoreOptions, setShowMoreOptions] = useState(false);   // the details page shows the picture, the caption and Share; everything else is behind "More options"
   const [step, setStep] = useState<'select' | 'edit' | 'details' | 'done'>(initialType === 'thought' ? 'details' : 'select');
   const [isAltOpen, setIsAltOpen] = useState(false);
   const [shareNote, setShareNote] = useState('');
@@ -1484,7 +1485,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           {/* Step 3 — the details, then Share */}
           {step === 'details' && (
             <div className="p-4 space-y-4" data-testid="create-details">
-              {creationType === 'post' && (
+              {showMoreOptions && creationType === 'post' && (
               <>
           {/* User Profile & Dual Tagged Indicator (Instagram style) */}
           <div className="flex items-center justify-between bg-neutral-900/50 p-3 rounded-2xl border border-neutral-800/80">
@@ -1806,6 +1807,21 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           )}
 
 
+              {/* one row opens everything else: location, tag people, audience, comments, likes, schedule, accessibility ... */}
+              <button
+                type="button"
+                onClick={() => setShowMoreOptions((v) => !v)}
+                aria-expanded={showMoreOptions}
+                data-testid="create-more-options"
+                className="w-full flex items-center justify-between gap-3 rounded-2xl border border-neutral-800 bg-zinc-900/60 px-4 py-3.5 text-left cursor-pointer active:scale-[0.99] transition-transform"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-bold text-white">More options</span>
+                  <span className="block text-xs text-zinc-400 truncate">Location, tag people, who can see it, comments, likes and more</span>
+                </span>
+                <ChevronDown className={`w-5 h-5 text-zinc-300 shrink-0 transition-transform ${showMoreOptions ? 'rotate-180' : ''}`} />
+              </button>
+              {showMoreOptions && (<>
               {/* the list of options, like Instagram's */}
               <div>
                 {creationType === 'post' && (
@@ -1984,6 +2000,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   )}
                 </div>
               )}
+              </>)}
             </div>
           )}
 

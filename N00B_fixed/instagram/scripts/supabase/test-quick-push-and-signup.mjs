@@ -53,7 +53,7 @@ check(/fetchVapidKeyResult/.test(read('src/services/api.ts')) && /export async f
 
 section('3. Sign-up code: the person is let in as soon as the app can be shown');
 const verify = api.slice(api.indexOf('export async function verifySignupOtp'), api.indexOf('// Shared by signupUser and verifySignupOtp'));
-check(!/await uploadPendingSignupAvatar/.test(verify) && /void uploadPendingSignupAvatar\(pendingKey\)\.then/.test(verify), 'the profile photo is saved in the background, not waited for');
+check(!/await uploadPendingSignupAvatar/.test(verify) && /void uploadPendingSignupAvatar\(pendingKey, signedInId\)\.then/.test(verify), 'the profile photo is saved in the background, not waited for');
 check(/user = await fetchMyUserWithRetry\(\)/.test(verify) && !/get_my_user/.test(verify.replace(/fetchMyUserWithRetry/g, '')) && (verify.match(/await /g) || []).length <= 16, 'only the profile is read before the person goes in (retried a little if the first answer is empty), with a password sign-in as the back-up if the answer is lost');
 check(/shown\.avatar = preview/.test(verify) && /pendingAvatarPreview/.test(api) && /noob:own-avatar/.test(api), 'meanwhile the photo shows from the phone\'s own copy, and the app is told when the saved one is ready');
 check(/App|window\.addEventListener\('noob:own-avatar'/.test(app) && /u\.id === d\.userId \? \{ \.\.\.u, avatar: d\.avatar \}/.test(app), 'the app swaps in the saved photo when it is announced');

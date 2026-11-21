@@ -1,7 +1,7 @@
 import { showErrorDialog } from '../../utils/errorDialog';
 import { detectAiMedia } from '../../utils/aiDetect';
 import React, { useState, useRef, useEffect } from 'react';
-import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
+import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon, MoreHorizontal, ChevronUp } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
@@ -122,6 +122,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [isUploading, setIsUploading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [showMoreStoryTools, setShowMoreStoryTools] = useState(false);
   useEffect(() => { if (uploadError) showErrorDialog(uploadError, { onOk: () => setUploadError('') }); }, [uploadError]);   // a problem opens in a box with an OK button
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
@@ -1828,93 +1829,64 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 {uploadError}
               </div>
             )}
-            {/* Quick Interactive Sticker Toggles */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button
-                onClick={openNewTextLayer}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <Type className="w-3.5 h-3.5" /> Text
-              </button>
-              <button
-                onClick={() => setShowStickerPicker(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <StickerIcon className="w-3.5 h-3.5" /> Stickers
-              </button>
-              <button
-                onClick={() => setShowMentionPicker(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <AtSign className="w-3.5 h-3.5" /> Mention
-              </button>
-              <button
-                onClick={openNewHashtagLayer}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <Hash className="w-3.5 h-3.5" /> Hashtag
-              </button>
-              <button
-                onClick={openNewLinkLayer}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <Link2 className="w-3.5 h-3.5" /> Link
-              </button>
-              <button
-                onClick={() => setIsDrawMode(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Draw
-              </button>
-              <button
-                onClick={openNewCountdownLayer}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <Timer className="w-3.5 h-3.5" /> Countdown
-              </button>
-              <button
-                onClick={addAnonButton}
-                data-testid="add-anon-button"
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <VenetianMask className="w-3.5 h-3.5" /> Anonymous
-              </button>
-              <button
-                onClick={openNewQuestionLayer}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <MessageCircleQuestion className="w-3.5 h-3.5" /> Questions
-              </button>
+            {/* The tools, in two steps: the four most used ones big and always in view, everything else behind "More", then who sees it */}
+            <div className="grid grid-cols-5 gap-2" data-testid="story-tools">
+              {[
+                { key: 'text', label: 'Text', Icon: Type, on: openNewTextLayer },
+                { key: 'stickers', label: 'Stickers', Icon: StickerIcon, on: () => setShowStickerPicker(true) },
+                { key: 'music', label: 'Music', Icon: MusicIcon, on: () => setShowMusicPicker(true) },
+                { key: 'draw', label: 'Draw', Icon: Pencil, on: () => setIsDrawMode(true) },
+                { key: 'more', label: showMoreStoryTools ? 'Less' : 'More', Icon: showMoreStoryTools ? ChevronUp : MoreHorizontal, on: () => setShowMoreStoryTools((v) => !v) }
+              ].map(({ key, label, Icon, on }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={on}
+                  data-testid={`story-tool-${key}`}
+                  className={`flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-semibold transition-colors active:scale-95 cursor-pointer ${key === 'more' && showMoreStoryTools ? 'bg-white text-black' : 'bg-neutral-800 text-white hover:bg-neutral-700'}`}
+                >
+                  <Icon className="w-6 h-6" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {showMoreStoryTools && (
+              <div className="grid grid-cols-4 gap-2 animate-in slide-in-from-top-2 duration-150">
+                {[
+                  { key: 'mention', label: 'Mention', Icon: AtSign, on: () => setShowMentionPicker(true), active: false },
+                  { key: 'hashtag', label: 'Hashtag', Icon: Hash, on: openNewHashtagLayer, active: false },
+                  { key: 'link', label: 'Link', Icon: Link2, on: openNewLinkLayer, active: false },
+                  { key: 'location', label: 'Location', Icon: MapPin, on: () => setShowLocationInput(!showLocationInput), active: showLocationInput },
+                  { key: 'poll', label: 'Poll', Icon: HelpCircle, on: () => setShowPollInput(!showPollInput), active: showPollInput },
+                  { key: 'questions', label: 'Questions', Icon: MessageCircleQuestion, on: openNewQuestionLayer, active: false },
+                  { key: 'countdown', label: 'Countdown', Icon: Timer, on: openNewCountdownLayer, active: false },
+                  { key: 'anon', label: 'Anonymous', Icon: VenetianMask, on: addAnonButton, active: false }
+                ].map(({ key, label, Icon, on, active }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={on}
+                    data-testid={key === 'anon' ? 'add-anon-button' : `story-tool-${key}`}
+                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[11px] font-semibold transition-colors active:scale-95 cursor-pointer ${active ? 'bg-noob text-black' : 'bg-neutral-800 text-gray-200 hover:bg-neutral-700'}`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* who sees it, and the AI label */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowMusicPicker(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
-              >
-                <MusicIcon className="w-3.5 h-3.5" /> Music
-              </button>
-              <button
-                onClick={() => setShowPollInput(!showPollInput)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  showPollInput ? 'bg-noob text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
-                }`}
-              >
-                <HelpCircle className="w-3.5 h-3.5" /> Poll Sticker
-              </button>
-              <button
-                onClick={() => setShowLocationInput(!showLocationInput)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  showLocationInput ? 'bg-noob text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5" /> Location
-              </button>
-              <button
                 onClick={() => setIsCloseFriends(!isCloseFriends)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  isCloseFriends ? 'bg-emerald-500 text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
-                }`}
+                aria-pressed={isCloseFriends}
+                data-testid="story-close-friends"
+                className={`flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${isCloseFriends ? 'bg-emerald-500 text-black' : 'bg-neutral-800 text-gray-200 hover:bg-neutral-700'}`}
               >
-                <Sparkles className="w-3.5 h-3.5" /> Close Friends Only
+                <Sparkles className="w-4 h-4" /> {isCloseFriends ? 'Close friends only' : 'Everyone'}
               </button>
               <button
                 type="button"
@@ -1922,11 +1894,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 aria-pressed={aiLabel}
                 title={aiDetected ? 'NOOB found a made-with-AI marker inside your picture, so this label is on' : 'Turn on if your picture is made or changed with AI'}
                 data-testid="story-ai-label"
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  aiLabel ? 'bg-purple-500 text-white font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
-                }`}
+                className={`flex-1 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${aiLabel ? 'bg-purple-500 text-white' : 'bg-neutral-800 text-gray-200 hover:bg-neutral-700'}`}
               >
-                <Sparkles className="w-3.5 h-3.5" /> AI info label
+                <Sparkles className="w-4 h-4" /> AI label
               </button>
             </div>
 

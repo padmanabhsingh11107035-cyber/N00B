@@ -24,7 +24,8 @@ import { announceCaptionEdited, onCaptionEdited } from '../../utils/captionEvent
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { OptionsSheet } from '../Common/OptionsSheet';
-import { setInterest, interested as isInterestedIn } from '../../utils/feedInterest';
+import { setInterest, saveReasons, interested as isInterestedIn } from '../../utils/feedInterest';
+import { NotInterestedSheet } from '../Common/NotInterestedSheet';
 import { translateOne } from '../../i18n/contentTranslator';
 import { getLanguage } from '../../i18n/engine';
 import { formatCompactCount } from '../../utils/repostBatcher';
@@ -98,6 +99,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const videoMayAutoplay = shouldAutoplayVideo(devicePrefs);   // Settings > Media quality: Wi-Fi only / never / data saver
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [asking, setAsking] = useState(false);   // "Not interested": asking why
   const [menuView, setMenuView] = useState<'menu' | 'why'>('menu');   // the three-dot sheet: the list, or "Why you're seeing this post"
   const [hiddenByMe, setHiddenByMe] = useState(false);   // "Not interested": the post folds away
   const [interestNote, setInterestNote] = useState('');
@@ -628,9 +630,11 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  const reasonsSheet = asking ? <NotInterestedSheet what="post" onClose={() => setAsking(false)} onDone={(r) => { setInterest('post', post.id, 'no'); saveReasons('post', post.id, r); setAsking(false); setHiddenByMe(true); }} /> : null;
   if (hiddenByMe) {
     return (
       <article ref={articleRef} data-post-card="" id={`post-card-${post.id}`} className="hv-card w-full mb-4">
+        {reasonsSheet}
         <div className="pm-folded" data-testid="post-folded"><span>Thanks. You will see fewer posts like this.</span><button type="button" onClick={() => { setInterest('post', post.id, null); setHiddenByMe(false); }}>Undo</button></div>
       </article>
     );
@@ -755,7 +759,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <>
                   <button type="button" onClick={() => setMenuView('why')} data-testid="post-why-btn"><Info className="w-6 h-6" /> Why you're seeing this post</button>
                   <button type="button" onClick={() => { setInterest('post', post.id, 'yes'); setInterestNote('Thanks. We will show you more posts like this.'); setShowOptionsMenu(false); }} data-testid="post-interested"><CircleCheck className="w-6 h-6" /> Interested</button>
-                  <button type="button" onClick={() => { setInterest('post', post.id, 'no'); setHiddenByMe(true); setShowOptionsMenu(false); }} data-testid="post-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
+                  <button type="button" onClick={() => { setShowOptionsMenu(false); setAsking(true); }} data-testid="post-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
                 </>
               )}
               {post.isSponsored && onHideAd && (
@@ -1257,6 +1261,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
       </div>
 
+      {reasonsSheet}
       <FullscreenAvatarModal
         isOpen={showFullscreenAvatar}
         avatarUrl={post.userAvatar}

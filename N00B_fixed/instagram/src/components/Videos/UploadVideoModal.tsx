@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Film, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { uploadMediaFile, createLongVideo } from '../../services/api';
 import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
+import { showErrorDialog } from '../../utils/errorDialog';
 import { explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { queueRenditions } from '../../utils/videoRenditions';
@@ -94,6 +95,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  useEffect(() => { if (error) showErrorDialog(error, { onOk: () => setError('') }); }, [error]);   // a problem opens in a box with an OK button
   const [isChecking, setIsChecking] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState<UploadProgress | null>(null);

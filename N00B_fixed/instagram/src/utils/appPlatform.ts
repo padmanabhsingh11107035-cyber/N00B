@@ -10,10 +10,10 @@ export function detectPlatform(native: boolean, installedFromWebsite: boolean): 
 }
 
 /** The app is gone when it has not been opened for this long: the person has uninstalled it, or stopped using it. */
-export const APP_SEEN_WITHIN_MS = 14 * 24 * 60 * 60 * 1000;
+export const APP_SEEN_WITHIN_MS = 3 * 24 * 60 * 60 * 1000;
 
 /**
- * The blue tick: the person is on the real Android app right now, or the last time they were seen it was on the app and that was within the last 14 days.
+ * The blue tick: the person is on the real Android app right now, or the last time they were seen it was on the app and that was within the last 3 days.
  * Someone who opens NOOB in a browser afterwards (the usual sign of having deleted the app) is last seen on 'web' / 'pwa', so the tick goes at once.
  */
 export function hasNativeApp(args: { liveOnApp?: boolean; lastSeenPlatform?: string | null; lastSeenAt?: string | null; now?: number }): boolean {

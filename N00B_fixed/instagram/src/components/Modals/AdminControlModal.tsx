@@ -1849,7 +1849,7 @@ They will not be told.`)) return;
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-xs font-black text-white truncate">@{user.username}</span>
                               {user.isVerified && <VerifiedBadge size="sm" />}
-                              {hasApp && <span title="Has the NOOB Android app installed" aria-label="Has the NOOB Android app installed" data-testid="app-tick" className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 ring-1 ring-sky-300/50 shrink-0"><Check className="w-2.5 h-2.5 text-white" strokeWidth={4} /></span>}
+                              {hasApp && <span title="Has the NOOB Android app installed" aria-label="Has the NOOB Android app installed" data-testid="app-tick" className="inline-flex items-center justify-center w-4 h-4 rounded-full ring-1 ring-white/30 shrink-0" style={{ backgroundColor: '#0095f6' }}><Check className="w-2.5 h-2.5 text-white" strokeWidth={4} /></span>}
                               {isOnline ? (
                                 <span className="flex items-center gap-1 text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30 shrink-0">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

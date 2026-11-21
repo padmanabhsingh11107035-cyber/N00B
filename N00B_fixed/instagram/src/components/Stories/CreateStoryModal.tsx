@@ -1,3 +1,4 @@
+import { showErrorDialog } from '../../utils/errorDialog';
 import { detectAiMedia } from '../../utils/aiDetect';
 import React, { useState, useRef, useEffect } from 'react';
 import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
@@ -121,6 +122,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [isUploading, setIsUploading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  useEffect(() => { if (uploadError) showErrorDialog(uploadError, { onOk: () => setUploadError('') }); }, [uploadError]);   // a problem opens in a box with an OK button
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
   const [isCloseFriends, setIsCloseFriends] = useState(false);

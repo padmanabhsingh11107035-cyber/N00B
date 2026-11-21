@@ -17,3 +17,14 @@ export const notInterested = (kind: Kind, id: string): boolean => read(key(kind,
 export const interested = (kind: Kind, id: string): boolean => read(key(kind, 'yes')).includes(id);
 /** the ids of everything the person said "Not interested" to (for filtering a list) */
 export const notInterestedIds = (kind: Kind): Set<string> => new Set(read(key(kind, 'no')));
+
+/** Why a post or reel was marked "Not interested" (kept on this phone only: the newest 200 answers). */
+export function saveReasons(kind: Kind, id: string, reasons: string[]): void {
+  if (!reasons.length) return;
+  try {
+    const all = JSON.parse(localStorage.getItem('noob_interest_reasons') || '[]');
+    const list = Array.isArray(all) ? all : [];
+    list.push({ kind, id, reasons, at: Date.now() });
+    localStorage.setItem('noob_interest_reasons', JSON.stringify(list.slice(-200)));
+  } catch { /* not remembered */ }
+}

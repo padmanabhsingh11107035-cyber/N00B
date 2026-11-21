@@ -17,7 +17,8 @@ import { Heart, MessageCircle, Send, Bookmark, Music, ExternalLink, Sparkles, Gl
 import { Reel, User } from '../../types';
 import { openContentReport } from '../Common/ContentReportSheet';
 import { OptionsSheet } from '../Common/OptionsSheet';
-import { setInterest, notInterestedIds } from '../../utils/feedInterest';
+import { setInterest, notInterestedIds, saveReasons } from '../../utils/feedInterest';
+import { NotInterestedSheet } from '../Common/NotInterestedSheet';
 const dropNotInterested = <T extends { id: string }>(list: T[]): T[] => { const no = notInterestedIds('reel'); return no.size ? list.filter((r) => !no.has(r.id)) : list; };
 import { ContentAiBadge } from '../Common/ContentAiBadge';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
@@ -124,6 +125,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [reelMenuView, setReelMenuView] = useState<'menu' | 'why'>('menu');
+  const [askingReel, setAskingReel] = useState(false);   // "Not interested": asking why
   const [reelNote, setReelNote] = useState('');
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
@@ -1111,7 +1113,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                       <>
                         <button type="button" onClick={() => setReelMenuView('why')} data-testid="reel-why-btn"><Info className="w-6 h-6" /> Why you're seeing this reel</button>
                         <button type="button" onClick={() => { setInterest('reel', currentReel.id, 'yes'); setReelNote('Thanks. We will show you more reels like this.'); window.setTimeout(() => setReelNote(''), 2600); setShowReelOptionsMenu(false); }} data-testid="reel-interested"><CircleCheck className="w-6 h-6" /> Interested</button>
-                        <button type="button" onClick={() => { setInterest('reel', currentReel.id, 'no'); setReelNote('Thanks. You will see fewer reels like this.'); window.setTimeout(() => setReelNote(''), 2600); setShowReelOptionsMenu(false); }} data-testid="reel-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
+                        <button type="button" onClick={() => { setShowReelOptionsMenu(false); setAskingReel(true); }} data-testid="reel-not-interested"><CircleX className="w-6 h-6" /> Not interested</button>
                       </>
                     )}
                     <button
@@ -1217,6 +1219,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     </div>)}
                 </OptionsSheet>
               )}
+              {isCur && askingReel && currentReel && <NotInterestedSheet what="reel" onClose={() => setAskingReel(false)} onDone={(r) => { setInterest('reel', currentReel.id, 'no'); saveReasons('reel', currentReel.id, r); setAskingReel(false); setReelNote('Thanks. You will see fewer reels like this.'); window.setTimeout(() => setReelNote(''), 2600); }} />}
               {isCur && reelNote && createPortal(<div className="pm-toast" role="status" data-testid="reel-interest-note">{reelNote}</div>, document.body)}
             </div>
             {soundCover('rv-disc w-[38px] h-[38px]')}

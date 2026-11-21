@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { HatBoy } from './HatBoy';
 
 import { ANDROID_APK_URL } from '../../utils/appVersion';
+import { showErrorDialog, closeErrorDialog } from '../../utils/errorDialog';
 
 import { isNativeApp } from '../../utils/siteUrl';
 import {
@@ -139,6 +140,7 @@ const SHOW_AUTH_DOODLES = false;
 
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
+
 
   // Sign-up is its own page: "Create Account" opens it as a new page (the phone's back button / browser Back return to the log-in page, like any other page), and the Back
   // button on it does the same. The Continue with Google / Apple / Facebook / Discord buttons stay on the log-in page.
@@ -383,6 +385,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
   const [signupOtpCode, setSignupOtpCode] = useState('');
   const [signupOtpError, setSignupOtpError] = useState<string | null>(null);
+  // An error opens in a box with an OK button (a wrong code, a missing detail ...); pressing OK clears it so the person can put it right.
+  useEffect(() => { if (errorMessage && errorMessage !== notice) showErrorDialog(errorMessage, { onOk: () => setErrorMessage(null) }); }, [errorMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (signupOtpError) showErrorDialog(signupOtpError, { onOk: () => setSignupOtpError(null) }); }, [signupOtpError]);
+  useEffect(() => () => closeErrorDialog(), []);
+
   const [signupOtpLoading, setSignupOtpLoading] = useState(false);
   const [signupOtpResending, setSignupOtpResending] = useState(false);
   const turnstile = useTurnstile();   // the 'are you a person' check in front of the emailed code (switched on by VITE_TURNSTILE_SITE_KEY; renders nothing without it)
@@ -1068,8 +1075,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           </div>
         )}
         {/* (the "Log in to open ..." note that used to stand here is gone: the sign-in screen is one clear screen, with Log in and Create account always in view) */}
-        {errorMessage && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5 animate-shake">
+        {/* a note that came with the screen (for instance "log in again") stays up here; every error of the person's own actions opens in a box with an OK button (see the effects below) */}
+        {errorMessage && errorMessage === notice && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1">{errorMessage}</span>
             <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-white text-sm font-bold">✕</button>
@@ -1146,11 +1154,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   <p className="text-xs text-zinc-400 leading-relaxed">
                     We emailed a 6-digit code to <span className="text-white font-semibold" translate="no">{email.trim()}</span>. Enter it below to create your account.
                   </p>
-                  {signupOtpError && (
-                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-                      {signupOtpError}
-                    </div>
-                  )}
                   <form ref={otpFormRef} onSubmit={(e) => { e.preventDefault(); void handleVerifySignupOtp(); }} className="space-y-3.5">
                     <div>
                       <label className="text-xs font-bold text-zinc-300 block mb-1.5">6-digit code</label>

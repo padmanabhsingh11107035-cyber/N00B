@@ -1,3 +1,4 @@
+import { showErrorDialog } from '../../utils/errorDialog';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
@@ -664,12 +665,12 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     setCategoryError(false);
 
     if (creationType === 'reel' && !videoObjectKey) {
-      alert('Please upload a video file for your Reel.');
+      showErrorDialog('Please add a video for your reel, then try again.');
       return;
     }
 
     if (creationType === 'post' && !caption.trim() && slides.length === 0) {
-      alert('Please add a photo or write a caption for your Post.');
+      showErrorDialog('Please add a photo or write a caption for your post, then try again.');
       return;
     }
 
@@ -776,7 +777,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
       setStep('done');
     } catch (err: any) {
-      alert(err?.message || 'Failed to publish. Please try again.');
+      showErrorDialog(err?.message || 'It could not be published. Please try again.');
     } finally {
       setIsPublishing(false);
     }

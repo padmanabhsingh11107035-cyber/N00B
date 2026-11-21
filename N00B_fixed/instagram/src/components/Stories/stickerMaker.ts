@@ -107,3 +107,35 @@ export function currentTemperature(): Promise<number> {
     }, () => reject(new Error('Allow the place so we can read the temperature around you.')), { timeout: 10000, maximumAge: 600000 });
   });
 }
+
+export type CutoutShape = 'circle' | 'heart' | 'star' | 'square';
+/** the picture cut into a shape, with a white sticker edge */
+export async function cutoutSticker(file: File, shape: CutoutShape): Promise<File> {
+  const img = await load(file);
+  const S = 640, pad = 22;
+  const c = document.createElement('canvas'); c.width = S; c.height = S;
+  const ctx = c.getContext('2d')!;
+  const path = (inset: number) => {
+    const a = pad + inset, b = S - pad - inset, mid = S / 2;
+    ctx.beginPath();
+    if (shape === 'circle') ctx.arc(mid, mid, mid - pad - inset, 0, Math.PI * 2);
+    else if (shape === 'square') { const r = 70; ctx.moveTo(a + r, a); ctx.arcTo(b, a, b, b, r); ctx.arcTo(b, b, a, b, r); ctx.arcTo(a, b, a, a, r); ctx.arcTo(a, a, b, a, r); ctx.closePath(); }
+    else if (shape === 'star') {
+      const R = mid - pad - inset, r = R * 0.48;
+      for (let i = 0; i < 10; i++) { const ang = -Math.PI / 2 + (i * Math.PI) / 5, rad = i % 2 === 0 ? R : r; const x = mid + Math.cos(ang) * rad, y = mid + Math.sin(ang) * rad; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.closePath();
+    } else {
+      const w = b - a, top = a + w * 0.28;
+      ctx.moveTo(mid, b - w * 0.02);
+      ctx.bezierCurveTo(a - w * 0.08, top + w * 0.45, a + w * 0.02, a - w * 0.02, mid - w * 0.02, top);
+      ctx.bezierCurveTo(mid - w * 0.0, a + w * 0.02, b - w * 0.02, a - w * 0.02, b + w * 0.08, top + w * 0.45);
+      ctx.bezierCurveTo(b + w * 0.08, top + w * 0.45, mid + w * 0.3, b - w * 0.2, mid, b - w * 0.02);
+      ctx.closePath();
+    }
+  };
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 5;
+  path(0); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.save(); path(14); ctx.clip(); cover(ctx, img, 0, 0, S, S); ctx.restore();
+  return toPng(c, 'cutout-sticker.png');
+}

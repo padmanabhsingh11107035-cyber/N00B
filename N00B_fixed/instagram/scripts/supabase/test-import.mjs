@@ -276,7 +276,7 @@ if (sharedGroup) {
   check((await resolve(older.email)) === loginEmailFor(idOf(older)), 'a shared email logs into the older account (same as the old app)');
 }
 const ghost = await resolve('no-such-person');
-check(/^[0-9a-f-]{36}@users\.nooob\.xyz$/.test(ghost), 'an unknown name still returns a well-formed address (no account probing)');
+check(/^[0-9a-f-]{36}@users\.noobsocials\.com$/.test(ghost), 'an unknown name still returns a well-formed address (no account probing)');
 check((await asAnon(db, async () => (await db.query(`select username_taken('${viewerRaw.username.toUpperCase()}') t`)).rows[0].t)) === true && (await asAnon(db, async () => (await db.query(`select username_taken('brand_new_name') t`)).rows[0].t)) === false, 'username availability check works while logged out');
 
 console.log(`\n${passed} passed, ${failed} failed`);

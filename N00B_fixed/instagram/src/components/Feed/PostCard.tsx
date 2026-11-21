@@ -630,7 +630,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const reasonsSheet = asking ? <NotInterestedSheet what="post" onClose={() => setAsking(false)} onDone={(r) => { setInterest('post', post.id, 'no'); saveReasons('post', post.id, r); setAsking(false); setHiddenByMe(true); }} /> : null;
+  const reasonsSheet = asking ? <NotInterestedSheet what="post" onClose={() => setAsking(false)} onDone={(r) => { setInterest('post', post.id, 'no'); saveReasons('post', post.id, r, post.userId); setAsking(false); setHiddenByMe(true); }} /> : null;
   if (hiddenByMe) {
     return (
       <article ref={articleRef} data-post-card="" id={`post-card-${post.id}`} className="hv-card w-full mb-4">

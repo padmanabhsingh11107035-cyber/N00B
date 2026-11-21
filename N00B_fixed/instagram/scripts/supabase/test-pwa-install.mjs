@@ -38,8 +38,8 @@ check(pngSize('public/brand/noob-logo-1024.png') === '1024x1024' && fs.statSync(
 section('4. NOOB AI works inside the app on either address');
 const server = read('../noob-ai/server/noob_server.py');
 const theme = read('../noob-ai/server/web/theme.js');
-check(/EMBED_ALLOWED = "[^"]*https:\/\/noobsocials\.com[^"]*https:\/\/nooob\.xyz|EMBED_ALLOWED = "[^"]*https:\/\/nooob\.xyz[^"]*https:\/\/noobsocials\.com/.test(server), 'NOOB AI may be shown inside the app on nooob.xyz and on noobsocials.com');
-check(/"https:\/\/noobsocials\.com"/.test(theme) && /"https:\/\/nooob\.xyz"/.test(theme), 'and it follows the app\'s light / dark choice on both');
+check(/EMBED_ALLOWED = "[^"]*https:\/\/noobsocials\.com[^"]*https:\/\/www\.noobsocials\.com/.test(server), 'NOOB AI may be shown inside the app on noobsocials.com (and www)');
+check(/"https:\/\/noobsocials\.com"/.test(theme) && /"https:\/\/www\.noobsocials\.com"/.test(theme), 'and it follows the app\'s light / dark choice on both');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

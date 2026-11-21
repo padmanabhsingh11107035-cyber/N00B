@@ -30,7 +30,7 @@ check(fs.existsSync('public/app-icons/default.png') && fs.existsSync('public/app
 section('3. The Android app');
 const wf = read('../../.github/workflows/android-build.yml'), java = read('android-overrides/AppIconPlugin.java'), main = read('android-overrides/MainActivity.java'), py = read('android-overrides/add-icon-aliases.py');
 check(/@CapacitorPlugin\(name = "AppIcon"\)/.test(java) && /com\.noob\.social\.IconDefault/.test(java) && /com\.noob\.social\.IconProBlack/.test(java) && /com\.noob\.social\.IconProWhite/.test(java) && /COMPONENT_ENABLED_STATE_DISABLED/.test(java) && /DONT_KILL_APP/.test(java), 'the plugin turns the chosen launcher entry on and the others off, without closing the app');
-check(/registerPlugin\(AppIconPlugin\.class\);\s*super\.onCreate/.test(main), 'it is registered before the app starts');
+check(/registerPlugin\(AppIconPlugin\.class\);[\s\S]*?super\.onCreate/.test(main), 'it is registered before the app starts');
 check(/add-icon-aliases\.py/.test(wf) && /AppIconPlugin\.java/.test(wf) && /grep -q 'IconProBlack'/.test(wf) && /grep -q 'IconProWhite'/.test(wf) && /grep -q 'IconDefault'/.test(wf), 'the Android build adds the plugin and the two entries, and stops if they did not get in');
 check(['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'].every((d) => fs.existsSync(`android-overrides/icons/mipmap-${d}/ic_launcher_pro_black.png`) && fs.existsSync(`android-overrides/icons/mipmap-${d}/ic_launcher_pro_white_round.png`)), 'the Pro icon exists in every size');
 const sample = `<manifest><application><activity android:name=".MainActivity"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity></application></manifest>`;

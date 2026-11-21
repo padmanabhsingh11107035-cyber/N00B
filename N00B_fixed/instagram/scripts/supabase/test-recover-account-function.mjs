@@ -48,7 +48,7 @@ let tables = {};
 globalThis.__fake = {
   updates: [],
   rpc: async (fn, args) => { rpcCalls.push({ fn, args }); return dbPlan[fn] ? dbPlan[fn](args) : { data: null, error: { message: 'unknown rpc ' + fn } }; },
-  getUserById: async (id) => (id === 'u-ok' ? { data: { user: { email: `${id}@users.nooob.xyz` } }, error: null } : { data: { user: null }, error: { message: 'not found' } }),
+  getUserById: async (id) => (id === 'u-ok' ? { data: { user: { email: `${id}@users.noobsocials.com` } }, error: null } : { data: { user: null }, error: { message: 'not found' } }),
   createUser: async (opts) => { events.push(['createUser', opts.email]); return globalThis.__fake.createUserAnswer(opts); },
   createUserAnswer: async () => ({ data: { user: { id: 'u-ok' } }, error: null }),
   insert: async (table, row) => { events.push(['insert', table, row.auth_email]); return globalThis.__fake.insertAnswer(table, row); },
@@ -94,7 +94,7 @@ section('1. The existing security-question recovery is unchanged');
 reset();
 dbPlan.recovery_check = () => ({ data: { status: 'ok', userId: 'u-ok' }, error: null });
 let r = await call({ username: 'ana', mobileNumber: '9000000000', dateOfBirth: '2000-01-01', email: 'a@b.c' });
-check(r.status === 200 && r.json.success && r.json.tokenHash === 'th-u-ok@users.nooob.xyz', 'a verified account gets a one-time sign-in token');
+check(r.status === 200 && r.json.success && r.json.tokenHash === 'th-u-ok@users.noobsocials.com', 'a verified account gets a one-time sign-in token');
 check(rpcCalls[0].fn === 'recovery_check' && rpcCalls[0].args.p_username === 'ana', 'the database check is asked, with the four details');
 for (const [status, code, pattern] of [
   ['rate_limited', 429, /Too many attempts/], ['missing_username', 400, /Username is required/], ['not_found', 404, /No account found/],
@@ -145,7 +145,7 @@ check(r.status === 502 && /unavailable/.test(r.json.error), 'if the email provid
 section('3. Checking an emailed code');
 reset(); dbPlan.recovery_otp_verify = () => ({ data: { status: 'ok', userId: 'u-ok' }, error: null });
 r = await call({ action: 'otp-verify', username: 'padma', code: '482913' });
-check(r.status === 200 && r.json.success && r.json.tokenHash === 'th-u-ok@users.nooob.xyz', 'the right code signs the account in, the same one-time-token way as the security questions');
+check(r.status === 200 && r.json.success && r.json.tokenHash === 'th-u-ok@users.noobsocials.com', 'the right code signs the account in, the same one-time-token way as the security questions');
 check(rpcCalls[0].fn === 'recovery_otp_verify' && rpcCalls[0].args.p_code === '482913', 'the typed code is sent to the database check as-is');
 for (const [status, code, pattern] of [
   ['rate_limited', 429, /Too many attempts/], ['missing_username', 400, /Username is required/], ['missing', 400, /enter the code/],
@@ -237,7 +237,7 @@ reset(); okVerify();
 r = await call(signupBody);
 const ev = events.map((e) => e[0] + ':' + e[1] + ':' + (e[2] || ''));
 check(r.status === 200 && r.json.success && r.json.tokenHash, 'the right code makes the account and hands back a one-time sign-in token');
-check(events.length === 2 && events[0][0] === 'insert' && events[0][1] === 'signup_tickets' && events[1][0] === 'createUser' && events[0][2] === events[1][1] && /^[0-9a-f-]{36}@users\.nooob\.xyz$/.test(events[1][1]), 'the ticket (the private login address) is written down FIRST, and the very same address is then used to create the login', ev.join(' | '));
+check(events.length === 2 && events[0][0] === 'insert' && events[0][1] === 'signup_tickets' && events[1][0] === 'createUser' && events[0][2] === events[1][1] && /^[0-9a-f-]{36}@users\.noobsocials\.com$/.test(events[1][1]), 'the ticket (the private login address) is written down FIRST, and the very same address is then used to create the login', ev.join(' | '));
 reset(); okVerify();
 globalThis.__fake.insertAnswer = async () => ({ error: { message: 'relation "signup_tickets" does not exist' } });
 r = await call(signupBody);
@@ -337,7 +337,7 @@ check(r.json.status === 'send_failed' && !JSON.stringify(r.json).includes('11122
 reset(); globalThis.__fake.updates = [];
 dbPlan.guest_support_otp_verify = () => ({ data: { status: 'ok', userId: 'u-ok' }, error: null });
 r = await gcall({ action: 'guest-support-otp-verify', caseId: 'c', caseKey: 'k', code: ' 123456 ' });
-check(r.status === 200 && r.json.status === 'ok' && r.json.tokenHash === 'th-u-ok@users.nooob.xyz' && Object.keys(r.json).sort().join() === 'status,tokenHash' && rpcCalls[0].args.p_code === ' 123456 ', 'the right code gives a one-time sign-in token (the same kind as every other emailed-code login)');
+check(r.status === 200 && r.json.status === 'ok' && r.json.tokenHash === 'th-u-ok@users.noobsocials.com' && Object.keys(r.json).sort().join() === 'status,tokenHash' && rpcCalls[0].args.p_code === ' 123456 ', 'the right code gives a one-time sign-in token (the same kind as every other emailed-code login)');
 for (const status of ['mismatch', 'expired', 'too_many_attempts', 'rate_limited', 'case_locked', 'bad_format', 'missing', 'suspended', 'bad_case', 'id_required']) {
   reset(); dbPlan.guest_support_otp_verify = () => ({ data: { status, userId: 'u-ok' }, error: null });
   r = await gcall({ action: 'guest-support-otp-verify', caseId: 'c', caseKey: 'k', code: '000000' });

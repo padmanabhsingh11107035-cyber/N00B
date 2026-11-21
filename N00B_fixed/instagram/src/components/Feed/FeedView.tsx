@@ -40,7 +40,7 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, Repeat2 } from 'lucide-react';
+import { Wand2, Repeat2, Clock, ListVideo } from 'lucide-react';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
 import { sendLike } from '../../utils/likeSync';
@@ -63,7 +63,7 @@ import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
 import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
 import { PostCard } from './PostCard';
-import { notInterestedIds } from '../../utils/feedInterest';
+import { notInterestedIds, hiddenAuthorIds, syncInterest } from '../../utils/feedInterest';
 import { HomeMixCard, useHomeMix, useCanManagePolls, mixKey } from './HomeMix';
 import { holdSongs } from '../../utils/songSound';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
@@ -139,6 +139,8 @@ interface FeedViewProps {
   onNavigateToReel?: (reelId: string) => void;
   onNavigateToVideo?: (videoId: string) => void;
   onNavigateToLive?: (stream: import('../../services/supabaseApi').LiveStreamSummary) => void;
+  /** Watch history, playlists or liked videos (the video player page opens on it, closing goes back to Home) */
+  onOpenVideoPage?: (page: 'history' | 'playlists' | 'liked') => void;
   // A specific post to scroll to and highlight (e.g. tapped from a profile grid or Explore) — the
   // feed is shuffled and paginated, so without this the target post may not even be rendered yet.
   initialPostId?: string;
@@ -194,6 +196,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToReel,
   onNavigateToVideo,
   onNavigateToLive,
+  onOpenVideoPage,
   onNavigateToProfile,
   onOpenFunPage,
   onOpenTab,
@@ -301,7 +304,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, currentUser.id));
   const [refreshNonce, setRefreshNonce] = useState(0);
   // Anonymous thoughts and public polls are part of Home: they sit between the posts of the plain "For You" feed (not in a topic, Following or Favourites)
-  const noInterestFrozen = useMemo(() => notInterestedIds('post'), [refreshNonce]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
+  const [interestTick, setInterestTick] = useState(0);
+  useEffect(() => { let alive = true; void syncInterest().then((ok) => { if (alive && ok) setInterestTick((n) => n + 1); }); return () => { alive = false; }; }, []);   // the person's answers from the server (once per start)
+  const noInterestFrozen = useMemo(() => notInterestedIds('post'), [refreshNonce, interestTick]);
+  const hiddenAuthorsFrozen = useMemo(() => hiddenAuthorIds(), [refreshNonce, interestTick]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
   const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('videos'), featOn('live'));
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
   const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
@@ -423,7 +429,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // the Favourites tab only exists while there are favourites: if the last one is removed, go back to For You
   useEffect(() => { if (activeFeedFilter === 'favourites' && favouriteCount() === 0) setActiveFeedFilter('foryou'); }, [listsVersion, activeFeedFilter]);
   filteredPosts = filteredPosts.filter((p) => p.userId === currentUser.id || !isPostMuted(p.userId));
-  if (noInterestFrozen.size) filteredPosts = filteredPosts.filter((p) => !noInterestFrozen.has(p.id));   // "Not interested" in the three-dot sheet
+  if (noInterestFrozen.size || hiddenAuthorsFrozen.size) filteredPosts = filteredPosts.filter((p) => !noInterestFrozen.has(p.id) && !(p.userId !== currentUser.id && hiddenAuthorsFrozen.has(p.userId)));   // "Not interested" in the three-dot sheet
 
   // Reposts of the people you follow (Following tab only): the original is shown as an ordinary card with a "Reposted by" line (see utils/repostFeed.ts).
   const likeLedgerVersion = useLikeLedgerVersion();   // redraw when a heart is pressed on a repost-only card
@@ -657,8 +663,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const menuGroups: MenuGroupSpec[] = [
     {
       id: 'more-pages',
-      title: 'More pages',
-      items: menuItems([]),   // "Feed" (the Videos page) is a button in the top bar of Home now
+      title: 'Your videos',
+      items: menuItems([
+        featOn('videos') && onOpenVideoPage && { id: 'watch-history', entryId: 'watch-history', testId: 'menu-watch-history', label: 'Watch history', icon: <Clock />, hint: 'Videos you have watched', onClick: go('watch-history', () => onOpenVideoPage('history')) },
+        featOn('videos') && onOpenVideoPage && { id: 'video-playlists', entryId: 'video-playlists', testId: 'menu-video-playlists', label: 'Playlists and saved videos', icon: <ListVideo />, hint: 'Your playlists and the videos you saved', onClick: go('video-playlists', () => onOpenVideoPage('playlists')) },
+        featOn('videos') && onOpenVideoPage && { id: 'liked-videos', entryId: 'liked-videos', testId: 'menu-liked-videos', label: 'Liked videos', icon: <Heart />, hint: 'Videos you have liked', onClick: go('liked-videos', () => onOpenVideoPage('liked')) },
+      ]),
     },
     {
       id: 'noob',

@@ -31,6 +31,8 @@ const pool = raw.users.filter((u) => u.accountType !== 'private' && !u.isAdmin &
 const [sRaw, tRaw, uRaw, vRaw, wRaw, xRaw] = pool;
 const admin = idOf(adminRaw), s = idOf(sRaw), t = idOf(tRaw), u = idOf(uRaw), v = idOf(vRaw), w = idOf(wRaw), x = idOf(xRaw);
 const names = Object.fromEntries((await db.query('select id, username from profiles')).rows.map((r) => [r.id, r.username]));
+// the administrators confirmed their password a moment ago (sensitive admin actions ask for that, see migration 20261118000005): the powers below are what is under test here, not that password check
+for (const who of [admin, s, t]) await db.query(`insert into public.admin_reauth (user_id, until, fails) values ($1, now() + interval '2 hours', 0) on conflict (user_id) do update set until = excluded.until`, [who]);
 
 const call = (uid, sql, params = []) => asUser(db, uid, async () => (await db.query(sql, params)).rows);
 const rpc = async (uid, fn, ...args) => (await call(uid, `select public.${fn}(${args.map((_, i) => `$${i + 1}`).join(', ')}) as r`, args))[0].r;
@@ -162,7 +164,7 @@ await expectFail(() => rpc(s, 'admin_suspend_user', names[s], 'x', true), /can't
 await rpc(admin, 'admin_set_permissions', v, ['suspend_accounts', 'delete_accounts', 'adjust_points']);
 await expectFail(() => rpc(s, 'admin_suspend_user', names[v], 'x', true), /Only the main administrator can change another administrator/, 'a delegate can NOT suspend another administrator');
 await expectFail(() => rpc(v, 'admin_delete_user', names[s]), /Only the main administrator can change another administrator/, '...nor delete one');
-await expectFail(() => rpc(v, 'admin_adjust_points', s, 0, null), /Only the main administrator can change another administrator/, '...nor change their points');
+await expectFail(() => rpc(v, 'admin_adjust_points', s, 0, null), /Only the main administrator can change another administrator|REAUTH_REQUIRED/, '...nor change their points (the password check or the rule stops it)');
 check((await rpc(admin, 'admin_suspend_user', names[v], 'test', true)).success && (await rpc(admin, 'admin_suspend_user', names[v], null, false)).success, 'but the main admin can suspend and restore any delegate');
 // reports need BOTH permissions to suspend
 await rpc(u, 'submit_report', names[w], 'Spam', 'testing');

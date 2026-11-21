@@ -126,6 +126,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [showMoreStoryTools, setShowMoreStoryTools] = useState(false);
+  const [sliderSticker, setSliderSticker] = useState<{ question: string; emoji: string } | null>(null);   // the emoji slider (one per story)
   useEffect(() => { if (uploadError) showErrorDialog(uploadError, { onOk: () => setUploadError('') }); }, [uploadError]);   // a problem opens in a box with an OK button
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
@@ -657,6 +658,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: layer.rotation
         });
       });
+      if (sliderSticker) mainStickers.push({ type: 'slider', data: { question: sliderSticker.question, emoji: sliderSticker.emoji }, x: 50, y: 72, width: 60, rotation: 0 });
       stickerLayers.forEach((layer) => {
         mainStickers.push({
           type: 'sticker',
@@ -1289,6 +1291,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             </EditableStickerLayer>
           )}
 
+          {sliderSticker && (
+            <div className="absolute left-1/2 -translate-x-1/2 z-30 w-[62%] max-w-[240px] bg-black/85 backdrop-blur-md border border-orange-500/40 rounded-xl p-3 text-center shadow-xl" style={{ top: '72%', transform: 'translate(-50%, -50%)' }} data-testid="story-slider-preview">
+              <p className="text-xs font-bold text-white mb-2">{sliderSticker.question}</p>
+              <div className="h-2 rounded-full bg-white/25 relative"><span className="absolute -top-2.5 text-xl" style={{ left: '70%' }}>{sliderSticker.emoji}</span></div>
+              <button type="button" onClick={() => setSliderSticker(null)} className="mt-3 text-[10px] font-bold text-red-300 cursor-pointer">Remove slider</button>
+            </div>
+          )}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -1383,6 +1393,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               onLink={() => { setShowStickerPicker(false); openNewLinkLayer(); }}
               onHashtag={() => { setShowStickerPicker(false); openNewHashtagLayer(); }}
               onCountdown={() => { setShowStickerPicker(false); openNewCountdownLayer(); }}
+              onSlider={(question, emoji) => { setSliderSticker({ question, emoji }); setShowStickerPicker(false); }}
             />
           )}
 

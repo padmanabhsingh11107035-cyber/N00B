@@ -17,9 +17,9 @@ import { Heart, MessageCircle, Send, Bookmark, Music, ExternalLink, Sparkles, Gl
 import { Reel, User } from '../../types';
 import { openContentReport } from '../Common/ContentReportSheet';
 import { OptionsSheet } from '../Common/OptionsSheet';
-import { setInterest, notInterestedIds, saveReasons } from '../../utils/feedInterest';
+import { setInterest, notInterestedIds, saveReasons, hiddenAuthorIds } from '../../utils/feedInterest';
 import { NotInterestedSheet } from '../Common/NotInterestedSheet';
-const dropNotInterested = <T extends { id: string }>(list: T[]): T[] => { const no = notInterestedIds('reel'); return no.size ? list.filter((r) => !no.has(r.id)) : list; };
+const dropNotInterested = <T extends { id: string; userId?: string }>(list: T[]): T[] => { const no = notInterestedIds('reel'); const authors = hiddenAuthorIds(); return no.size || authors.size ? list.filter((r) => !no.has(r.id) && !(r.userId && authors.has(r.userId))) : list; };
 import { ContentAiBadge } from '../Common/ContentAiBadge';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
@@ -1219,7 +1219,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     </div>)}
                 </OptionsSheet>
               )}
-              {isCur && askingReel && currentReel && <NotInterestedSheet what="reel" onClose={() => setAskingReel(false)} onDone={(r) => { setInterest('reel', currentReel.id, 'no'); saveReasons('reel', currentReel.id, r); setAskingReel(false); setReelNote('Thanks. You will see fewer reels like this.'); window.setTimeout(() => setReelNote(''), 2600); }} />}
+              {isCur && askingReel && currentReel && <NotInterestedSheet what="reel" onClose={() => setAskingReel(false)} onDone={(r) => { setInterest('reel', currentReel.id, 'no'); saveReasons('reel', currentReel.id, r, currentReel.userId); setAskingReel(false); setReelNote('Thanks. You will see fewer reels like this.'); window.setTimeout(() => setReelNote(''), 2600); }} />}
               {isCur && reelNote && createPortal(<div className="pm-toast" role="status" data-testid="reel-interest-note">{reelNote}</div>, document.body)}
             </div>
             {soundCover('rv-disc w-[38px] h-[38px]')}

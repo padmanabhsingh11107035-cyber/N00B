@@ -1210,6 +1210,8 @@ export default function App() {
   // Home shows long videos and live streams between the posts; tapping one opens the player (kept in the 'videos' tab, which is no longer a page of its own) and closing it comes back to Home
   const [selectedLive, setSelectedLive] = useState<LiveStreamSummary | undefined>(undefined);
   const handleNavigateToLive = (stream: LiveStreamSummary) => { setSelectedLive(stream); setActiveTab('videos'); };
+  const [videoPage, setVideoPage] = useState<'history' | 'playlists' | 'liked' | undefined>(undefined);
+  const handleOpenVideoPage = (page: 'history' | 'playlists' | 'liked') => { setVideoPage(page); setActiveTab('videos'); };
   const handleNavigateToVideo = async (videoId: string) => {
     setSelectedVideoId(videoId);
     setActiveTab('videos');
@@ -2091,6 +2093,7 @@ export default function App() {
             onNavigateToReel={handleNavigateToReel}
             onNavigateToVideo={handleNavigateToVideo}
             onNavigateToLive={handleNavigateToLive}
+            onOpenVideoPage={handleOpenVideoPage}
             onNavigateToProfile={handleNavigateToUserProfile}
             onOpenFunPage={openFun}
             onOpenTab={handleSelectNavTab}
@@ -2161,6 +2164,8 @@ export default function App() {
               onInitialOpenVideoIdHandled={() => setSelectedVideoId(undefined)}
               initialOpenLive={selectedLive}
               onInitialOpenLiveHandled={() => setSelectedLive(undefined)}
+              openPage={videoPage}
+              onOpenPageHandled={() => setVideoPage(undefined)}
               onLeave={() => setActiveTab('feed')}
             />
           </React.Suspense>

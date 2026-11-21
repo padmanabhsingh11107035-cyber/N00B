@@ -60,6 +60,9 @@ interface HomeVideoFeedViewProps {
   onInitialOpenLiveHandled?: () => void;
   /** this page is only the player now (Home shows the videos): when nothing is open, or the player is closed, go back to Home */
   onLeave?: () => void;
+  /** the library page to open: watch history, playlists or liked videos */
+  openPage?: 'history' | 'playlists' | 'liked';
+  onOpenPageHandled?: () => void;
 }
 
 const formatDuration = (totalSeconds: number): string => {
@@ -105,7 +108,9 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   onInitialOpenVideoIdHandled,
   initialOpenLive,
   onInitialOpenLiveHandled,
-  onLeave
+  onLeave,
+  openPage,
+  onOpenPageHandled
 }) => {
   const isMasterAdmin = can(currentUser, 'moderate_content');
   const pinnedItems = usePinnedFeedItems();
@@ -124,8 +129,17 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   }, [initialOpenLive]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (initialOpenVideoId) cameFromHome.current = true;
-    else if (!initialOpenLive) onLeave?.();
+    else if (!initialOpenLive && !openPage) onLeave?.();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const pageFromMenu = useRef(false);
+  useEffect(() => {
+    if (!openPage) return;
+    pageFromMenu.current = true;
+    if (openPage === 'history') setShowHistory(true);
+    else if (openPage === 'playlists') setShowPlaylists(true);
+    else setShowLikedVideos(true);
+    onOpenPageHandled?.();
+  }, [openPage]); // eslint-disable-line react-hooks/exhaustive-deps
   const [filter, setFilter] = useState<FilterChip>('all');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +166,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [showHistory, setShowHistory] = useState(false);
   const [showLikedVideos, setShowLikedVideos] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
+  useEffect(() => { if (pageFromMenu.current && !showHistory && !showPlaylists && !showLikedVideos) { pageFromMenu.current = false; onLeave?.(); } }, [showHistory, showPlaylists, showLikedVideos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // "Add to playlist" picker, opened from the "⋮" options sheet.
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);

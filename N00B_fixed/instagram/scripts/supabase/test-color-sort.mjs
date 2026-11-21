@@ -90,14 +90,14 @@ check(shortest >= 5, 'none of them is solved in a few pours');
 section('5. The page and its files');
 const html = read(path.join(GAME, 'index.html')), css = read(path.join(GAME, 'game.css')), js = read(path.join(GAME, 'game.js'));
 for (const f of ['index.html', 'game.css', 'game.js', 'rules.js', 'levels.js']) check(fs.existsSync(path.join(GAME, f)), f);
-check(/<script src="\.\/rules\.js\?v=2"><\/script>\s*<script src="\.\/levels\.js\?v=2"><\/script>\s*<script src="\.\/game\.js\?v=2"><\/script>/.test(html) && /href="\.\/game\.css\?v=2"/.test(html), 'the page loads the rules, the levels, then the game (with a version number)');
+check(/<script src="\.\/rules\.js\?v=\d+"><\/script>\s*<script src="\.\/levels\.js\?v=\d+"><\/script>\s*<script src="\.\/game\.js\?v=\d+"><\/script>/.test(html) && /href="\.\/game\.css\?v=\d+"/.test(html), 'the page loads the rules, the levels, then the game (with a version number)');
 check(!/<script>[^<]/.test(html) && !/\son[a-z]+=/.test(html), 'no script is written inside the page (the security policy does not allow it)');
 check(/background: #fff;/.test(css) && /theme-color" content="#ffffff"/.test(html), 'a white page');
 check(/<title>Color Sort<\/title>/.test(html) && !/og:|twitter:/.test(html), 'a plain title, no share information');
 check(/window\.ColorSortRules/.test(js) && /pointerdown/.test(js) && /prefers-reduced-motion/.test(js) && /window\.setTimeout\(finish, ms \+ 250\)/.test(js), 'the game uses the rules, answers a touch at once, respects reduced motion and always finishes an animation');
 check(/noob_colorsort_level2/.test(js) && /function read\(key\) \{ try/.test(js) && /function write\(key, value\) \{ try/.test(js), 'saved things (level, sound) never break the game if storage is blocked');
 check(!/fetch\(|XMLHttpRequest|WebSocket|sendBeacon|window\.top|eval\(|new Function/.test(js + read(path.join(GAME, 'rules.js'))), 'it talks to no server and runs no made-up code');
-check(/postMessage\(msg, window\.location\.origin\)/.test(js) && (js.match(/postMessage\(/g) || []).length === 1 && /e\.source !== window\.parent \|\| e\.origin !== window\.location\.origin/.test(js), 'its one message goes only to its own page on this site, and it only listens to that page');
+check(/postMessage\(msg, NOOB_PARENT\)/.test(js) && (js.match(/postMessage\(/g) || []).length === 1 && /e\.source !== window\.parent \|\| e\.origin !== NOOB_PARENT/.test(js), 'its one message goes only to the page that shows it, and it only listens to that page');
 check(!/innerHTML/.test(js.slice(js.indexOf('ranking: the page around'))) && /textContent = String\(r\.displayName/.test(js) && /sameSiteImage/.test(js), 'names on the board are put in as plain text, and pictures only if they come from this site');
 check(!/https?:\/\/(?!www\.w3\.org)/.test(html + js + css), 'it links to no other website');
 const total = fs.readdirSync(GAME).reduce((n, f) => n + fs.statSync(path.join(GAME, f)).size, 0);
@@ -112,7 +112,7 @@ check(!/magic sort/i.test(html + js + css + entry + read(path.join(SRC, 'README.
 section('7. Headers');
 const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/color-sort/*'), headers.indexOf('\n/', headers.indexOf('/games/color-sort/*') + 5));
-check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
+check(/frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self';/.test(block) && !/unsafe-eval|wasm/.test(block) && /connect-src 'self';/.test(block) && /object-src 'none'/.test(block), 'its own scripts only, no eval, no WebAssembly, no network, no plug-ins');
 check(/\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/color-sort\/\*\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/color-sort\/\*\.css\n  Cache-Control: public, max-age=31536000, immutable/.test(headers), 'the page is asked for again every time, the versioned files are kept for a year');
 

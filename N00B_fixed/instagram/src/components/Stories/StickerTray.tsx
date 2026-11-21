@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Loader2, MapPin, AtSign, Music2, Search, PlusSquare, Image as ImageIcon, Camera, LayoutPanelTop, HelpCircle, ListChecks, Link2, Hash, Timer, Smile, UserRound, Thermometer, Clock, ImagePlus } from 'lucide-react';
+import { Scissors, SlidersHorizontal, Loader2, MapPin, AtSign, Music2, Search, PlusSquare, Image as ImageIcon, Camera, LayoutPanelTop, HelpCircle, ListChecks, Link2, Hash, Timer, Smile, UserRound, Thermometer, Clock, ImagePlus } from 'lucide-react';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { uploadMediaFile } from '../../services/api';
-import { photoSticker, polaroidSticker, photostripSticker, timeSticker, temperatureSticker, pillSticker, currentTemperature } from './stickerMaker';
+import { photoSticker, polaroidSticker, photostripSticker, timeSticker, temperatureSticker, pillSticker, cutoutSticker, currentTemperature, type CutoutShape } from './stickerMaker';
 import { showErrorDialog } from '../../utils/errorDialog';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip } from '../Common/SheetGrip';
 import './storyCamera.css';
 
 // The sticker tray of the story editor, drawn like Instagram's: a search box, a cloud of white pills (Location, mention, Music, GIF, Add yours, Frames, Photostrip, Photo, Questions, Poll, Link, hashtag,
@@ -22,11 +24,18 @@ interface Props {
   onLink: () => void;
   onHashtag: () => void;
   onCountdown: () => void;
+  /** an emoji slider (a question and an emoji the viewers slide) */
+  onSlider: (question: string, emoji: string) => void;
 }
 type Pill = { key: string; label: string; Icon: React.ElementType; tint: string; run: () => void };
 
 export const StickerTray: React.FC<Props> = (p) => {
-  const [view, setView] = useState<'home' | 'emoji' | 'animated' | 'gif'>('home');
+  const drag = useSheetDrag(p.onClose);   // drag the grey bar down to close
+  const [view, setView] = useState<'home' | 'emoji' | 'animated' | 'gif' | 'cutouts' | 'slider'>('home');
+  const [shape, setShape] = useState<CutoutShape>('circle');
+  const [sliderQ, setSliderQ] = useState('How much do you like it?');
+  const [sliderEmoji, setSliderEmoji] = useState('😍');
+  const cutRef = useRef<HTMLInputElement | null>(null);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState('');
   const photoRef = useRef<HTMLInputElement | null>(null);
@@ -57,6 +66,8 @@ export const StickerTray: React.FC<Props> = (p) => {
     { key: 'frames', label: 'Frames', Icon: Camera, tint: 'text-zinc-500', run: () => frameRef.current?.click() },
     { key: 'strip', label: 'Photostrip', Icon: LayoutPanelTop, tint: 'text-sky-500', run: () => stripRef.current?.click() },
     { key: 'photo', label: 'Photo', Icon: ImageIcon, tint: 'text-emerald-500', run: () => photoRef.current?.click() },
+    { key: 'cutouts', label: 'Cutouts', Icon: Scissors, tint: 'text-green-500', run: () => setView('cutouts') },
+    { key: 'slider', label: 'Slider', Icon: SlidersHorizontal, tint: 'text-rose-500', run: () => setView('slider') },
     { key: 'questions', label: 'Questions', Icon: HelpCircle, tint: 'text-pink-500', run: p.onQuestions },
     { key: 'avatar', label: 'Avatar', Icon: UserRound, tint: 'text-orange-500', run: () => { if (p.avatar) p.onImage(p.avatar); else showErrorDialog('You have no profile picture to use yet.'); } },
     { key: 'emoji', label: 'Emoji', Icon: Smile, tint: 'text-amber-500', run: () => setView('emoji') },
@@ -69,9 +80,10 @@ export const StickerTray: React.FC<Props> = (p) => {
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col justify-end" onPointerDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Stickers" data-testid="sticker-tray">
-      <div className="absolute inset-0 bg-black/40" onClick={p.onClose} aria-hidden="true" />
-      <div className="relative h-[84%] rounded-t-[28px] bg-zinc-900/95 backdrop-blur-xl flex flex-col overflow-hidden">
-        <div className="flex justify-center pt-3 pb-2"><button type="button" onClick={view === 'home' ? p.onClose : () => setView('home')} aria-label={view === 'home' ? 'Close stickers' : 'Back to stickers'} className="w-10 h-1.5 rounded-full bg-white/40" /></div>
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/40" onClick={p.onClose} aria-hidden="true" />
+      <div ref={drag.sheetRef} className="relative h-[84%] rounded-t-[28px] bg-zinc-900/95 backdrop-blur-xl flex flex-col overflow-hidden">
+        <SheetGrip drag={drag} alwaysBar barClassName="bg-white/40"><div className="h-1" aria-hidden="true" /></SheetGrip>
+        {view !== 'home' && <button type="button" onClick={() => setView('home')} className="mx-4 mb-2 self-start text-sm font-bold text-white/80 cursor-pointer">← Back to stickers</button>}
         <label className="mx-4 mb-3 flex items-center gap-2 rounded-2xl bg-white/12 px-4 h-11 text-white/70">
           <Search className="w-5 h-5" />
           <input value={q} onChange={(e) => { setQ(e.target.value); if (view !== 'home') setView('home'); }} placeholder="Search" aria-label="Search stickers" className="flex-1 bg-transparent text-base text-white placeholder-white/50 outline-none" />
@@ -81,6 +93,31 @@ export const StickerTray: React.FC<Props> = (p) => {
           {view === 'emoji' && <EmojiPanel onPick={p.onEmoji} />}
           {view === 'animated' && <AnimatedStickerPanel onPick={p.onImage} />}
           {view === 'gif' && <GifPanel curated={[]} onPick={p.onImage} />}
+          {view === 'cutouts' && (
+            <div className="px-2 pt-2" data-testid="sticker-cutouts">
+              <h3 className="text-xl font-extrabold text-white mb-1">Cutouts</h3>
+              <p className="text-white/60 text-sm mb-4">Pick a shape, then a picture. The picture is cut into that shape with a white edge.</p>
+              <div className="grid grid-cols-4 gap-3 mb-5">
+                {([['circle', 'Circle'], ['heart', 'Heart'], ['star', 'Star'], ['square', 'Rounded']] as Array<[CutoutShape, string]>).map(([k, label]) => (
+                  <button key={k} type="button" onClick={() => setShape(k)} aria-pressed={shape === k} className={`h-20 rounded-2xl text-sm font-bold cursor-pointer ${shape === k ? 'bg-white text-black' : 'bg-white/12 text-white'}`}>{label}</button>
+                ))}
+              </div>
+              <button type="button" onClick={() => cutRef.current?.click()} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer">Choose a picture</button>
+            </div>
+          )}
+          {view === 'slider' && (
+            <div className="px-2 pt-2" data-testid="sticker-slider">
+              <h3 className="text-xl font-extrabold text-white mb-1">Emoji slider</h3>
+              <p className="text-white/60 text-sm mb-4">People who watch your story slide the emoji to answer.</p>
+              <input value={sliderQ} onChange={(e) => setSliderQ(e.target.value)} maxLength={60} aria-label="Question" className="w-full h-12 rounded-2xl bg-white/12 px-4 text-base text-white outline-none mb-4" />
+              <div className="flex gap-3 mb-5">
+                {['😍', '🔥', '😂', '😮', '👍', '💯'].map((e) => (
+                  <button key={e} type="button" onClick={() => setSliderEmoji(e)} aria-pressed={sliderEmoji === e} className={`w-12 h-12 rounded-full text-2xl cursor-pointer ${sliderEmoji === e ? 'bg-white' : 'bg-white/12'}`}>{e}</button>
+                ))}
+              </div>
+              <button type="button" onClick={() => p.onSlider(sliderQ.trim() || 'How much do you like it?', sliderEmoji)} className="w-full h-12 rounded-2xl bg-white text-black text-base font-extrabold cursor-pointer">Add the slider</button>
+            </div>
+          )}
           {view === 'home' && (
             <>
               <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-3 pt-1">
@@ -110,6 +147,7 @@ export const StickerTray: React.FC<Props> = (p) => {
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickOne(photoRef, photoSticker, 'photo')} />
         <input ref={frameRef} type="file" accept="image/*" className="hidden" onChange={pickOne(frameRef, polaroidSticker, 'frame')} />
         <input ref={stripRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const fs: File[] = Array.from(e.target.files || []).slice(0, 4) as File[]; e.target.value = ''; if (fs.length) void place(() => photostripSticker(fs), 'photostrip'); }} />
+        <input ref={cutRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void place(() => cutoutSticker(f, shape), 'cutout'); }} />
         <input ref={ownRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void place(async () => f, 'sticker'); }} />
       </div>
     </div>

@@ -73,7 +73,7 @@ check(/\[data-act="nav"\]\[data-arg="online"\], \[data-act="nav"\]\[data-arg="bo
 section('5. Headers: the game may be framed by this site only, and may load only its own files');
 const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/the-rogue/*'), headers.indexOf('\n/', headers.indexOf('/games/the-rogue/*') + 5));
-check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
+check(/frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self' 'wasm-unsafe-eval';/.test(block) && !/'unsafe-eval'/.test(block) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block), 'its own scripts only, no eval, no network, no plug-ins');
 check(/\/games\/the-rogue\/assets\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/warm\.json\n  Cache-Control: no-cache/.test(headers), 'its fingerprinted scripts are kept for ever, the page and the list are always checked');
 

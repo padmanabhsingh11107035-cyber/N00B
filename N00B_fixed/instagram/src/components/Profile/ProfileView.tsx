@@ -181,6 +181,8 @@ interface ProfileViewProps {
   onOpenFunPage?: (loc: FunLocation) => void;
   onNavigateToChatWithUser?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
+  // Opens the list of long videos you liked (the old menu entry moved here, into the Liked tab)
+  onOpenLikedVideos?: () => void;
   // Opens one of the long videos (Home > Videos) listed in the profile's Feed tab
   onOpenLongVideo?: (videoId: string) => void;
   // Present only for the main NOOB admin while they're using the app in "Use as User" mode (see
@@ -215,6 +217,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenFunPage,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
+  onOpenLikedVideos,
   onOpenLongVideo,
   onSwitchToAdminPanel,
   onOpenCreate
@@ -1585,6 +1588,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
 
         {/* D. LIKED POSTS (owner only) */}
+        {activeTab === 'liked' && isOwnProfile && onOpenLikedVideos && (
+          <button type="button" onClick={onOpenLikedVideos} data-testid="liked-videos-row" className="w-full flex items-center gap-3 px-3 py-3 mb-2 rounded-2xl border border-zinc-500/30 bg-zinc-500/10 text-left cursor-pointer active:scale-[.99]">
+            <Heart className="w-5 h-5 shrink-0" />
+            <span className="flex-1 min-w-0 truncate text-sm font-semibold">Liked videos</span>
+            <ChevronRight className="w-4 h-4 shrink-0 text-zinc-400" />
+          </button>
+        )}
         {activeTab === 'liked' && isOwnProfile && (
           <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
             {likedPosts.map((post) => (

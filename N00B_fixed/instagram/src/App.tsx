@@ -1926,6 +1926,7 @@ export default function App() {
       allUsers={registeredUsers}
       posts={posts}
       reels={reels}
+      onOpenLikedVideos={() => handleOpenVideoPage('liked')}
       onSelectPost={(post) => {
         handleNavigateToPost(post.id);
       }}

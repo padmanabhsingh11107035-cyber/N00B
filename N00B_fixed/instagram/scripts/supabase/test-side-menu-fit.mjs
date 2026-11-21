@@ -33,7 +33,7 @@ check(/\.nmenu-panel\.is-open \{ width: 248px; \}/.test(css) && /\.nmenu-panel \
 section('3. Phone: three lines + drawer');
 check(/className="md:hidden p-1 -ml-1[^"]*"\s+title="More from NOOB"/.test(feed), 'the three lines on Home are only on a phone (hidden from 768 px wide)');
 check(/<MenuList groups=\{menuGroups\} \/>/.test(feed) && /className="nmenu md:hidden fixed inset-0 z-\[95\] flex flex-col/.test(feed) && /data-noob-keep="1"/.test(feed), 'pressing them opens the full list as a page that fills the screen (never on a tablet or computer)');
-check(/<MenuList groups=\{menuGroups\} \/>/.test(feed) && /id: 'noob'/.test(feed) && /id: 'fun'/.test(feed) && /id: 'more'/.test(feed) && /id: 'more-pages'/.test(feed), 'with the same groups as before: More pages, NOOB, Fun & community, More from NOOB');
+check(/<MenuList groups=\{menuGroups\} \/>/.test(feed) && /id: 'noob'/.test(feed) && /id: 'fun'/.test(feed) && /id: 'more'/.test(feed), 'with the same groups as before: NOOB, Fun & community, More from NOOB');
 check(/window\.matchMedia\?\.\('\(min-width: 768px\)'\)\.matches\) return;/.test(feed), 'a page closed on a tablet or computer does not pop a three-line menu open');
 
 section('4. Tablet / laptop / computer: the long strip');

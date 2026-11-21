@@ -230,3 +230,7 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 .hm-live-go { flex: none; padding: 8px 16px; border-radius: 9999px; background: #ef4444; color: #fff; font-size: 14px; font-weight: 800; }
 
 .hm-vid-tag { position: absolute; top: 10px; right: 10px; padding: 3px 10px; border-radius: 9999px; background: rgba(0, 0, 0, 0.62); color: #fff; font-size: 12px; font-weight: 800; letter-spacing: 0.03em; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+
+/* thin line between Home items (posts, videos, thoughts, polls), like X/Twitter */
+.hv-feed > * { position: relative; }
+.hv-feed > *:not(:last-child)::after { content: ''; position: absolute; left: -10px; right: -10px; bottom: -8px; height: 1px; background: var(--hv-line); pointer-events: none; }

@@ -458,7 +458,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       <button
         id="story-close-btn"
         onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2 text-white/80 hover:text-white bg-black/40 rounded-full cursor-pointer hover:scale-110 transition-transform"
+        className="absolute right-3 z-50 p-2 text-white/80 hover:text-white bg-black/40 rounded-full cursor-pointer hover:scale-110 transition-transform"
+        style={{ top: 'calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 18px)' }}
       >
         <X className="w-6 h-6" />
       </button>
@@ -512,7 +513,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         </div>
 
         {/* Story Header */}
-        <div className="absolute top-5 inset-x-3 z-30 flex items-center justify-between px-2 pt-1">
+        <div className="absolute top-5 inset-x-3 z-30 flex items-center justify-between px-2 pt-1 pr-12">
           <button
             type="button"
             onClick={() => {

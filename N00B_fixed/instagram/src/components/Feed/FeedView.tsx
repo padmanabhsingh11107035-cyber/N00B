@@ -662,15 +662,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const menuItems = (list: Array<MenuItemSpec | false | null | undefined>): MenuItemSpec[] => list.filter((i): i is MenuItemSpec => !!i);
   const menuGroups: MenuGroupSpec[] = [
     {
-      id: 'more-pages',
-      title: 'Your videos',
-      items: menuItems([
-        featOn('videos') && onOpenVideoPage && { id: 'watch-history', entryId: 'watch-history', testId: 'menu-watch-history', label: 'Watch history', icon: <Clock />, hint: 'Videos you have watched', onClick: go('watch-history', () => onOpenVideoPage('history')) },
-        featOn('videos') && onOpenVideoPage && { id: 'video-playlists', entryId: 'video-playlists', testId: 'menu-video-playlists', label: 'Playlists and saved videos', icon: <ListVideo />, hint: 'Your playlists and the videos you saved', onClick: go('video-playlists', () => onOpenVideoPage('playlists')) },
-        featOn('videos') && onOpenVideoPage && { id: 'liked-videos', entryId: 'liked-videos', testId: 'menu-liked-videos', label: 'Liked videos', icon: <Heart />, hint: 'Videos you have liked', onClick: go('liked-videos', () => onOpenVideoPage('liked')) },
-      ]),
-    },
-    {
       id: 'noob',
       title: 'NOOB',
       items: menuItems([
@@ -992,7 +983,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       </div>
 
       {/* 4. Feed Posts Stack */}
-      <main ref={postListRef} className="w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
+      <main ref={postListRef} className="hv-feed w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 && mixOn && mix.items.length > 0 ? (
           <>{mix.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} onOpenVideo={onNavigateToVideo} onOpenLive={onNavigateToLive} />)}</>
         ) : filteredPosts.length === 0 ? (

@@ -1,13 +1,13 @@
 import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect } from 'react';
-import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2, ScanFace, VenetianMask, BarChart3 } from 'lucide-react';
+import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, ScanFace, VenetianMask, BarChart3 } from 'lucide-react';
 
 import { useSheetDrag } from '../../utils/sheetDrag';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import '../Common/nzPage.css';
 import { ScrollMoreHint, useScrollMore } from '../Feed/ScrollMoreHint';
 
-export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'anon' | 'poll' | 'studio' | 'lenses';
+export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'anon' | 'poll' | 'lenses';
 
 interface CreateChooserProps {
   onClose: () => void;
@@ -27,8 +27,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
   { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' },
   { kind: 'anon', title: 'Anonymous post', blurb: 'Words or a picture on Home, without your name', Icon: VenetianMask, tint: 'text-white' },
   { kind: 'poll', title: 'Poll', blurb: 'Ask everyone a question; shown with your name', Icon: BarChart3, tint: 'text-white' },
-  { kind: 'lenses', title: 'Lenses', blurb: 'Face filters: take a picture, save it or share it anywhere', Icon: ScanFace, tint: 'text-amber-300' },
-  { kind: 'studio', title: 'Edit in Studio', blurb: 'Edit photos and videos first, then share them', Icon: Wand2, tint: 'text-fuchsia-300' }
+  { kind: 'lenses', title: 'Lenses', blurb: 'Face filters: take a picture, save it or share it anywhere', Icon: ScanFace, tint: 'text-amber-300' }
 ];
 
 export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {

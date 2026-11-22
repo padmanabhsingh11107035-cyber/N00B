@@ -5,16 +5,12 @@ import { MAIN_SITE } from './siteUrl.ts';
 //   /this-or-that      /ask   (my questions)      /ask/<username>   (ask that person)      /mood      /polls      /polls/<id>
 export type FunFeature = 'this-or-that' | 'ask' | 'mood' | 'polls';
 
-/** NOOB Forms live beside the Fun pages: /forms (my forms), /forms/<id> (the editor), /forms/<id>/responses, and /f/<address> (a form anyone can fill, no account) */
-export type FormsFeature = 'forms' | 'form';
 /** One anonymous thought on its own page: /thought/<id> (what the Share button of a thought sends) */
 export type ThoughtFeature = 'thought';
 export interface FunLocation {
-  feature: FunFeature | FormsFeature | ThoughtFeature;
-  /** Ask: the username whose page is shown; Polls: the id of the poll that is open; Forms: the id of the form; Form: its address */
+  feature: FunFeature | ThoughtFeature;
+  /** Ask: the username whose page is shown; Polls: the id of the poll that is open */
   target?: string;
-  /** Forms: 'responses' = the answers of the form */
-  sub?: 'responses';
 }
 
 export const FUN_FEATURES: ReadonlyArray<{ id: FunFeature; label: string; short: string; path: string; blurb: string }> = [
@@ -30,13 +26,8 @@ const USERNAME = /^[A-Za-z0-9._]{1,30}$/;
 export const isPollId = (s: string): boolean => UUID.test(s);
 export const isUsername = (s: string): boolean => USERNAME.test(s);
 
-const FORM_SLUG = /^[a-z0-9]{8,24}$/;
-export const isFormSlug = (s: string): boolean => FORM_SLUG.test(s);
-
 export function funPath(loc: FunLocation): string {
   if (loc.feature === 'thought') return loc.target && isPollId(loc.target) ? `/thought/${loc.target}` : '/';
-  if (loc.feature === 'form') return loc.target && isFormSlug(loc.target) ? `/f/${loc.target}` : '/forms';
-  if (loc.feature === 'forms') return loc.target && isPollId(loc.target) ? `/forms/${loc.target}${loc.sub === 'responses' ? '/responses' : ''}` : '/forms';
   const base = FUN_FEATURES.find((f) => f.id === loc.feature)?.path ?? '/';
   if (loc.feature === 'ask' && loc.target && isUsername(loc.target)) return `${base}/${encodeURIComponent(loc.target)}`;
   if (loc.feature === 'polls' && loc.target && isPollId(loc.target)) return `${base}/${loc.target}`;
@@ -48,14 +39,7 @@ export function parseFunPath(pathname: string): FunLocation | null {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length === 0) return null;
   const head = parts[0].toLowerCase();
-  if (head === 'forms') {
-    if (parts.length === 1) return { feature: 'forms' };
-    if (isPollId(parts[1]) && parts.length === 2) return { feature: 'forms', target: parts[1].toLowerCase() };
-    if (isPollId(parts[1]) && parts.length === 3 && parts[2] === 'responses') return { feature: 'forms', target: parts[1].toLowerCase(), sub: 'responses' };
-    return null;
-  }
   if (head === 'thought') return parts.length === 2 && isPollId(parts[1]) ? { feature: 'thought', target: parts[1].toLowerCase() } : null;
-  if (head === 'f') return parts.length === 2 && isFormSlug(parts[1].toLowerCase()) ? { feature: 'form', target: parts[1].toLowerCase() } : null;
   const feature = FUN_FEATURES.find((f) => f.path === `/${head}`)?.id;
   if (!feature) return null;
   if (parts.length === 1) return { feature };

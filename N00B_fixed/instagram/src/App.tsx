@@ -120,8 +120,6 @@ import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists,
 import { useDevicePrefs } from './utils/devicePrefs';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
-import { StudioHost } from './components/Studio/StudioHost';
-import { closeStudio, openStudio } from './components/Studio/studioStore';
 import { LensHost } from './components/Lenses/LensHost';
 import { closeLenses, openLenses } from './components/Lenses/lensStore';
 import { BoothHost } from './components/Booth/BoothHost';
@@ -523,13 +521,11 @@ export default function App() {
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
   const [homeCompose, setHomeCompose] = useState<null | 'anon' | 'poll'>(null);
-  // A picture or video finished in NOOB Studio: the Post / Reel / Story creator opens with it (it is only published when the person does that there)
-  const [studioFile, setStudioFile] = useState<File | null>(null);
-  const [studioStoryFile, setStudioStoryFile] = useState<File | null>(null);
-  // the address /studio opens NOOB Studio
-  useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
-  // (the settings arrive a moment after the address opens it: if Studio or Draw is switched off for this person it closes again)
-  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); if (featuresOff.has('family')) closeFamily(); }, [featuresOff]);
+  // A picture or video finished in Lenses / Buddy Booth / the story camera: the Post / Reel / Story creator opens with it (it is only published when the person does that there)
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [pickedStoryFile, setPickedStoryFile] = useState<File | null>(null);
+  // (the settings arrive a moment after the address opens it: if Draw is switched off for this person it closes again)
+  useEffect(() => { if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); if (featuresOff.has('family')) closeFamily(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -2458,21 +2454,16 @@ export default function App() {
       {currentUser && <RenditionStrip />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
-      <StudioHost onUse={(file, target) => {
-        closeStudio();
-        if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
-        else { setStudioFile(file); setCreateKind(target); }
-      }} />
       {/* NOOB Lenses: a picture with a face filter goes into the normal Post / Story creator (nothing is published from the camera itself) */}
       <LensHost onUse={(file, target) => {
-        if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
-        else { setStudioFile(file); setCreateKind('post'); }
+        if (target === 'story') { setPickedStoryFile(file); setShowCreateStoryModal(true); }
+        else { setPickedFile(file); setCreateKind('post'); }
       }} />
       {/* Buddy Booth: a picture with a buddy next to you goes into the normal Post / Story / Reel creator (the booth itself sends nothing anywhere) */}
       <BoothHost onUse={(file, target) => {
         closeBooth();
-        if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
-        else { setStudioFile(file); setCreateKind(target); }
+        if (target === 'story') { setPickedStoryFile(file); setShowCreateStoryModal(true); }
+        else { setPickedFile(file); setCreateKind(target); }
       }} />
       {/* Family Map: rooms where a family or friends see each other live on a map (opened from the Home menu; the same map is also the page /family) */}
       <FamilyHost lockUser={currentUser} />
@@ -2507,7 +2498,7 @@ export default function App() {
       {showStoryCamera && (
         <React.Suspense fallback={null}><StoryCameraScreen
           onClose={() => setShowStoryCamera(false)}
-          onFile={(file) => { setStudioStoryFile(file); setShowStoryCamera(false); setShowCreateStoryModal(true); }}
+          onFile={(file) => { setPickedStoryFile(file); setShowStoryCamera(false); setShowCreateStoryModal(true); }}
           onSwitchMode={(mode) => {
             setShowStoryCamera(false);
             if (mode === 'post') setCreateKind('post');
@@ -2518,9 +2509,9 @@ export default function App() {
 
       {showCreateStoryModal && (
         <React.Suspense fallback={null}><CreateStoryModal
-          initialFile={studioStoryFile}
+          initialFile={pickedStoryFile}
           avatar={currentUser.avatar}
-          onClose={() => { setShowCreateStoryModal(false); setStudioStoryFile(null); }}
+          onClose={() => { setShowCreateStoryModal(false); setPickedStoryFile(null); }}
           onSubmitStory={handleCreateStory}
           allUsers={registeredUsers}
         /></React.Suspense>
@@ -2537,7 +2528,6 @@ export default function App() {
             setShowPostCreationModal(false);
             if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
             else if (kind === 'story') setShowStoryCamera(true);
-            else if (kind === 'studio') { if (featOn('studio')) openStudio(); }
             else if (kind === 'lenses') { if (featOn('lenses')) openLenses(); }
             else if (kind === 'video') setShowUploadVideoModal(true);
             else if (kind === 'live') handleGoLiveTap();
@@ -2552,10 +2542,10 @@ export default function App() {
           key={createKind}
           initialType={createKind}
           initialAudio={createSound}
-          initialFile={studioFile}
+          initialFile={pickedFile}
           currentUser={currentUser}
           allUsers={registeredUsers}
-          onClose={() => { setCreateKind(null); setCreateSound(null); setStudioFile(null); }}
+          onClose={() => { setCreateKind(null); setCreateSound(null); setPickedFile(null); }}
           onSubmitPost={handleCreatePostOrReel}
         /></React.Suspense>
       )}

@@ -4,7 +4,6 @@
 //    band can show above or below it (html.ns-on, see index.html).
 //  * It stays at least MIN_MS (so it is seen), then goes as soon as the app says it is ready (window.__noobSplash.ready(), called by src/main.tsx and App.tsx), and never longer
 //    than MAX_MS (1.8 s: if the app is still loading by then the splash fades out and the loading screen, NoobStackLoader, shows by itself). Then it disappears in FADE_MS (60 ms: a longer fade shows the page through a yellow wash), the page background and theme colour are put back, and "noob-splash-end" is sent (src/utils/statusStrip.ts paints the strip again).
-//  * NOOB Studio's address (editor-init.js) calls cancel(): it keeps its own black screen, handled by src/main.tsx.
 (function () {
   'use strict';
   var YELLOW = '#F8CB46', MIN_MS = 1100, MAX_MS = 1800, FADE_MS = 60;

@@ -8,7 +8,7 @@ let passed = 0, failed = 0;
 const check = (cond, label) => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label}`); } };
 const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r/g, '');
 const html = read('index.html');
-const box = html.slice(html.indexOf('<div id="noob-splash"'), html.indexOf('<script src="/editor-init.js">'));
+const box = html.slice(html.indexOf('<div id="noob-splash"'), html.indexOf('<div id="root">'));
 
 console.log('The splash in index.html');
 check(/#noob-splash \{[^}]*background: #F8CB46/.test(box), 'its colour is yellow #F8CB46');
@@ -22,7 +22,7 @@ check(!/box-shadow|text-shadow|glow/.test(box.replace(/<!--[\s\S]*?-->/g, '')), 
 check(fs.existsSync('public/brand/noob-splash-logo.svg') && fs.existsSync('public/brand/noob-splash-logo-1024.png'), 'the logo is a vector file and a transparent PNG in public/brand');
 check(box.includes(read('public/brand/noob-splash-logo.svg').match(/<path d="M163.5[^"]*"/)[0]), 'the inline logo is the one in public/brand/noob-splash-logo.svg');
 check(html.indexOf('/splash.js') > html.indexOf('/theme-init.js') && html.indexOf('/splash.js') < html.indexOf('</head>'), 'splash.js runs in the head, after theme-init.js');
-check(/<script src="\/editor-init\.js"><\/script>/.test(html) && !/<script>/.test(html), 'no script is written inside the page (security policy)');
+check(!/<script>/.test(html), 'no script is written inside the page (security policy)');
 check(/viewport-fit=cover/.test(read('public/theme-init.js')) && /black-translucent/.test(html), 'iPhone home-screen app: black-translucent bar (page under the status bar), viewport-fit=cover added by theme-init on phones');
 
 console.log('The old animation is gone');
@@ -69,7 +69,6 @@ console.log('Timing and hand-over (public/splash.js)');
 const code = read('public/splash.js');
 check(/MIN_MS = 1100, MAX_MS = 1800, FADE_MS = 60/.test(code) && /#F8CB46/.test(code), 'at least 1.1 s, at most 1.8 s, fade 60 ms');
 check(/__noobSplash\?\.ready\(\)/.test(read('src/App.tsx')) && /noobSplash\?\.ready\(\)/.test(read('src/main.tsx')) && /noob-splash-end/.test(read('src/utils/statusStrip.ts')) && /__noobSplash\?: \{ active\?: boolean/.test(read('src/utils/statusStrip.ts')), 'the app tells the splash when it is ready; the strip waits for it and repaints after');
-check(/__noobSplash\.cancel/.test(read('public/editor-init.js')), 'NOOB Studio keeps its own black screen');
 
 // splash.js against a fake page and a fake clock
 function world() {

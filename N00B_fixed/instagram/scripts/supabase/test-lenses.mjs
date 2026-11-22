@@ -161,7 +161,7 @@ check(/key: 'lenses'/.test(feats) && /closeLenses\(\)/.test(appTsx), 'the admini
 check(/<LensHost onUse=/.test(appTsx), 'it is drawn once, by LensHost, in the app');
 check(/src="\/lenses\?embed=1"/.test(host) && /allow="camera"/.test(host) && /e\.origin !== window\.location\.origin/.test(host), 'the app shows /lenses in a frame, allows its camera, and listens only to this site');
 const handoff = appTsx.slice(appTsx.indexOf('<LensHost onUse='), appTsx.indexOf('<LensHost onUse=') + 330);
-check(/setStudioStoryFile\(file\)/.test(handoff) && /setStudioFile\(file\)/.test(handoff) && !/upload|publish|insert/i.test(handoff), 'a finished picture only opens the Post / Story creator with it: nothing is published from the camera');
+check(/setPickedStoryFile\(file\)/.test(handoff) && /setPickedFile\(file\)/.test(handoff) && !/upload|publish|insert/i.test(handoff), 'a finished picture only opens the Post / Story creator with it: nothing is published from the camera');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

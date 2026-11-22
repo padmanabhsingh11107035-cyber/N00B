@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { MenuGroupSpec } from '../components/Navigation/SideMenu';
 
-// The pages of the NOOB menu (Draw, Studio, Daily, Shop, the Fun pages ...) are opened by the Home page, which owns their state. Home publishes the list here, and the long strip
+// The pages of the NOOB menu (Draw, Daily, Shop, the Fun pages ...) are opened by the Home page, which owns their state. Home publishes the list here, and the long strip
 // on a tablet / laptop / computer reads it, so the strip and the three-line menu of a phone always show the very same pages (and the same switches of the administrator).
 let groups: MenuGroupSpec[] = [];
 let latest: MenuGroupSpec[] = [];

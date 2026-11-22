@@ -73,7 +73,7 @@ interface PostCreationModalProps {
   initialType?: 'post' | 'reel' | 'thought';
   // "Use this sound" on a reel: the sound is already chosen when the creator opens
   initialAudio?: MusicSelection | null;
-  // A picture or video that was just finished in NOOB Studio: the creator opens with it already picked
+  // A picture or video that was just finished in Lenses, Buddy Booth or the story camera: the creator opens with it already picked
   initialFile?: File | null;
 }
 

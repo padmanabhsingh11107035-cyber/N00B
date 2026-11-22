@@ -26,12 +26,6 @@
   ! Referrer-Policy
   Referrer-Policy: no-referrer
   Cache-Control: no-store
-# A form people fill (/f/<address>) may be shown inside other websites (the "embed code" of NOOB Forms). It is the only page that may; the rest of the policy is the same as everywhere.
-/f/*
-  ! X-Frame-Options
-  ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.pwnedpasswords.com https://images.unsplash.com https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.noobsocials.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors *; base-uri 'self'; object-src 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
-
 # NOOB Lenses (/lenses, the camera with face filters) is a page of its own, and the app shows it in a frame of its own (the one place besides the games where the app frames itself, by itself only).
 # It finds faces with Google's MediaPipe, a small WebAssembly program that runs on the phone (public/lenses/): that is the one extra thing this page is allowed, 'wasm-unsafe-eval' (it compiles the
 # program; it does NOT allow eval() of text). It needs no network except its own files, no other site and no frames; the camera is the page's own (Permissions-Policy above).

@@ -35,10 +35,7 @@ import { parseFunPath } from './utils/funRoutes.ts';
 import { isNativeApp } from './utils/siteUrl.ts';
 import { SystemPage } from './components/Common/SystemPage.tsx';
 import { ServiceGate } from './components/Common/ServiceGate.tsx';
-import { isEditorHost } from './components/Studio/studioStore.ts';
 
-// NOOB Studio as a page of its own (editor.noobsocials.com): fetched only on that address
-const StudioStandalone = lazy(() => import('./components/Studio/StudioStandalone.tsx'));
 // The page the two buttons of the "Is this you?" login email open (/login-approval): fetched only there, the app itself is not started
 const LoginApprovalPage = lazy(() => import('./components/Auth/LoginApprovalPage.tsx'));
 
@@ -119,8 +116,7 @@ registerServiceWorkerForInstallability();
 listenForNativeAuthReturn();   // the Android app: finishes "Continue with Google ..." when the phone's browser tab hands back to NOOB (services/nativeAuth.ts)
 
 // The opening splash (index.html, public/splash.js): a full yellow screen with the NOOB logo. It times itself (at least 1.1 s, at most 1.8 s) and goes as soon as the app says it is ready:
-// App.tsx calls window.__noobSplash.ready() once it has loaded, and the stand-alone pages below do it right after they are drawn. The NOOB Studio address (editor-init.js) cancels it
-// and keeps a black screen with its round logo: that one is faded away here after 1 second (0.4 s when nothing sets a time).
+// App.tsx calls window.__noobSplash.ready() once it has loaded, and the stand-alone pages below do it right after they are drawn.
 const noobSplash = (window as unknown as { __noobSplash?: { active: boolean; ready: () => void } }).__noobSplash;
 const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 0.4;
 const splash = document.getElementById('noob-splash');
@@ -137,9 +133,8 @@ if (splash && !noobSplash?.active) {
 const oldAddress = movedNoticeBlocksApp();
 
 // An address that is not a page of NOOB shows only the "page not found" page: the app is not even started (no sign-in screen, no loading, no browser error page).
-const editorPage = !oldAddress && !isNativeApp() && isEditorHost();
-const approvalPage = !oldAddress && !editorPage && !isNativeApp() && cleanPath(window.location.pathname) === '/login-approval';
-const pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
+const approvalPage = !oldAddress && !isNativeApp() && cleanPath(window.location.pathname) === '/login-approval';
+const pageNotFound = !oldAddress && !approvalPage && !isNativeApp() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
 
 installErrorReporter();
 
@@ -148,8 +143,6 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       {oldAddress ? (
         <MovedNotice />
-      ) : editorPage ? (
-        <Suspense fallback={null}><StudioStandalone /></Suspense>
       ) : approvalPage ? (
         <Suspense fallback={null}><LoginApprovalPage /></Suspense>
       ) : pageNotFound ? (
@@ -169,8 +162,8 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// The pages that are not the app itself (new-home card, Studio, login approval, page not found) are ready as soon as they are drawn; the app calls ready() itself when it has loaded.
-if (oldAddress || editorPage || approvalPage || pageNotFound) noobSplash?.ready();
+// The pages that are not the app itself (new-home card, login approval, page not found) are ready as soon as they are drawn; the app calls ready() itself when it has loaded.
+if (oldAddress || approvalPage || pageNotFound) noobSplash?.ready();
 
 // Tells public/boot-guard.js that the app started (if it does not, that file shows the "NOOB is taking a short break" page by itself).
 (window as unknown as { __noobBooted?: boolean }).__noobBooted = true;

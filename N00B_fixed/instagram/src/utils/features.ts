@@ -23,7 +23,6 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'calls', label: 'Voice calls in chat', blurb: 'The call button, the calls list and incoming rings', group: 'Main pages' },
 
   { key: 'draw', label: 'NOOB Draw', blurb: 'The weekly free prize spins', group: 'Home menu' },
-  { key: 'studio', label: 'NOOB Studio', blurb: 'The photo and video editor', group: 'Home menu' },
   { key: 'lenses', label: 'NOOB Lenses', blurb: 'The camera with face filters', group: 'Home menu' },
   { key: 'booth', label: 'Buddy Booth', blurb: 'Photos with a buddy next to you, in a premium frame (opened from the profile)', group: 'Home menu' },
   { key: 'family', label: 'Family Map', blurb: 'Rooms where a family or friends see each other live on a map (also stops new rooms, members and places on the server)', group: 'Home menu' },
@@ -37,7 +36,6 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'ai', label: 'NOOB AI', blurb: 'The voice assistant', group: 'Home menu' },
   { key: 'drinks', label: 'NOOB Cold Drinks', blurb: 'The 3D cans page', group: 'Home menu' },
   { key: 'creations', label: 'More of our creations', blurb: 'Our other websites', group: 'Home menu' },
-  { key: 'forms', label: 'NOOB Forms', blurb: 'Making forms and answering them (also by link, without an account)', group: 'Home menu' },
 
   { key: 'fun-this-or-that', label: 'This or That', blurb: 'Pick a side and see what everyone chose', group: 'Fun & community' },
   { key: 'fun-ask', label: 'Ask Me Anything', blurb: 'Anonymous questions from friends', group: 'Fun & community' },
@@ -56,7 +54,7 @@ export const FEATURE_GROUPS: ReadonlyArray<FeatureDef['group']> = ['Main pages',
 export const TAB_FEATURE: Readonly<Record<string, string>> = { explore: 'explore', reels: 'reels', videos: 'videos', post: 'create', chat: 'chat', games: 'games' };
 
 /** the name of the fun page (this-or-that, ask, mood, polls) as a page key */
-export const funFeatureKey = (id: string): string => (id === 'forms' || id === 'form' ? 'forms' : id === 'thought' ? 'anonymous' : 'fun-' + id);   // NOOB Forms live beside the Fun pages but have their own page key
+export const funFeatureKey = (id: string): string => (id === 'thought' ? 'anonymous' : 'fun-' + id);
 
 /** the list of switched-off pages out of the settings (an old server that does not know the list means: everything is on) */
 export function disabledFeatureSet(list: unknown): ReadonlySet<string> {

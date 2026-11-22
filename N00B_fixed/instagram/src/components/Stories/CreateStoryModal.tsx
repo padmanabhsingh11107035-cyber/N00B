@@ -107,7 +107,7 @@ interface CreateStoryModalProps {
   // background) that must be created right after the main one — see handlePublish.
   onSubmitStory: (storyData: Partial<Story>[]) => void;
   allUsers?: User[];
-  // A picture that was just finished in NOOB Studio: the story opens with it already picked
+  // A picture that was just finished in the story camera, Lenses or Buddy Booth: the story opens with it already picked
   initialFile?: File | null;
   /** the person's own picture (the Avatar sticker) */
   avatar?: string;

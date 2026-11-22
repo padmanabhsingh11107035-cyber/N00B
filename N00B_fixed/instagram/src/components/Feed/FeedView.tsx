@@ -38,9 +38,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
-import { openStudio, useStudioState } from '../Studio/studioStore';
-import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, Repeat2, Clock, ListVideo } from 'lucide-react';
+import { Repeat2, Clock, ListVideo } from 'lucide-react';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
 import { sendLike } from '../../utils/likeSync';
@@ -354,14 +352,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
   }, [menuPageOpen]);
 
   // Back to the three-line menu: a page that was opened from the menu drops the person back in the menu, at the button they pressed, when it is closed (utils/menuReturn.ts).
-  // The pages of this file, Draw, Study and Studio are seen closing right here; the Fun pages are layers of the app (utils/pageLayers.tsx), which says so with an event when the
+  // The pages of this file, Draw and Study are seen closing right here; the Fun pages are layers of the app (utils/pageLayers.tsx), which says so with an event when the
   // person goes back from the last layer. Nothing happens when Home is not on screen (another tab was opened meanwhile) or when the page was not opened from the menu.
   const pageHidden = usePageHidden();
   const pageHiddenRef = useRef(pageHidden);
   pageHiddenRef.current = pageHidden;
-  const studioOpen = useStudioState().open;
   const lensesOpen = useLensOpen();
-  const entryPageOpen = !!(menuPageOpen || showJoinUsModal || showSparkXModal || studioOpen || lensesOpen);
+  const entryPageOpen = !!(menuPageOpen || showJoinUsModal || showSparkXModal || lensesOpen);
   const entryPageWasOpen = useRef(false);
   const backToMenu = () => {
     const id = currentMenuEntry();
@@ -667,7 +664,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
       items: menuItems([
         featOn('daily') && { id: 'daily', entryId: 'daily', label: 'Daily NOOB', icon: <Flame />, hint: "Today's challenge: win real points", onClick: go('daily', () => setShowDailyNoob(true)) },
         featOn('draw') && { id: 'draw', entryId: 'draw', label: 'NOOB Draw', tag: 'NEW', icon: <Gift />, hint: 'Free weekly spins: win Pro, the tick and millions', onPointerDown: preloadNoobDraw, onClick: go('draw', openNoobDraw) },
-        featOn('studio') && { id: 'studio', entryId: 'studio', testId: 'menu-studio', label: 'NOOB Studio', tag: 'NEW', icon: <Wand2 />, hint: 'Edit photos and videos: filters, text, music, export', onPointerDown: preloadStudio, onClick: go('studio', openStudio) },
         featOn('team') && { id: 'team', entryId: 'team', label: 'Our Team', icon: <Users />, hint: 'Meet the people behind NOOB', onPointerDown: preloadOurTeam, onClick: go('team', () => setShowOurTeam(true)) },
         joinTeamOpen && { id: 'join', entryId: 'join', label: 'Join the NOOB team', icon: <Handshake />, hint: 'Apply to help build NOOB', onClick: go('join', () => setShowJoinUsModal(true)) },
         { id: 'spark', entryId: 'spark', label: 'Join our SparkX team', icon: <Rocket />, hint: 'IIT Bombay Techfest', onClick: go('spark', () => setShowSparkXModal(true)) },
@@ -681,7 +677,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
           const Icon = FUN_MENU_ICONS[f.id];
           return { id: 'fun-' + f.id, entryId: 'fun-' + f.id, label: f.label, icon: <Icon aria-hidden={true} />, hint: f.blurb, onPointerDown: preloadFunHub, onClick: go('fun-' + f.id, () => onOpenFunPage({ feature: f.id })) };
         }) : []),
-        onOpenFunPage && featOn('forms') && { id: 'forms', entryId: 'forms', label: 'NOOB Forms', icon: <FileText />, hint: 'Build forms and surveys, share a link', onPointerDown: preloadFunHub, onClick: go('forms', () => onOpenFunPage({ feature: 'forms' })) },
       ]),
     },
     {

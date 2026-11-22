@@ -66,7 +66,7 @@ section('5. The server side of the call door and the page list');
 const fn = fs.readFileSync('supabase/functions/agora-token/index.ts', 'utf8');
 check(/rpc\('feature_blocked', \{ p_key: streamId \? 'live' : roomId \? 'lounge' : 'rooms' \}\)/.test(fn) && /off === true\) return json/.test(fn), 'the call-token function refuses a switched-off live / meeting / room (it is the one door to every call minute)');
 const feats = fs.readFileSync('src/utils/features.ts', 'utf8');
-check(/key: 'live'/.test(feats) && /key: 'calls'/.test(feats) && /key: 'forms'/.test(feats) && /id === 'forms' \|\| id === 'form' \? 'forms'/.test(feats), 'Go Live, Calls and NOOB Forms are rows of the Pages tab');
+check(/key: 'live'/.test(feats) && /key: 'calls'/.test(feats), 'Go Live and Calls are rows of the Pages tab');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

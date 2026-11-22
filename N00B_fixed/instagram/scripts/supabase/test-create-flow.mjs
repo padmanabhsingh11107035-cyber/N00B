@@ -18,7 +18,7 @@ const L = await import(pathToFileURL(path.resolve('src/utils/slideLook.ts')).hre
 
 section('1. The chooser');
 const kinds = [...chooser.matchAll(/\{ kind: '(\w+)', title: '([^']+)'/g)].map((m) => `${m[1]}:${m[2]}`);
-check(kinds.join(',') === 'post:Post,reel:Reel,story:Story,video:Video,live:Live,thought:Thought,anon:Anonymous post,poll:Poll,lenses:Lenses,studio:Edit in Studio', 'Post, Reel, Story, Video, Live, Thought, Anonymous post, Poll, Lenses and Edit in Studio', kinds.join(','));
+check(kinds.join(',') === 'post:Post,reel:Reel,story:Story,video:Video,live:Live,thought:Thought,anon:Anonymous post,poll:Poll,lenses:Lenses', 'Post, Reel, Story, Video, Live, Thought, Anonymous post, Poll and Lenses', kinds.join(','));
 check(/data-testid=\{`create-\$\{kind\}`\}/.test(chooser) && /e\.key === 'Escape'/.test(chooser), 'each row can be tested and Escape closes it');
 check(/<CreateChooser\s*\n\s*live=\{[^\n]*\n\s*onClose=\{\(\) => setShowPostCreationModal\(false\)\}/.test(app), '"+" (bottom bar, side menu, the Home bonus banner) opens the chooser');
 check(/kind === 'post' \|\| kind === 'reel' \|\| kind === 'thought'\) setCreateKind\(kind\)/.test(app) && /kind === 'story'\) setShowStoryCamera\(true\)/.test(app) && /kind === 'video'\) setShowUploadVideoModal\(true\)/.test(app) && /kind === 'live'\) handleGoLiveTap\(\)/.test(app), 'each choice opens its own creator (Story opens the story camera first)');

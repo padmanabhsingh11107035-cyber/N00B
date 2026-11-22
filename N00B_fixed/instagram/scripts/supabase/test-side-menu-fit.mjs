@@ -51,7 +51,7 @@ check(/pointer-events-auto md:hidden/.test(nav), 'the bottom bar is gone from 76
 section('5. Published list');
 check(/publishMenuGroups\(menuGroups\.filter\(\(g\) => g\.id !== 'more-pages'\)\)/.test(feed) && /clearMenuGroups\(\)/.test(feed), 'Home publishes its list for the strip (the phone-only "More pages: Feed" is left out: the strip has its own Feed button)');
 check(/useSyncExternalStore/.test(store) && /export const menuItemClick/.test(store) && /latest = next/.test(store), 'the strip reads it, always with the newest handlers');
-check(/featOn\('draw'\)/.test(feed) && /featOn\('studio'\)/.test(feed) && /featOn\('daily'\)/.test(feed) && /featOn\('shop'\)/.test(feed) && /featOn\('creations'\)/.test(feed), 'the administrator\'s page switches still hide the entries, in the strip too');
+check(/featOn\('draw'\)/.test(feed) && /featOn\('daily'\)/.test(feed) && /featOn\('shop'\)/.test(feed) && /featOn\('creations'\)/.test(feed), 'the administrator\'s page switches still hide the entries, in the strip too');
 
 section('6. Drawn for real (full rows, then the icon-only strip)');
 const out = path.resolve('node_modules/.cache-side-menu.mjs');

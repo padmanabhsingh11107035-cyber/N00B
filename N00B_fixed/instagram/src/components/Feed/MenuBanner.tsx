@@ -1,6 +1,6 @@
 import React from 'react';
 
-// One entry of the three-line menu, dressed like the banners at the top of it (NOOB Draw, Studio, Our Team): a coloured, softly glowing card with a
+// One entry of the three-line menu, dressed like the banners at the top of it (NOOB Draw, Our Team): a coloured, softly glowing card with a
 // bright icon tile, a bold title and a line under it. Each entry has its own colours (the tone). It stays dark in Light mode too (force-dark), as those banners do.
 type Tone = 'daily' | 'rooms' | 'song' | 'lounge' | 'shop' | 'food' | 'ai' | 'support' | 'idea' | 'videos' | 'join' | 'spark' | 'mask' | 'pick' | 'ask' | 'mood' | 'polls' | 'creations' | 'drinks';
 

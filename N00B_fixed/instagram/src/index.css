@@ -1850,8 +1850,11 @@ html.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat
 
 /* ---- Phones (html.phone-edge): the Settings bar and the Reels bar are see-through ---- */
 html.phone-edge .nst-header { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
-/* once the page has scrolled under the bar it is the page colour (solid), so the title never prints over the words that pass behind it */
-html.phone-edge .nst-header.is-stuck { background: var(--page) !important; border-bottom-color: var(--nst-line) !important; }
+/* the bar is only the round Back arrow: no strip behind it. Once the page has scrolled, the title goes away (so it never prints over the words passing behind it) and only the arrow stays. */
+html.phone-edge .nst-header.is-stuck { background: transparent !important; border-bottom-color: transparent !important; box-shadow: none !important; }
+html.phone-edge .nst-header.is-stuck .nst-htitle, html.phone-edge .nst-header.is-stuck .nst-hsub { opacity: 0; transition: opacity .15s; pointer-events: none; }
+html.phone-edge .nst-header { pointer-events: none; }
+html.phone-edge .nst-header button, html.phone-edge .nst-header a { pointer-events: auto; }   /* only the arrow (and any button) takes a tap: the rest of the bar lets the page under it be touched */
 html.phone-edge .nst-root { padding-top: 0; }
 
 /* Home and Profile: no doodle at all, not even faintly behind the page: plain black (Dark) or plain white (Light) */

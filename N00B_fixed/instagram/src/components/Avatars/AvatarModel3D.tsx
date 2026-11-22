@@ -45,7 +45,9 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     const ro = new ResizeObserver(size); ro.observe(el);
 
     let model: THREE.Object3D | null = null;
-    new GLTFLoader().load(src, (gltf) => {
+    const loader = new GLTFLoader();
+    const onFail = () => { if (!disposed) setState('error'); };
+    const onLoaded = (gltf: { scene: THREE.Object3D }) => {
       if (disposed) return;
       model = gltf.scene;
       // the exported shine map made the skin glare and hid the eyes: a soft, mostly matt surface keeps the face readable
@@ -65,7 +67,15 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
       controls.minDistance = dist * 0.12; controls.maxDistance = dist * 1.25;
       controls.update();
       setState('ready'); onReady?.();
-    }, undefined, () => { if (!disposed) setState('error'); });
+    };
+    fetch(src).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); }).then((buf) => {
+      if (disposed) return;
+      // three reads the pictures inside the file with fetch(blob:), which the site's security rules block (the model came out white). Hiding createImageBitmap for this one call
+      // makes it use a plain <img> instead, which the rules allow.
+      const w = window as unknown as { createImageBitmap?: unknown };
+      const saved = w.createImageBitmap; w.createImageBitmap = undefined;
+      try { loader.parse(buf, '', onLoaded, onFail); } finally { w.createImageBitmap = saved; }
+    }).catch(onFail);
 
     const tick = () => {
       raf = requestAnimationFrame(tick);

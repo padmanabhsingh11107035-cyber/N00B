@@ -192,3 +192,6 @@ export const avatarIdOf = (value?: string | null): string | null => {
   const m = /\/avatars\/([a-z]+)\.webp(?:\?|$)/.exec(value || '');
   return m && AVATARS.some((a) => a.id === m[1]) ? m[1] : null;
 };
+
+/** the character cut out of its picture (transparent background), for the turning 3D view */
+export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;

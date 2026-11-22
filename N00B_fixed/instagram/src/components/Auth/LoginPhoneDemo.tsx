@@ -6,7 +6,7 @@ import React from 'react';
 // hidden from screen readers, never catches a tap, and for people who ask their device for less motion it simply shows the first screen.
 // Each screen is drawn on a fixed 160 x 284 sheet that is scaled to fit the phone (smaller on tablets, full size from 1280px wide).
 
-const CAPTIONS = ['Share moments', 'Watch reels', 'Chat with friends', 'Play 50+ games', 'Hang out live', 'Daily challenge', 'Ask NOOB AI'];
+const CAPTIONS = ['Share moments', 'Watch reels', 'Chat with friends', 'Play 38 games', 'Hang out live', 'Daily challenge', 'Ask NOOB AI'];
 
 const NAV = [
   'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',

@@ -49,7 +49,7 @@ const FEATURES = [
     title: 'NOOB Music | Play songs and share them on NOOB Socials',
     description: 'Listen to songs in NOOB Music, search by artist or genre, and share songs in posts, stories and chats.',
     lead: 'A music hub inside your social app.',
-    points: ['Play songs and search by artist or genre.', 'Add a song to a post or a story.', 'Share a song with a friend in a chat.', 'Find a song that is playing around you with Search song in the menu.']
+    points: ['Play songs and search by artist or genre.', 'Add a song to a post or a story.', 'Share a song with a friend in a chat.']
   },
   {
     slug: 'stories', name: 'NOOB Stories', open: '/', shot: 'noob-socials-stories.jpg',

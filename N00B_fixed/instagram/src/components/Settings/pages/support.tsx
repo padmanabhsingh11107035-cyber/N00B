@@ -169,14 +169,14 @@ const FEATURES: Array<{ title: string; icon: React.ComponentType<{ className?: s
   { title: 'Chat and call', icon: MessageCircle, items: [
     'Private and group chats', 'Voice messages, photos and videos, replies and reactions', 'Voice and video calls', 'End-to-end encrypted chats', 'Translate messages into your language'] },
   { title: 'Play', icon: Gamepad2, items: [
-    '50+ mini-games: Ludo, Chess, Snakes & Ladders, Monopoly, Tic-Tac-Toe, Rock Paper Scissors and many more',
+    '38 games: big 3D games like Critter Kart, Helix Fall and Siegecraft, plus Ludo, Chess Blitz, Snakes & Ladders, Monopoly, Tic Tac Toe, Rock Paper Scissors and more',
     'Play against smart bots, a friend on the same phone, or someone online', 'Guess the Song, leaderboards and NOOB Points to win'] },
   { title: 'Go live', icon: Radio, items: ['Live streaming', 'Live Lounge for hosted live sessions', 'NOOB Rooms: voice rooms to talk with friends', 'Meetings you can schedule and join'] },
   { title: 'Fun and community', icon: Sparkles, items: [
     'Daily NOOB: a new challenge every day, vote for the best entry, top three win NOOB Points', 'Anonymous Messages and Ask Me Anything',
     'This or That, Mood Status and public polls', 'Suggestion Box: tell the team what to build next', 'Family Map: share your place with the people you choose, end-to-end encrypted, only while you want to'] },
   { title: 'Create and learn', icon: Brain, items: [
-    'NOOB AI: a friendly AI assistant', 'NOOB Draw: draw and share your own pictures', 'Lenses and Buddy Booth: fun face filters and photos with characters', 'Customer Support with an AI helper'] },
+    'NOOB AI: a friendly AI assistant', 'NOOB Draw: free weekly prize spins', 'Lenses and Buddy Booth: fun face filters and photos with characters', 'Customer Support with an AI helper'] },
   { title: 'Shop and rewards', icon: ShoppingBag, items: ['Shop NOOB and the NOOB Food Stall', 'NOOB Points you earn by taking part', 'NOOB Pro for extra perks'] },
   { title: 'Privacy and safety', icon: ShieldCheck, items: [
     'Public or private account, close friends, and hiding your profile from chosen people', 'Block and report people, with a team that handles reports',

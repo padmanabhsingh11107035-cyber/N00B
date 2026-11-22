@@ -1,81 +1,89 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-// The "3D" view of an avatar: the character (cut out of its picture) stands on a floor shadow and turns in depth. Drag sideways to turn it; left alone it sways slowly.
-// It is built from a few thin copies of the cut-out stacked in depth, so a turn shows real thickness at the edges (a figure with volume, not a flat picture sliding around).
+// A real 3D avatar: one .glb file (public/avatars/<id>.glb) shown on a transparent canvas over the page colour. One finger or the mouse turns the character round (sideways only), a
+// pinch or the wheel brings it closer; it turns slowly by itself until it is touched. Drawing stops when the page is not showing it, and everything is released when it closes.
 
-const LAYERS = 7;          // copies stacked in depth
-const GAP = 3.2;           // px between two copies
-const MAX_TURN = 42;       // degrees to each side
+interface Props { src: string; name: string; calm?: boolean; onReady?: () => void }
 
-export const AvatarModel3D: React.FC<{ src: string; name: string; calm?: boolean }> = ({ src, name, calm }) => {
-  const stage = useRef<HTMLDivElement | null>(null);
-  const shadow = useRef<HTMLDivElement | null>(null);
-  const turn = useRef({ angle: 0, vel: 0, dragging: false, lastX: 0, lastT: 0, idleSince: 0, t0: 0 });
+const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
+  const host = useRef<HTMLDivElement | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
+    const el = host.current; if (!el) return;
+    let disposed = false;
     let raf = 0;
-    const s = turn.current;
-    s.t0 = performance.now(); s.idleSince = s.t0;
-    const apply = (a: number) => {
-      if (stage.current) stage.current.style.transform = `rotateY(${a.toFixed(2)}deg)`;
-      if (shadow.current) shadow.current.style.transform = `translateX(${(a * 0.7).toFixed(1)}px) scaleX(${(1 - Math.abs(a) / 220).toFixed(3)})`;
-    };
-    const tick = (now: number) => {
-      if (!s.dragging) {
-        const idle = now - s.idleSince;
-        if (calm) { s.angle += (0 - s.angle) * 0.15; }
-        else if (idle > 1200) {
-          // a slow sway once the finger has been away for a moment: it eases from where it was left into the swing
-          const target = Math.sin((now - s.idleSince - 1200) / 1500) * 20;
-          s.angle += (target - s.angle) * 0.04;
-        } else { s.angle += s.vel; s.vel *= 0.92; }
-        s.angle = Math.max(-MAX_TURN, Math.min(MAX_TURN, s.angle));
-      }
-      apply(s.angle);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [calm]);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;outline:none';
+    el.appendChild(renderer.domElement);
 
-  const down = (e: React.PointerEvent) => { const s = turn.current; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); s.dragging = true; s.lastX = e.clientX; s.lastT = performance.now(); s.vel = 0; };
-  const move = (e: React.PointerEvent) => {
-    const s = turn.current; if (!s.dragging) return;
-    const now = performance.now(), dx = e.clientX - s.lastX;
-    const d = dx * 0.32;
-    s.angle = Math.max(-MAX_TURN, Math.min(MAX_TURN, s.angle + d));
-    s.vel = 0.6 * s.vel + 0.4 * (d / Math.max(1, now - s.lastT) * 16);
-    s.lastX = e.clientX; s.lastT = now;
-  };
-  const up = () => { const s = turn.current; s.dragging = false; s.idleSince = performance.now(); };
+    const scene = new THREE.Scene();
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
+    const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(1.5, 2.5, 3); scene.add(key);
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.minPolarAngle = controls.maxPolarAngle = Math.PI / 2 - 0.06; // sideways only, slightly above the middle
+    controls.autoRotate = !calm; controls.autoRotateSpeed = 1.4;
+    controls.addEventListener('start', () => { controls.autoRotate = false; });
+
+    const size = () => {
+      const w = el.clientWidth || 300, h = el.clientHeight || 400;
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    };
+    size();
+    const ro = new ResizeObserver(size); ro.observe(el);
+
+    let model: THREE.Object3D | null = null;
+    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(src, (gltf) => {
+      if (disposed) return;
+      model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const sz = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
+      model.position.sub(c); model.position.y += sz.y / 2 - sz.y / 2; // centred on its middle
+      scene.add(model);
+      const dist = (sz.y / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.08;
+      camera.position.set(0, sz.y * 0.1, dist); controls.target.set(0, sz.y * 0.16, 0); camera.position.y = sz.y * 0.2;
+      controls.minDistance = dist * 0.5; controls.maxDistance = dist * 1.25;
+      controls.update();
+      setState('ready'); onReady?.();
+    }, undefined, () => { if (!disposed) setState('error'); });
+
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      if (document.hidden) return;
+      controls.update(); renderer.render(scene, camera);
+    };
+    tick();
+
+    return () => {
+      disposed = true; cancelAnimationFrame(raf); ro.disconnect(); controls.dispose();
+      model?.traverse((o) => {
+        const m = o as THREE.Mesh; if (!m.isMesh) return;
+        m.geometry.dispose();
+        const mats: THREE.Material[] = Array.isArray(m.material) ? m.material : [m.material];
+        mats.forEach((mm) => { for (const k of Object.keys(mm)) { const v = (mm as unknown as Record<string, unknown>)[k]; if (v instanceof THREE.Texture) (v as THREE.Texture).dispose(); } mm.dispose(); });
+      });
+      envTex.dispose(); pmrem.dispose(); renderer.dispose();
+      renderer.domElement.remove();
+    };
+  }, [src, calm, onReady]);
 
   return (
-    <div
-      className="relative h-full w-full select-none"
-      style={{ perspective: '1100px', touchAction: 'pan-y', cursor: 'grab' }}
-      onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-      role="img" aria-label={`${name}, turn with your finger`} data-testid="avatar-3d"
-    >
-      {/* the floor: a soft shadow and a faint ring of light */}
-      <div ref={shadow} className="absolute left-1/2 bottom-[1%] h-[5%] w-[56%] -ml-[28%] rounded-[50%] pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,.55) 0%, rgba(0,0,0,.25) 45%, rgba(0,0,0,0) 72%)', filter: 'blur(3px)' }} />
-      <div className="absolute inset-x-0 top-0 bottom-[3%] flex justify-center" style={{ transformStyle: 'preserve-3d' }}>
-        <div ref={stage} className="relative h-full" style={{ transformStyle: 'preserve-3d', willChange: 'transform', aspectRatio: '0.45 / 1' }}>
-          {Array.from({ length: LAYERS }, (_, i) => {
-            const back = LAYERS - 1 - i;          // 0 = the front copy
-            return (
-              <img
-                key={back}
-                src={src}
-                alt=""
-                draggable={false}
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-contain pointer-events-none"
-                style={{ transform: `translateZ(${(-back * GAP + (LAYERS * GAP) / 2).toFixed(1)}px)`, filter: back === 0 ? 'none' : `brightness(${(0.78 - back * 0.05).toFixed(2)}) saturate(.9)`, zIndex: i }}
-              />
-            );
-          })}
-        </div>
-      </div>
+    <div ref={host} className="relative h-full w-full" role="img" aria-label={`${name}, a 3D model you can turn`} data-testid="avatar-3d">
+      {state === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" aria-live="polite">Loading 3D…</div>}
+      {state === 'error' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" role="alert">The 3D model could not load</div>}
     </div>
   );
 };

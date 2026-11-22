@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
-import { AVATARS, avatarCutUrl, avatarIdOf, avatarUrl, type Avatar } from '../../data/avatars';
+import { AVATARS, AVATARS_3D, avatarIdOf, avatarModelUrl, avatarUrl, type Avatar } from '../../data/avatars';
 import { Box } from 'lucide-react';
 const AvatarModel3D = React.lazy(() => import('./AvatarModel3D'));
 import { mediaOrigin } from '../../utils/siteUrl';
@@ -174,10 +174,10 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
               <span>{a.name}</span><span>{a.name}</span><span>{a.name}</span>
             </div>
             <div className="absolute left-1/2 top-[13%] bottom-[19%] flex items-start justify-center" style={{ width: 'min(150vw, 700px)', transform: `translateX(-50%) scale(${i === idx ? 1 : 0.92})`, opacity: i === idx ? 1 : 0.7, transition: calm ? 'none' : 'transform .45s ease, opacity .45s ease' }}>
-              {view3d && i === idx ? (
-                <React.Suspense fallback={null}><AvatarModel3D src={avatarCutUrl(a.id, origin)} name={a.name} calm={calm} /></React.Suspense>
+              {view3d && i === idx && AVATARS_3D.has(a.id) ? (
+                <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} name={a.name} calm={calm} /></React.Suspense>
               ) : null}
-              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={view3d && i === idx} decoding="async" className="h-full w-auto max-w-none object-contain"
+              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={view3d && i === idx && AVATARS_3D.has(a.id)} decoding="async" className="h-full w-auto max-w-none object-contain"
                 style={{ WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', WebkitMaskComposite: 'source-in', maskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', maskComposite: 'intersect' }} />
             </div>
           </section>
@@ -186,6 +186,9 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
 
       {/* the top: back, the name and the role of the one on the screen */}
       <button type="button" onClick={onClose} aria-label="Back" className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)', color: text }}><ChevronLeft className="w-6 h-6" /></button>
+      {AVATARS_3D.has(av.id) && (
+        <button type="button" onClick={() => setView3d((v) => !v)} aria-pressed={view3d} aria-label={view3d ? 'Show the picture' : 'Turn on 3D'} data-testid="avatar-3d-toggle" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] h-10 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer active:scale-95 transition-transform z-20" style={{ background: view3d ? (av.light ? '#14161c' : '#ffffff') : (av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)'), color: view3d ? (av.light ? '#ffffff' : '#14161c') : text }}><Box className="w-4 h-4" aria-hidden="true" />3D</button>
+      )}
       <div key={av.id} className="av-in absolute inset-x-0 top-[max(1.1rem,env(safe-area-inset-top))] flex flex-col items-center pointer-events-none z-10" style={{ animation: calm ? 'none' : 'av-in .35s ease both' }} aria-live="polite">
         <h1 className="font-black uppercase" style={{ fontSize: 'clamp(30px, 9vw, 40px)', letterSpacing: '.22em', paddingLeft: '.22em', textShadow: av.light ? 'none' : '0 3px 14px rgba(0,0,0,.28)' }} data-testid="avatar-name">{av.name}</h1>
         <p className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: soft }}><Sparkles className="w-3.5 h-3.5" aria-hidden="true" />{av.role}</p>

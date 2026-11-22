@@ -190,7 +190,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       {
         id: 'welcome_init',
         sender: 'bot',
-        text: `${greetingTone} I am NoobBuddy, your NOOB AI support assistant. I know all about the feed, reels, chat, mini-games and points, music, your wallet, Shop NOOB, and our Terms & Privacy Policy. How can I help you today?`,
+        text: `${greetingTone} I am NoobBuddy, your NOOB AI support assistant. I know all about Home, reels, chat, the 38 games and points, music, your wallet, Shop NOOB, and our Terms & Privacy Policy. How can I help you today?`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ];

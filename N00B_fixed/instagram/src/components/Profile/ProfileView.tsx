@@ -954,10 +954,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <button type="button" onClick={onOpenCreate} aria-label="Add a story" className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-noob text-black border-[3px] border-black flex items-center justify-center cursor-pointer active:scale-90 transition-transform"><Plus className="w-4 h-4" strokeWidth={3} /></button>
             )}
           </div>
+        </div>
 
-
+        {/* The details card: name, @handle and kind of account, the three numbers, the bio and what else they shared, then the buttons: everything in one tidy card under the picture */}
+        <div className="relative z-[1] mt-3 rounded-3xl border border-white/10 bg-black/50 p-4" data-testid="profile-card">
           <div className="min-w-0">
             <h2 className="text-2xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
+            <p className="mt-0.5 text-sm text-zinc-400 truncate" translate="no" data-testid="profile-handle">@{targetUser.username}</p>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0">
               {targetUser.isVerified ? (
                 <VerifiedBadge size="md" />
@@ -987,10 +990,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </button>
             )}
           </div>
-        </div>
 
         {/* The three numbers: one even row of three, so every label is written in full */}
-        <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-black/50" data-testid="profile-stats">
+        <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 border-y border-white/10" data-testid="profile-stats">
           <div className="min-w-0 px-2 py-2.5 text-center">
             <span className="block text-lg font-extrabold text-white leading-tight">{displayedPosts.length}</span>
             <span className="block text-xs font-semibold text-zinc-400">Posts</span>
@@ -1237,6 +1239,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {inviteNote && <p className="mt-1.5 text-center text-xs text-zinc-400" role="status">{inviteNote}</p>}
           </>
         )}
+        </div>
       </div>
 
       {/* 3. Follow Requests Drawer (for Private Accounts) — only ever the

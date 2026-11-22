@@ -183,6 +183,8 @@ export {
   toggleLongVideoComments,
   toggleLongVideoLikeCount,
   updateLongVideo,
+  addLongVideoToReels,
+  fetchLongVideoReelId,
   fetchLongVideoLikers,
   fetchLongVideoViewers,
   fetchDailyChallenge,

@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { X, Image as ImageIcon, RefreshCw } from 'lucide-react';
-import { uploadMediaFile, updateLongVideo } from '../../services/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Image as ImageIcon, RefreshCw, Clapperboard, Check } from 'lucide-react';
+import { uploadMediaFile, updateLongVideo, addLongVideoToReels, fetchLongVideoReelId } from '../../services/api';
+import { REEL_MAX_SECONDS } from '../../utils/videoDuration';
 import { LongVideo } from '../../types';
 
 interface EditVideoDetailsModalProps {
@@ -17,6 +18,22 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const thumbInputRef = useRef<HTMLInputElement>(null);
+  // "Add to Reels": the same video (no copy) also plays in Reels; only for a video of up to 70 seconds
+  const canReel = video.durationSeconds > 0 && video.durationSeconds <= REEL_MAX_SECONDS;
+  const [reelState, setReelState] = useState<'checking' | 'none' | 'adding' | 'added'>(canReel ? 'checking' : 'none');
+  useEffect(() => {
+    if (!canReel) return;
+    let live = true;
+    void fetchLongVideoReelId(video.id).then((id) => { if (live) setReelState(id ? 'added' : 'none'); });
+    return () => { live = false; };
+  }, [canReel, video.id]);
+  const addToReels = async () => {
+    if (reelState !== 'none') return;
+    setError('');
+    setReelState('adding');
+    try { await addLongVideoToReels(video.id); setReelState('added'); }
+    catch (err) { setReelState('none'); setError(err instanceof Error ? err.message : 'Could not add this video to Reels.'); }
+  };
 
   const handlePickThumbnail = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -102,6 +119,24 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
               className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob resize-none"
             />
           </div>
+
+          {canReel && (
+            <button
+              type="button"
+              onClick={() => void addToReels()}
+              disabled={reelState !== 'none'}
+              data-testid="edit-add-to-reels"
+              className="w-full flex items-center gap-3 rounded-xl border border-neutral-700 bg-black px-3.5 py-3 text-left cursor-pointer disabled:cursor-default"
+            >
+              <span className="w-9 h-9 rounded-full bg-noob/15 text-noob flex items-center justify-center shrink-0">
+                {reelState === 'added' ? <Check className="w-4 h-4" /> : reelState === 'adding' || reelState === 'checking' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Clapperboard className="w-4 h-4" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-white">{reelState === 'added' ? 'Shown in Reels too' : 'Add to Reels'}</span>
+                <span className="block text-[11px] text-zinc-400">{reelState === 'added' ? 'This same video plays in Reels. Nothing is saved twice.' : 'Also show this video in Reels. The same video is used, nothing is saved twice.'}</span>
+              </span>
+            </button>
+          )}
 
           {error && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{error}</div>}
         </div>

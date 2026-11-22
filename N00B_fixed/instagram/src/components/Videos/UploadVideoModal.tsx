@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Film, Image as ImageIcon, RefreshCw, ChevronDown } from 'lucide-react';
-import { uploadMediaFile, createLongVideo } from '../../services/api';
+import { uploadMediaFile, createLongVideo, addLongVideoToReels } from '../../services/api';
+import { REEL_MAX_SECONDS } from '../../utils/videoDuration';
 import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
 import { showErrorDialog } from '../../utils/errorDialog';
@@ -14,6 +15,14 @@ interface UploadVideoModalProps {
 }
 
 const MAX_DURATION_SECONDS = 5 * 60 * 60; // 5 hours
+
+// Nothing after the file is sent may wait for ever: a step that does not answer in time is given up (the cover picture) or reported (saving the video), so the screen
+// never sits at "100%" without an end. (A phone's player often never reports a frame for a video it can not show, which used to hold the upload here.)
+const withTimeout = <T,>(work: Promise<T>, ms: number, onTimeout: () => T | Promise<T>): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => { Promise.resolve(onTimeout()).then(resolve, reject); }, ms);
+    work.then((v) => { window.clearTimeout(timer); resolve(v); }, (e) => { window.clearTimeout(timer); reject(e); });
+  });
 
 // What one upload can really hold today: storage takes at most 50 MB a file, so a long video is made smaller on the phone first (videoPlan.ts) and the longest
 // that still looks acceptable in 48 MB is about this long (with ordinary sound). A longer video is refused up front, in words, instead of failing after a long wait.
@@ -42,18 +51,19 @@ const readVideoDuration = (file: File): Promise<number> =>
 const captureVideoFrame = (file: File): Promise<File | null> =>
   new Promise((resolve) => {
     const video = document.createElement('video');
-    video.preload = 'metadata';
+    video.preload = 'auto';
     video.muted = true;
     video.playsInline = true;
     const cleanup = () => URL.revokeObjectURL(video.src);
-    video.onloadeddata = () => {
-      try {
-        video.currentTime = Math.min(1, (video.duration || 2) / 2);
-      } catch {
-        cleanup();
-        resolve(null);
-      }
+    let sought = false;
+    // (loadedmetadata as well as loadeddata: an iPhone often reports only the first before anything is played)
+    const seek = () => {
+      if (sought) return;
+      sought = true;
+      try { video.currentTime = Math.min(1, (video.duration || 2) / 2); } catch { cleanup(); resolve(null); }
     };
+    video.onloadedmetadata = seek;
+    video.onloadeddata = seek;
     video.onseeked = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -84,6 +94,7 @@ const captureVideoFrame = (file: File): Promise<File | null> =>
       resolve(null);
     };
     video.src = URL.createObjectURL(file);
+    video.load();
   });
 
 export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onUploaded }) => {
@@ -95,6 +106,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [showMoreVideoOptions, setShowMoreVideoOptions] = useState(false);
+  const [addToReels, setAddToReels] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => { if (error) showErrorDialog(error, { onOk: () => setError('') }); }, [error]);   // a problem opens in a box with an OK button
   const [isChecking, setIsChecking] = useState(false);
@@ -160,22 +172,28 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
     abortRef.current = abort;
     setProgress({ stage: 'uploading', fraction: 0 });
     try {
+      // the cover picture is taken while the video goes up (not after it): it needs no answer from the server and is given up after a few seconds if the phone can not show a frame
+      const frameJob: Promise<File | null> = thumbnailFile ? Promise.resolve(thumbnailFile) : withTimeout(captureVideoFrame(videoFile), 8000, () => null).catch(() => null);
       const videoRes = await uploadMediaFile(videoFile, 'videos', { signal: abort.signal, onProgress: setProgress });
+      setProgress({ stage: 'uploading', fraction: 1 });   // "Finishing up"
       let thumbnailUrl: string | undefined;
-      const thumbnailToUpload = thumbnailFile || (await captureVideoFrame(videoFile));
+      const thumbnailToUpload = await frameJob;
       if (thumbnailToUpload) {
-        const thumbRes = await uploadMediaFile(thumbnailToUpload, 'videos');
-        thumbnailUrl = thumbRes.url;
+        // a cover that can not be sent in time is left out: the video itself is already up and must still be posted
+        try { thumbnailUrl = (await withTimeout(uploadMediaFile(thumbnailToUpload, 'videos'), 30000, () => { throw new Error('cover timed out'); })).url; } catch { thumbnailUrl = undefined; }
       }
-      const video = await createLongVideo({
-        videoUrl: videoRes.url,
-        thumbnailUrl,
-        title: title.trim(),
-        description: description.trim(),
-        durationSeconds
-      });
+      const video = await withTimeout(
+        createLongVideo({ videoUrl: videoRes.url, thumbnailUrl, title: title.trim(), description: description.trim(), durationSeconds }),
+        45000,
+        () => { throw new Error('Your video is uploaded, but saving it took too long. Please check your connection, then look on your profile before posting it again.'); }
+      );
       // the lower-quality copies (the Feed's quality options) are made quietly in the background from here: posting is not held up
       queueRenditions({ videoId: video.id, source: videoFile, mainHeight: Math.min(videoRes.width || 0, videoRes.height || 0), durationSec: durationSeconds });
+      // "Add to Reels": the same file is shown in Reels too (nothing is copied or uploaded again)
+      if (addToReels && durationSeconds <= REEL_MAX_SECONDS) {
+        try { await withTimeout(addLongVideoToReels(video.id), 20000, () => { throw new Error('It took too long.'); }); }
+        catch (e) { showErrorDialog(`Your video is posted, but it could not be added to Reels: ${e instanceof Error ? e.message : 'please try again from Edit video.'}`, { title: 'Added to Videos only' }); }
+      }
       onUploaded(video);
     } catch (err) {
       setError(explainUploadError(err));
@@ -246,6 +264,26 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
                   className="w-full bg-zinc-900 rounded-2xl px-4 py-3.5 text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-noob/60"
                 />
               </div>
+
+              {/* Add to Reels: the same video also plays in Reels (only for a video of up to 70 seconds); nothing is uploaded or stored twice */}
+              {durationSeconds > 0 && durationSeconds <= REEL_MAX_SECONDS && (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={addToReels}
+                  onClick={() => setAddToReels((v) => !v)}
+                  data-testid="upload-add-to-reels"
+                  className="w-full flex items-center justify-between gap-3 rounded-2xl bg-zinc-900 px-4 py-3.5 text-left cursor-pointer"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-white">Add to Reels</span>
+                    <span className="block text-xs text-zinc-400">Also show this video in Reels. The same video is used, nothing is saved twice.</span>
+                  </span>
+                  <span className={`shrink-0 w-11 h-6 rounded-full p-0.5 transition-colors ${addToReels ? 'bg-noob' : 'bg-zinc-700'}`}>
+                    <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${addToReels ? 'translate-x-5' : ''}`} />
+                  </span>
+                </button>
+              )}
 
               {/* 3. everything else, when the person wants it */}
               <button

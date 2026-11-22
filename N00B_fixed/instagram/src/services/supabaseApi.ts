@@ -2706,6 +2706,20 @@ export async function updateLongVideo(videoId: string, data: { title?: string; d
   return mapLongVideo(res.video);
 }
 
+/** Shows a video of up to 70 seconds in Reels too: the same file, nothing copied (migration 20261122000001). Returns the reel (the same one when it was added before). */
+export async function addLongVideoToReels(videoId: string): Promise<Reel> {
+  try {
+    return mapReel(await rpc<any>('add_long_video_to_reels', { p_video: videoId }));
+  } catch (err) {
+    throw new Error(errorText(err, 'Could not add this video to Reels.'));
+  }
+}
+
+/** The id of the reel made from this video, or null when it is not in Reels. */
+export async function fetchLongVideoReelId(videoId: string): Promise<string | null> {
+  try { return (await rpc<string | null>('long_video_reel_id', { p_video: videoId })) || null; } catch { return null; }
+}
+
 export async function fetchLongVideoLikers(videoId: string): Promise<{ users: User[]; error?: string }> {
   try {
     return await cached(`video-likers:${videoId}`, async () => {

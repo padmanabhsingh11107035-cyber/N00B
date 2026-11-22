@@ -160,7 +160,6 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
 
   const press = (r: RowDef) => {
     if (r.page) { go(r.page); return; }
-    if (r.action === 'showProfileTab') { ctx.actions.showProfileTab('saved'); ctx.actions.close(); return; }
     if (r.action) (ctx.actions[r.action] as () => void)();
   };
 

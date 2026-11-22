@@ -16,7 +16,7 @@ export const ArchivePage: React.FC<PageProps> = ({ ctx, go, back }) => (
   <PageShell title="Archive" onBack={back}>
     <Section note="Your stories are kept here for ever. Posts you archive disappear from your profile and wait here until you bring them back. (Instants are deleted for good after 24 hours.)">
       <Row icon={ImageIcon} label="Stories archive" sub="Every story you have posted" onClick={() => go('stories-archive')} testId="archive-stories" />
-      <Row icon={Archive} label="Posts archive" sub="Posts you took off your profile" onClick={() => { ctx.actions.showProfileTab('archive'); ctx.actions.close(); }} />
+      <Row icon={Archive} label="Posts archive" sub="Posts you took off your profile" onClick={() => go('posts-archive')} testId="archive-posts" />
     </Section>
   </PageShell>
 );
@@ -74,13 +74,13 @@ export const StoriesArchivePage: React.FC<PageProps> = ({ back }) => {
 export const ActivityPage: React.FC<PageProps> = ({ ctx, go, back }) => (
   <PageShell title="Your activity" onBack={back}>
     <Section title="Interactions">
-      <Row icon={Heart} label="Likes" sub="Posts you liked" onClick={() => { ctx.actions.showProfileTab('liked'); ctx.actions.close(); }} testId="activity-likes" />
+      <Row icon={Heart} label="Likes" sub="Posts you liked" onClick={() => go('liked')} testId="activity-likes" />
       <Row icon={MessageSquare} label="Comments" sub="What you wrote on posts, reels and videos" onClick={() => go('activity-comments')} testId="activity-comments" />
-      <Row icon={Bookmark} label="Saved" sub="Posts you saved" onClick={() => { ctx.actions.showProfileTab('saved'); ctx.actions.close(); }} />
+      <Row icon={Bookmark} label="Saved" sub="Posts you saved" onClick={() => go('saved')} />
     </Section>
     <Section title="Your content">
       <Row icon={ImageIcon} label="Stories archive" onClick={() => go('stories-archive')} />
-      <Row icon={Archive} label="Posts archive" onClick={() => { ctx.actions.showProfileTab('archive'); ctx.actions.close(); }} />
+      <Row icon={Archive} label="Posts archive" onClick={() => go('posts-archive')} />
     </Section>
     <Section title="Time">
       <Row icon={Clock} label="Time on NOOB" sub="How long you used the app" onClick={() => go('time')} />

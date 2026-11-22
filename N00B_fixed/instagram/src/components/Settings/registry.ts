@@ -45,7 +45,7 @@ export const ROWS: RowDef[] = [
   // ---------------------------------------------------------------- How you use NOOB
   { id: 'invite-friends', section: 'How you use NOOB', label: 'Invite a friend', sub: 'Share NOOB with someone you know', icon: UserPlus, action: 'inviteFriends', keywords: 'invite share friend link refer tell' },
   { id: 'find-contacts', section: 'How you use NOOB', label: 'Find users from my contacts', sub: 'See which of your contacts are on NOOB', icon: UserPlus, action: 'openFindContacts', keywords: 'contacts phone numbers friends find people invite address book' },
-  { id: 'saved', section: 'How you use NOOB', label: 'Saved', icon: Bookmark, action: 'showProfileTab', keywords: 'bookmarks collections saved posts' },
+  { id: 'saved', section: 'How you use NOOB', label: 'Saved', icon: Bookmark, page: 'saved', keywords: 'bookmarks collections saved posts' },
   { id: 'archive', section: 'How you use NOOB', label: 'Archive', icon: Archive, page: 'archive', keywords: 'archived posts stories old' },
   { id: 'activity', section: 'How you use NOOB', label: 'Your activity', icon: Activity, page: 'activity', keywords: 'likes comments time spent history interactions' },
   { id: 'notifications', section: 'How you use NOOB', label: 'Notifications', icon: Bell, page: 'notifications', keywords: 'push alerts pause quiet mute likes comments follows noobs messages' },
@@ -106,7 +106,6 @@ export const ROWS: RowDef[] = [
 
   // ---------------------------------------------------------------- More from NOOB (what this app has that Instagram does not)
   { id: 'notepad', section: 'Quick tools', label: 'Notepad', sub: 'Write and paste notes, kept on your account', icon: StickyNote, page: 'notepad', keywords: 'notes notepad text write paste memo jot list' },
-  { id: 'search-song', section: 'Quick tools', label: 'Search song', sub: 'Play a song on another device and find its name', icon: AudioLines, page: 'search-song', keywords: 'shazam song music identify listen tune name find' },
   { id: 'wallet', section: 'More from NOOB', label: 'Wallet', sub: 'NOOB Points and transactions', icon: Wallet, action: 'openWallet', keywords: 'points money transactions balance' },
   { id: 'qr', section: 'More from NOOB', label: 'Profile finder using QR', icon: ScanLine, action: 'openQrScanner', keywords: 'scan qr code profile' },
   { id: 'my-qr', section: 'More from NOOB', label: 'My QR code', icon: ScanLine, action: 'openProfileQr', keywords: 'share profile qr' },

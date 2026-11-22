@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { User } from '../../types';
+import type { Post, User } from '../../types';
 
 // What a page of "Settings and activity" is given, and what it can ask the profile page to do (open one of the older windows that already exist, switch the profile's tab,
 // log out...). Keeping these in one place means every page is built the same way and the hub never needs to know how the profile page opens its windows.
@@ -9,6 +9,7 @@ export type ProfileTab = 'posts' | 'reels' | 'feed' | 'saved' | 'liked' | 'archi
 export interface SettingsActions {
   editProfile: () => void;
   showProfileTab: (tab: ProfileTab) => void;     // closes Settings and shows that tab of the profile
+  openPost: (post: Post, list: Post[], title: string) => void;   // the post viewer, on top of Settings (closing it comes back to the page)
   openLanguagePicker: () => void;
   openTranslator: () => void;
   openDevices: () => void;

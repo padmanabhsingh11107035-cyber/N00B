@@ -52,39 +52,6 @@ check(/All your plans/.test(sp) && /What each plan costs/.test(sp) && /ctx\.acti
 const reg = read('src/components/Settings/registry.ts'), pages = read('src/components/Settings/pages/index.tsx');
 check(/id: 'subscription-history', section: 'Subscriptions'/.test(reg) && /'subscription-history': SubscriptionHistoryPage/.test(pages), 'it is in Settings and activity, under Subscriptions');
 
-section('4. Search song: the rules');
-const T = await load('src/utils/songSearch.ts');
-check(T.pickRecorderMime((m) => m === 'audio/webm;codecs=opus') === 'audio/webm;codecs=opus' && T.pickRecorderMime((m) => m === 'audio/mp4') === 'audio/mp4' && T.pickRecorderMime(() => false) === null && T.pickRecorderMime(() => { throw new Error('x'); }) === null, 'the recording format this phone can make (webm on Android, mp4 on iPhone), or none');
-const found = { configured: true, found: true, song: { title: 'Tum Hi Ho', artist: 'Arijit Singh', album: 'Aashiqui 2', links: { spotify: 'https://open.spotify.com/x' } } };
-check(T.readSongAnswer(found, false).kind === 'found' && T.readSongAnswer(found, false).song.artist === 'Arijit Singh', 'a song that was found');
-check(T.readSongAnswer({ configured: true, found: false }, false).kind === 'notFound', 'a song that was not found');
-check(T.readSongAnswer({ configured: false }, false).kind === 'notSetUp' && T.readSongAnswer({ unavailable: true }, false).kind === 'notSetUp', 'the search not being switched on');
-check(T.readSongAnswer({ limited: true }, false).kind === 'limited' && T.readSongAnswer({ tooShort: true }, false).kind === 'tooShort' && T.readSongAnswer({ failed: true }, false).kind === 'failed' && T.readSongAnswer(null, true).kind === 'failed' && T.readSongAnswer(undefined, false).kind === 'failed', 'too many searches, too short, a failed search, no connection');
-const nf = T.songMessage({ kind: 'notFound' });
-check(/Sorry, the content you searched for was not found/.test(nf.text) && nf.title === 'We could not find that song', 'a song that is not found is told politely');
-check(T.songMessage({ kind: 'found', song: { title: 'A', artist: 'B', links: {} } }).text === 'by B' && /being set up/.test(T.songMessage({ kind: 'notSetUp' }).title), 'the other messages');
-check(T.base64FromDataUrl('data:audio/webm;base64,QUJD') === 'QUJD' && T.base64FromDataUrl('nonsense') === '', 'the recording is sent as plain base64');
-check(T.loudness([]) === 0 && T.loudness([128, 128]) === 1 && T.loudness([255, 255]) === 1 && Math.abs(T.loudness([64, 64]) - 0.5) < 1e-9, 'the moving bars: loudness between 0 and 1');
-
-section('5. Search song: the server');
-const fn = read('supabase/functions/dynamic-handler/index.ts');
-const mapSrc = fn.slice(fn.indexOf('// <song-mapping>'), fn.indexOf('// </song-mapping>')).replace(/: any\b/g, '');
-const mapSong = new Function(`${mapSrc}\nreturn mapSong;`)();
-let m = mapSong({ status: 'success', result: { title: 'Tum Hi Ho', artist: 'Arijit Singh', album: 'Aashiqui 2', release_date: '2013-04-08', label: 'T-Series', song_link: 'https://lis.tn/x',
-  apple_music: { url: 'https://music.apple.com/x', artwork: { url: 'https://is1.mzstatic.com/{w}x{h}bb.jpg' } }, spotify: { external_urls: { spotify: 'https://open.spotify.com/track/1' } } } });
-check(m.found && m.song.title === 'Tum Hi Ho' && m.song.cover === 'https://is1.mzstatic.com/400x400bb.jpg' && m.song.links.spotify === 'https://open.spotify.com/track/1' && m.song.links.apple === 'https://music.apple.com/x', 'a match: title, artist, the cover at a sensible size, and the links', JSON.stringify(m));
-check(mapSong({ status: 'success', result: null }).found === false && !mapSong({ status: 'success', result: null }).failed, 'no match is "not found", not an error');
-check(mapSong({ status: 'error', error: { error_code: 901 } }).unavailable === true && mapSong({ status: 'error', error: { error_code: 300 } }).failed === true && mapSong(null).failed === true, 'the service refusing (no credit) or failing is told apart from "not found"');
-m = mapSong({ status: 'success', result: { title: 'X', artist: 'Y', song_link: 'javascript:alert(1)', apple_music: { url: 'http://insecure.example/x' } } });
-check(m.found && !m.song.links.other && !m.song.links.apple, 'only https links are ever passed on');
-check(/body\?\.action === 'recognize_song'/.test(fn) && /Deno\.env\.get\('AUDD_API_TOKEN'\)/.test(fn) && /if \(!userId\) return json\(\{ error: 'Please log in\.' \}, 401\)/.test(fn.slice(fn.indexOf("'recognize_song'"))), 'the action needs a login and a secret token kept only on the server');
-check(/song:\$\{userId\}:\$\{hour\}[\s\S]{0,200}p_limit: 12/.test(fn) && /song-day:[\s\S]{0,160}p_limit: 40/.test(fn), 'each person can search 12 times an hour and 40 times a day');
-check(!/AUDD_API_TOKEN\s*=\s*['"][A-Za-z0-9]/.test(fn) && !/audd|AUDD/.test(read('src/services/supabaseApi.ts') + read('src/components/Settings/pages/searchsong.tsx')), 'no key is anywhere in the app');
-const ssp = read('src/components/Settings/pages/searchsong.tsx');
-check(/echoCancellation: false, noiseSuppression: false, autoGainControl: false/.test(ssp), 'the microphone is asked for music, not speech (no voice clean-up)');
-check(/action: 'recognize_song'/.test(ssp) && /song-listen/.test(ssp) && /Search again/.test(ssp) && /song-problem/.test(ssp), 'the page listens, searches, shows the answer, and offers "Search again"');
-check(/id: 'search-song', section: 'Quick tools'/.test(reg) && /export const SECTIONS = \[\s*'Quick tools'/.test(reg) && /'search-song': SearchSongPage/.test(pages), 'it is in the three-dot menu (Settings and activity) as "Search song"');
-
 section('6. Rotating Story');
 const R = await load('src/utils/rotatingStory.ts');
 check(R.ROTATE_MODES.map((x) => x.id).join() === 'off,spin,swing,tilt', 'still, spin, swing and 3D tilt');

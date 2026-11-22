@@ -1,6 +1,7 @@
 import React from 'react';
 import type { PageComponent, PageProps } from '../types';
 import { AccountPage, PasswordPage, AccountTypePage, PrivacyPage, CloseFriendsPage, BlockedPage, StoryPrivacyPage, ActivityStatusPage, ListPage } from './account';
+import { SavedPage, LikedPage, PostsArchivePage } from './library';
 import { ArchivePage, StoriesArchivePage, ActivityPage, MyCommentsPage, TimePage, SearchesPage } from './activity';
 import { NotificationsPage, MessagesPage, TagsPage, CommentsPage, SharingPage, LimitPage, HiddenWordsPage, InvitePage } from './interact';
 import { MutedPage, ContentPage, LikeCountsPage } from './see';
@@ -9,7 +10,6 @@ import { OrdersPage, HelpPage, PrivacyCentrePage, AccountStatusPage, AboutPage, 
 import { UpdatePage } from './update';
 import { ChatSettingsPage } from './chats';
 import { SubscriptionHistoryPage } from './subscription';
-import { SearchSongPage } from './searchsong';
 import { NotepadPage } from './notepad';
 import { AppLockPage } from './lock';
 import { AppIconPage } from './appicon';
@@ -33,6 +33,9 @@ export const PAGES: Record<string, PageComponent> = {
   'account-type': AccountTypePage,
   // how you use NOOB
   archive: ArchivePage,
+  saved: SavedPage,
+  liked: LikedPage,
+  'posts-archive': PostsArchivePage,
   'stories-archive': StoriesArchivePage,
   activity: ActivityPage,
   'activity-comments': MyCommentsPage,
@@ -53,7 +56,6 @@ export const PAGES: Record<string, PageComponent> = {
   messages: MessagesPage,
   chats: ChatSettingsPage,
   'subscription-history': SubscriptionHistoryPage,
-  'search-song': SearchSongPage,
   notepad: NotepadPage,
   tags: TagsPage,
   comments: CommentsPage,

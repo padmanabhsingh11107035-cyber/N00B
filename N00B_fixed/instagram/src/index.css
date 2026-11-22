@@ -1849,7 +1849,9 @@ html.phone-edge #chat-view-container[data-view="chat"] .chat-top { padding-top: 
 html.phone-edge[data-theme="light"] #chat-view-container[data-view="chat"] .chat-top { background: #ffffff !important; border-bottom-color: #e6e6e6 !important; }
 
 /* ---- Phones (html.phone-edge): the Settings bar and the Reels bar are see-through ---- */
-html.phone-edge .nst-header, html.phone-edge .nst-header.is-stuck { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
+html.phone-edge .nst-header { background: transparent !important; box-shadow: none !important; border-bottom-color: transparent !important; }
+/* once the page has scrolled under the bar it is the page colour (solid), so the title never prints over the words that pass behind it */
+html.phone-edge .nst-header.is-stuck { background: var(--page) !important; border-bottom-color: var(--nst-line) !important; }
 html.phone-edge .nst-root { padding-top: 0; }
 
 /* Home and Profile: no doodle at all, not even faintly behind the page: plain black (Dark) or plain white (Light) */

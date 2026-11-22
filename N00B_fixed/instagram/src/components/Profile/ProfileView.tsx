@@ -574,6 +574,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     actions: {
       editProfile: () => setShowEditProfileModal(true),
       showProfileTab: (tab) => setActiveTab(tab),
+      openPost: (post, list, title) => openPostFrom(post, list, title),
       openLanguagePicker: () => setShowLanguagePicker(true),
       openTranslator: () => setShowTranslator(true),
       openDevices: () => setShowDevices(true),

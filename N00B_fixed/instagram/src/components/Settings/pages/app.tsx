@@ -72,19 +72,17 @@ export const DevicePermissionsPage: React.FC<PageProps> = ({ back }) => {
       <Note>These are the permissions you gave NOOB on this device. NOOB only uses one while you are doing something that needs it. You can take one away in your browser or phone settings at any time.</Note>
       <Section>
         {items.map(([name, label, sub, Icon]) => (
-          <Row
-            key={name}
-            icon={Icon}
-            label={label}
-            sub={sub}
-            testId={`perm-${name}`}
-            right={
-              <span className="flex items-center gap-2 shrink-0">
-                <span className={`text-[12px] font-bold ${state[name] === 'granted' ? 'text-white' : 'text-zinc-400'}`}>{STATE_TEXT[state[name]]}</span>
+          <div key={name} className="nst-row" data-testid={`perm-${name}`}>
+            <span className="nst-ico"><Icon className="w-5 h-5" /></span>
+            <span className="nst-words">
+              <span className="nst-label text-white">{label}</span>
+              <span className="nst-sub">{sub}</span>
+              <span className="flex items-center gap-2.5 flex-wrap mt-2.5">
+                <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full border ${state[name] === 'granted' ? 'text-white border-white/30' : 'text-zinc-400 border-white/10'}`}>{STATE_TEXT[state[name]]}</span>
                 {(state[name] === 'prompt' || state[name] === 'denied') && <SmallButton onClick={() => ask(name)} disabled={busy === name}>{busy === name ? '…' : state[name] === 'denied' ? 'Try again' : 'Allow'}</SmallButton>}
               </span>
-            }
-          />
+            </span>
+          </div>
         ))}
       </Section>
     </PageShell>

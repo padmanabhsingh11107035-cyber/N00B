@@ -153,8 +153,8 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, curr
                           {on && <span className="gc-tick"><Check className="w-3.5 h-3.5" strokeWidth={3.5} /></span>}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="gc-name"><span className="truncate" translate="no">{u.displayName || u.username}</span>{u.isVerified && <VerifiedBadge size="xs" />}</span>
-                          <span className="gc-status truncate" translate="no">@{u.username}</span>
+                          <span className="gc-name"><span className="block truncate" translate="no">{u.displayName || u.username}</span>{u.isVerified && <VerifiedBadge size="xs" />}</span>
+                          <span className="gc-status block truncate" translate="no">@{u.username}</span>
                         </span>
                       </button>
                     </li>

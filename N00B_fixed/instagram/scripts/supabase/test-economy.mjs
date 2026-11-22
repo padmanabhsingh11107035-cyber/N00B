@@ -36,6 +36,7 @@ const adminRaw = raw.users.find((u) => u.isAdmin);
 const publicRaw = raw.users.filter((u) => u.accountType !== 'private' && !u.isAdmin);
 const [aRaw, bRaw, cRaw, dRaw] = publicRaw.filter((u) => (u.password || '').length > 0);
 const admin = idOf(adminRaw), a = idOf(aRaw), b = idOf(bRaw), c = idOf(cRaw), d = idOf(dRaw);
+await db.query(`insert into public.admin_reauth (user_id, until, fails) values ($1, now() + interval '2 hours', 0) on conflict (user_id) do update set until = excluded.until`, [admin]);   // the administrator's password was confirmed a moment ago (migration 20261118000005)
 const ids = [a, b, c, d].map((x) => `'${x}'`).join(',');
 
 const call = (uid, sql, params = []) => asUser(db, uid, async () => (await db.query(sql, params)).rows);

@@ -17,7 +17,7 @@ const screens = (demo.match(/<Screen n=\{(\d)\}>/g) || []);
 check(screens.length === 7 && [0, 1, 2, 3, 4, 5, 6].every((n) => demo.includes(`<Screen n={${n}}>`)), 'seven screens, each with its own turn');
 for (const [label, re] of [['the home feed with stories', /NOOB<\/span>[\s\S]{0,1200}maya/], ['reels', />Reels<\/div>/], ['a chat', /wanna play ludo\?/], ['the games', />Games<\/span>[\s\S]{0,200}50\+/], ['a live voice room', /NOOB Rooms/], ['Daily NOOB', /Daily NOOB[\s\S]{0,2500}\+10,000 points!/], ['the AI assistant', /NOOB AI[\s\S]{0,900}weekend/]]) check(re.test(demo), label);
 const captions = demo.match(/const CAPTIONS = \[([^\]]*)\]/)[1].split(',').length;
-check(captions === 7 && /Play 50\+ games/.test(demo) && /Ask NOOB AI/.test(demo), 'a hand-written caption under the phone for each screen');
+check(captions === 7 && /Play 38 games/.test(demo) && /Ask NOOB AI/.test(demo), 'a hand-written caption under the phone for each screen');
 check(/Ludo[\s\S]{0,400}Chess[\s\S]{0,700}Snakes[\s\S]{0,700}Tic-Tac-Toe/.test(demo), 'the games screen shows real games of the app');
 
 section('2. Moved by CSS alone, one round of 23.8 seconds');

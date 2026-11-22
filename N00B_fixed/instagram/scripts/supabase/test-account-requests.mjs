@@ -23,6 +23,7 @@ await runImport(buildImportPlan(raw, {}), makePgAdapter(db), { log: () => {} });
 const profByLegacy = Object.fromEntries((await db.query('select * from profiles')).rows.map((p) => [p.legacy_id, p]));
 const idOf = (u) => profByLegacy[u.id].id;
 const admin = idOf(raw.users.find((u) => u.isAdmin));
+await db.query(`insert into public.admin_reauth (user_id, until, fails) values ($1, now() + interval '2 hours', 0) on conflict (user_id) do update set until = excluded.until`, [admin]);   // the administrator's password was confirmed a moment ago (migration 20261118000005)
 // keep clear of the real @NOOB / @padmanabh rows so "an ordinary stranger" tests actually use one
 const pool = raw.users.filter((u) => u.accountType !== 'private' && !u.isAdmin && !['noob', 'padmanabh'].includes(u.username.toLowerCase()));
 const [aRaw, bRaw, delegateRaw, delegate2Raw] = pool;

@@ -1867,6 +1867,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         displayName={targetUser.displayName}
         isVerified={targetUser.isVerified}
         onClose={() => setShowFullscreenAvatar(false)}
+        onEdit={isOwnProfile ? () => { setShowFullscreenAvatar(false); setShowEditProfileModal(true); } : undefined}
       />
 
       {/* 13. Get Verified Modal */}

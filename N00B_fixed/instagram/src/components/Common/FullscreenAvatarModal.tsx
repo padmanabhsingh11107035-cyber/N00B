@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, User as UserIcon } from 'lucide-react';
+import { X, Pencil, User as UserIcon } from 'lucide-react';
 import { VerifiedBadge } from './VerifiedBadge';
 
 interface FullscreenAvatarModalProps {
@@ -9,6 +9,8 @@ interface FullscreenAvatarModalProps {
   displayName?: string;
   isVerified?: boolean;
   onClose: () => void;
+  /** your own picture only: a pencil in the middle of the picture, and what it does (change the profile picture) */
+  onEdit?: () => void;
 }
 
 export const FullscreenAvatarModal: React.FC<FullscreenAvatarModalProps> = ({
@@ -17,7 +19,8 @@ export const FullscreenAvatarModal: React.FC<FullscreenAvatarModalProps> = ({
   username,
   displayName,
   isVerified,
-  onClose
+  onClose,
+  onEdit
 }) => {
   if (!isOpen) return null;
 
@@ -55,6 +58,18 @@ export const FullscreenAvatarModal: React.FC<FullscreenAvatarModalProps> = ({
               </div>
             )}
           </div>
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label="Change profile picture"
+              title="Change profile picture"
+              data-testid="avatar-edit-pencil"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-black/55 border border-white/40 text-white flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95 transition-transform"
+            >
+              <Pencil className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
         {/* User Info & Badges */}

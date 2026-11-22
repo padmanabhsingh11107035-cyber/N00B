@@ -27,3 +27,6 @@ export function describeLength(seconds: number): string {
   const m = Math.round((seconds % 3600) / 60);
   return `${h} hour${h === 1 ? '' : 's'}${m ? ` ${m} minutes` : ''}`;
 }
+
+/** A video that is already on the Videos page can be added to Reels (the same file) when it is at most this long: 10 minutes. */
+export const REEL_FROM_VIDEO_MAX_SECONDS = 600;

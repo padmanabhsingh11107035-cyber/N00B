@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Film, Image as ImageIcon, RefreshCw, ChevronDown } from 'lucide-react';
 import { uploadMediaFile, createLongVideo, addLongVideoToReels } from '../../services/api';
-import { REEL_MAX_SECONDS } from '../../utils/videoDuration';
+import { REEL_FROM_VIDEO_MAX_SECONDS } from '../../utils/videoDuration';
 import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
 import { showErrorDialog } from '../../utils/errorDialog';
@@ -190,7 +190,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
       // the lower-quality copies (the Feed's quality options) are made quietly in the background from here: posting is not held up
       queueRenditions({ videoId: video.id, source: videoFile, mainHeight: Math.min(videoRes.width || 0, videoRes.height || 0), durationSec: durationSeconds });
       // "Add to Reels": the same file is shown in Reels too (nothing is copied or uploaded again)
-      if (addToReels && durationSeconds <= REEL_MAX_SECONDS) {
+      if (addToReels && durationSeconds <= REEL_FROM_VIDEO_MAX_SECONDS) {
         try { await withTimeout(addLongVideoToReels(video.id), 20000, () => { throw new Error('It took too long.'); }); }
         catch (e) { showErrorDialog(`Your video is posted, but it could not be added to Reels: ${e instanceof Error ? e.message : 'please try again from Edit video.'}`, { title: 'Added to Videos only' }); }
       }
@@ -265,8 +265,8 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
                 />
               </div>
 
-              {/* Add to Reels: the same video also plays in Reels (only for a video of up to 70 seconds); nothing is uploaded or stored twice */}
-              {durationSeconds > 0 && durationSeconds <= REEL_MAX_SECONDS && (
+              {/* Add to Reels: the same video also plays in Reels (only for a video of up to 10 minutes); nothing is uploaded or stored twice */}
+              {durationSeconds > 0 && durationSeconds <= REEL_FROM_VIDEO_MAX_SECONDS && (
                 <button
                   type="button"
                   role="switch"

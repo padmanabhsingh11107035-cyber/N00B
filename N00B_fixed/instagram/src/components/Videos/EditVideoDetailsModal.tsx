@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Image as ImageIcon, RefreshCw, Clapperboard, Check } from 'lucide-react';
 import { uploadMediaFile, updateLongVideo, addLongVideoToReels, fetchLongVideoReelId } from '../../services/api';
-import { REEL_MAX_SECONDS } from '../../utils/videoDuration';
+import { REEL_FROM_VIDEO_MAX_SECONDS } from '../../utils/videoDuration';
 import { LongVideo } from '../../types';
 
 interface EditVideoDetailsModalProps {
@@ -18,8 +18,8 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const thumbInputRef = useRef<HTMLInputElement>(null);
-  // "Add to Reels": the same video (no copy) also plays in Reels; only for a video of up to 70 seconds
-  const canReel = video.durationSeconds > 0 && video.durationSeconds <= REEL_MAX_SECONDS;
+  // "Add to Reels": the same video (no copy) also plays in Reels; only for a video of up to 10 minutes
+  const canReel = video.durationSeconds > 0 && video.durationSeconds <= REEL_FROM_VIDEO_MAX_SECONDS;
   const [reelState, setReelState] = useState<'checking' | 'none' | 'adding' | 'added'>(canReel ? 'checking' : 'none');
   useEffect(() => {
     if (!canReel) return;

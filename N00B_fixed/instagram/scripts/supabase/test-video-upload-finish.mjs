@@ -19,7 +19,7 @@ check(/video\.onloadedmetadata = seek/.test(up) && /video\.load\(\)/.test(up), '
 check(/setProgress\(\{ stage: 'uploading', fraction: 1 \}\)/.test(up), 'the screen says "Finishing up" while the last steps run');
 
 console.log('\n2. Add to Reels uses the same file (no copy)');
-check(/data-testid="upload-add-to-reels"/.test(up) && /durationSeconds <= REEL_MAX_SECONDS/.test(up), 'the upload screen offers it only for a video of up to 70 seconds');
+check(/data-testid="upload-add-to-reels"/.test(up) && /durationSeconds <= REEL_FROM_VIDEO_MAX_SECONDS/.test(up), 'the upload screen offers it only for a video of up to 10 minutes');
 check(/addLongVideoToReels\(video\.id\)/.test(up), 'after posting, the video id is sent (no file is sent again)');
 check(/data-testid="edit-add-to-reels"/.test(edit) && /fetchLongVideoReelId/.test(edit), 'an existing video can be added from Edit video, and shows when it already is');
 check(/rpc<any>\('add_long_video_to_reels', \{ p_video: videoId \}\)/.test(api), 'the app calls the server function with only the video id');

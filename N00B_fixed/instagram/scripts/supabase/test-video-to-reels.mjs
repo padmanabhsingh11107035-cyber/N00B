@@ -36,7 +36,8 @@ const q = async (sql, params = []) => (await db.query(sql, params)).rows;
 const FILE = 'videos/1700000000000-abc1234.mp4';
 const COVER = 'videos/1700000000000-cover.jpg';
 const short = (await rpc(a, 'create_long_video', FILE, COVER, 'My short video', 'about it', 45)).video;
-const long = (await rpc(a, 'create_long_video', 'videos/1700000000001-long.mp4', null, 'A long one', '', 600)).video;
+const long = (await rpc(a, 'create_long_video', 'videos/1700000000001-long.mp4', null, 'A long one', '', 1200)).video;
+const ten = (await rpc(a, 'create_long_video', 'videos/1700000000002-ten.mp4', null, 'Ten minutes', '', 600)).video;
 
 section('1. Add a short video to Reels');
 const reel = await rpc(a, 'add_long_video_to_reels', short.id);
@@ -55,9 +56,13 @@ check((await q('select count(*)::int n from reels where source_video_id = $1', [
 
 section('3. Rules');
 await expectFail(() => rpc(b, 'add_long_video_to_reels', short.id), /Only the person who uploaded/i, 'somebody else can not add my video');
-await expectFail(() => rpc(a, 'add_long_video_to_reels', long.id), /up to 70 seconds/i, 'a 10-minute video is refused');
+await expectFail(() => rpc(a, 'add_long_video_to_reels', long.id), /up to 10 minutes/i, 'a 20-minute video is refused');
 await expectFail(() => rpc(a, 'add_long_video_to_reels', '00000000-0000-0000-0000-000000000000'), /not found/i, 'a video that does not exist');
 check((await rpc(a, 'long_video_reel_id', long.id)) === null, 'the refused video has no reel');
+
+section('3b. Exactly 10 minutes is allowed');
+const tenReel = await rpc(a, 'add_long_video_to_reels', ten.id);
+check(tenReel && tenReel.videoUrl === 'videos/1700000000002-ten.mp4', 'a 10-minute video can be added (same file)');
 
 section('4. Removing only the reel keeps the video and its file');
 await call(a, 'delete from reels where id = $1', [reel.id]);

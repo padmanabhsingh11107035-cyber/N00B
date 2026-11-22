@@ -4,7 +4,7 @@
 -- (same video_url, same cover), so the server holds the file once.
 --
 --   * A reel can be linked to the video it came from (reels.source_video_id). One video can have only one such reel.
---   * Only the owner can do it, only for a video of up to 70 seconds (the longest a reel can be), and it does not count as a second post: no extra points and it does
+--   * Only the owner can do it, only for a video of up to 10 minutes (raised from 70 seconds by 20261122000002), and it does not count as a second post: no extra points and it does
 --     not use the free account's one-post-a-day.
 --   * If the video is deleted, its linked reel goes with it (the file would be gone). If only the reel is deleted, the video stays.
 --   * Files: the storage cleanup (media_trash / purge_media) checks every table before it deletes a file (media_in_use), so a file that the video or the reel still points

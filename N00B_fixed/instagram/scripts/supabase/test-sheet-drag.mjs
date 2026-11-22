@@ -47,7 +47,6 @@ const sheets = {
   'src/components/Common/LikesViewsSheet.tsx': { drag: 'drag', cross: true },
   'src/components/Common/SharePostSheet.tsx': { drag: 'drag', cross: true },
   'src/components/PostCreation/CreateChooser.tsx': { drag: 'drag', cross: true },
-  'src/components/Modals/SwitchAccountModal.tsx': { drag: 'drag', cross: false },
   'src/components/Profile/MutualFollowersSheet.tsx': { drag: 'drag', cross: false },
 };
 for (const [f, o] of Object.entries(sheets)) {

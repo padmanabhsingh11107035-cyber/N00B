@@ -5,8 +5,9 @@ interface FollowUsModalProps {
   onClose: () => void;
 }
 
-const INSTAGRAM_URL = 'https://www.instagram.com/nooob.xyz?stkn=c3Rsb3R1emMwc2s5&utm_source=qr';
-const YOUTUBE_URL = 'https://www.youtube.com/channel/UCn_bU5OKH2yraWxNRJIUoMA';
+const INSTAGRAM_URL = 'https://www.instagram.com/noobsocials';
+const YOUTUBE_URL = 'https://www.youtube.com/@noobsocials_456';
+const FOUNDER_URL = 'https://www.instagram.com/padmanabh_noob';
 
 export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
   return (
@@ -41,7 +42,7 @@ export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-sm font-bold text-white block">Instagram</span>
-              <span className="text-[11px] text-zinc-400 block truncate">@nooob.xyz</span>
+              <span className="text-[11px] text-zinc-400 block truncate">@noobsocials</span>
             </div>
             <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-pink-400 transition-colors shrink-0" />
           </a>
@@ -57,9 +58,24 @@ export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-sm font-bold text-white block">YouTube</span>
-              <span className="text-[11px] text-zinc-400 block truncate">@saraah_robotics_456</span>
+              <span className="text-[11px] text-zinc-400 block truncate">@noobsocials_456</span>
             </div>
             <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors shrink-0" />
+          </a>
+          <a
+            href={FOUNDER_URL}
+            target="_blank" data-no-inapp
+            rel="noopener noreferrer"
+            className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/15 hover:border-white/35 transition-all group"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-zinc-800 border border-white/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Instagram className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold text-white block">Founder on Instagram</span>
+              <span className="text-[11px] text-zinc-400 block truncate">@padmanabh_noob</span>
+            </div>
+            <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
           </a>
         </div>
       </div>

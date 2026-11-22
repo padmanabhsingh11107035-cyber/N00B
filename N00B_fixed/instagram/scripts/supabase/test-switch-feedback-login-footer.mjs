@@ -10,11 +10,11 @@ const modal = read('src/components/Modals/SwitchAccountModal.tsx'), auth = read(
 
 section('1. Switch account shows at once that it is working');
 check(/const \[switching, setSwitching\] = useState<\{ label: string \} \| null>\(null\);/.test(modal), 'the sheet knows when a switch has begun');
-check(/data-testid="switching-overlay"/.test(modal) && /<Loader2 className="w-9 h-9 text-cyan-300 animate-spin" \/>/.test(modal) && /This takes a few seconds\. Please wait\./.test(modal), 'it covers the sheet with a spinner and "This takes a few seconds. Please wait."');
+check(/data-testid="switching-overlay"/.test(modal) && /<Loader2 className="w-9 h-9 text-white animate-spin" \/>/.test(modal) && /This takes a few seconds\. Please wait\./.test(modal), 'it covers the sheet with a spinner and "This takes a few seconds. Please wait."');
 check(/Switching to @\$\{name\}…/.test(modal) && /Opening the log-in page…/.test(modal), 'and says which account it is switching to (or that it opens the log-in page)');
 check(/const goReload = \(label: string, doSwitch: \(\) => boolean\) => \{\s*setSwitching\(\{ label \}\);\s*window\.setTimeout\(\(\) => \{ if \(doSwitch\(\)\) window\.location\.reload\(\); else setSwitching\(null\); \}, 80\);/.test(modal), 'the spinner is drawn first, then the switch and the reload (a short pause so it is really seen)');
 check(/if \(switching\) return;\s*if \(id === currentId\) return onClose\(\);/.test(modal), 'a second tap while it works does nothing');
-check(/disabled=\{!!switching\} className="flex-1 min-w-0/.test(modal) && /disabled=\{!!switching\}\s*className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r/.test(modal), 'the account rows and "Add another account" are switched off meanwhile');
+check(/disabled=\{!!switching\} className="flex-1 min-w-0/.test(modal) && /disabled=\{!!switching\} data-testid="add-another-account"/.test(modal), 'the account rows and "Add another account" are switched off meanwhile');
 check(/setSwitching\(\{ label: `Switching to @\$\{acct\.username\}…` \}\); window\.setTimeout\(\(\) => window\.location\.reload\(\), 80\);/.test(modal) && /disabled=\{busy \|\| !!switching \|\| !password\}/.test(modal), 'signing in to another of your accounts keeps showing the spinner until the reload (it used to switch back to the plain button)');
 check(/aria-busy=\{!!switching\}/.test(modal) && /role="status" aria-live="polite"/.test(modal), 'screen readers are told too');
 

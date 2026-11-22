@@ -1,8 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { X, Users, Check, Sparkles, Upload, Image, Shield, Search, UserCheck } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, ArrowRight, Camera, Check, Loader2, Search, X } from 'lucide-react';
 import { User, ChatConversation } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { createGroupChat, uploadMediaFile } from '../../services/api';
+import './groupChat.css';
+
+// "New group", laid out like WhatsApp's: first the people (a bar with the chosen ones on top, a search, a list with a round tick on the picture, a round arrow button), then the group's
+// name and picture (the big camera circle, the name with a line under it, the people who will be in it, a round check button). The rules are the same as before: the name, one picture
+// and at least one friend are needed, and the person who makes the group is its admin.
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -12,358 +18,197 @@ interface CreateGroupModalProps {
   onGroupCreated: (newChat: ChatConversation) => void;
 }
 
-export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
-  isOpen,
-  currentUser,
-  availableUsers,
-  onClose,
-  onGroupCreated
-}) => {
-  // Option 1: Name
+const Face: React.FC<{ user: User; size: number }> = ({ user, size }) => {
+  const [broken, setBroken] = useState(false);
+  const box = { width: size, height: size } as const;
+  return user.avatar && !broken ? (
+    <img src={user.avatar} alt="" style={box} className="gc-face" onError={() => setBroken(true)} referrerPolicy="no-referrer" />
+  ) : (
+    <span style={{ ...box, fontSize: Math.round(size * 0.42) }} className="gc-face gc-face--letter" translate="no">{(user.displayName || user.username).slice(0, 1).toUpperCase()}</span>
+  );
+};
+
+export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, currentUser, availableUsers, onClose, onGroupCreated }) => {
+  const [step, setStep] = useState<1 | 2>(1);
   const [groupName, setGroupName] = useState('');
-  // Option 2: Profile Picture / Avatar — custom upload only, no presets.
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  // Option 3: Members
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [memberSearchQuery, setMemberSearchQuery] = useState('');
-
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
-
-  // The NOOB master admin account isn't limited to friends — it can add
-  // any registered user to a group, follow relationship or not.
   const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
 
-  // Filter friends: users who follow currentUser OR whom currentUser follows
-  const friendsList = availableUsers.filter((u) => {
+  // friends: people who follow you or whom you follow (the main administrator can add anybody)
+  const friendsList = useMemo(() => availableUsers.filter((u) => {
     if (u.id === currentUser.id || u.isAi) return false;
     if (isMasterAdmin) return true;
     const isFollowing = u.isFollowing || currentUser.followingIds?.includes(u.id);
     const isFollower = u.followers?.includes?.(currentUser.id) || currentUser.followers?.includes?.(u.id);
-    // Include friends (following or followers), or all non-self users if list is small
     return isFollowing || isFollower || availableUsers.length <= 4;
-  });
+  }), [availableUsers, currentUser, isMasterAdmin]);
 
-  const filteredFriends = friendsList.filter((u) => {
-    const q = memberSearchQuery.toLowerCase();
-    return (
-      u.username.toLowerCase().includes(q) ||
-      (u.displayName && u.displayName.toLowerCase().includes(q))
-    );
-  });
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q ? friendsList.filter((u) => u.username.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q)) : friendsList;
+    return [...list].sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+  }, [friendsList, query]);
 
-  const toggleSelectUser = (id: string) => {
-    if (selectedUserIds.includes(id)) {
-      setSelectedUserIds(selectedUserIds.filter((uid) => uid !== id));
-    } else {
-      setSelectedUserIds([...selectedUserIds, id]);
-    }
-  };
+  const selected = useMemo(() => selectedUserIds.map((id) => friendsList.find((u) => u.id === id)).filter(Boolean) as User[], [selectedUserIds, friendsList]);
+
+  if (!isOpen) return null;
+
+  const toggle = (id: string) => setSelectedUserIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
+    const readLocally = () => { const reader = new FileReader(); reader.onload = () => { if (reader.result) setAvatarUrl(reader.result as string); }; reader.readAsDataURL(file); };
     try {
       setIsUploading(true);
       setErrorMsg('');
-      // Routes through the same invisible client-side compression every
-      // other upload in the app uses (uploadMediaFile), instead of sending
-      // the raw camera-resolution file straight to B2 — this was one of a
-      // few upload paths that bypassed it, needlessly inflating storage and
-      // per-view download bandwidth.
+      // the same invisible picture compression every other upload in the app uses
       const data = await uploadMediaFile(file, 'avatars');
-      if (data.success && data.url) {
-        setAvatarUrl(data.url);
-      } else {
-        // Fallback to client reader
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (reader.result) setAvatarUrl(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
-    } catch (err: any) {
-      // Local fallback
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      if (data.success && data.url) setAvatarUrl(data.url); else readLocally();
+    } catch {
+      readLocally();
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupName.trim()) {
-      setErrorMsg('Please enter a group name');
-      return;
-    }
-    if (selectedUserIds.length === 0) {
-      setErrorMsg('Please select at least 1 friend to add to the group');
-      return;
-    }
-    if (!avatarUrl) {
-      setErrorMsg('Please upload a group profile picture');
-      return;
-    }
-
+  const create = async () => {
+    if (loading) return;
+    if (!groupName.trim()) { setErrorMsg('Type a group name.'); return; }
+    if (selectedUserIds.length === 0) { setErrorMsg('Add at least one person.'); return; }
+    if (!avatarUrl) { setErrorMsg('Add a group picture.'); return; }
     try {
       setLoading(true);
       setErrorMsg('');
-
-      const result = await createGroupChat(
-        groupName.trim(),
-        avatarUrl,
-        [...selectedUserIds, currentUser.id],
-        `Created by @${currentUser.username}`
-      );
-
-      if (!result.success || !result.chat) {
-        throw new Error('Failed to create group chat');
-      }
-
+      const result = await createGroupChat(groupName.trim(), avatarUrl, [...selectedUserIds, currentUser.id], `Created by @${currentUser.username}`);
+      if (!result.success || !result.chat) throw new Error('Could not create the group. Please try again.');
       onGroupCreated(result.chat);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error creating group chat');
+      setErrorMsg(err?.message || 'Could not create the group. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div
-        className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-600 to-noob flex items-center justify-center text-black font-extrabold shadow-md shadow-purple-500/20">
-              <Users className="w-5 h-5 text-black" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">Create Group Chat</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30">
-                  group
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-400">Configure Name, Profile Picture, and Friends</p>
-            </div>
+  const goBack = () => { if (step === 2) { setStep(1); setErrorMsg(''); } else onClose(); };
+
+  // drawn straight into the page: inside the chat page the bottom bar of the app would be drawn over it
+  return createPortal(
+    <div className="gc-root fixed inset-0 z-[125] flex flex-col" role="dialog" aria-modal="true" aria-label="New group" data-testid="create-group-page">
+      {/* the bar: back, the title, and under it how many are chosen (step 1) or what to do (step 2) */}
+      <header className="gc-bar">
+        <button type="button" onClick={goBack} aria-label="Back" data-testid="group-back" className="gc-iconbtn"><ArrowLeft className="w-6 h-6" /></button>
+        {searching && step === 1 ? (
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or username" aria-label="Search" className="gc-search" />
+        ) : (
+          <div className="min-w-0 flex-1">
+            <h1 className="gc-title">New group</h1>
+            <p className="gc-sub">{step === 1 ? (selected.length === 0 ? 'Add participants' : `${selected.length} of ${friendsList.length} selected`) : 'Add subject'}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-white rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
+        )}
+        {step === 1 && (
+          <button type="button" onClick={() => { if (searching) { setSearching(false); setQuery(''); } else setSearching(true); }} aria-label={searching ? 'Close search' : 'Search'} className="gc-iconbtn">
+            {searching ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
           </button>
-        </div>
+        )}
+      </header>
 
-        {/* Creator Admin Notice */}
-        <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-950/40 via-zinc-900 to-emerald-950/30 border border-purple-500/30 flex items-start gap-2.5 text-xs text-zinc-300">
-          <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold text-white">Admin Privileges: </span>
-            You (<span className="text-noob font-semibold">@{currentUser.username}</span>) will be the group creator & Admin. You can promote other friends to Admins and remove members anytime.
-          </div>
-        </div>
-
-        <form onSubmit={handleCreate} className="space-y-4">
-          {/* OPTION 1: GROUP NAME */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-bold">1</span>
-                Group Name <span className="text-red-400">*</span>
-              </label>
-              <span className="text-[10px] text-zinc-500">{groupName.length}/40</span>
-            </div>
-            <input
-              type="text"
-              maxLength={40}
-              placeholder="e.g. Cyber Squad 🚀, Friday Gamers 🎮"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob transition-colors"
-            />
-          </div>
-
-          {/* OPTION 2: GROUP PROFILE / AVATAR */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-bold">2</span>
-              Group Profile Picture
-            </label>
-
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800">
-              <div className="relative shrink-0">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Group profile"
-                    className="w-14 h-14 rounded-2xl object-cover ring-2 ring-purple-500/50"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-800 ring-2 ring-purple-500/50 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-zinc-500" />
-                  </div>
-                )}
-                <span className="absolute -bottom-1 -right-1 px-1 py-0.2 rounded bg-purple-600 text-white text-[8px] font-bold uppercase">
-                  group
-                </span>
-              </div>
-
-              <div className="flex-1 min-w-0 space-y-1">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <Upload className="w-3.5 h-3.5 text-noob" />
-                  {isUploading ? 'Uploading...' : avatarUrl ? 'Change Photo' : 'Upload Photo'}
+      {step === 1 ? (
+        <>
+          {selected.length > 0 && (
+            <div className="gc-chips" data-testid="group-chosen">
+              {selected.map((u) => (
+                <button key={u.id} type="button" onClick={() => toggle(u.id)} aria-label={`Remove ${u.displayName || u.username}`} className="gc-chip">
+                  <span className="relative">
+                    <Face user={u} size={56} />
+                    <span className="gc-chip-x"><X className="w-3 h-3" strokeWidth={3} /></span>
+                  </span>
+                  <span className="gc-chip-name" translate="no">{(u.displayName || u.username).split(' ')[0]}</span>
                 </button>
-                <p className="text-[11px] text-zinc-500">Custom photo required — no presets.</p>
+              ))}
+            </div>
+          )}
+          <div className="gc-list" data-testid="group-people">
+            {filtered.length === 0 ? (
+              <p className="gc-empty">{query ? 'Nobody matches your search.' : isMasterAdmin ? 'No other users found.' : 'No friends yet. Follow people to add them to a group.'}</p>
+            ) : (
+              <ul>
+                {filtered.map((u) => {
+                  const on = selectedUserIds.includes(u.id);
+                  return (
+                    <li key={u.id}>
+                      <button type="button" onClick={() => toggle(u.id)} aria-pressed={on} className="gc-row">
+                        <span className="relative shrink-0">
+                          <Face user={u} size={49} />
+                          {on && <span className="gc-tick"><Check className="w-3.5 h-3.5" strokeWidth={3.5} /></span>}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="gc-name"><span className="truncate" translate="no">{u.displayName || u.username}</span>{u.isVerified && <VerifiedBadge size="xs" />}</span>
+                          <span className="gc-status truncate" translate="no">@{u.username}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          {selected.length > 0 && (
+            <button type="button" onClick={() => { setStep(2); setSearching(false); setQuery(''); setErrorMsg(''); }} aria-label="Next" data-testid="group-next" className="gc-fab"><ArrowRight className="w-6 h-6" /></button>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="gc-list">
+            <div className="gc-subject">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} aria-label={avatarUrl ? 'Change the group picture' : 'Add a group picture'} data-testid="group-photo" className="gc-photo">
+                {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : isUploading ? <Loader2 className="w-7 h-7 animate-spin" /> : <Camera className="w-8 h-8" />}
+                {avatarUrl && isUploading && <span className="absolute inset-0 flex items-center justify-center bg-black/50"><Loader2 className="w-7 h-7 animate-spin text-white" /></span>}
+              </button>
+              <div className="flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={groupName}
+                  maxLength={40}
+                  onChange={(e) => { setGroupName(e.target.value); setErrorMsg(''); }}
+                  placeholder="Group name (required)"
+                  aria-label="Group name"
+                  data-testid="group-name"
+                  className="gc-nameinput"
+                />
+                <div className="gc-counter">{40 - groupName.length}</div>
               </div>
             </div>
-          </div>
+            <p className="gc-note">Add a group picture and a name. You will be the group admin and can make others admins or remove people later.</p>
 
-          {/* OPTION 3: SELECT MEMBERS (FRIENDS) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-bold">3</span>
-                Select Members ({selectedUserIds.length} chosen) <span className="text-red-400">*</span>
-              </label>
-              <span className="text-[10px] text-zinc-500">
-                {isMasterAdmin ? 'Any NOOB user (Admin)' : 'Friends (Followers & Following)'}
-              </span>
-            </div>
-
-            {/* Friend Search Input */}
-            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white focus-within:border-purple-500">
-              <Search className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
-              <input
-                type="text"
-                placeholder={isMasterAdmin ? 'Search users...' : 'Search friends...'}
-                value={memberSearchQuery}
-                onChange={(e) => setMemberSearchQuery(e.target.value)}
-                className="w-full bg-transparent focus:outline-none placeholder-zinc-500"
-              />
-            </div>
-
-            {/* Friends List Container */}
-            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 border border-zinc-800/80 rounded-2xl p-2 bg-zinc-900/40">
-              {filteredFriends.length === 0 ? (
-                <div className="p-4 text-center text-xs text-zinc-500">
-                  {memberSearchQuery
-                    ? 'No users matched your search.'
-                    : isMasterAdmin
-                      ? 'No other users found.'
-                      : 'No friends found. Noob people to add them to groups!'}
+            <h2 className="gc-section">Participants: {selected.length} of {friendsList.length}</h2>
+            <div className="gc-people-grid">
+              {selected.map((u) => (
+                <div key={u.id} className="gc-person">
+                  <Face user={u} size={56} />
+                  <span className="gc-chip-name" translate="no">{(u.displayName || u.username).split(' ')[0]}</span>
                 </div>
-              ) : (
-                filteredFriends.map((u) => {
-                  const isSelected = selectedUserIds.includes(u.id);
-                  const isFriend =
-                    u.isFollowing ||
-                    currentUser.followingIds?.includes(u.id) ||
-                    u.followers?.includes?.(currentUser.id) ||
-                    currentUser.followers?.includes?.(u.id);
-                  return (
-                    <div
-                      key={u.id}
-                      onClick={() => toggleSelectUser(u.id)}
-                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${
-                        isSelected
-                          ? 'bg-purple-950/40 border border-purple-500/50'
-                          : 'bg-zinc-900/70 hover:bg-zinc-800/70 border border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={u.avatar}
-                          alt={u.username}
-                          className="w-8 h-8 rounded-full object-cover shrink-0"
-                        />
-                        <div className="truncate">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-white truncate">
-                              {u.displayName || u.username}
-                            </span>
-                            {u.isVerified && <VerifiedBadge size="xs" />}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
-                            <span>@{u.username}</span>
-                            {isFriend && (
-                              <>
-                                <span className="text-zinc-600">•</span>
-                                <span className="text-noob font-semibold flex items-center gap-0.5">
-                                  <UserCheck className="w-2.5 h-2.5" /> Friend
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
-                          isSelected
-                            ? 'bg-noob border-noob text-black shadow-[0_0_8px_rgba(255,255,255,0.4)]'
-                            : 'border-zinc-700 bg-zinc-800'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              ))}
             </div>
+            {errorMsg && <p className="gc-error" role="alert">{errorMsg}</p>}
           </div>
-
-          {errorMsg && (
-            <p className="text-xs text-red-400 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20 font-medium">
-              {errorMsg}
-            </p>
-          )}
-
-          <div className="pt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-1/3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold text-xs rounded-xl border border-zinc-800 transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !groupName.trim() || selectedUserIds.length === 0 || !avatarUrl}
-              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-noob text-black font-extrabold text-xs rounded-xl shadow-lg shadow-purple-500/25 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Users className="w-4 h-4" />
-              {loading ? 'Creating Group...' : 'Create Group Chat'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <button type="button" onClick={() => void create()} disabled={loading} aria-label="Create group" data-testid="group-create" className="gc-fab">
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Check className="w-7 h-7" strokeWidth={3} />}
+          </button>
+        </>
+      )}
+    </div>,
+    document.body
   );
 };

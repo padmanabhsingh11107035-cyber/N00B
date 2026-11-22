@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import './legal.css';
 
@@ -43,7 +44,8 @@ export const LegalShell: React.FC<Props> = ({ title, meta, lead, sections, ariaL
     window.setTimeout(() => window.dispatchEvent(new CustomEvent(OPEN_SUPPORT_EVENT)), 0);
   };
 
-  return (
+  // drawn straight into the page (not inside the chat or profile page that opened it): inside those pages the bottom bar of the app would be drawn over its button
+  return createPortal(
     <div className="lg-root" role="dialog" aria-modal="true" aria-label={ariaLabel} data-testid="legal-page">
       <header className="lg-bar">
         <button type="button" className="lg-back" onClick={onClose} aria-label="Back" data-testid="legal-back"><ArrowLeft /></button>
@@ -73,6 +75,7 @@ export const LegalShell: React.FC<Props> = ({ title, meta, lead, sections, ariaL
       <footer className="lg-foot">
         <button type="button" onClick={onClose} data-testid="legal-understood"><CheckCircle2 />{agreeLabel}</button>
       </footer>
-    </div>
+    </div>,
+    document.body
   );
 };

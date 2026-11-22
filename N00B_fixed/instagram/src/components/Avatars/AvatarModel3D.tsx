@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
@@ -46,7 +45,7 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     const ro = new ResizeObserver(size); ro.observe(el);
 
     let model: THREE.Object3D | null = null;
-    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(src, (gltf) => {
+    new GLTFLoader().load(src, (gltf) => {
       if (disposed) return;
       model = gltf.scene;
       // the exported shine map made the skin glare and hid the eyes: a soft, mostly matt surface keeps the face readable

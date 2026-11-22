@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronUp, Loader2, Maximize2, Sparkles, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
 import { AVATARS, AVATARS_3D, avatarIdOf, avatarModelUrl, avatarUrl, type Avatar } from '../../data/avatars';
-import { Box } from 'lucide-react';
 const AvatarModel3D = React.lazy(() => import('./AvatarModel3D'));
 import { mediaOrigin } from '../../utils/siteUrl';
 
@@ -37,8 +36,6 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
   const [idx, setIdx] = useState(start);
   const idxRef = useRef(start);
   const [open, setOpen] = useState<'closed' | 'open' | 'full'>('closed');
-  const [view3d, setView3d] = useState(false);
-  const [full3d, setFull3d] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState('');
   const [error, setError] = useState('');
@@ -174,11 +171,11 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
             <div aria-hidden="true" className="absolute inset-x-0 top-[17%] flex flex-col items-center leading-none font-black uppercase pointer-events-none" style={{ fontSize: 'min(30vw, 150px)', letterSpacing: '.04em', color: a.light ? 'rgba(20,22,28,.08)' : 'rgba(255,255,255,.09)', transform: `translateX(${(i - idx) * 18}px)`, transition: calm ? 'none' : 'transform .5s ease' }}>
               <span>{a.name}</span><span>{a.name}</span><span>{a.name}</span>
             </div>
-            <div className="absolute left-1/2 top-[13%] bottom-[19%] flex items-start justify-center" style={{ width: 'min(150vw, 700px)', transform: `translateX(-50%) scale(${i === idx ? 1 : 0.92})`, opacity: i === idx ? 1 : 0.7, transition: calm ? 'none' : 'transform .45s ease, opacity .45s ease' }}>
-              {view3d && !full3d && i === idx && AVATARS_3D.has(a.id) ? (
+            <div className="absolute left-1/2 top-[13%] bottom-[19%] flex items-start justify-center" style={{ width: AVATARS_3D.has(a.id) ? '100%' : 'min(150vw, 700px)', transform: `translateX(-50%) scale(${i === idx ? 1 : 0.92})`, opacity: i === idx ? 1 : 0.7, transition: calm ? 'none' : 'transform .45s ease, opacity .45s ease' }}>
+              {i === idx && AVATARS_3D.has(a.id) ? (
                 <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} name={a.name} calm={calm} /></React.Suspense>
               ) : null}
-              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={view3d && i === idx && AVATARS_3D.has(a.id)} decoding="async" className="h-full w-auto max-w-none object-contain"
+              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={i === idx && AVATARS_3D.has(a.id)} decoding="async" className="h-full w-auto max-w-none object-contain"
                 style={{ WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', WebkitMaskComposite: 'source-in', maskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', maskComposite: 'intersect' }} />
             </div>
           </section>
@@ -187,18 +184,11 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
 
       {/* the top: back, the name and the role of the one on the screen */}
       <button type="button" onClick={onClose} aria-label="Back" className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)', color: text }}><ChevronLeft className="w-6 h-6" /></button>
-      {view3d && AVATARS_3D.has(av.id) && (
-        <button type="button" onClick={() => setFull3d(true)} aria-label="Full screen" data-testid="avatar-3d-full" className="absolute right-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+3rem)] w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)', color: text }}><Maximize2 className="w-[18px] h-[18px]" aria-hidden="true" /></button>
+      {list.length > 1 && idx > 0 && (
+        <button type="button" onClick={() => goTo(idx - 1)} aria-label="Previous avatar" data-testid="avatar-prev" className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.25)', color: text }}><ChevronLeft className="w-6 h-6" /></button>
       )}
-      {full3d && AVATARS_3D.has(av.id) && (
-        <div className="fixed inset-0 z-[130]" style={{ background: `linear-gradient(180deg, ${shade(av.bg, 0.12)} 0%, ${av.bg} 45%, ${shade(av.bg, -0.35)} 100%)`, color: text }} role="dialog" aria-modal="true" aria-label={`${av.name} in 3D, full screen`} data-testid="avatar-3d-fullscreen">
-          <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(av.id, origin)} name={av.name} calm={calm} /></React.Suspense>
-          <button type="button" onClick={() => setFull3d(false)} aria-label="Close full screen" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.28)', color: text }}><X className="w-5 h-5" aria-hidden="true" /></button>
-          <p className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] text-center text-xs font-semibold pointer-events-none" style={{ color: soft }}>Drag to turn · pinch or scroll to zoom into her face</p>
-        </div>
-      )}
-      {AVATARS_3D.has(av.id) && (
-        <button type="button" onClick={() => setView3d((v) => !v)} aria-pressed={view3d} aria-label={view3d ? 'Show the picture' : 'Turn on 3D'} data-testid="avatar-3d-toggle" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] h-10 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer active:scale-95 transition-transform z-20" style={{ background: view3d ? (av.light ? '#14161c' : '#ffffff') : (av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)'), color: view3d ? (av.light ? '#ffffff' : '#14161c') : text }}><Box className="w-4 h-4" aria-hidden="true" />3D</button>
+      {list.length > 1 && idx < list.length - 1 && (
+        <button type="button" onClick={() => goTo(idx + 1)} aria-label="Next avatar" data-testid="avatar-next" className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.25)', color: text }}><ChevronLeft className="w-6 h-6 rotate-180" /></button>
       )}
       <div key={av.id} className="av-in absolute inset-x-0 top-[max(1.1rem,env(safe-area-inset-top))] flex flex-col items-center pointer-events-none z-10" style={{ animation: calm ? 'none' : 'av-in .35s ease both' }} aria-live="polite">
         <h1 className="font-black uppercase" style={{ fontSize: 'clamp(30px, 9vw, 40px)', letterSpacing: '.22em', paddingLeft: '.22em', textShadow: av.light ? 'none' : '0 3px 14px rgba(0,0,0,.28)' }} data-testid="avatar-name">{av.name}</h1>

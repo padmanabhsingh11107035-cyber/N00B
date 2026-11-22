@@ -184,11 +184,6 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
         ))}
       </div>
 
-      {(
-        <button type="button" onClick={() => setView3d((v) => !v)} aria-pressed={view3d} aria-label={view3d ? 'Show the picture' : 'Show the 3D model'} data-testid="avatar-3d-toggle" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 h-10 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-extrabold cursor-pointer active:scale-95 transition-transform" style={{ background: av.light ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.35)', color: av.light ? '#14161c' : '#fff', backdropFilter: 'blur(8px)' }}>
-          <Box className="w-4 h-4" aria-hidden="true" />{view3d ? '2D' : '3D'}
-        </button>
-      )}
       {/* the top: back, the name and the role of the one on the screen */}
       <button type="button" onClick={onClose} aria-label="Back" className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform z-20" style={{ background: av.light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.22)', color: text }}><ChevronLeft className="w-6 h-6" /></button>
       <div key={av.id} className="av-in absolute inset-x-0 top-[max(1.1rem,env(safe-area-inset-top))] flex flex-col items-center pointer-events-none z-10" style={{ animation: calm ? 'none' : 'av-in .35s ease both' }} aria-live="polite">

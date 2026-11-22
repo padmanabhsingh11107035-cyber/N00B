@@ -59,8 +59,9 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
       const sz = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
       model.position.sub(c); model.position.y += sz.y / 2 - sz.y / 2; // centred on its middle
       scene.add(model);
-      const dist = (sz.y / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.08;
-      camera.position.set(0, sz.y * 0.1, dist); controls.target.set(0, sz.y * 0.16, 0); camera.position.y = sz.y * 0.2;
+      // the whole body in view with a little air above and below; the camera looks at the middle of the figure
+      const dist = (sz.y / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.2;
+      camera.position.set(0, sz.y * 0.06, dist); controls.target.set(0, sz.y * 0.02, 0);
       controls.minDistance = dist * 0.12; controls.maxDistance = dist * 1.25;
       controls.update();
       setState('ready'); onReady?.();

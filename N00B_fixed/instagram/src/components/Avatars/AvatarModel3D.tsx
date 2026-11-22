@@ -22,7 +22,7 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 0.9;
     renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;outline:none';
     el.appendChild(renderer.domElement);
 
@@ -33,7 +33,7 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(1.5, 2.5, 3); scene.add(key);
     const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.enablePan = false; controls.zoomToCursor = true; controls.enableDamping = true; controls.dampingFactor = 0.08;
     controls.minPolarAngle = controls.maxPolarAngle = Math.PI / 2 - 0.06; // sideways only, slightly above the middle
     controls.autoRotate = !calm; controls.autoRotateSpeed = 1.4;
     controls.addEventListener('start', () => { controls.autoRotate = false; });
@@ -49,13 +49,20 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(src, (gltf) => {
       if (disposed) return;
       model = gltf.scene;
+      // the exported shine map made the skin glare and hid the eyes: a soft, mostly matt surface keeps the face readable
+      model.traverse((o) => {
+        const m = o as THREE.Mesh; if (!m.isMesh) return;
+        const mat = m.material as THREE.MeshStandardMaterial;
+        if (mat.map) mat.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        mat.metalnessMap = null; mat.roughnessMap = null; mat.metalness = 0; mat.roughness = 0.62; mat.envMapIntensity = 0.55; mat.needsUpdate = true;
+      });
       const box = new THREE.Box3().setFromObject(model);
       const sz = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
       model.position.sub(c); model.position.y += sz.y / 2 - sz.y / 2; // centred on its middle
       scene.add(model);
       const dist = (sz.y / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.08;
       camera.position.set(0, sz.y * 0.1, dist); controls.target.set(0, sz.y * 0.16, 0); camera.position.y = sz.y * 0.2;
-      controls.minDistance = dist * 0.5; controls.maxDistance = dist * 1.25;
+      controls.minDistance = dist * 0.12; controls.maxDistance = dist * 1.25;
       controls.update();
       setState('ready'); onReady?.();
     }, undefined, () => { if (!disposed) setState('error'); });

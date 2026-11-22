@@ -62,6 +62,8 @@ section('6. Scan of the whole source: a handler that closes one page and opens a
 // A reviewed pair is listed here with the reason it is meant to close. Anything else found is a page that closed the page it was opened from: keep the first one open and draw the second
 // above it (a higher z-index, or later in the same place), the way the pairs above do. Popup menus (a name with "Menu" in it) close themselves when a choice is made: not pages.
 const REVIEWED = new Set([
+  // the full-screen picture hands over to Edit profile (the pencil on your own picture: the picture must close, it would only be in the way behind the editor)
+  'Profile/ProfileView.tsx|setShowFullscreenAvatar|setShowEditProfileModal(true)',
   // the story camera hands over to the story editor (the camera must close), a reason sheet hands over to the folded post, and the sticker tray hands over to the page of the pill that was tapped (the tray must close)
   'src/App.tsx|setShowStoryCamera|setShowCreateStoryModal(true)', 'Feed/PostCard.tsx|setAsking|setHiddenByMe(true)', 'Stories/CreateStoryModal.tsx|setShowStickerPicker|setShowLocationInput(true)', 'Stories/CreateStoryModal.tsx|setShowStickerPicker|setShowMentionPicker(true)', 'Stories/CreateStoryModal.tsx|setShowStickerPicker|setShowMusicPicker(true)', 'Stories/CreateStoryModal.tsx|setShowStickerPicker|setShowPollInput(true)',
   // the state of a screen, not a page: a flag set to false and another set to true (a loading flag, a step of one form)

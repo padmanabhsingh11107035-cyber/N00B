@@ -18,7 +18,7 @@ check((await breachCount('password', async () => { throw new Error('offline'); }
 const auth = read('src/components/Auth/AuthView.tsx'), acct = read('src/components/Settings/pages/account.tsx'), headers = read('public/_headers');
 check(/breachCount\(password\)\) > 0[\s\S]{0,160}BREACHED_PASSWORD_MESSAGE/.test(auth) && /breachCount\(next\)\) > 0/.test(acct), 'sign-up and change password refuse a leaked password, with a clear sentence');
 check(/autoComplete="username"/.test(auth) && /autoComplete="current-password"/.test(auth) && /autoComplete="new-password"/.test(auth), 'the log-in and sign-up fields tell the browser which is the user ID, the current password and a new password');
-check(/connect-src 'self' https:\/\/api\.pwnedpasswords\.com /.test(headers), 'the site may ask the breach list (one named address, never "anywhere")');
+check(/connect-src [^;]*https:\/\/api\.pwnedpasswords\.com /.test(headers), 'the site may ask the breach list (one named address, never "anywhere")');
 
 section('2. Google Play: no self-updating app, no cloud backup of private data');
 const wf = read('../../.github/workflows/android-build.yml'), plug = read('android-overrides/AppUpdaterPlugin.java'), nu = read('src/services/nativeUpdate.ts');

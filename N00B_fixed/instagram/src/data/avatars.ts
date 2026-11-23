@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty-eight characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: thirty-four characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -247,6 +247,54 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Painted moustache mask', 'Black rifle', 'Dark gloves'],
     info: { age: 28, height: '184 cm', from: 'Madrid', vibe: 'Tough and focused', colour: 'Deep red', sound: 'Heavy drums' },
     traits: [['Focused', 'Eyes on the plan.'], ['Strong', 'Takes the front line.'], ['Loyal', 'Never leaves the crew behind.']]
+  },
+  {
+    id: 'frontman', name: 'Frontman', role: 'Host', tagline: 'Watches everything, says little', bg: '#1d1d22',
+    intro: 'Frontman wears a long black coat, black gloves and a polished black mask under a deep hood. He runs the whole show from the shadows and nobody has ever seen his face. Every rule is his, every move is watched, and he never raises his voice.',
+    clothing: C('A long black double-breasted trench coat with a cross strap over the chest and a deep black hood.', 'The coat falls to the ankles over dark trousers.', 'Black laced combat boots with thick soles, and black gloves.'),
+    extras: ['Polished black mask', 'Cross strap', 'Black gloves'],
+    info: { age: 35, height: '185 cm', from: 'Unknown', vibe: 'Cold and in control', colour: 'Black', sound: 'Slow low strings' },
+    traits: [['Authority', 'Everyone follows his rules.'], ['Calm', 'Never raises his voice.'], ['Mystery', 'No one has seen his face.']]
+  },
+  {
+    id: 'squareguard', name: 'Square', role: 'Guard', tagline: 'Follows the plan, never questions it', bg: '#d6336c',
+    intro: 'Square is a guard in a bright pink hooded jumpsuit and a black mask marked with a white square. Quiet, strict and always on time, he keeps order wherever he stands and never leaves his post.',
+    clothing: C('A pink hooded jumpsuit with a long centre zip and a black mask with a white square.', 'The same pink jumpsuit, gathered at the ankles with a dark belt line at the waist.', 'Black laced combat boots and black gloves.'),
+    extras: ['White square mask', 'Pink hood', 'Black gloves'],
+    info: { age: 28, height: '178 cm', from: 'Seoul', vibe: 'Strict and steady', colour: 'Hot pink', sound: 'Steady drums' },
+    traits: [['Disciplined', 'Never leaves his post.'], ['Precise', 'Does exactly what is asked.'], ['Silent', 'Speaks only when needed.']]
+  },
+  {
+    id: 'circleguard', name: 'Circle', role: 'Guard', tagline: 'Always where he is needed', bg: '#e0457b',
+    intro: 'Circle is a guard in a pink hooded jumpsuit with a black mask marked with a white circle. Watchful and never in a hurry, he sees the whole room at once and keeps everything running smoothly.',
+    clothing: C('A pink hooded jumpsuit with a long centre zip and a black mask with a white circle.', 'The same pink jumpsuit, gathered at the ankles with a dark belt line at the waist.', 'Black laced combat boots and black gloves.'),
+    extras: ['White circle mask', 'Pink hood', 'Black gloves'],
+    info: { age: 27, height: '176 cm', from: 'Busan', vibe: 'Watchful and calm', colour: 'Rose pink', sound: 'Soft pulse' },
+    traits: [['Watchful', 'Sees everything in the room.'], ['Patient', 'Never in a hurry.'], ['Reliable', 'Always at his post.']]
+  },
+  {
+    id: 'triangleguard', name: 'Triangle', role: 'Guard', tagline: 'Sharp eyes, sharper focus', bg: '#c2255c',
+    intro: 'Triangle is a guard in a pink hooded jumpsuit with a black mask marked with a white triangle. Sharp and alert, he is the one the others look to when a decision has to be made fast.',
+    clothing: C('A pink hooded jumpsuit with a long centre zip and a black mask with a white triangle.', 'The same pink jumpsuit, gathered at the ankles with a dark belt line at the waist.', 'Black laced combat boots and black gloves.'),
+    extras: ['White triangle mask', 'Pink hood', 'Black gloves'],
+    info: { age: 29, height: '180 cm', from: 'Incheon', vibe: 'Sharp and alert', colour: 'Deep pink', sound: 'Tight beats' },
+    traits: [['Alert', 'Notices the smallest change.'], ['Decisive', 'Chooses fast.'], ['Leader', 'The others follow his lead.']]
+  },
+  {
+    id: 'survivor', name: 'Survivor', role: 'Player', tagline: 'Quiet, careful, never gives up', bg: '#1f8a70',
+    intro: 'Survivor wears a green tracksuit with white stripes and the number 456 on the chest. Calm and thoughtful, she watches before she moves and trusts the few people who earned it. When everything looks lost, she is the one still standing.',
+    clothing: C('A green zip-up tracksuit jacket with white shoulder stripes, a white tee and the number 456 patch.', 'Green tracksuit trousers with a white stripe down each leg and cuffed ankles.', 'Black and white slip-on trainers.'),
+    extras: ['Number 456 patch', 'White stripes', 'Short ponytail'],
+    info: { age: 24, height: '165 cm', from: 'Seoul', vibe: 'Quiet and determined', colour: 'Teal green', sound: 'Gentle piano' },
+    traits: [['Resilient', 'Never gives up.'], ['Careful', 'Thinks before she acts.'], ['Kind', 'Helps when it matters.']]
+  },
+  {
+    id: 'rookie', name: 'Rookie', role: 'Player', tagline: 'Nervous at first, brave in the end', bg: '#2b9c7e',
+    intro: 'Rookie wears a green tracksuit with white stripes and the number 101 on the chest. New to everything and a little nervous, he learns fast, asks good questions and surprises everyone with how brave he turns out to be.',
+    clothing: C('A green zip-up tracksuit jacket with white shoulder stripes, a white tee and the number 101 patch.', 'Green tracksuit trousers with a white stripe down each leg and cuffed ankles.', 'Black and white slip-on trainers.'),
+    extras: ['Number 101 patch', 'White stripes', 'Neat dark hair'],
+    info: { age: 22, height: '172 cm', from: 'Daegu', vibe: 'Hopeful and curious', colour: 'Teal green', sound: 'Light acoustic' },
+    traits: [['Quick learner', 'Gets it after one try.'], ['Brave', 'Steps up when it counts.'], ['Honest', 'Says what he thinks.']]
   }
 ];
 
@@ -261,5 +309,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=20`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=21`;

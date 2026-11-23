@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { fetchAvatarModel } from './modelCache';
 
 // A real 3D avatar: one .glb file (public/avatars/<id>.glb) shown on a transparent canvas that fills its whole parent (the page colour shows through). The figure is framed in the
 // middle of the screen, clear of the name above and the buttons below. One finger or the mouse on the figure turns it all the way round, from every side and from above and below;
@@ -15,6 +16,8 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
   const host = useRef<HTMLDivElement | null>(null);
   const touchZone = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const readyCb = useRef(onReady);
+  readyCb.current = onReady;
 
   useEffect(() => {
     const el = host.current; if (!el) return;
@@ -72,9 +75,9 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
       camera.position.set(0, ty + sz.y * 0.04, dist); controls.target.set(0, ty, 0);
       controls.minDistance = dist * 0.15; controls.maxDistance = dist * 1.7;
       controls.update();
-      setState('ready'); onReady?.();
+      setState('ready'); readyCb.current?.();
     };
-    fetch(src).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); }).then((buf) => {
+    fetchAvatarModel(src).then((buf) => {
       if (disposed) return;
       // three reads the pictures inside the file with fetch(blob:), which the site's security rules block (the model came out white). Hiding createImageBitmap for this one call
       // makes it use a plain <img> instead, which the rules allow.
@@ -101,12 +104,12 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
       envTex.dispose(); pmrem.dispose(); renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [src, calm, onReady]);
+  }, [src, calm]);
 
   return (
     <div ref={host} className="absolute inset-0" role="img" aria-label={`${name}, a 3D model you can turn all the way round`} data-testid="avatar-3d">
       <div ref={touchZone} className="absolute" style={{ left: '20%', right: '20%', top: '11%', bottom: '21%', touchAction: 'none', cursor: 'grab' }} data-testid="avatar-3d-zone" />
-      {state === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" aria-live="polite">Loading 3D…</div>}
+      {state === 'loading' && <div className="absolute inset-x-0 bottom-[22%] flex justify-center text-[11px] font-bold opacity-80 pointer-events-none" aria-live="polite">Loading 3D…</div>}
       {state === 'error' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" role="alert">The 3D model could not load</div>}
     </div>
   );

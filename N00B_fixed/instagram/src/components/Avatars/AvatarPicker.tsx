@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronUp, Loader2, Sparkles } from 'lucide-react';
 import { AVATARS, AVATARS_3D, avatarIdOf, avatarModelUrl, avatarUrl, type Avatar } from '../../data/avatars';
+import { prefetchAvatarModel } from './modelCache';
 const AvatarModel3D = React.lazy(() => import('./AvatarModel3D'));
 import { mediaOrigin } from '../../utils/siteUrl';
 
@@ -34,6 +35,7 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
   const currentId = avatarIdOf(current);
   const start = Math.max(0, list.findIndex((a) => a.id === currentId));
   const [idx, setIdx] = useState(start);
+  const [readyId, setReadyId] = useState('');
   const idxRef = useRef(start);
   const [open, setOpen] = useState<'closed' | 'open' | 'full'>('closed');
   const [busy, setBusy] = useState(false);
@@ -96,6 +98,17 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
       try { navigator.vibrate?.(5); } catch { /* not everywhere */ }
     }
   };
+
+  // the picture shows at once; meanwhile the viewer code is fetched, and once the one on the screen is in, the next ones are downloaded quietly so swiping to them is instant
+  useEffect(() => { void import('./AvatarModel3D'); }, []);
+  useEffect(() => {
+    const cur = list[idx]; if (!cur || !AVATARS_3D.has(cur.id)) return;
+    const wait = readyId === cur.id ? 200 : 6000;
+    const t = window.setTimeout(() => {
+      [idx + 1, idx - 1, idx + 2].forEach((j) => { const a = list[j]; if (a && AVATARS_3D.has(a.id)) prefetchAvatarModel(avatarModelUrl(a.id, origin)); });
+    }, wait);
+    return () => window.clearTimeout(t);
+  }, [idx, readyId, list, origin]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
@@ -173,9 +186,9 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
             </div>
             <div className={AVATARS_3D.has(a.id) ? 'absolute inset-0' : 'absolute left-1/2 top-[13%] bottom-[19%] flex items-start justify-center'} style={AVATARS_3D.has(a.id) ? undefined : { width: 'min(150vw, 700px)', transform: `translateX(-50%) scale(${i === idx ? 1 : 0.92})`, opacity: i === idx ? 1 : 0.7, transition: calm ? 'none' : 'transform .45s ease, opacity .45s ease' }}>
               {i === idx && AVATARS_3D.has(a.id) ? (
-                <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} name={a.name} calm={calm} /></React.Suspense>
+                <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} name={a.name} calm={calm} onReady={() => setReadyId(a.id)} /></React.Suspense>
               ) : null}
-              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={i === idx && AVATARS_3D.has(a.id)} decoding="async" className={AVATARS_3D.has(a.id) ? 'absolute left-1/2 top-[13%] h-[66%] w-auto max-w-none -translate-x-1/2 object-contain' : 'h-full w-auto max-w-none object-contain'}
+              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={i === idx && AVATARS_3D.has(a.id) && readyId === a.id} decoding="async" className={AVATARS_3D.has(a.id) ? 'absolute left-1/2 top-[13%] h-[66%] w-auto max-w-none -translate-x-1/2 object-contain' : 'h-full w-auto max-w-none object-contain'}
                 style={{ WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', WebkitMaskComposite: 'source-in', maskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', maskComposite: 'intersect' }} />
             </div>
           </section>

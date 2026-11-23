@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: twenty-one characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -182,6 +182,15 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Short dark hair', 'Gold buckle belt', 'Fingerless gloves'],
     info: { age: 23, height: '178 cm', from: 'Dehradun', vibe: 'Gentle and dependable', colour: 'Cloud white', sound: 'Soft acoustic' },
     traits: [['First aid', 'Always has a plaster.'], ['Gentle', 'Never rushes you.'], ['Dependable', 'Shows up every time.']]
+  },
+  {
+    id: 'soldier', name: 'Ranger', role: 'Scout', tagline: 'Quiet steps, steady eyes', bg: '#d4d8c8',
+    light: true,
+    intro: 'Ranger is the one who walks ahead and checks the path before anyone else. Camouflage kit, a heavy pack and night goggles on his helmet: he is calm in the dark and always knows where the group is. If he says it is safe, it is.',
+    clothing: C('A camouflage combat jacket under an olive vest with a star badge, a patterned scarf and a helmet with night goggles.', 'Camouflage cargo trousers with a utility belt, leg straps and pouches.', 'Tan lace-up boots with thick black soles.'),
+    extras: ['Night goggles', 'Dark sunglasses', 'Big backpack'],
+    info: { age: 27, height: '182 cm', from: 'Jaipur', vibe: 'Calm and watchful', colour: 'Olive', sound: 'Slow drums' },
+    traits: [['Sharp eyes', 'Notices everything first.'], ['Steady', 'Keeps calm when it is loud.'], ['Loyal', 'Never leaves anyone behind.']]
   }
 ];
 
@@ -196,5 +205,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=10`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'soldier']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=12`;

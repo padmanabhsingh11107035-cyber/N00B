@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty-six characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: twenty-eight characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -231,6 +231,22 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Spiky blond hair', 'Forehead protector', 'Whisker marks'],
     info: { age: 18, height: '166 cm', from: 'Hidden Leaf Village', vibe: 'Loud and loyal', colour: 'Orange', sound: 'Upbeat drums' },
     traits: [['Never quits', 'Stands up every time.'], ['Friendly', 'Makes friends with everyone.'], ['Determined', 'Keeps every promise he makes.']]
+  },
+  {
+    id: 'mask', name: 'Mastermind', role: 'Planner', tagline: 'Every move planned in advance', bg: '#b3202a',
+    intro: 'Mastermind wears a red jumpsuit, a deep hood and a painted moustache mask, and never shows a face. Calm, patient and always three steps ahead, he plans the whole job before anyone else wakes up. When the plan goes wrong, he already has another one ready.',
+    clothing: C('A bright red hooded jumpsuit with a long diagonal zip and a chest pocket.', 'The same red jumpsuit, loose at the legs and gathered at the ankles.', 'Black laced combat boots with thick soles, and dark gloves.'),
+    extras: ['Painted moustache mask', 'Deep red hood', 'Dark gloves'],
+    info: { age: 30, height: '180 cm', from: 'Madrid', vibe: 'Calm and clever', colour: 'Bold red', sound: 'Slow tense beats' },
+    traits: [['Planner', 'Has a backup for the backup.'], ['Patient', 'Waits for the perfect moment.'], ['Mysterious', 'Nobody has seen the face.']]
+  },
+  {
+    id: 'raider', name: 'Raider', role: 'Enforcer', tagline: 'Ready before the signal', bg: '#7a161d',
+    intro: 'Raider is the one on the team who stands at the front, in a red jumpsuit and a moustache mask with a toy-style rifle held ready. Tough and focused, he never breaks the plan and never leaves the crew behind.',
+    clothing: C('A red hooded jumpsuit with a diagonal zip, worn over a tough, ready stance.', 'Loose red jumpsuit legs gathered at the ankles.', 'Black laced combat boots with thick soles, and dark gloves.'),
+    extras: ['Painted moustache mask', 'Black rifle', 'Dark gloves'],
+    info: { age: 28, height: '184 cm', from: 'Madrid', vibe: 'Tough and focused', colour: 'Deep red', sound: 'Heavy drums' },
+    traits: [['Focused', 'Eyes on the plan.'], ['Strong', 'Takes the front line.'], ['Loyal', 'Never leaves the crew behind.']]
   }
 ];
 
@@ -245,5 +261,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=19`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=20`;

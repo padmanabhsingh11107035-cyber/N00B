@@ -4,13 +4,16 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-// A real 3D avatar: one .glb file (public/avatars/<id>.glb) shown on a transparent canvas over the page colour. One finger or the mouse turns the character round (sideways only), a
-// pinch or the wheel brings it closer; it turns slowly by itself until it is touched. Drawing stops when the page is not showing it, and everything is released when it closes.
+// A real 3D avatar: one .glb file (public/avatars/<id>.glb) shown on a transparent canvas that fills its whole parent (the page colour shows through). The figure is framed in the
+// middle of the screen, clear of the name above and the buttons below. One finger or the mouse on the figure turns it all the way round, from every side and from above and below;
+// a pinch or the wheel brings it closer. Only the middle of the screen takes the dragging: the two side strips are left free so a swipe there changes to the next avatar. It turns
+// slowly by itself until it is touched. Drawing stops when the page is not showing it, and everything is released when it closes.
 
 interface Props { src: string; name: string; calm?: boolean; onReady?: () => void }
 
 const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
   const host = useRef<HTMLDivElement | null>(null);
+  const touchZone = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
@@ -22,7 +25,7 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.9;
-    renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;outline:none';
+    renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;pointer-events:none;outline:none';
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -31,9 +34,10 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
     scene.environment = envTex;
     const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(1.5, 2.5, 3); scene.add(key);
     const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enablePan = false; controls.zoomToCursor = true; controls.enableDamping = true; controls.dampingFactor = 0.08;
-    controls.minPolarAngle = controls.maxPolarAngle = Math.PI / 2 - 0.06; // sideways only, slightly above the middle
+    const controls = new OrbitControls(camera, touchZone.current ?? renderer.domElement);
+    controls.enablePan = false; controls.zoomToCursor = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.minPolarAngle = 0.02; controls.maxPolarAngle = Math.PI - 0.02; // all the way round: from above, from below and from every side
+    controls.rotateSpeed = 0.9;
     controls.autoRotate = !calm; controls.autoRotateSpeed = 1.4;
     controls.addEventListener('start', () => { controls.autoRotate = false; });
 
@@ -61,10 +65,12 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
       const sz = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
       model.position.sub(c); model.position.y += sz.y / 2 - sz.y / 2; // centred on its middle
       scene.add(model);
-      // the whole body in view with a little air above and below; the camera looks at the middle of the figure
-      const dist = (sz.y / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.2;
-      camera.position.set(0, sz.y * 0.06, dist); controls.target.set(0, sz.y * 0.02, 0);
-      controls.minDistance = dist * 0.12; controls.maxDistance = dist * 1.25;
+      // the whole body fills about 58% of the screen height, centred a little above the middle (the name is above it, the buttons below it)
+      const visible = sz.y / 0.58;
+      const dist = (visible / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const ty = -visible * 0.06;
+      camera.position.set(0, ty + sz.y * 0.04, dist); controls.target.set(0, ty, 0);
+      controls.minDistance = dist * 0.15; controls.maxDistance = dist * 1.7;
       controls.update();
       setState('ready'); onReady?.();
     };
@@ -98,7 +104,8 @@ const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
   }, [src, calm, onReady]);
 
   return (
-    <div ref={host} className="relative h-full w-full" role="img" aria-label={`${name}, a 3D model you can turn`} data-testid="avatar-3d">
+    <div ref={host} className="absolute inset-0" role="img" aria-label={`${name}, a 3D model you can turn all the way round`} data-testid="avatar-3d">
+      <div ref={touchZone} className="absolute" style={{ left: '20%', right: '20%', top: '11%', bottom: '21%', touchAction: 'none', cursor: 'grab' }} data-testid="avatar-3d-zone" />
       {state === 'loading' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" aria-live="polite">Loading 3D…</div>}
       {state === 'error' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" role="alert">The 3D model could not load</div>}
     </div>

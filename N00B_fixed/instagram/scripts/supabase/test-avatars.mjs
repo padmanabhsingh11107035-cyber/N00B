@@ -7,7 +7,7 @@ const check = (cond, label) => { if (cond) { passed++; console.log(`  ok   ${lab
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
 
 console.log('1. The characters');
-check(AVATARS.length === 20 && new Set(AVATARS.map((a) => a.id)).size === 20 && new Set(AVATARS.map((a) => a.name)).size === 20, 'twenty avatars, each with its own id and name (no repeats)');
+check(AVATARS.length === 21 && new Set(AVATARS.map((a) => a.id)).size === 21 && new Set(AVATARS.map((a) => a.name)).size === 21, 'twenty-one avatars, each with its own id and name (no repeats)');
 check(AVATARS.every((a) => /^#[0-9a-f]{6}$/i.test(a.bg) && a.role && a.tagline && a.intro.length > 120 && a.clothing.length === 3 && a.extras.length >= 2 && a.traits.length === 3 && a.info.age >= 18 && a.info.height && a.info.from && a.info.colour), 'every avatar has a colour, a role, an introduction, three clothes, extras, three traits and its info');
 check(AVATARS.every((a) => ['', 'top', 'pants', 'boots'].every((k) => fs.existsSync(`public${avatarUrl(a.id, k).split("?")[0]}`))), 'every avatar has its picture and the three close-ups of the clothes');
 check(AVATARS.every((a) => fs.statSync(`public${avatarUrl(a.id).split("?")[0]}`).size < 200_000), 'and the pictures are small enough for a phone (under 200 KB)');
@@ -22,5 +22,8 @@ check(/id: 'avatars'[^}]*action: 'openAvatars'/.test(read('src/components/Settin
 const prof = read('src/components/Profile/ProfileView.tsx');
 check(/openAvatars: \(\) => setShowAvatarPicker\(true\)/.test(prof) && /await setMyAvatarChoice\(a\.id\)/.test(prof) && !/updateFullProfile\(\{ avatar: avatarStoredUrl/.test(prof), 'choosing an avatar saves only the choice: the profile picture is NOT changed');
 check(/data-testid="profile-view-avatar"/.test(prof) && /!isOwnProfile && avatarChoice/.test(prof) && /<AvatarPicker only=\{avatarChoice\}/.test(prof), 'a visitor sees a View avatar button that opens only that person\'s avatar, with nothing to pick');
+const viewer = read('src/components/Avatars/AvatarModel3D.tsx');
+check(!/avatar-prev|avatar-next/.test(page) && /ArrowRight/.test(page) && /ArrowLeft/.test(page), 'no next/previous arrow buttons: swipe the sides or use the arrow keys to change avatar');
+check(/absolute inset-0/.test(viewer) && /minPolarAngle = 0\.02/.test(viewer) && /maxPolarAngle = Math\.PI - 0\.02/.test(viewer), 'the 3D model fills the whole page and turns 360 degrees, from every angle');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

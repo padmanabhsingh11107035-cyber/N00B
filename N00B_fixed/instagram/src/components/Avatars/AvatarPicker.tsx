@@ -105,15 +105,11 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
   useEffect(() => {
     const cur = list[idx]; if (!cur || !AVATARS_3D.has(cur.id)) return;
     if (readyId !== cur.id) return;
-    // the tiny previews of the next ones first, a little later the full model of the next one (so the one on the screen is not slowed down)
-    const t1 = window.setTimeout(() => {
-      [idx + 1, idx - 1].forEach((j) => { const a = list[j]; if (a && AVATARS_3D.has(a.id)) prefetchAvatarModel(avatarModelUrl(a.id, origin, true)); });
+    // once the one on the screen is in, the next two are downloaded quietly so swiping to them is instant
+    const t = window.setTimeout(() => {
+      [idx + 1, idx - 1, idx + 2].forEach((j) => { const a = list[j]; if (a && AVATARS_3D.has(a.id)) prefetchAvatarModel(avatarModelUrl(a.id, origin)); });
     }, 300);
-    const t2 = window.setTimeout(() => {
-      const a = list[idx + 1]; if (a && AVATARS_3D.has(a.id)) prefetchAvatarModel(avatarModelUrl(a.id, origin));
-      const b = list[idx + 2]; if (b && AVATARS_3D.has(b.id)) prefetchAvatarModel(avatarModelUrl(b.id, origin, true));
-    }, 9000);
-    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+    return () => window.clearTimeout(t);
   }, [idx, readyId, list, origin]);
 
   useEffect(() => {
@@ -192,9 +188,9 @@ export const AvatarPicker: React.FC<Props> = ({ current, only, onChoose, onClose
             </div>
             <div className={AVATARS_3D.has(a.id) ? 'absolute inset-0' : 'absolute left-1/2 top-[13%] bottom-[19%] flex items-start justify-center'} style={AVATARS_3D.has(a.id) ? undefined : { width: 'min(150vw, 700px)', transform: `translateX(-50%) scale(${i === idx ? 1 : 0.92})`, opacity: i === idx ? 1 : 0.7, transition: calm ? 'none' : 'transform .45s ease, opacity .45s ease' }}>
               {i === idx && AVATARS_3D.has(a.id) ? (
-                <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} preview={avatarModelUrl(a.id, origin, true)} name={a.name} calm={calm} onReady={() => setReadyId(a.id)} /></React.Suspense>
+                <React.Suspense fallback={null}><AvatarModel3D src={avatarModelUrl(a.id, origin)} name={a.name} calm={calm} onReady={() => setReadyId(a.id)} /></React.Suspense>
               ) : null}
-              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={i === idx && AVATARS_3D.has(a.id) && readyId === a.id} decoding="async" className={AVATARS_3D.has(a.id) ? 'absolute left-1/2 top-[13%] h-[66%] w-auto max-w-none -translate-x-1/2 object-contain' : 'h-full w-auto max-w-none object-contain'}
+              <img src={avatarUrl(a.id, '', origin)} alt={`${a.name}, ${a.role}`} draggable={false} loading={Math.abs(i - start) < 2 ? 'eager' : 'lazy'} hidden={i === idx && AVATARS_3D.has(a.id)} decoding="async" className={AVATARS_3D.has(a.id) ? 'absolute left-1/2 top-[13%] h-[66%] w-auto max-w-none -translate-x-1/2 object-contain' : 'h-full w-auto max-w-none object-contain'}
                 style={{ WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', WebkitMaskComposite: 'source-in', maskImage: 'linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 5%, #000 97%, transparent 100%)', maskComposite: 'intersect' }} />
             </div>
           </section>

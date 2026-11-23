@@ -10,12 +10,13 @@ import { fetchAvatarModel } from './modelCache';
 // a pinch or the wheel brings it closer. Only the middle of the screen takes the dragging: the two side strips are left free so a swipe there changes to the next avatar. It turns
 // slowly by itself until it is touched. Drawing stops when the page is not showing it, and everything is released when it closes.
 
-interface Props { src: string; preview?: string; name: string; calm?: boolean; onReady?: () => void }
+interface Props { src: string; name: string; calm?: boolean; onReady?: () => void }
 
-const AvatarModel3D: React.FC<Props> = ({ src, preview, name, calm, onReady }) => {
+const AvatarModel3D: React.FC<Props> = ({ src, name, calm, onReady }) => {
   const host = useRef<HTMLDivElement | null>(null);
   const touchZone = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [pct, setPct] = useState(0);
   const readyCb = useRef(onReady);
   readyCb.current = onReady;
 
@@ -98,11 +99,7 @@ const AvatarModel3D: React.FC<Props> = ({ src, preview, name, calm, onReady }) =
       try { loader.parse(buf, '', resolve, reject); } catch (e) { reject(e); } finally { w.createImageBitmap = saved; }
     });
     const onFail = () => { if (!disposed && !framed) setState('error'); };
-    const loadFull = () => fetchAvatarModel(src).then((buf) => (disposed ? undefined : parse(buf))).then((g) => { if (g) show(g); }).catch(onFail);
-    if (preview) {
-      // the small preview first (about a fifth of the size), then the full model
-      fetchAvatarModel(preview).then((buf) => (disposed ? undefined : parse(buf))).then((g) => { if (g) show(g); }).catch(() => { /* the full model is still coming */ }).finally(() => { if (!disposed) loadFull(); });
-    } else loadFull();
+    fetchAvatarModel(src, (p) => { if (!disposed) setPct(Math.round(p * 100)); }).then((buf) => (disposed ? undefined : parse(buf))).then((g) => { if (g) show(g); }).catch(onFail);
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -117,12 +114,17 @@ const AvatarModel3D: React.FC<Props> = ({ src, preview, name, calm, onReady }) =
       envTex.dispose(); pmrem.dispose(); renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [src, preview, calm]);
+  }, [src, calm]);
 
   return (
     <div ref={host} className="absolute inset-0" role="img" aria-label={`${name}, a 3D model you can turn all the way round`} data-testid="avatar-3d">
       <div ref={touchZone} className="absolute" style={{ left: '20%', right: '20%', top: '11%', bottom: '21%', touchAction: 'none', cursor: 'grab' }} data-testid="avatar-3d-zone" />
-      {state === 'loading' && <div className="absolute inset-x-0 bottom-[22%] flex justify-center text-[11px] font-bold opacity-80 pointer-events-none" aria-live="polite">Loading 3D…</div>}
+      {state === 'loading' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none" aria-live="polite">
+          <div className="text-sm font-bold opacity-90">Loading 3D model… {pct > 0 && pct < 100 ? `${pct}%` : ''}</div>
+          <div className="h-1 w-40 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,.25)' }}><div className="h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, background: 'currentColor', transition: 'width .3s ease' }} /></div>
+        </div>
+      )}
       {state === 'error' && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold opacity-80" role="alert">The 3D model could not load</div>}
     </div>
   );

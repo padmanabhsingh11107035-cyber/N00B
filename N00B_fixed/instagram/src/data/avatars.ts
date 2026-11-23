@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty-two characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: twenty-three characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -199,6 +199,14 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Golden spiky hair', 'Blue wristbands', 'Blue sash belt'],
     info: { age: 29, height: '175 cm', from: 'Mount Paozu', vibe: 'Fearless and cheerful', colour: 'Orange', sound: 'Loud drums' },
     traits: [['Never gives up', 'Gets back up every single time.'], ['Fast learner', 'Copies a move after seeing it once.'], ['Big heart', 'Fights to protect his friends.']]
+  },
+  {
+    id: 'vegeta', name: 'Vegeta', role: 'Prince', tagline: 'Pride first, always', bg: '#2b6fd6',
+    intro: 'Vegeta is a proud warrior prince with golden spiky hair and a blue fighting suit under white and gold armour. He trains harder than anyone and hates to lose, even in a small game. Behind the stern face is a loyal fighter who always shows up when it matters.',
+    clothing: C('White and gold battle armour with shoulder straps over a blue fitted top.', 'A blue stretch bodysuit with strong, muscled legs and a plain belt line.', 'White boots with gold toe caps and white gloves with a gold edge.'),
+    extras: ['Golden spiky hair', 'White gloves', 'Gold armour plate'],
+    info: { age: 32, height: '164 cm', from: 'Vegeta Plateau', vibe: 'Proud and fierce', colour: 'Royal blue', sound: 'Heavy bass' },
+    traits: [['Pride', 'Never accepts second place.'], ['Discipline', 'Trains before sunrise.'], ['Loyal', 'Shows up when it counts.']]
   }
 ];
 
@@ -213,5 +221,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=17`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=18`;

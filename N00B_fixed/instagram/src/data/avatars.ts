@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty-one characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: twenty-two characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -191,6 +191,14 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Night goggles', 'Dark sunglasses', 'Big backpack'],
     info: { age: 27, height: '182 cm', from: 'Jaipur', vibe: 'Calm and watchful', colour: 'Olive', sound: 'Slow drums' },
     traits: [['Sharp eyes', 'Notices everything first.'], ['Steady', 'Keeps calm when it is loud.'], ['Loyal', 'Never leaves anyone behind.']]
+  },
+  {
+    id: 'goku', name: 'Goku', role: 'Fighter', tagline: 'Never stops getting stronger', bg: '#f08a1c',
+    intro: 'Goku is a warrior with golden spiky hair and an orange training suit with a blue sash. He loves a good fight, a big meal and a challenge that makes him better. However tough the battle gets, he smiles, stands up again and keeps going.',
+    clothing: C('An orange training top with a blue undershirt, blue wristbands and a round badge on the chest.', 'Orange loose trousers with a blue sash tied at the waist, torn and dusty from many fights.', 'Blue boots with red trim and a rope tied round the ankle.'),
+    extras: ['Golden spiky hair', 'Blue wristbands', 'Blue sash belt'],
+    info: { age: 29, height: '175 cm', from: 'Mount Paozu', vibe: 'Fearless and cheerful', colour: 'Orange', sound: 'Loud drums' },
+    traits: [['Never gives up', 'Gets back up every single time.'], ['Fast learner', 'Copies a move after seeing it once.'], ['Big heart', 'Fights to protect his friends.']]
   }
 ];
 
@@ -205,5 +213,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=16`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=17`;

@@ -1,4 +1,4 @@
-// The free NOOB avatars: thirty-four characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: thirty-six characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -295,6 +295,22 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Number 101 patch', 'White stripes', 'Neat dark hair'],
     info: { age: 22, height: '172 cm', from: 'Daegu', vibe: 'Hopeful and curious', colour: 'Teal green', sound: 'Light acoustic' },
     traits: [['Quick learner', 'Gets it after one try.'], ['Brave', 'Steps up when it counts.'], ['Honest', 'Says what he thinks.']]
+  },
+  {
+    id: 'shadowguard', name: 'Shadow', role: 'Guard', tagline: 'Unseen until it matters', bg: '#2a2a31',
+    intro: 'Shadow is a guard in an all-black hooded jumpsuit and a black mask marked with a white square. He moves quietly at the edge of the room, sees everything and is only noticed when something goes wrong.',
+    clothing: C('A black hooded jumpsuit with a long centre zip and a black mask with a white square.', 'The same black jumpsuit, loose at the legs and gathered at the ankles.', 'Black laced combat boots and black gloves.'),
+    extras: ['White square mask', 'Black hood', 'Black gloves'],
+    info: { age: 30, height: '181 cm', from: 'Seoul', vibe: 'Silent and watchful', colour: 'Midnight black', sound: 'Low drone' },
+    traits: [['Silent', 'You never hear him coming.'], ['Observant', 'Misses nothing.'], ['Steady', 'Stays calm under pressure.']]
+  },
+  {
+    id: 'gunguard', name: 'Marksman', role: 'Guard', tagline: 'Ready before the signal', bg: '#a61e4d',
+    intro: 'Marksman is a guard in a pink hooded jumpsuit with a triangle mask, carrying a black rifle held ready across his chest. Focused and disciplined, he stands at the front and never breaks formation.',
+    clothing: C('A pink hooded jumpsuit with a long centre zip and a black mask with a white triangle.', 'The same pink jumpsuit, gathered at the ankles.', 'Black laced combat boots and black gloves, with a black rifle held across the chest.'),
+    extras: ['White triangle mask', 'Black rifle', 'Black gloves'],
+    info: { age: 31, height: '183 cm', from: 'Seoul', vibe: 'Focused and ready', colour: 'Deep pink', sound: 'Heavy drums' },
+    traits: [['Focused', 'Eyes on his post.'], ['Disciplined', 'Never breaks formation.'], ['Strong', 'Takes the front line.']]
   }
 ];
 
@@ -309,5 +325,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=21`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=22`;

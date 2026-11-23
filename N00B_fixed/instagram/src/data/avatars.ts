@@ -1,4 +1,4 @@
-// The free NOOB avatars: twenty-three characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: twenty-six characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -207,6 +207,30 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Golden spiky hair', 'White gloves', 'Gold armour plate'],
     info: { age: 32, height: '164 cm', from: 'Vegeta Plateau', vibe: 'Proud and fierce', colour: 'Royal blue', sound: 'Heavy bass' },
     traits: [['Pride', 'Never accepts second place.'], ['Discipline', 'Trains before sunrise.'], ['Loyal', 'Shows up when it counts.']]
+  },
+  {
+    id: 'itachi', name: 'Itachi', role: 'Shadow', tagline: 'Silent, sharp, always one step ahead', bg: '#7a1f2b',
+    intro: 'Itachi is a calm, quiet ninja in a long black robe covered in red clouds. He rarely says more than he needs to, and he is always thinking three moves ahead. Under the cold stare is someone who carries every burden alone so that others do not have to.',
+    clothing: C('A long black robe with a high red-lined collar and red cloud patterns, over a mesh shirt.', 'The robe falls to the ankles, torn at the hem, over dark trousers with white wraps.', 'Dark blue open sandals with white leg wraps.'),
+    extras: ['Forehead protector', 'Red cloud robe', 'Ring on his finger'],
+    info: { age: 21, height: '178 cm', from: 'Hidden Leaf Village', vibe: 'Calm and mysterious', colour: 'Crimson', sound: 'Slow strings' },
+    traits: [['Calm', 'Never raises his voice.'], ['Genius', 'Sees the plan before it starts.'], ['Selfless', 'Carries the weight alone.']]
+  },
+  {
+    id: 'sasuke', name: 'Sasuke', role: 'Avenger', tagline: 'Walks alone, strikes first', bg: '#2e3566',
+    intro: 'Sasuke is a sharp-eyed ninja in a dark torn outfit with a thick purple rope belt and a sword across his back. He trains in silence and answers with actions, not words. Cold at first, he is fiercely loyal to the few people he trusts.',
+    clothing: C('A dark sleeveless top with a high collar, a bandaged right arm and fingerless gloves.', 'Dark loose trousers under a torn dark cloth with a thick purple rope belt.', 'Grey-green shin guards and open ninja sandals.'),
+    extras: ['Sword on his back', 'Purple rope belt', 'Bandaged arm'],
+    info: { age: 19, height: '182 cm', from: 'Hidden Leaf Village', vibe: 'Cold and focused', colour: 'Midnight blue', sound: 'Dark synth' },
+    traits: [['Focused', 'Never loses sight of the goal.'], ['Fast', 'Moves before you blink.'], ['Loyal', 'Rarely says it, always shows it.']]
+  },
+  {
+    id: 'naruto', name: 'Naruto', role: 'Dreamer', tagline: 'Believe it, then do it', bg: '#f2a31b',
+    intro: 'Naruto is a loud, cheerful ninja with spiky blond hair, an orange jacket and a huge grin. He was alone for most of his childhood, so he never lets anyone else feel left out. He never gives up, and his stubborn kindness has changed more hearts than any fight.',
+    clothing: C('An orange and navy zip-up jacket with a fluffy white collar and rolled sleeves.', 'Dark olive trousers with a leg pouch and white tape wraps on the thigh.', 'Dark ninja sandals with strap guards on the shins.'),
+    extras: ['Spiky blond hair', 'Forehead protector', 'Whisker marks'],
+    info: { age: 18, height: '166 cm', from: 'Hidden Leaf Village', vibe: 'Loud and loyal', colour: 'Orange', sound: 'Upbeat drums' },
+    traits: [['Never quits', 'Stands up every time.'], ['Friendly', 'Makes friends with everyone.'], ['Determined', 'Keeps every promise he makes.']]
   }
 ];
 
@@ -221,5 +245,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=18`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=19`;

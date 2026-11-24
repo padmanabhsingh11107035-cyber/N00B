@@ -1,4 +1,4 @@
-// The free NOOB avatars: thirty-seven characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: thirty-eight characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -319,6 +319,14 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['White smiling mask', 'Tactical vest', 'Silenced rifle'],
     info: { age: 29, height: '183 cm', from: 'Lisbon', vibe: 'Calm and precise', colour: 'Dark red', sound: 'Slow bass' },
     traits: [['Precise', 'Every step is planned.'], ['Calm', 'The smile never changes.'], ['Prepared', 'Carries what the job needs.']]
+  },
+  {
+    id: 'daruma', name: 'Daruma', role: 'Guardian', tagline: 'Falls seven times, stands up eight', bg: '#b3202a',
+    intro: 'Daruma is a fierce old good-luck doll with wide bloodshot eyes, thick painted brows and a stitched red head. He has been knocked over a thousand times and has stood back up every time. Grumpy to look at, he is the most stubborn friend you will ever have.',
+    clothing: C('A round red lacquer body with cracked, chipped paint, a pale wrinkled face and a black stitched seam around the head.', 'A worn belly of red and gold stripes with a big gold kanji for courage, scratched and flaking.', 'A heavy round red base that keeps him upright however hard he is pushed.'),
+    extras: ['Bloodshot eyes', 'Gold kanji belly', 'Stitched head'],
+    info: { age: 120, height: '60 cm', from: 'Takasaki', vibe: 'Stubborn and fierce', colour: 'Lacquer red', sound: 'Taiko drums' },
+    traits: [['Stubborn', 'Always stands back up.'], ['Fierce', 'The stare says it all.'], ['Lucky', 'Brings luck to his friends.']]
   }
 ];
 
@@ -333,5 +341,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=25`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=26`;

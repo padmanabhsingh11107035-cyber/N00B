@@ -7,7 +7,7 @@ const check = (cond, label) => { if (cond) { passed++; console.log(`  ok   ${lab
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
 
 console.log('1. The characters');
-check(AVATARS.length === 38 && new Set(AVATARS.map((a) => a.id)).size === 38 && new Set(AVATARS.map((a) => a.name)).size === 38, 'thirty-eight avatars, each with its own id and name (no repeats)');
+check(AVATARS.length === 40 && new Set(AVATARS.map((a) => a.id)).size === 40 && new Set(AVATARS.map((a) => a.name)).size === 40, 'forty avatars, each with its own id and name (no repeats)');
 check(AVATARS.every((a) => /^#[0-9a-f]{6}$/i.test(a.bg) && a.role && a.tagline && a.intro.length > 120 && a.clothing.length === 3 && a.extras.length >= 2 && a.traits.length === 3 && a.info.age >= 18 && a.info.height && a.info.from && a.info.colour), 'every avatar has a colour, a role, an introduction, three clothes, extras, three traits and its info');
 check(AVATARS.every((a) => ['', 'top', 'pants', 'boots'].every((k) => fs.existsSync(`public${avatarUrl(a.id, k).split("?")[0]}`))), 'every avatar has its picture and the three close-ups of the clothes');
 check(AVATARS.every((a) => fs.statSync(`public${avatarUrl(a.id).split("?")[0]}`).size < 200_000), 'and the pictures are small enough for a phone (under 200 KB)');

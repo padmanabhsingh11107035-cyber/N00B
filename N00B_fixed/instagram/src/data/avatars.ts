@@ -1,4 +1,4 @@
-// The free NOOB avatars: thirty-eight characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: forty characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -327,6 +327,22 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Bloodshot eyes', 'Gold kanji belly', 'Stitched head'],
     info: { age: 120, height: '60 cm', from: 'Takasaki', vibe: 'Stubborn and fierce', colour: 'Lacquer red', sound: 'Taiko drums' },
     traits: [['Stubborn', 'Always stands back up.'], ['Fierce', 'The stare says it all.'], ['Lucky', 'Brings luck to his friends.']]
+  },
+  {
+    id: 'pinkdoll', name: 'Rosie', role: 'Doll', tagline: 'Sweet smile, sharp eyes', bg: '#c2556e',
+    intro: 'Rosie is a jointed wooden-style doll in a soft pink blouse and a burgundy pinafore, with neat bunches tied in purple beads. She stands perfectly still and watches everything with wide painted eyes. Cute on the outside, she never misses a single move.',
+    clothing: C('A soft pink collared blouse under burgundy pinafore straps, with visible jointed elbows.', 'A pleated burgundy pinafore skirt that falls to the knees.', 'Black round-toe shoes over clean white knee socks.'),
+    extras: ['Purple bead hair ties', 'Jointed arms', 'Painted eyes'],
+    info: { age: 18, height: '120 cm', from: 'Toy Workshop', vibe: 'Sweet and watchful', colour: 'Burgundy', sound: 'Music box' },
+    traits: [['Watchful', 'Never blinks.'], ['Patient', 'Can stand still for hours.'], ['Neat', 'Not a hair out of place.']]
+  },
+  {
+    id: 'sunnydoll', name: 'Sunny', role: 'Watcher', tagline: 'Eyes everywhere, smile always', bg: '#e07b1f',
+    intro: 'Sunny is a tall jointed doll in a bright yellow blouse and an orange pinafore, with two little bunches and white knee socks. She turns her head slowly and sees everything in the room. Her calm face never changes, however loud the game gets.',
+    clothing: C('A bright yellow collared blouse under an orange pinafore, with visible jointed elbows.', 'A pleated orange pinafore skirt that falls to the knees.', 'Plain white knee socks and soft white shoes.'),
+    extras: ['Two little bunches', 'Jointed arms', 'Painted eyes'],
+    info: { age: 18, height: '250 cm', from: 'Toy Workshop', vibe: 'Calm and watchful', colour: 'Sunny orange', sound: 'Slow lullaby' },
+    traits: [['Observant', 'Notices every move.'], ['Calm', 'The smile never changes.'], ['Bright', 'The colours stand out anywhere.']]
   }
 ];
 
@@ -341,5 +357,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=26`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=27`;

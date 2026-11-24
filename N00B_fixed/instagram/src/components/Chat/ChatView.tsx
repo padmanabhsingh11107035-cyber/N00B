@@ -1975,7 +1975,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {!activeChat?.isGroup && headerPartner && (isUserOnline(headerPartner.id) ? (
                       <span className="text-noob font-semibold" data-testid="chat-online-text">Online</span>
                     ) : lastSeenMap[headerPartner.id] ? (
-                      <span className="chat-last-seen text-zinc-300 font-medium min-w-0" data-testid="chat-last-seen" style={{ fontSize: 11, lineHeight: 1.2 }}>{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
+                      <span className="chat-last-seen text-zinc-300 font-medium min-w-0 truncate" data-testid="chat-last-seen" style={{ fontSize: 11, lineHeight: 1.2 }}>{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
                     ) : null)}
                     {!activeChat?.isGroup && activeChat?.vanishMode && (
                       <span className="text-noob font-medium flex items-center gap-1">
@@ -1984,7 +1984,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     )}
                     {/* Only says "encrypted" when this chat really is: the server is asked, and the answer is shown as it is */}
                     {chatCrypto?.peer?.changed && (
-                      <span className="text-amber-300 font-bold truncate">Security code changed</span>
+                      <span className="text-amber-300 shrink-0 flex items-center" title="Security code changed" aria-label="Security code changed" data-testid="chat-code-changed"><ShieldCheck className="w-3.5 h-3.5" /></span>
                     )}
                   </div>
                 </div>

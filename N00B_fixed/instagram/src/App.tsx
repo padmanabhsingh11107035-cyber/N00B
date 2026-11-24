@@ -39,6 +39,7 @@ import {
   fetchReelById,
   fetchUsers,
   fetchUserByUsername,
+  fetchUserById,
   pokeMediaCleanup,
   toggleFollowUser,
   endLiveStream,
@@ -1249,6 +1250,11 @@ export default function App() {
     } else {
       // someone else's profile opens on top of the page that is showing; the page stays where it is, and "Go to previous page" comes back to it
       pageLayers.push({ id: 'p:' + user.id, kind: 'profile', user });
+      // Some places (a chat, a notification) only know a person's name and picture: the counts and bio are missing there, so the page would show zeros and "no bio".
+      // The full profile is fetched and put into the open page; Explore already hands over the full one.
+      if (typeof user.followersCount !== 'number' || typeof user.followingCount !== 'number' || user.bio === undefined) {
+        void fetchUserById(user.id).then((fresh) => { if (fresh) handleNavigateToUserProfile({ ...user, ...fresh }, true); }).catch(() => undefined);
+      }
     }
   };
 

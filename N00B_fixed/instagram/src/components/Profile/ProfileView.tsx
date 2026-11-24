@@ -954,13 +954,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
           {/* On your own profile: a big Avatar button (opens the avatars) and a big + (adds a story), side by side next to the picture */}
           {isOwnProfile && (
-            <div className="flex-1 min-w-0 flex items-center justify-end gap-3 pb-2">
+            <div className="flex-1 min-w-0 flex items-center justify-end gap-2 pb-2">
               <button type="button" onClick={() => setShowAvatarPicker(true)} aria-label="Avatars" data-testid="profile-avatars-button"
-                className="flex-1 max-w-[220px] min-w-0 h-14 rounded-full bg-gradient-to-r from-[#ff4e6a] via-[#ff758c] to-[#ff9966] text-white font-extrabold text-base flex items-center justify-center gap-2.5 px-5 shadow-[0_8px_22px_rgba(255,78,106,0.35)] cursor-pointer active:scale-95 transition-transform">
-                <AvatarsIcon size={28} /> <span className="truncate">Avatar</span>
+                className="flex-1 max-w-[220px] min-w-[104px] h-12 rounded-full bg-gradient-to-r from-[#ff4e6a] via-[#ff758c] to-[#ff9966] text-white font-extrabold text-[15px] whitespace-nowrap flex items-center justify-center gap-1.5 px-3 shadow-[0_8px_22px_rgba(255,78,106,0.35)] cursor-pointer active:scale-95 transition-transform">
+                <AvatarsIcon size={24} /> <span>Avatar</span>
               </button>
               {onOpenCreate && (
-                <button type="button" onClick={onOpenCreate} aria-label="Add a story" data-testid="profile-add-story" className="shrink-0 w-14 h-14 rounded-full bg-noob text-black flex items-center justify-center shadow-[0_8px_22px_rgba(0,0,0,0.35)] cursor-pointer active:scale-90 transition-transform"><Plus className="w-8 h-8" strokeWidth={3} /></button>
+                <button type="button" onClick={onOpenCreate} aria-label="Add a story" data-testid="profile-add-story" className="shrink-0 w-12 h-12 rounded-full bg-noob text-black flex items-center justify-center shadow-[0_8px_22px_rgba(0,0,0,0.35)] cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={3} /></button>
               )}
             </div>
           )}

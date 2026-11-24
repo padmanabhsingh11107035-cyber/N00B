@@ -1,4 +1,4 @@
-// The free NOOB avatars: forty characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: forty-two characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -343,6 +343,22 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Two little bunches', 'Jointed arms', 'Painted eyes'],
     info: { age: 18, height: '250 cm', from: 'Toy Workshop', vibe: 'Calm and watchful', colour: 'Sunny orange', sound: 'Slow lullaby' },
     traits: [['Observant', 'Notices every move.'], ['Calm', 'The smile never changes.'], ['Bright', 'The colours stand out anywhere.']]
+  },
+  {
+    id: 'tuxedo', name: 'Tuxedo', role: 'Survivor', tagline: 'Scarred, sharp, still standing', bg: '#3a2a2a',
+    intro: 'Tuxedo is a tired, scarred man in a perfect black dinner suit with a bow tie. A red X patch sits on one side of his chest and the number 456 on the other. One hand rests in his pocket and his eyes watch everything. He has been through the worst and he is still standing.',
+    clothing: C('A black dinner jacket with satin lapels over a white shirt and a black bow tie, with a red X patch and a 456 badge.', 'Slim black tuxedo trousers with a sharp crease.', 'Polished black leather lace-up dress shoes.'),
+    extras: ['Red X patch', '456 badge', 'Scar above the eye'],
+    info: { age: 45, height: '180 cm', from: 'Seoul', vibe: 'Quiet and stubborn', colour: 'Black', sound: 'Slow footsteps' },
+    traits: [['Stubborn', 'Never gives up.'], ['Watchful', 'Sees everything.'], ['Calm', 'Stays cool under pressure.']]
+  },
+  {
+    id: 'capdoll', name: 'Cappy', role: 'Toy', tagline: 'Backwards cap, big brown eyes', bg: '#2f7f86',
+    intro: 'Cappy is a small jointed toy boy in a dark teal cap worn backwards, a striped polo shirt in black, teal and pale grey, and grey shorts. He has neat dark hair with a straight fringe and big, curious brown eyes. His arms and knees bend like a real action figure.',
+    clothing: C('A striped polo shirt in black, teal and pale grey with a grey collar, and jointed elbows.', 'Plain dark grey shorts with a front pocket.', 'Black lace-up trainers over short white socks.'),
+    extras: ['Backwards teal cap', 'Jointed arms and knees', 'Straight fringe'],
+    info: { age: 18, height: '95 cm', from: 'Toy Workshop', vibe: 'Curious and cheerful', colour: 'Teal', sound: 'Squeaky sneakers' },
+    traits: [['Curious', 'Looks at everything twice.'], ['Cheerful', 'Always smiling.'], ['Sporty', 'Ready to play.']]
   }
 ];
 
@@ -357,5 +373,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=27`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll', 'tuxedo', 'capdoll']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=28`;

@@ -76,8 +76,60 @@ function buildRunner(o) {
   return { player, body, head, arms, legs, shieldBubble, sneakGlow, pack };
 }
 
-MR.buildPlayer = function (outfit = 'street') {
-  const rig = buildRunner(OUTFITS[outfit] || OUTFITS.street);
+// ---------- the Crown boy: a rigged 3D model (hero.glb, 15k triangles) with its own run / jump / slide / stumble clips.
+// It loads in the background; until it is ready (or if it can not load) the colourful procedural runner above is used.
+const HERO = { ready: false, gltf: null, mixer: null, actions: null, hips: null, hx: 0, hz: 0 };
+MR.heroPromise = (async () => {
+  try {
+    if (!window.MR_GLTFLoader) throw new Error('no loader');
+    const buf = await fetch('hero.glb?v=1').then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); });
+    const gltf = await new Promise((ok, bad) => new MR_GLTFLoader().parse(buf, '', ok, bad));
+    const model = gltf.scene;
+    model.traverse(m => { if (m.isMesh) { m.frustumCulled = false; m.castShadow = true; const mm = m.material; mm.metalness = 0; mm.roughness = .62; mm.needsUpdate = true; } if (m.isBone && /Hips$/.test(m.name)) HERO.hips = m; });
+    model.scale.setScalar(1.4); model.rotation.y = Math.PI;   // 1.7 m tall in the file; the game's runner is about 2.4 units tall and looks along -z
+    const mixer = new THREE.AnimationMixer(model);
+    const find = (n) => gltf.animations.find(a => a.name === n);
+    const act = (n) => { const a = mixer.clipAction(find(n)); return a; };
+    HERO.actions = { run: act('Running'), air: act('Jump_Run'), slide: act('slide_light'), dead: act('sliding_stumble') };
+    if (HERO.hips) { HERO.hx = HERO.hips.position.x; HERO.hz = HERO.hips.position.z; }
+    HERO.gltf = gltf; HERO.mixer = mixer; HERO.ready = true;
+  } catch (e) { HERO.ready = false; if (window.console) console.warn('Metro Rush: hero model not available, using the built-in runner', e); }
+})();
+
+function buildHeroRig() {
+  const rig = buildRunner(OUTFITS.street);                 // (reused for its shield bubble)
+  const body = new THREE.Group();
+  rig.player.remove(rig.body); rig.player.add(body);
+  HERO.gltf.scene.removeFromParent(); body.add(HERO.gltf.scene);
+  rig.body = body; rig.head = new THREE.Group(); rig.arms = []; rig.legs = []; rig.sneakGlow = [];
+  rig.hero = { cur: '' };
+  for (const a of Object.values(HERO.actions)) a.stop();
+  return rig;
+}
+
+function poseHero(rig, s, dt) {
+  const D = THREE.MathUtils.damp, H = rig.hero, A = HERO.actions;
+  const want = s.mode === 'slide' ? 'slide' : s.mode === 'air' ? 'air' : s.mode === 'dead' ? 'dead' : 'run';
+  if (want !== H.cur) {
+    const a = A[want], prev = A[H.cur];
+    a.reset(); a.enabled = true;
+    if (want === 'run') { a.setLoop(THREE.LoopRepeat, Infinity); a.timeScale = 1; }
+    else { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = want === 'air' ? 2.5 : want === 'slide' ? 1.9 : 1.4; }
+    a.play(); if (prev) prev.crossFadeTo(a, .1, false);
+    H.cur = want;
+  }
+  if (want === 'run') A.run.timeScale = .9 + Math.max(0, Math.min(1, ((s.speed || 17) - 17) / 17)) * .75;
+  HERO.mixer.update(dt);
+  if (HERO.hips) { HERO.hips.position.x = HERO.hx; HERO.hips.position.z = HERO.hz; }   // the clips carry some forward travel: the game moves the world instead
+  const body = rig.body;
+  body.position.y = D(body.position.y, 0, 18, dt);
+  body.rotation.x = D(body.rotation.x, 0, 16, dt);
+  body.rotation.z = D(body.rotation.z, s.mode === 'dead' ? 0 : s.lean, 12, dt);
+}
+
+MR.buildPlayer = function (outfit = 'crown') {
+  const useHero = outfit === 'crown' && HERO.ready;
+  const rig = useHero ? buildHeroRig() : buildRunner(OUTFITS[outfit] || OUTFITS.street);
   scene.add(rig.player);
   // contact shadow
   const tex = canvasTex(64, 64, (x) => { const g = x.createRadialGradient(32, 32, 2, 32, 32, 31); g.addColorStop(0, 'rgba(30,20,60,.55)'); g.addColorStop(1, 'rgba(30,20,60,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); });
@@ -90,6 +142,7 @@ MR.buildPlayer = function (outfit = 'street') {
 
 // Pose solver: run / jump / slide / idle / roll
 MR.poseRunner = function (rig, s, dt) {
+  if (rig.hero) return poseHero(rig, s, dt);
   const D = THREE.MathUtils.damp;
   const { body, arms, legs, head } = rig;
   const ph = s.phase;

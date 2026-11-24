@@ -10,9 +10,9 @@ let ROOF, RAMP = CONFIG.rampLen;
 let state = 'loading', rig, lane = 1, prevLane = 1, py = 0, vy = 0, slide = 0, ground = 0, grounded = true;
 let speed = CONFIG.startSpeed, distance = 0, coins = 0, best = 0, runBest = 0, score = 0, time = 0, phase = 0;
 let shield = 0, magnet = 0, sneakers = 0, doubler = 0, invuln = 0, shake = 0, dieT = 0, nextRowAt = 0, rowN = 0, prevSafe = 1, prevRowD = 0;
-let bgTimer = [1, 2.5], camGround = 0, outfit = 'street', streak = 0, streakT = 0, lastLandY = 0, combo = 0;
+let bgTimer = [1, 2.5], camGround = 0, outfit = 'crown', streak = 0, streakT = 0, lastLandY = 0, combo = 0;
 const trains = [], props = [], pickups = [], bgTrains = [];
-try { best = Number(localStorage.getItem('noob.metrorush.best')) || 0; outfit = localStorage.getItem('noob.metrorush.outfit') || 'street'; } catch (e) { }
+try { best = Number(localStorage.getItem('noob.metrorush.best')) || 0; outfit = localStorage.getItem('noob.metrorush.hero') || 'crown'; } catch (e) { }
 
 // ---------- trains (main lanes)
 function trainOcc(len, v) { return len * speed / (speed + v); }
@@ -153,7 +153,7 @@ function spawnBg(side) {
 
 // ---------- player
 function setOutfit(o) {
-  outfit = o; try { localStorage.setItem('noob.metrorush.outfit', o); } catch (e) { }
+  outfit = o; try { localStorage.setItem('noob.metrorush.hero', o); } catch (e) { }
   if (rig) { scene.remove(rig.player); scene.remove(rig.contact); }
   rig = MR.buildPlayer(o); rig.player.position.x = LANES[lane];
   document.querySelectorAll('[data-outfit]').forEach(b => b.classList.toggle('on', b.dataset.outfit === o));
@@ -391,7 +391,7 @@ function update(dt) {
     phase += dt * (state === 'running' ? speed * .62 : state === 'home' || state === 'over' ? 9.5 : 0);
     const mode = state === 'dying' ? 'dead' : state === 'running' ? (slide > 0 && grounded ? 'slide' : !grounded ? 'air' : 'run') : state === 'paused' ? 'run' : 'run';
     const lean = state === 'running' ? (LANES[lane] - rig.player.position.x) * -.09 : 0;
-    MR.poseRunner(rig, { mode, phase, vy, lean, look: 0 }, dt);
+    MR.poseRunner(rig, { mode, phase, vy, lean, look: 0, speed }, dt);
     rig.player.rotation.y = state === 'dying' ? D(rig.player.rotation.y, .6, 5, dt) : 0;
     rig.shieldBubble.visible = shield > 0; rig.shieldBubble.rotation.y = time; rig.shieldBubble.scale.setScalar(1 + Math.sin(time * 6) * .03);
     for (const s of rig.sneakGlow) s.visible = sneakers > 0;
@@ -456,6 +456,7 @@ function frame(now) {
 // ---------- boot (wait for the display font so canvas textures use it)
 async function boot() {
   try { await Promise.race([document.fonts.load('40px "Lilita One"'), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
+  try { await Promise.race([MR.heroPromise, new Promise(r => setTimeout(r, 5000))]); } catch (e) { }   // the 3D boy (about 3 MB); the built-in runner is used if it is slow
   const steps = [() => MR.buildWorld(), () => MR.buildTrainTemplates(), () => MR.buildPropTemplates()];
   for (const s of steps) { s(); await new Promise(r => setTimeout(r, 0)); }
   ROOF = MR.TRAIN.ROOF_TOP;

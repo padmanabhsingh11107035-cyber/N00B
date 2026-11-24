@@ -1,4 +1,4 @@
-// The free NOOB avatars: thirty-six characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: thirty-seven characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -311,6 +311,14 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['White triangle mask', 'Black rifle', 'Black gloves'],
     info: { age: 31, height: '183 cm', from: 'Seoul', vibe: 'Focused and ready', colour: 'Deep pink', sound: 'Heavy drums' },
     traits: [['Focused', 'Eyes on his post.'], ['Disciplined', 'Never breaks formation.'], ['Strong', 'Takes the front line.']]
+  },
+  {
+    id: 'operative', name: 'Operative', role: 'Specialist', tagline: 'Smiling mask, serious work', bg: '#8e1b22',
+    intro: 'Operative wears a worn red hooded jumpsuit, a black tactical vest and a white smiling mask that never changes expression. Equipped with a belt of pouches and a silenced rifle, he stays calm, keeps to the plan and always finishes the job.',
+    clothing: C('A worn red hooded jumpsuit under a black tactical vest, with a white smiling mask.', 'The red jumpsuit with a black utility belt, holster, pouches and a strapped thigh rig.', 'Black lace-up combat boots, scuffed and thick-soled, with black gloves.'),
+    extras: ['White smiling mask', 'Tactical vest', 'Silenced rifle'],
+    info: { age: 29, height: '183 cm', from: 'Lisbon', vibe: 'Calm and precise', colour: 'Dark red', sound: 'Slow bass' },
+    traits: [['Precise', 'Every step is planned.'], ['Calm', 'The smile never changes.'], ['Prepared', 'Carries what the job needs.']]
   }
 ];
 
@@ -325,5 +333,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=24`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=25`;

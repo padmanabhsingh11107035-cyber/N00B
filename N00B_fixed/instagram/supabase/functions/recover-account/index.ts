@@ -137,11 +137,19 @@ function siteForEmails(raw: string): string {
   return NEW_SITE;
 }
 const SITE_URL = siteForEmails(Deno.env.get('SITE_URL') || '');
+// The NOOB logo at the top of every email (a plain picture from the site, so it shows in every mail app; the sender's round picture in Gmail is a different thing: it needs BIMI on the domain).
+const LOGO_URL = 'https://noobsocials.com/brand/noob-email-logo.png';
+function withLogo(html: string): string {
+  if (html.includes('data-noob-logo')) return html;
+  const logo = `<div data-noob-logo style="text-align:center;padding:22px 12px 6px"><a href="https://noobsocials.com" style="text-decoration:none"><img src="${LOGO_URL}" width="64" height="64" alt="NOOB" style="display:inline-block;width:64px;height:64px;border-radius:16px;border:0"></a></div>`;
+  const m = /<body[^>]*>/i.exec(html);
+  return m ? html.slice(0, m.index + m[0].length) + logo + html.slice(m.index + m[0].length) : logo + html;
+}
 function withSiteFooter(html: string, text: string): { html: string; text: string } {
   const host = SITE_URL.replace(/^https?:\/\//, '');
   const footer = `<div data-noob-footer style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;max-width:560px;margin:14px auto 0;padding:0 12px 18px;text-align:center;font-size:12px;line-height:1.6;color:#8a8794">NOOB &middot; <a href="${SITE_URL}" style="color:#D97757;font-weight:700;text-decoration:none">${host}</a></div>`;
   return {
-    html: html.includes('data-noob-footer') ? html : html + footer,
+    html: withLogo(html.includes('data-noob-footer') ? html : html + footer),
     text: text.includes(`NOOB · ${SITE_URL}`) ? text : `${text}\n\nNOOB · ${SITE_URL}`
   };
 }

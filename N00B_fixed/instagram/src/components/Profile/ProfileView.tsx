@@ -923,6 +923,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {/* Who this is: the big picture sits on the lower edge of the cover, the name, its badges and what kind of account it is underneath */}
         <div className="relative z-[1] flex flex-col gap-3 px-1 -mt-[54px]" data-testid="profile-identity">
           {/* The picture: tap for full screen. The note sits above it like a speech bubble; on your own profile a small + adds a story. */}
+          <div className="flex items-end gap-3">
           <div className={`relative shrink-0 ${targetUser.statusNote ? 'mt-7' : ''}`}>
             <div className="relative cursor-pointer group" onClick={() => setShowFullscreenAvatar(true)} title="View profile picture full screen">
               <div
@@ -950,9 +951,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {targetUser.statusNote.musicTrack && <Volume2 className="w-3 h-3 text-zinc-300 animate-pulse shrink-0" />}
               </div>
             )}
-            {isOwnProfile && onOpenCreate && (
-              <button type="button" onClick={onOpenCreate} aria-label="Add a story" className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-noob text-black border-[3px] border-black flex items-center justify-center cursor-pointer active:scale-90 transition-transform"><Plus className="w-4 h-4" strokeWidth={3} /></button>
-            )}
+          </div>
+          {/* On your own profile: a big Avatar button (opens the avatars) and a big + (adds a story), side by side next to the picture */}
+          {isOwnProfile && (
+            <div className="flex-1 min-w-0 flex items-center justify-end gap-3 pb-2">
+              <button type="button" onClick={() => setShowAvatarPicker(true)} aria-label="Avatars" data-testid="profile-avatars-button"
+                className="flex-1 max-w-[220px] min-w-0 h-14 rounded-full bg-gradient-to-r from-[#ff4e6a] via-[#ff758c] to-[#ff9966] text-white font-extrabold text-base flex items-center justify-center gap-2.5 px-5 shadow-[0_8px_22px_rgba(255,78,106,0.35)] cursor-pointer active:scale-95 transition-transform">
+                <AvatarsIcon size={28} /> <span className="truncate">Avatar</span>
+              </button>
+              {onOpenCreate && (
+                <button type="button" onClick={onOpenCreate} aria-label="Add a story" data-testid="profile-add-story" className="shrink-0 w-14 h-14 rounded-full bg-noob text-black flex items-center justify-center shadow-[0_8px_22px_rgba(0,0,0,0.35)] cursor-pointer active:scale-90 transition-transform"><Plus className="w-8 h-8" strokeWidth={3} /></button>
+              )}
+            </div>
+          )}
           </div>
         </div>
 

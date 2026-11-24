@@ -6988,6 +6988,19 @@ export async function sendAskQuestion(username: string, body: string, clientKey:
   await rpc('ask_send', { p_username: username, p_body: body, p_client_key: clientKey });
 }
 
+/** A random id kept on this device, so one device can not flood a person with questions (and the person can block it without learning who it is). */
+const guestDeviceId = (): string => {
+  try {
+    let id = localStorage.getItem('noob_guest_device') || '';
+    if (id.length < 16) { id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `g${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`); localStorage.setItem('noob_guest_device', id); }
+    return id;
+  } catch { return `t${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`; }
+};
+/** Sends a question WITHOUT an account (migration 20261125000001): for people who opened a shared link and are not on NOOB. */
+export async function sendAskQuestionGuest(username: string, body: string, clientKey: string): Promise<void> {
+  await rpc('ask_send_guest', { p_username: username, p_body: body, p_client_key: clientKey, p_device: guestDeviceId() });
+}
+
 export async function fetchAskInbox(opts: { filter?: 'new' | 'answered' | 'all'; limit?: number; before?: { createdAt: string; id: string } } = {}): Promise<AskInboxPage> {
   const res = await rpc<AskInboxPage>('ask_inbox', { p_filter: opts.filter ?? 'new', p_limit: opts.limit ?? 20, p_before: opts.before?.createdAt ?? null, p_before_id: opts.before?.id ?? null });
   return { questions: Array.isArray(res?.questions) ? res.questions : [], hasMore: !!res?.hasMore, counts: { new: res?.counts?.new ?? 0, answered: res?.counts?.answered ?? 0 } };

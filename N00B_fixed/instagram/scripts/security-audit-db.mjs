@@ -35,6 +35,7 @@ const OPEN_TO_VISITORS = {
   anon_messages_feed: 'Anonymous Messages is a public feed with no author shown',
   anon_message_get: 'one anonymous thought by its id (its shared page /thought/<id>): only visible ones (not removed, not hidden), the same four fields as the feed, never an author',
   ask_profile_public: 'the public Ask Me Anything page of a person',
+  ask_send_guest: 'a person without an account asks a question from a shared link: tight limits per device and connection, no links, bans and blocks, nothing about the sender is ever returned',
   public_profile: 'a shared link to a profile: private and suspended accounts are not shown',
   public_post: 'a shared link: private and suspended accounts are not shown (public_account_ok)',
   public_reel: 'a shared link: private and suspended accounts are not shown (public_account_ok)',

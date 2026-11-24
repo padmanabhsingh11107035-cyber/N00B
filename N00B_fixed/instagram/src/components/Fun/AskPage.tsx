@@ -5,6 +5,7 @@ import {
   ASK_ANSWER_MAX_LENGTH,
   fetchAskProfile,
   sendAskQuestion,
+  sendAskQuestionGuest,
   fetchAskInbox,
   answerAskQuestion,
   setAskAnswerPublic,
@@ -24,6 +25,7 @@ import {
   type AskReport
 } from '../../services/api';
 import { funShareUrl } from '../../utils/funRoutes';
+import { PLAY_STORE_URL } from '../../utils/pwaInstall';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { Card, EmptyState, ErrorState, SkeletonCards, LoginPrompt, BusyLabel, useToast, friendly, newKey, codePoints, timeAgo } from './funUi';
 import { shareCardAsStory } from './shareCard';
@@ -68,8 +70,39 @@ const copyOrShare = async (url: string, say: (t: string, k?: 'ok' | 'err') => vo
   }
 };
 
+// After a person WITHOUT an account sends a question, a small box offers the app: Android phones get the Google Play listing (once PLAY_STORE_URL in utils/pwaInstall.ts is set),
+// iPhones and everything else get the website address (where NOOB installs from the browser).
+const SITE_URL = 'https://noobsocials.com';
+const GetTheAppBox: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const android = /Android/i.test(ua);
+  const useStore = android && PLAY_STORE_URL !== '';
+  const href = useStore ? PLAY_STORE_URL : SITE_URL;
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Get the NOOB app" data-testid="ask-get-app"
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: 420, background: 'var(--fx-surface)', color: 'var(--fx-ink)', border: '1px solid var(--fx-line)', borderRadius: 20, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,.4)', marginBottom: 'max(0px, env(safe-area-inset-bottom))' }}>
+        <div className="fx-stack-sm" style={{ textAlign: 'center' }}>
+          <div className="fx-sent" style={{ margin: '0 auto' }}><Check className="w-6 h-6" aria-hidden="true" /></div>
+          <p className="fx-sent-title">Your question was sent!</p>
+          <p className="fx-t13 fx-muted" data-testid="ask-guest-expiry">You are not on NOOB, so nothing is saved to an account for you. Your question is wiped for good within a day, and you will not get to see a reply.</p>
+          <p className="fx-t15 fx-muted">Want your own anonymous question link and a place to hang out with friends? Get NOOB, it is free.</p>
+          <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClose} className="fx-btn" style={{ textDecoration: 'none' }} data-testid="ask-get-app-link">
+            {useStore ? 'Get it on Google Play' : 'Open noobsocials.com'}
+          </a>
+          {!useStore && <p className="fx-t13 fx-muted" style={{ wordBreak: 'break-all', userSelect: 'all' }}>{SITE_URL}</p>}
+          {!useStore && !android && <p className="fx-t13 fx-muted">On iPhone: open the link in Safari, tap Share, then Add to Home Screen.</p>}
+          <button type="button" onClick={onClose} className="fx-btn-ghost">Maybe later</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ================================================================================================================================ a friend's page: ask someone
-const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser, username, onLogin, onOpenFeature, onOpenProfile }) => {
+const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser, username, onOpenFeature, onOpenProfile }) => {
   const [profile, setProfile] = useState<AskProfile | null | undefined>(undefined);   // undefined: loading, null: no such person
   const [answers, setAnswers] = useState<AskPublicAnswer[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -78,6 +111,7 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
+  const [showApp, setShowApp] = useState(false);   // the "get the app" box, after a person without an account sent a question
   const keyRef = useRef(newKey());
   const postingRef = useRef(false);
   const { say, toast } = useToast();
@@ -100,13 +134,14 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
   const canSend = !sending && text.trim().length >= 2 && count <= ASK_MAX_LENGTH;
 
   const send = async () => {
-    if (!currentUser) { say('Log in to send your question.', 'err'); onLogin?.(); return; }
     if (!canSend || postingRef.current || !profile) return;
     postingRef.current = true;
     setSending(true);
     try {
-      await sendAskQuestion(profile.username, text, keyRef.current);
+      if (currentUser) await sendAskQuestion(profile.username, text, keyRef.current);
+      else await sendAskQuestionGuest(profile.username, text, keyRef.current);   // no account needed
       setSentCount((n) => n + 1);
+      if (!currentUser) setShowApp(true);
       setText('');
       keyRef.current = newKey();
       say('Sent anonymously.', 'ok');
@@ -185,12 +220,13 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
             />
             <div className="fx-composer-foot">
               <p className="fx-count" style={count >= ASK_MAX_LENGTH ? { color: 'var(--fx-bad)' } : undefined} aria-live="polite">{count} / {ASK_MAX_LENGTH}</p>
-              <button type="button" onClick={() => void send()} disabled={!!currentUser && !canSend} className="fx-btn is-auto">
-                <BusyLabel busy={sending}><Send className="w-4 h-4" aria-hidden="true" />{currentUser ? 'Send Anonymously' : 'Log in to send'}</BusyLabel>
+              <button type="button" onClick={() => void send()} disabled={!canSend} className="fx-btn is-auto">
+                <BusyLabel busy={sending}><Send className="w-4 h-4" aria-hidden="true" />Send Anonymously</BusyLabel>
               </button>
             </div>
           </div>
           <PrivacyNote name={profile.displayName} />
+          {!currentUser && <p className="fx-lock" data-testid="ask-guest-note"><Lock className="fx-ic" style={{ marginTop: 2 }} aria-hidden="true" /><span>No account needed. Because you are not on NOOB, questions from visitors are cleared automatically after a day and cannot be answered to you directly.</span></p>}
         </div>
       )}
 
@@ -220,6 +256,7 @@ const AskSomeone: React.FC<FunPageProps & { username: string }> = ({ currentUser
           <button type="button" onClick={() => { const u = { id: profile.userId, username: profile.username, displayName: profile.displayName, avatar: profile.avatar } as unknown as Parameters<NonNullable<FunPageProps['onOpenProfile']>>[0]; onOpenProfile?.(u); }} className="fx-btn-ghost">View {profile.displayName}&apos;s profile</button>
         )}
       </section>
+      {showApp && <GetTheAppBox onClose={() => setShowApp(false)} />}
       {toast}
     </div>
   );

@@ -512,6 +512,7 @@ export {
   fetchAskProfile,
   sendAskQuestion,
   fetchAskInbox,
+  sendAskQuestionGuest,
   answerAskQuestion,
   setAskAnswerPublic,
   deleteAskQuestion,

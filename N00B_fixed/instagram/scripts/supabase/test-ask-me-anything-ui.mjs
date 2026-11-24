@@ -18,7 +18,7 @@ const apiIndex = read('src/services/api.ts');
 section('1. The page a friend opens from a link');
 check(/Send Anonymously/.test(page) && /ASK_MAX_LENGTH/.test(page) && /\{count\} \/ \{ASK_MAX_LENGTH\}/.test(page), 'a question box with a counter and a "Send Anonymously" button');
 check(/sendAskQuestion\(profile\.username, text, keyRef\.current\)/.test(page) && /keyRef\.current = newKey\(\)/.test(page) && /postingRef/.test(page), 'a double tap or a retry sends once (a one-time key, and a lock while sending)');
-check(/if \(!currentUser\) \{ say\('Log in to send your question\.', 'err'\); onLogin\?\.\(\); return; \}/.test(page) && /Log in to send/.test(page), 'a visitor is asked to log in to send (they can look at the page first)');
+check(/else await sendAskQuestionGuest\(profile\.username, text, keyRef\.current\)/.test(page) && !/Log in to send/.test(page) && /GetTheAppBox/.test(page) && /PLAY_STORE_URL/.test(page) && /https:\/\/noobsocials\.com/.test(page), 'a visitor without an account can send, and then sees the get-the-app box (Google Play on Android once the link is set, the website otherwise)');
 check(/is not taking questions right now/.test(page) && /We could not find that person/.test(page), 'a person who switched questions off, and a link that does not lead anywhere, are explained');
 check(/This is your own question page/.test(page) && /Open my questions/.test(page), 'opening your own link shows you your own page, not a box to ask yourself');
 check(/Sent!/.test(page) && /without knowing it was you/.test(page) && /Ask something else/.test(page), 'after sending: a clear "Sent!", and a way to ask something else');

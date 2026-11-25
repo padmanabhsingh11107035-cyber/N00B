@@ -42,6 +42,8 @@ export const ROWS: RowDef[] = [
   { id: 'app-lock', section: 'Your account', label: 'App lock', sub: 'Face ID or fingerprint before NOOB, or chosen pages, opens', icon: ScanFace, page: 'app-lock', keywords: 'face id touch id fingerprint lock passcode biometric screen lock privacy security' },
   { id: 'app-icon', section: 'Your account', label: 'App icon', sub: 'NOOB Pro members can pick the Pro icon', icon: Crown, page: 'app-icon', keywords: 'icon logo home screen pro app icon change', value: (c) => (c.currentUser.proTier ? undefined : 'NOOB Pro') },
 
+  { id: 'not-back', section: 'Your account', label: 'People who didn’t noob you back', sub: 'People you noob who don’t noob you (NOOB Pro Ultimate)', icon: UserX, page: 'not-back', keywords: 'follow back not following unfollow ghost fans one sided ultimate', value: (c) => (c.currentUser.proTier === 'ultimate' ? undefined : 'Ultimate') },
+
   // ---------------------------------------------------------------- How you use NOOB
   { id: 'invite-friends', section: 'How you use NOOB', label: 'Invite a friend', sub: 'Share NOOB with someone you know', icon: UserPlus, action: 'inviteFriends', keywords: 'invite share friend link refer tell' },
   { id: 'find-contacts', section: 'How you use NOOB', label: 'Find users from my contacts', sub: 'See which of your contacts are on NOOB', icon: UserPlus, action: 'openFindContacts', keywords: 'contacts phone numbers friends find people invite address book' },

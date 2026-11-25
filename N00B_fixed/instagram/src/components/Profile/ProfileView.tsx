@@ -598,6 +598,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openLiveAvatar: () => setShowLiveAvatarModal(true),
       openAvatars: () => setShowAvatarPicker(true),
       openAdmin: () => setShowAdminControlModal(true),
+      openProfile: (u) => { setShowSettingsHub(false); onNavigateToUserProfile?.(u); },
+      toggleFollow: async (id) => (onToggleFollowUser ? await onToggleFollowUser(id) : undefined),
       openSwitchAccount: () => setShowSwitchAccount(true),
       openExport: () => {
         const mine = (p: { userId?: string; username?: string }) => p.userId === currentUser.id || p.username === currentUser.username;
@@ -610,7 +612,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       logout: () => { setShowSettingsHub(false); onLogout?.(); },
       close: closeSettingsHub
     }
-  }), [currentUser, allUsers, posts, reels, onUserUpdated, onLogout, onDeleteMyAccount, onOpenProfessionalDashboard, closeSettingsHub]);
+  }), [currentUser, allUsers, posts, reels, onUserUpdated, onNavigateToUserProfile, onToggleFollowUser, onLogout, onDeleteMyAccount, onOpenProfessionalDashboard, closeSettingsHub]);
 
   // Someone else's profile: the strip behind the clock / camera takes the colour of their cover (and goes back to normal when this page is left or hidden)
   const profileHidden = usePageHidden();

@@ -33,6 +33,8 @@ export interface SettingsActions {
   openLiveAvatar: () => void;
   openAvatars: () => void;
   openAdmin: () => void;
+  openProfile: (user: User) => void;             // closes Settings and opens that person's profile
+  toggleFollow: (userId: string) => Promise<unknown>;   // noob / unnoob someone
   openSwitchAccount: () => void;
   openExport: () => void;
   openDeleteAccount: () => void;

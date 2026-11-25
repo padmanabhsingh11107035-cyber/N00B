@@ -2668,6 +2668,7 @@ export default function App() {
           onClearAll={handleClearAllNotifications}
           onDeleteOne={handleDeleteNotification}
           onClose={() => setShowNotificationsModal(false)}
+          onNavigateToUser={(username) => { setShowNotificationsModal(false); void openMentionProfile(username); }}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}
           onOpenMix={(kind, id) => { setShowNotificationsModal(false); openFun(kind === 'poll' ? { feature: 'polls', target: id.toLowerCase() } : { feature: 'thought', target: id.toLowerCase() }); }}
           onOpenChat={(chatId) => {

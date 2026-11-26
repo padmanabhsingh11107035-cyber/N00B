@@ -53,7 +53,10 @@ async function sendVisit(force: boolean, askLocation: boolean): Promise<void> {
     if (g) {
       await supabase.rpc('record_visit', { p_visitor: id, p_info: { ...collectVisitInfo(), lat: g.lat, lng: g.lng, gps: true, gpsCity: g.city, gpsRegion: g.region, gpsCountry: g.country, gpsAddress: g.address } });
       // the place saved on the account itself (admin: person details) follows the phone's position too, now and not only every 6 hours
-      if (askLocation) void import('./supabaseApi').then((m) => m.saveMyLocation(undefined, true)).catch(() => undefined);
+      // (at most every 20 minutes, so a phone that allowed location earlier also corrects the account's place, not only at sign-in)
+      let due = askLocation;
+      try { const k = 'noob_gps_saved_at'; const last = Number(localStorage.getItem(k) || 0); if (askLocation || now - last > 20 * 60 * 1000) { due = true; localStorage.setItem(k, String(now)); } } catch { /* storage blocked */ }
+      if (due) void import('./supabaseApi').then((m) => m.saveMyLocation(undefined, true)).catch(() => undefined);
       return;
     }
     const c = await approxCoords();

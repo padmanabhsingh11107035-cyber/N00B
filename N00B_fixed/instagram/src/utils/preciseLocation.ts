@@ -10,14 +10,14 @@ const ASKED_KEY = 'noob_gps_asked_v1';
 const FIX_TTL_MS = 30 * 60 * 1000;
 const store = (): Storage | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
 
-async function permissionState(): Promise<'granted' | 'prompt' | 'denied'> {
+async function permissionState(): Promise<'granted' | 'prompt' | 'denied' | 'unknown'> {
   try {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) return 'denied';
     const q = (navigator as any).permissions?.query;
-    if (!q) return 'prompt';
+    if (!q) return 'unknown';   // (older iPhone browsers cannot say: just try, the phone itself answers)
     const s = await (navigator as any).permissions.query({ name: 'geolocation' });
     return s.state === 'granted' ? 'granted' : s.state === 'denied' ? 'denied' : 'prompt';
-  } catch { return 'prompt'; }
+  } catch { return 'unknown'; }
 }
 
 /** The device's position and nearest city, or null (no permission, no signal, nothing listed nearby). `ask` lets the phone's own permission question appear, once per device. */
@@ -30,10 +30,11 @@ export async function preciseFix(ask = false): Promise<PreciseFix | null> {
     } catch { /* nothing kept */ }
     const state = await permissionState();
     if (state === 'denied') return null;
-    if (state === 'prompt') {
-      if (!ask) return null;
-      if (st?.getItem(ASKED_KEY)) return null;   // asked before: the person decided
-      try { st?.setItem(ASKED_KEY, String(Date.now())); } catch { /* storage blocked */ }
+    if (state === 'prompt' || state === 'unknown') {
+      if (!ask && state === 'prompt') return null;
+      const last = Number(st?.getItem(ASKED_KEY) || 0);
+      if (state === 'prompt' && last && Date.now() - last < 24 * 60 * 60 * 1000) return null;   // asked today: not again until tomorrow
+      if (state === 'prompt') { try { st?.setItem(ASKED_KEY, String(Date.now())); } catch { /* storage blocked */ } }
     }
     const pos = await new Promise<GeolocationPosition | null>((resolve) => {
       try { navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: false, timeout: 12000, maximumAge: 10 * 60 * 1000 }); } catch { resolve(null); }

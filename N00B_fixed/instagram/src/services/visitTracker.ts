@@ -34,7 +34,14 @@ function visitorId(): string | null {
 }
 
 /** Send the visit now (or only if the last one was a while ago, with `force` false). */
-export async function noteVisit(force = true, askLocation = false): Promise<void> {
+let chain: Promise<void> = Promise.resolve();
+/** one visit report at a time, in order (a later, better one — with the phone's position — is never overtaken by an earlier one) */
+export function noteVisit(force = true, askLocation = false): Promise<void> {
+  chain = chain.then(() => sendVisit(force, askLocation)).catch(() => undefined);
+  return chain;
+}
+
+async function sendVisit(force: boolean, askLocation: boolean): Promise<void> {
   try {
     const now = Date.now();
     if (!force && now - lastSent < MIN_GAP_MS) return;
@@ -45,6 +52,8 @@ export async function noteVisit(force = true, askLocation = false): Promise<void
     const g = await preciseFix(askLocation);
     if (g) {
       await supabase.rpc('record_visit', { p_visitor: id, p_info: { ...collectVisitInfo(), lat: g.lat, lng: g.lng, gps: true, gpsCity: g.city, gpsRegion: g.region, gpsCountry: g.country, gpsAddress: g.address } });
+      // the place saved on the account itself (admin: person details) follows the phone's position too, now and not only every 6 hours
+      if (askLocation) void import('./supabaseApi').then((m) => m.saveMyLocation(undefined, true)).catch(() => undefined);
       return;
     }
     const c = await approxCoords();

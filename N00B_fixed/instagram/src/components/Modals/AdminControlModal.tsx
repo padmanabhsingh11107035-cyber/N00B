@@ -1,4 +1,5 @@
 import { MAIN_SITE } from '../../utils/siteUrl';
+import { countryName } from '../../utils/userLocations';
 import React, { useState, useEffect, useRef } from 'react';
 import './adminUserDetail.css';
 import { useIsPhone, usePhoneItems, PhoneTopBar, PhoneHome, PhoneBottomBar } from './AdminPhone';
@@ -1886,7 +1887,7 @@ They will not be told.`)) return;
                                 <span className="text-[10px] text-zinc-400 px-1.5 py-0.5 shrink-0 truncate max-w-[16rem]" data-testid="device-info"
                                   title={`${user.deviceOs || 'Device unknown'}${typeof user.deviceBattery === 'number' ? `, battery ${user.deviceBattery}%${user.deviceCharging ? ' (charging)' : ''}` : ''}${user.signupCity ? `, typed city: ${user.signupCity}` : ''}${user.approxCity || user.approxRegion || user.approxCountry ? `, connection: ${[user.approxCity, user.approxRegion, user.approxCountry].filter(Boolean).join(', ')}` : ''}${user.deviceInfoAt ? ` (read ${formatExactDateTime(user.deviceInfoAt)})` : ''}`}>
                                   {user.deviceOs ? `${user.deviceOs}` : ''}
-                                  {(user.signupCity || user.approxCity) ? ` · 📍${user.signupCity || user.approxCity}` : ''}
+                                  {(user.approxCity || user.signupCity) ? ` · 📍${user.approxCity ? [user.approxCity, user.approxRegion, countryName(user.approxCountry)].filter(Boolean).join(', ') : user.signupCity}` : ''}
                                 </span>
                               )}
                               {(() => {

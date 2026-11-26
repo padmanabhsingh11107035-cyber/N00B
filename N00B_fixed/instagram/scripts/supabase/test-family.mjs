@@ -143,7 +143,7 @@ check(readPlace(wire({ lat: 91 }), 5000) === null && readPlace(wire({ lng: -181 
 check(readPlace(wire({ at: 9e15 }), 5000).at === 5000 + 120000, 'a time far in the future (a wrong clock, or a trick) is held at two minutes ahead');
 
 section('7. The database');
-const sql1 = read('supabase/migrations/20261031000001_family_map.sql'), sql2 = read('supabase/migrations/20261031000002_family_sealed.sql'), sql3 = read('supabase/migrations/20261031000003_family_day_report.sql'), sql = sql1 + '\n' + sql2 + '\n' + sql3;
+const sql1 = read('supabase/migrations/20261031000001_family_map.sql'), sql2 = read('supabase/migrations/20261031000002_family_sealed.sql'), sql3 = read('supabase/migrations/20261031000003_family_day_report.sql'), sql4 = read('supabase/migrations/20261126000002_family_phone_sender.sql'), sql = sql1 + '\n' + sql2 + '\n' + sql3 + '\n' + sql4;
 check(['family_rooms', 'family_members', 'family_sealed', 'family_join_misses', 'family_prefs', 'family_timeline', 'family_housekeeping'].every((t) => new RegExp(`alter table public\\.${t} enable row level security`).test(sql)) && /revoke all on public\.family_prefs, public\.family_sealed from public, anon, authenticated/.test(sql2) && !/create policy/.test(sql) && !/grant (select|insert|update|delete|all) on public\.family/.test(sql), 'row-level security on, nothing granted on the tables, no policy: only the functions can reach them');
 check((sql.match(/security definer set search_path = public/g) || []).length >= 20 && !/delete from public\.(profiles|posts|messages)|alter table public\.(profiles|posts)/i.test(sql) && /drop table if exists public\.family_locations/.test(sql2) && /drop function if exists public\.family_push_location/.test(sql2), 'every function checks who is asking; the plain places and the function that wrote them are removed; nothing else that exists is touched');
 const db = await createTestDb();
@@ -452,7 +452,7 @@ check(/@capacitor-community\/background-geolocation/.test(pkg) && /registerPlugi
 const sigs = Object.fromEntries([...sql.matchAll(/create or replace function public\.(family_\w+)\(([^)]*)\)/g)].map((m) => [m[1], m[2].split(',').map((x) => x.trim().split(/\s+/)[0]).filter(Boolean)]));
 const calls = [...live.matchAll(/call\('(family_\w+)'(?:, \{([^}]*)\})?/g), ...sealedSrc.matchAll(/rpc\('(family_\w+)', \{([^}]*)\}/g)].map((m) => [m[1], (m[2] || '').split(',').map((x) => x.trim().split(':')[0]).filter(Boolean)]);
 const names = new Set(calls.map(([fn]) => fn));
-check(names.size === 17 && calls.every(([fn, keys]) => sigs[fn] && keys.every((k) => sigs[fn].includes(k))), 'the page calls 17 database functions, each with argument names that exist in the SQL', JSON.stringify(calls.filter(([fn, keys]) => !sigs[fn] || !keys.every((k) => sigs[fn].includes(k)))) + ' ' + [...names].join());
+check(names.size === 19 && calls.every(([fn, keys]) => sigs[fn] && keys.every((k) => sigs[fn].includes(k))), 'the page calls 19 database functions, each with argument names that exist in the SQL', JSON.stringify(calls.filter(([fn, keys]) => !sigs[fn] || !keys.every((k) => sigs[fn].includes(k)))) + ' ' + [...names].join());
 const cssBare = css.replace(/\/\*[\s\S]*?\*\//g, '');
 const sels = [...cssBare.matchAll(/(^|\n|\})\s*([^@{}\n][^{}]*)\{/g)].flatMap((m) => m[2].split(/,(?![^(]*\))/)).map((x) => x.trim()).filter(Boolean);
 const loose = sels.filter((x) => !/^(:where\(\.fm-root[ )]|\.fm-|\.maplibregl-|\d+%|from|to)/.test(x));

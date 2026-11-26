@@ -34,6 +34,12 @@ export interface FamilyApi {
   readonly mode: 'live' | 'demo';
   /** the id of the person who is logged in (the "keep sharing" switch is remembered per person) */
   userId(): Promise<string | null>;
+  /** Android app only: a token for the phone's own background sender and this device's key (null when there is none); the token can only list the rooms and hand in locked places */
+  phoneSetup?(): Promise<{ token: string; key: { kid: string; x: string; y: string; d: string } } | null>;
+  /** the id of this device's key (the sender must lock with the same key the app uses) */
+  phoneKid?(): Promise<string | null>;
+  /** switch all the person's phone tokens off */
+  phoneRevoke?(): Promise<void>;
   /** the person's "share my location" switch: what a new room starts with */
   getPrefs(): Promise<{ shareDefault: boolean; reportDefault: boolean }>;
   /** "share my day report" for all rooms at once (deleted at 00:00 every night; switching it off deletes it at once) */

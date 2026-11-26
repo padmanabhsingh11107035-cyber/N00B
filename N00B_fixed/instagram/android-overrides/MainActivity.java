@@ -33,6 +33,8 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(AppIconPlugin.class);
     // Does this build have Firebase? The web app asks before it registers for phone notifications (without Firebase that registration stops the whole app).
     registerPlugin(PushGuardPlugin.class);
+    // Family Map: the phone's own background sender, which keeps sending the (locked) place after the app is swiped away (FamilySenderPlugin / FamilyLocationService).
+    registerPlugin(FamilySenderPlugin.class);
     super.onCreate(savedInstanceState);
     hideSystemBars();
   }

@@ -42,6 +42,8 @@ const OPEN_TO_VISITORS = {
   public_video: 'a shared link: private and suspended accounts are not shown (public_account_ok)',
   record_public_view: 'counts a view of a shared link: one per visitor, robots are not counted',
   submit_grievance: 'the Grievance Officer form (grievance.html) works without login on purpose (the IT Rules of India want a reachable officer); length, 3 a day per contact and 200 an hour are checked inside',
+  family_phone_rooms: 'Family Map in the Android app: the background service (no login after the app is swiped away) asks which rooms its person shares with; the secret 64-character phone token is checked inside (only its fingerprint is stored, 60 days, switched off at logout)',
+  family_phone_push: 'Family Map in the Android app: the background service hands in end-to-end locked places; the phone token is checked inside, the room must be one the person shares with, and the lock must be made by the person\'s own key',
   track_grievance: 'looks up a complaint by its ticket number AND the contact it was filed with; nothing else is returned'
 };
 

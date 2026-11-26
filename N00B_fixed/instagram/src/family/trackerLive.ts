@@ -1,5 +1,6 @@
 import type { FamilyApi } from './api.ts';
 import { backgroundSupported, watchInBackground } from './background.ts';
+import { senderAvailable, startPhoneSender } from './phoneSender.ts';
 import { backgroundWanted } from './consent.ts';
 import { createRecorder, type DayRecorder } from './dayRecorder.ts';
 import { watchLocation } from './locate.ts';
@@ -9,12 +10,22 @@ import { createTracker } from './tracker.ts';
 // The tracker of the real app: the Android app follows the phone with its background service (also while the app is closed), everywhere else the page's own location is followed.
 // The day report is made from the same places (dayRecorder.ts): it listens to every place that is sent, and keeps today's stays and trips on the phone until 00:00.
 let askPermission = false;
+let currentApi: FamilyApi;
 let native = false; // the background service of the Android app is following the phone
 let recorder: DayRecorder | null = null;
 
 export const tracker = createTracker({
   watch: async (onFix, onProblem) => {
+    const api = currentApi;
     if (backgroundSupported() && backgroundWanted()) {
+      // the newer Android app has its own sender that goes on after the app is swiped away; an older app (or one without the database part yet) uses the plugin below
+      if (senderAvailable()) {
+        try {
+          const stop = await startPhoneSender(api, onFix, onProblem, askPermission);
+          native = true;
+          return () => { native = false; stop(); };
+        } catch { /* the plugin below */ }
+      }
       try {
         const stop = await watchInBackground(onFix, onProblem, askPermission);
         native = true;
@@ -55,7 +66,7 @@ async function ensureRecorder(api: FamilyApi): Promise<void> {
 }
 
 /** `prompt`: the person is looking at Family Map, so the phone may ask for the permission now; the automatic start when NOOB opens never asks */
-export async function startTracker(api: FamilyApi, prompt = false): Promise<void> { askPermission = prompt; await ensureRecorder(api); return tracker.start(api); }
+export async function startTracker(api: FamilyApi, prompt = false): Promise<void> { askPermission = prompt; currentApi = api; await ensureRecorder(api); return tracker.start(api); }
 export function restartTracker(api: FamilyApi, prompt = false): Promise<void> { tracker.stop(); return startTracker(api, prompt); }
 /** the day report was switched on or off: ask which rooms get it right now */
 export const refreshReport = (): void => { void recorder?.refresh(); };

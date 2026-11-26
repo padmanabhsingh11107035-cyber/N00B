@@ -3,6 +3,7 @@ import { browserKeyStore } from '../e2ee/keyring.ts';
 import { deviceLabel } from '../e2ee/label.ts';
 import { FamilyOffline, parseOutcome, parseRoom, parseRoomOutcome, parseStateOutcome, type FamilyApi, type FamilyError, type FamilyRoom } from './api';
 import { createPlaceCrypto } from './sealed.ts';
+import { nativeIsSending } from './phoneSender.ts';
 import { dayStartFromKey, endOfDay, fromWire, toWire, type Seg } from './timeline.ts';
 
 // The Family Map on the real database: every call is one of the family_* functions (migrations 20261031000001 and 20261031000002), which check who is asking. Nothing is read from a table directly,
@@ -90,12 +91,25 @@ export const liveApi: FamilyApi = {
   async pushLocation(fix) {
     // a missed update is not worth an error: the next one follows in a few seconds
     try {
+      if (await nativeIsSending()) return;   // the phone's own background sender is already sending this place
       const rooms = await roomsToShareWith();
       const items: { room: string; env: unknown }[] = [];
       for (const r of rooms.slice(0, 10)) { const env = await places.seal(r.id, fix); if (env) items.push({ room: r.id, env }); }
       if (items.length) await call('family_push_sealed', { p_items: items });
     } catch { /* ignored */ }
   },
+  async phoneSetup() {
+    try {
+      const ready = await places.ready();
+      if (!ready) return null;
+      const j = await call('family_phone_register');
+      if (!j || j.ok !== true || typeof j.token !== 'string' || !/^[0-9a-f]{64}$/.test(j.token)) return null;
+      const k = ready.key;
+      return { token: j.token, key: { kid: k.kid, x: k.publicJwk.x, y: k.publicJwk.y, d: k.privateJwk.d } };
+    } catch { return null; }   // (the SQL is not installed yet, or no signal: the old way keeps working)
+  },
+  async phoneKid() { try { return (await places.ready())?.key.kid ?? null; } catch { return null; } },
+  async phoneRevoke() { try { await call('family_phone_revoke'); } catch { /* it expires by itself */ } },
   async getPrefs() { try { const j = await call('family_my_prefs'); return { shareDefault: j?.shareDefault !== false, reportDefault: j?.reportDefault === true }; } catch { return { shareDefault: true, reportDefault: false }; } },
   setReportAll: (on) => safe(async () => { const r = parseOutcome(await call('family_set_report_all', { p_on: on })); changed(); dayCache.clear(); return r; }, { ok: false, error: 'failed' }),
   async reportRooms() { try { return (await allRooms()).filter((r) => r.sharing && r.report).map((r) => r.id); } catch { return null; } },

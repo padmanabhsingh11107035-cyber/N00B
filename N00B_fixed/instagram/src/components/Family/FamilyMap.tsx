@@ -170,6 +170,7 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
   };
   const switchBackground = (on: boolean): void => {
     setBgOn(on); setBackgroundWanted(on);
+    if (!on) void import('../../family/phoneSender').then((m) => m.forgetPhoneSender(api));
     if (tracker.state().running) void restartTracker(api, true);
     say(on ? 'NOOB keeps sharing with the screen off. Do not swipe it away from recent apps' : 'Sharing stops when the app is not on screen');
   };

@@ -42,7 +42,7 @@ const lcsv = V.ledgerToCsv([{ id: '1', at: 'x', userId: 'u', username: 'dan', di
 check(lcsv.includes('x,dan,Dan,-250,Bought a coupon,3750,'), 'the ledger spreadsheet');
 
 section('3. Visitors: the words and the facts the app sends');
-check(V.placeOf({ city: 'Mumbai', region: 'Maharashtra', country: 'IN' }) === 'Mumbai, Maharashtra, IN' && V.placeOf({ city: '', region: '', country: '' }) === 'Unknown place' && V.placeOf({ city: 'Delhi', region: 'Delhi', country: 'IN' }) === 'Delhi, IN', 'the place, without repeating a name');
+check(V.placeOf({ city: 'Mumbai', region: 'Maharashtra', country: 'IN' }) === 'India › Maharashtra › Mumbai' && V.placeOf({ city: '', region: '', country: '' }) === 'Unknown place' && V.placeOf({ city: 'Delhi', region: 'Delhi', country: 'IN' }) === 'India › Delhi', 'the place (country, state, city, area), without repeating a name');
 check(V.PLATFORM_LABEL.app === 'Android app' && V.PLATFORM_LABEL.pwa === 'Home-screen app' && V.PLATFORM_LABEL.web === 'Browser', 'the three ways of opening NOOB are named');
 const I = await load('src/utils/visitorInfo.ts');
 const ua = {
@@ -83,7 +83,7 @@ const panels = ['AdminUserLogsPanel', 'AdminAccountsPanel', 'AdminVisitorsPanel'
 check(panels.every((p) => /Download/.test(p) && /text\/csv/.test(p)), 'each page can be downloaded as a spreadsheet');
 check(/Show more/.test(panels[0]) && /Show more/.test(panels[1]) && /Show more/.test(panels[2]), 'and pages through long lists');
 check(/run-audit/.test(panels[1]) && /Settle/.test(panels[1]) && /every Sunday/.test(panels[1]) && /audit-issue/.test(panels[1]), 'Accounts: run an audit now, see each mistake in words, settle it with one tap; says it runs every Sunday');
-check(/startVisitTracking\(\)/.test(read('src/App.tsx')) && /noteVisit\(true\)/.test(read('src/App.tsx')), 'the app tells the server about every open, and again after login');
+check(/startVisitTracking\(\)/.test(read('src/App.tsx')) && /noteVisit\(true, true\)/.test(read('src/App.tsx')), 'the app tells the server about every open, and again after login');
 const api = read('src/services/adminLedgerApi.ts');
 check(['admin_user_logs', 'admin_accounts_ledger', 'admin_user_transactions', 'admin_accounting_overview', 'admin_run_accounting_audit', 'admin_fix_accounting_issue', 'admin_site_visits'].every((fn) => api.includes(`'${fn}'`)), 'every page asks the matching database function');
 const mig = read('supabase/migrations/20261020000002_admin_logs_accounts_visitors.sql');

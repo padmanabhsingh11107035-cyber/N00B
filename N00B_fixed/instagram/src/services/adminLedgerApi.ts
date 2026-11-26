@@ -53,7 +53,7 @@ export const fixAccountingIssue = (issueId: string, note?: string) => call<{ suc
 export interface SiteVisit {
   visitorId: string; firstSeen: string; lastSeen: string; visits: number; userId: string | null; username: string | null; displayName: string | null; avatar: string | null; email: string | null;
   browser: string | null; os: string | null; device: string | null; platform: 'app' | 'pwa' | 'web' | null; language: string | null; timezone: string | null; screen: string | null;
-  referrer: string | null; landingPath: string | null; lastPath: string | null; country: string | null; region: string | null; city: string | null; ip: string | null; isBot: boolean;
+  referrer: string | null; landingPath: string | null; lastPath: string | null; country: string | null; region: string | null; city: string | null; address?: string | null; ip: string | null; isBot: boolean;
 }
 export interface SiteVisits {
   rows: SiteVisit[]; total: number;
@@ -63,7 +63,7 @@ export const fetchSiteVisits = (o: { limit?: number; offset?: number; search?: s
   call<SiteVisits>('admin_site_visits', { p_limit: o.limit ?? 100, p_offset: o.offset ?? 0, p_search: o.search || null, p_who: o.who || 'people' }, 'Visitors');
 
 // ---------------------------------------------------------------- user locations (the User data map page)
-export interface UserLocationPlace { city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null; lat?: number | null; lng?: number | null; ip?: string | null; platform?: string | null; device?: string | null }
+export interface UserLocationPlace { address?: string | null; city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null; lat?: number | null; lng?: number | null; ip?: string | null; platform?: string | null; device?: string | null }
 export interface UserLocationRow { id: string; username: string | null; displayName: string | null; createdAt: string | null; signup: UserLocationPlace | null; last: UserLocationPlace | null }
 export interface UserLocations { rows: UserLocationRow[]; total: number; generatedAt: string }
 /** Approximate places (connection coordinates, usually the city) and the IP of that visit. The database refuses everyone but the main administrator. */

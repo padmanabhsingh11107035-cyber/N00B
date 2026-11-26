@@ -99,7 +99,7 @@ const two = clusterDots([dots[0], dots[1]], { k: 1, tx: 0, ty: 0 }, 5000);
 check(two.length === 1 && two[0].dots.length === 2, 'a big square joins all dots');
 const apart = clusterDots([{ ...dots[0], x: 0, y: 0 }, { ...dots[1], x: 500, y: 100 }], { k: 1, tx: 0, ty: 0 }, 22);
 check(apart.length === 2, 'far dots stay apart');
-check(placeLabel({ city: 'Pune', country: 'IN' }) === 'Pune, IN' && placeLabel({ region: 'Karnataka', country: 'IN' }) === 'Karnataka, IN' && placeLabel(null) === 'unknown' && placeLabel({ country: 'India' }) === 'IN', 'place text');
+check(placeLabel({ city: 'Pune', country: 'IN' }) === 'India › Pune' && placeLabel({ region: 'Karnataka', country: 'IN' }) === 'India › Karnataka' && placeLabel({ city: 'Ajmer', region: 'Rajasthan', country: 'IN', address: 'Madar Gate' }) === 'India › Rajasthan › Ajmer › Madar Gate' && placeLabel(null) === 'unknown' && placeLabel({ country: 'India' }) === 'India', 'place text: country, state, city, then the area');
 const now = Date.parse('2026-11-13T12:00:00Z');
 check(agoShort('2026-11-13T11:59:50Z', now) === 'now' && agoShort('2026-11-13T11:57:00Z', now) === '3m' && agoShort('2026-11-13T07:00:00Z', now) === '5h' && agoShort('2026-11-11T12:00:00Z', now) === '2d' && agoShort('2026-07-01T12:00:00Z', now) === '4mo' && agoShort('2024-01-01T00:00:00Z', now) === '2y' && agoShort(null, now) === '?', 'short times');
 check(dateOnly('2026-03-01T10:00:00Z') === '2026-03-01' && dateOnly(null) === '?', 'dates');

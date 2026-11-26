@@ -149,6 +149,8 @@ export const MAP_H = WORLD_MAP_HEIGHT;
 // ---------------------------------------------------------------------------------------------- the rows
 export interface UserPlace {
   city: string | null; region: string | null; country: string | null; at?: string | null; source?: string | null
+  /** the area / road the device gave (only when the person allowed location) */
+  address?: string | null
   /** approximate position of the connection (IP geolocation, usually the city; NOT a GPS reading), from the same visit */
   lat?: number | null; lng?: number | null
   /** shown only to the main administrator (this whole answer is admin only) */
@@ -156,11 +158,21 @@ export interface UserPlace {
 }
 export interface UserLocationRow { id: string; username: string | null; displayName: string | null; createdAt: string | null; signup: UserPlace | null; last: UserPlace | null }
 
-export const placeLabel = (p: PlaceText | null | undefined): string => {
+/** "India" from "IN" (the name from our country table); an unknown value is shown as it is */
+export function countryName(country: string | null | undefined): string {
+  const raw = String(country ?? '').trim();
+  if (!raw) return '';
+  const cc = countryCode(raw);
+  if (!cc) return raw;
+  for (const line of COUNTRY_DATA.split('\n')) { const m = /^([A-Z]{2})\s+\S+\s+\S+\s+(.+)$/.exec(line.trim()); if (m && m[1] === cc) return m[2]; }
+  return cc;
+}
+
+/** "India › Rajasthan › Ajmer › Madar Gate, Ajmer": country, state, city, then the area when known (a missing part is left out) */
+export const placeLabel = (p: (PlaceText & { address?: string | null }) | null | undefined): string => {
   if (!p) return 'unknown';
-  const cc = countryCode(p.country) ?? (String(p.country ?? '').trim().toUpperCase() || '');
-  const out = [p.city, p.region && !p.city ? p.region : null, cc].map((x) => String(x ?? '').trim()).filter(Boolean);
-  return out.length ? out.join(', ') : 'unknown';
+  const out = [countryName(p.country), p.region, p.city, p.address].map((x) => String(x ?? '').trim()).filter((x, i, a) => x && a.indexOf(x) === i);
+  return out.length ? out.join(' › ') : 'unknown';
 };
 
 export type DotKind = 'signup' | 'last';

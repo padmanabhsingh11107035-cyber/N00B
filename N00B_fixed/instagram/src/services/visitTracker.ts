@@ -44,7 +44,7 @@ export async function noteVisit(force = true, askLocation = false): Promise<void
     // the device's own position when the person allowed it (right city); otherwise the approximate one from the connection
     const g = await preciseFix(askLocation);
     if (g) {
-      await supabase.rpc('record_visit', { p_visitor: id, p_info: { ...collectVisitInfo(), lat: g.lat, lng: g.lng, gps: true, gpsCity: g.city, gpsCountry: g.country } });
+      await supabase.rpc('record_visit', { p_visitor: id, p_info: { ...collectVisitInfo(), lat: g.lat, lng: g.lng, gps: true, gpsCity: g.city, gpsRegion: g.region, gpsCountry: g.country, gpsAddress: g.address } });
       return;
     }
     const c = await approxCoords();

@@ -1,4 +1,5 @@
 // The words and the spreadsheet for the admin pages User logs, Accounts and Visitors: one place, so each sentence can be tested on its own.
+import { countryName } from './userLocations.ts';
 import type { UserLogEvent, AuditIssue, LedgerRow, SiteVisit } from '../services/adminLedgerApi';
 
 const num = (n: number | null | undefined) => (n === null || n === undefined ? '' : Number(n).toLocaleString('en-IN'));
@@ -60,8 +61,10 @@ export function describeIssue(i: AuditIssue): { title: string; text: string; fix
 // ---------------------------------------------------------------------------------------------- Visitors
 export const PLATFORM_LABEL: Record<string, string> = { app: 'Android app', pwa: 'Home-screen app', web: 'Browser' };
 
-export function placeOf(v: Pick<SiteVisit, 'city' | 'region' | 'country'>): string {
-  return [v.city, v.region, v.country].filter((x, i, a) => x && a.indexOf(x) === i).join(', ') || 'Unknown place';
+export function placeOf(v: Pick<SiteVisit, 'city' | 'region' | 'country'> & { address?: string | null }): string {
+  // country, then state, then city, then the area / road when the device gave one
+  const out = [countryName(v.country), v.region, v.city, v.address].map((x) => String(x ?? '').trim()).filter((x, i, a) => x && a.indexOf(x) === i);
+  return out.join(' › ') || 'Unknown place';
 }
 
 export const visitsToCsv = (rows: SiteVisit[]) =>

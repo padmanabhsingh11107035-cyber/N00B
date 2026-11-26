@@ -3818,7 +3818,7 @@ export async function saveMyLocation(typedCity?: string, force = false): Promise
     const typed = (typedCity || '').trim();
     if (!force && !typed && !dueNow(localStore(), 'noob_location_at', 6 * 60 * 60 * 1000)) return;
     const g = await preciseFix(false);   // the device's own position when the person allowed it, else the connection's approximate place
-    const p = g && g.city ? { city: g.city, region: '', country: g.country } : await readApproxPlace(mediaOrigin());
+    const p = g && g.city ? { city: g.city, region: g.region, country: g.country } : await readApproxPlace(mediaOrigin());
     await rpc('save_my_location', { p_typed_city: typed || null, p_city: p?.city || null, p_region: p?.region || null, p_country: p?.country || null });
   } catch { /* never shown to the person */ }
 }

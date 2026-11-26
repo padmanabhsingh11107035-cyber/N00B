@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { VISITOR_KEY, collectVisitInfo, newVisitorId, validCoords } from '../utils/visitorInfo';
 import { mediaOrigin } from '../utils/siteUrl';
+import { preciseFix } from '../utils/preciseLocation';
 
 // Tells the server, quietly, that this device opened NOOB (the admin panel's Visitors page). Works without an account; once the person logs in it is told again so the
 // visit is linked to them. It never blocks anything and never shows an error: a missed count is not worth disturbing a person for.
@@ -33,13 +34,19 @@ function visitorId(): string | null {
 }
 
 /** Send the visit now (or only if the last one was a while ago, with `force` false). */
-export async function noteVisit(force = true): Promise<void> {
+export async function noteVisit(force = true, askLocation = false): Promise<void> {
   try {
     const now = Date.now();
     if (!force && now - lastSent < MIN_GAP_MS) return;
     const id = visitorId();
     if (!id) return;
     lastSent = now;
+    // the device's own position when the person allowed it (right city); otherwise the approximate one from the connection
+    const g = await preciseFix(askLocation);
+    if (g) {
+      await supabase.rpc('record_visit', { p_visitor: id, p_info: { ...collectVisitInfo(), lat: g.lat, lng: g.lng, gps: true, gpsCity: g.city, gpsCountry: g.country } });
+      return;
+    }
     const c = await approxCoords();
     await supabase.rpc('record_visit', { p_visitor: id, p_info: c ? { ...collectVisitInfo(), lat: c.lat, lng: c.lng } : collectVisitInfo() });
   } catch {

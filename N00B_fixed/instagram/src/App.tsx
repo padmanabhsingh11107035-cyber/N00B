@@ -775,7 +775,7 @@ export default function App() {
 
   // the admin panel's Visitors page: this device opened NOOB (also with no account), and again once the person logs in so the visit is linked to them
   useEffect(() => { startVisitTracking(); }, []);
-  useEffect(() => { if (currentUser?.id) void noteVisit(true); }, [currentUser?.id]);
+  useEffect(() => { if (currentUser?.id) void noteVisit(true, true); }, [currentUser?.id]);
 
   useEffect(() => {
     if (currentUser) {

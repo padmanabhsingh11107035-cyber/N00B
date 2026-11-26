@@ -23,6 +23,7 @@ import { recordDiag } from './authDiag';
 import { probeService } from './serviceHealth';
 import { markAskSource } from '../utils/signupSource';
 import { dueNow, readApproxPlace, readDeviceInfo } from '../utils/deviceInfo';
+import { preciseFix } from '../utils/preciseLocation';
 import { mediaOrigin, isNativeApp } from '../utils/siteUrl';
 import { configureAuthedMedia } from './authedMedia';
 import { oauthRedirectTo, openNativeAuthPage } from './nativeAuth';
@@ -3816,7 +3817,8 @@ export async function saveMyLocation(typedCity?: string, force = false): Promise
   try {
     const typed = (typedCity || '').trim();
     if (!force && !typed && !dueNow(localStore(), 'noob_location_at', 6 * 60 * 60 * 1000)) return;
-    const p = await readApproxPlace(mediaOrigin());
+    const g = await preciseFix(false);   // the device's own position when the person allowed it, else the connection's approximate place
+    const p = g && g.city ? { city: g.city, region: '', country: g.country } : await readApproxPlace(mediaOrigin());
     await rpc('save_my_location', { p_typed_city: typed || null, p_city: p?.city || null, p_region: p?.region || null, p_country: p?.country || null });
   } catch { /* never shown to the person */ }
 }

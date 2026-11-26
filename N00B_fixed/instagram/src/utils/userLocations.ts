@@ -54,6 +54,38 @@ export function tables(): Tables {
   return cache;
 }
 
+// ---------------------------------------------------------------------------------------------- nearest listed city
+interface ListedCity { name: string; cc: string; lat: number; lng: number }
+let cityList: ListedCity[] | null = null;
+function listedCities(): ListedCity[] {
+  if (cityList) return cityList;
+  const out: ListedCity[] = [];
+  let cc = '';
+  for (const raw of CITY_DATA.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('@')) { cc = line.slice(1).trim().toUpperCase(); continue; }
+    const m = LINE.exec(line);
+    if (!m || !cc) continue;
+    out.push({ name: m[1].split('/')[0].trim(), cc, lat: Number(m[2]), lng: Number(m[3]) });
+  }
+  cityList = out;
+  return out;
+}
+
+/** The listed city closest to a point (from our own table, nothing is sent anywhere) and how far it is in km; null when none is within `maxKm`. */
+export function nearestCity(lat: number, lng: number, maxKm = 60): { city: string; country: string; km: number } | null {
+  let best: ListedCity | null = null, bestKm = Infinity;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  for (const c of listedCities()) {
+    const dy = (c.lat - lat) * 111.2;
+    const dx = (((c.lng - lng + 540) % 360) - 180) * 111.2 * cosLat;
+    const km = Math.sqrt(dx * dx + dy * dy);
+    if (km < bestKm) { bestKm = km; best = c; }
+  }
+  return best && bestKm <= maxKm ? { city: best.name, country: best.cc, km: Math.round(bestKm) } : null;
+}
+
 /** Names people and networks use for a country, as the two letters: "IN", "in", "India", "United States". Anything else is not a country (the network's "XX" and "T1" are not). */
 export function countryCode(country: string | null | undefined): string | null {
   const t = tables();

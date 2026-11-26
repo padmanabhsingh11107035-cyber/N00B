@@ -466,5 +466,13 @@ check([legal.privacy, legal.privacyPage].every((t) => /Family Map/.test(t) && /p
 check([legal.terms, legal.termsPage].every((t) => /Family Map/.test(t) && /consent/i.test(t) && /emergenc/i.test(t) && /(parent|guardian)/i.test(t) && /day report/i.test(t)), 'the Terms (in the app and on the website) ask for everybody\'s consent, say it is not an emergency service, put the guardian in charge of a child and say the day report is only for people who switch it on themselves');
 check(/Family Map/.test(legal.e2ee) && /Family Map/.test(legal.deletePage) && /day report/i.test(legal.e2ee) && /day report/i.test(legal.deletePage), 'the encryption page and the data-deletion page mention Family Map and the day report');
 
+
+section('10. Full address under a pin');
+const pn = read('src/family/placeName.ts');
+check(/zoom=18/.test(pn) && /toFixed\(4\)/.test(pn) && /<= 25/.test(pn) && /fullLines/.test(pn), 'the address is looked up for the spot rounded to about 11 m, and a spot within 25 m reuses an answer already known');
+check(/fm-detail/.test(read('src/components/Family/RoomView.tsx')) && /fm-pin-place/.test(read('src/family/markers.ts')), 'the map shows the place under each pin and the full address of the person you tap');
+check(/ROUGH_M/.test(read('src/family/tracker.ts')), 'a rough cell-tower reading never throws a good pin away');
+check(!/never your account or where your family is/.test(legal.privacy + legal.privacyPage), 'the Privacy Policy no longer says the map companies never learn where family is: the rounded pin position is sent for the address');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

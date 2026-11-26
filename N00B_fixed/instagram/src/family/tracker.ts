@@ -17,7 +17,7 @@ export interface TrackerDeps {
   /** called every few seconds while the tracker runs */
   onTick?: () => void;
 }
-const HEARTBEAT_MS = 20_000, BEAT_CHECK_MS = 5_000;
+const HEARTBEAT_MS = 20_000, BEAT_CHECK_MS = 5_000, ROUGH_M = 200;
 
 export function createTracker(deps: TrackerDeps) {
   let state: TrackerState = { running: false, fix: null, problem: null };
@@ -35,7 +35,7 @@ export function createTracker(deps: TrackerDeps) {
     set({ running: true, problem: null });
     starting = (async () => {
       const stop = await deps.watch(
-        (f) => { set({ fix: f, problem: null }); if (shouldPush(last, f, deps.now())) send(f); },
+        (f) => { if (f.accuracy != null && f.accuracy > ROUGH_M && state.fix && (state.fix.accuracy ?? 0) <= ROUGH_M) return; /* a rough cell-tower reading must not throw a good pin away */ set({ fix: f, problem: null }); if (shouldPush(last, f, deps.now())) send(f); },
         (p) => set({ problem: p })
       );
       if (!state.running) { stop(); return; } // stopped while it was starting

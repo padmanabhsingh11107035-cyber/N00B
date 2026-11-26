@@ -3,7 +3,7 @@ import type { Freshness } from './geo.ts';
 // NOOB Family Map: the pin of a person on the map: their profile picture in a round frame standing exactly on the place, a dot on the exact spot and the first name under it.
 // Built with plain DOM (MapLibre markers are elements). Names and addresses come from other people, so they only ever go in as text / as a picture address, never as HTML.
 export interface PinData {
-  id: string; name: string; avatar: string; lat: number; lng: number; state: Exclude<Freshness, 'none'>; me: boolean; moving: boolean; hue: number; initial: string;
+  id: string; name: string; avatar: string; lat: number; lng: number; state: Exclude<Freshness, 'none'>; me: boolean; moving: boolean; hue: number; initial: string; place?: string;
 }
 
 const span = (cls: string): HTMLSpanElement => { const e = document.createElement('span'); e.className = cls; return e; };
@@ -28,12 +28,14 @@ export function refreshPin(el: HTMLElement, d: PinData): void {
   if (bubble && el.dataset.avatar !== d.avatar) { el.dataset.avatar = d.avatar; fillBubble(bubble, d); }
   const label = el.querySelector('.fm-pin-name');
   if (label) label.textContent = d.me ? 'You' : d.name;
+  const pl = el.querySelector('.fm-pin-place');
+  if (pl) { pl.textContent = d.place || ''; (pl as HTMLElement).hidden = !d.place; }
 }
 
 export function buildPin(d: PinData, onTap: (id: string) => void): HTMLElement {
   const el = document.createElement('div');
   el.setAttribute('role', 'button'); el.tabIndex = 0; el.dataset.id = d.id;
-  el.append(span('fm-pin-pulse'), span('fm-pin-bubble'), span('fm-pin-dot'), span('fm-pin-name'));
+  el.append(span('fm-pin-pulse'), span('fm-pin-bubble'), span('fm-pin-dot'), span('fm-pin-name'), span('fm-pin-place'));
   refreshPin(el, d);
   el.addEventListener('click', (e) => { e.stopPropagation(); onTap(d.id); });
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(d.id); } });

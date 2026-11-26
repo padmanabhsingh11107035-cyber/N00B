@@ -76,8 +76,8 @@ export const Gate: React.FC<Props> = ({ rooms, lastId, place, demo, onCreate, on
             {bgSupported ? (
               <div className="fm-line">
                 <span className="fm-line-icon"><Smartphone size={17} /></span>
-                <span><b>Keep sharing when NOOB is closed</b><small>{bgOn ? 'A small notification stays on while it works.' : 'Sharing stops when the app is closed.'}</small></span>
-                <Switch on={bgOn} onChange={onBg} label="Keep sharing when NOOB is closed" />
+                <span><b>Keep sharing in the background</b><small>{bgOn ? 'Works with the screen off or NOOB in the background. A small notification stays on. Swiping NOOB away from recent apps stops it.' : 'Sharing stops when the app is not on screen.'}</small></span>
+                <Switch on={bgOn} onChange={onBg} label="Keep sharing in the background" />
               </div>
             ) : (
               <p className="fm-share-note">Sharing works while NOOB is open. To keep sharing when the app is closed, use the NOOB Android app.</p>

@@ -10,7 +10,7 @@ import { keepAwake } from '../../booth/camera';
 import { MapCanvas, type MapApi, type MapLook, type TrailData } from './MapCanvas';
 import { DayPanel } from './DayPanel';
 import { ReportSheet } from './Sheets';
-import { cachedPlace, placeName, spotKey } from '../../family/placeName';
+import { cachedInfo, placeInfo, spotKey, type PlaceInfo } from '../../family/placeName';
 import { Avatar, copyText, Modal, shareInvite, Switch, Toast } from './parts';
 
 // A room: the detailed map full-screen with everybody's picture on their exact place, and a sheet below that lists the people (drag it up to see all of them).
@@ -99,7 +99,7 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
   const update = (p: Partial<Prefs>): void => { const next = { ...prefs, ...p }; setPrefs(next); savePrefs(next); };
 
   // ---- the name of the place under each person (looked up once per spot, kept on this phone)
-  const [places, setPlaces] = useState<Record<string, string>>({});
+  const [places, setPlaces] = useState<Record<string, PlaceInfo>>({});
   const spots = useRef<Set<string>>(new Set());
 
   // ---- the people, with where they are and how fresh it is
@@ -114,8 +114,10 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
       else if (lat == null || lng == null) status = m.me ? (geo === 'denied' ? 'Location is blocked' : 'Finding your place…') : 'Waiting for a place…';
       else if (st === 'live') status = speedText(own ? fix.speed : m.speed) || 'Live now';
       else status = `Last seen ${agoText(m.updatedAt, now)}`;
-      const place = lat != null && lng != null && m.sharing ? (places[spotKey(lat, lng)] || cachedPlace(lat, lng)) : '';
-      return { m, lat, lng, st, dist, status, place };
+      const info = lat != null && lng != null && m.sharing ? (places[spotKey(lat, lng)] || cachedInfo(lat, lng)) : null;
+      const place = info?.short || '';
+      const acc = own ? fix.accuracy : m.accuracy;
+      return { m, lat, lng, st, dist, status, place, info, acc };
     });
     return list.sort((a, b) => Number(b.m.me) - Number(a.m.me) || (a.dist ?? 1e12) - (b.dist ?? 1e12));
   }, [data, fix, now, geo, places]);
@@ -125,11 +127,11 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
       const k = spotKey(r.lat, r.lng);
       if (spots.current.has(k)) continue;
       spots.current.add(k);
-      void placeName(r.lat, r.lng).then((n) => { if (n) setPlaces((o) => ({ ...o, [k]: n })); else spots.current.delete(k); });
+      void placeInfo(r.lat, r.lng).then((n) => { if (n) setPlaces((o) => ({ ...o, [k]: n })); else spots.current.delete(k); });
     }
   }, [rows]);
   const pins = useMemo<PinData[]>(() => rows.flatMap((r) => (r.lat == null || r.lng == null || r.st === 'none' || (!r.m.sharing && !r.m.me)) ? [] : [{
-    id: r.m.id, name: r.m.name, avatar: r.m.avatar, lat: r.lat, lng: r.lng, state: r.st, me: r.m.me, moving: ((r.m.me ? fix?.speed : r.m.speed) ?? 0) > 1.5, hue: pinHue(r.m.id), initial: initialOf(r.m.name)
+    id: r.m.id, name: r.m.name, avatar: r.m.avatar, lat: r.lat, lng: r.lng, state: r.st, me: r.m.me, moving: ((r.m.me ? fix?.speed : r.m.speed) ?? 0) > 1.5, hue: pinHue(r.m.id), initial: initialOf(r.m.name), place: r.place
   }]), [rows, fix]);
   const liveCount = rows.filter((r) => r.m.sharing && r.st === 'live').length;
   // the day report of one person: their route on the map, the list in the sheet (everybody else's pin steps aside)
@@ -217,6 +219,21 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
         <div className="fm-top-title"><b>{room ? `${room.emoji || '🏠'} ${room.name}` : 'Loading…'}</b><small>{room ? `${liveCount} live · ${room.memberCount} ${room.memberCount === 1 ? 'person' : 'people'}` : ' '}</small></div>
         <button type="button" className="fm-round" onClick={() => setMenu(true)} aria-label="Room menu" data-testid="family-menu"><MoreVertical size={20} /></button>
       </div>
+
+      {(() => {
+        const r = sel ? rows.find((x) => x.m.id === sel) : null;
+        if (!r || r.lat == null || r.lng == null || !r.m.sharing || dayFor) return null;
+        return (
+          <div className="fm-detail" data-testid="family-detail" role="status">
+            <div className="fm-detail-text">
+              <b>{r.m.me ? 'You' : r.m.name}</b>
+              {r.info?.lines.length ? r.info.lines.map((l) => <span key={l}>{l}</span>) : <span>Finding the address…</span>}
+              <small>{r.lat.toFixed(5)}, {r.lng.toFixed(5)}{r.acc != null ? ` · accurate to ${Math.max(1, Math.round(r.acc))} m` : ''} · {r.status}</small>
+            </div>
+            <button type="button" aria-label="Close" onClick={() => setSel('')}>✕</button>
+          </div>
+        );
+      })()}
 
       {geo === 'denied' && <div className="fm-banner fm-banner--warn" role="alert"><MapPinOff size={16} /> Location is blocked, so your family cannot see you. Allow it in your browser settings.</div>}
       {data && !sharing && geo !== 'denied' && <div className="fm-banner" role="status"><MapPinOff size={16} /> You paused sharing. Nobody sees where you are. <button type="button" onClick={() => void setSharing(true)}>Resume</button></div>}

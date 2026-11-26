@@ -89,7 +89,7 @@ export const DayPanel: React.FC<Props> = ({ api, roomId, member, onBack, onTrail
     body = (
       <div className="fm-day-empty"><Route size={28} />
         <p>{member.me ? 'Nothing recorded yet today.' : `Nothing from ${member.name} yet today.`} A place shows up after about 5 minutes in one spot, a trip once it is over a minute long.</p>
-        {member.me && <p className="fm-day-hint">A website only records while NOOB is open on your phone. The NOOB Android app records all day, also when it is closed.</p>}
+        {member.me && <p className="fm-day-hint">A website only records while NOOB is open on your phone. The NOOB Android app records all day, also with the screen off (not after you swipe it away from recent apps).</p>}
       </div>
     );
   } else {

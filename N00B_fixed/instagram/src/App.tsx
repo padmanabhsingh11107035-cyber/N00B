@@ -573,14 +573,17 @@ export default function App() {
   const wideScreen = useWideScreen();
   const [supportPopup, setSupportPopup] = useState(false);
   const [supportSeed, setSupportSeed] = useState('');
+  // it is there from the start on every visit and stays until the person presses its cross (or sends a message); the round picture brings it back
   useEffect(() => {
     if (!wideScreen) return;
-    let seen = false;
-    try { seen = sessionStorage.getItem('noob_support_popup_seen') === '1'; } catch { /* private window */ }
-    if (seen) return;
-    const t = window.setTimeout(() => { setSupportPopup(true); try { sessionStorage.setItem('noob_support_popup_seen', '1'); } catch { /* private window */ } }, 6000);
-    return () => window.clearTimeout(t);
+    let closed = false;
+    try { closed = sessionStorage.getItem('noob_support_popup_closed') === '1'; } catch { /* private window */ }
+    if (!closed) setSupportPopup(true);
   }, [wideScreen]);
+  const closeSupportPopup = (): void => {
+    setSupportPopup(false);
+    try { sessionStorage.setItem('noob_support_popup_closed', '1'); } catch { /* private window */ }
+  };
   // "Help" on the Terms / Privacy / encryption pages (components/Legal/LegalShell.tsx) asks the app to open Customer Support
   useEffect(() => {
     const open = () => setShowCustomerSupportModal(true);
@@ -2448,7 +2451,7 @@ export default function App() {
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}
       {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <button
-          onClick={() => { if (wideScreen) setSupportPopup((o) => !o); else setShowCustomerSupportModal(true); }}
+          onClick={() => { if (wideScreen) { if (supportPopup) closeSupportPopup(); else { setSupportPopup(true); try { sessionStorage.removeItem('noob_support_popup_closed'); } catch { /* private window */ } } } else setShowCustomerSupportModal(true); }}
           className="noob-buddy-btn fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-16 h-16 flex items-end cursor-pointer group"
           title="Open NOOB Support"
           aria-label="Open NOOB Support"
@@ -2469,9 +2472,9 @@ export default function App() {
       {wideScreen && supportPopup && !showCustomerSupportModal && activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <SupportPopup
           open
-          onClose={() => setSupportPopup(false)}
-          onSend={(text) => { setSupportSeed(text); setSupportPopup(false); setShowCustomerSupportModal(true); }}
-          onMore={() => { setSupportSeed(''); setSupportPopup(false); setShowCustomerSupportModal(true); }}
+          onClose={closeSupportPopup}
+          onSend={(text) => { setSupportSeed(text); closeSupportPopup(); setShowCustomerSupportModal(true); }}
+          onMore={() => { setSupportSeed(''); closeSupportPopup(); setShowCustomerSupportModal(true); }}
         />
       )}
 

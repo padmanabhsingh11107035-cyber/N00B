@@ -56,9 +56,9 @@ check(/<HomeLiveRail/.test(feed) && /featOn\('live'\)/.test(feed), 'the boxes si
 check(/\.hl-card \{[^}]*border-radius: 28px/.test(css) && /:root\[data-theme="light"\] \.hl-card/.test(css), 'curved corners, dark and light');
 
 section('3. When going live fails');
-const err = read('src/utils/agoraError.ts');
+const agoraSrc = read('src/utils/agoraError.ts');
 check(/createScreenVideoTrack\(\{\}, 'disable'\)/.test(view) && /screenResult\.status === 'rejected'/.test(view) && /audioTrack = micResult\.status === 'fulfilled' \? micResult\.value : null;/.test(view) && !/\[audioTrack, videoTrack\] = await withTimeout\(Promise\.all/.test(view), 'sharing the screen no longer needs a microphone: the screen and the microphone are asked for separately (a computer without a microphone shares without sound)');
-check(/DEVICE_NOT_FOUND/.test(err) && /NOT_SUPPORTED/.test(err) && /PERMISSION_DENIED/.test(err) && !/Requested device not found"/.test(err.replace(/\/Requested device not found\|NotFoundError\/i/, '')), 'the browser\'s plain message ("Requested device not found") is replaced by a sentence that says what to do');
+check(/DEVICE_NOT_FOUND/.test(agoraSrc) && /NOT_SUPPORTED/.test(agoraSrc) && /PERMISSION_DENIED/.test(agoraSrc) && /No camera or screen was found on this device/.test(agoraSrc) && /can not share its screen/.test(agoraSrc),'the browser\'s plain message ("Requested device not found") is replaced by a sentence that says what to do');
 check(/data-testid="live-try-again"/.test(view) && /setPhase\('setup'\)/.test(view), 'a host whose live failed gets "Try again" next to "Close"');
 check(/data-testid="home-live-end"/.test(rail) && /endLiveStream\(s\.id\)/.test(rail) && /meId=\{currentUser\.id\}/.test(feed) && /Tap again to end/.test(rail), 'the host\'s own box on Home has an End live button (a second press ends it), from any phone or computer');
 

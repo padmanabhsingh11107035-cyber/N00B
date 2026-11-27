@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import './noobLoader.css';
 import { getLoadingQuote } from '../../data/loadingQuotes';
+import { Doodle, LOADER_DOODLES } from './LoaderDoodles';
 import { getLoadProgress, nextPercent, subscribeLoadProgress } from '../../utils/loadProgress';
 
-// The loading page: a full-screen layer with a card in the middle. NOOB's own character hops on the spot (with its shadow and some drifting confetti), then a line to read
+// The loading page: a full-screen layer with a card in the middle. Six big, colourful doodles (Common/LoaderDoodles.tsx, a different six each time) bob on the spot, then a line to read
 // (a quote and its author), and a thin ring with a percentage at the bottom. When `tracked` (the start-up of the app) the percentage is the real progress of the five start-up
 // requests (src/utils/loadProgress.ts); everywhere else (a page being fetched) the ring simply turns, with no number, because nothing is known to count.
 // Nothing is seen for the first 400 ms (a quick load shows no page at all); at the end it jumps to 100 % and fades out in 250 ms. Look and motion: noobLoader.css.
@@ -20,18 +21,9 @@ interface NoobStackLoaderProps {
   z?: number;
 }
 
-const CONFETTI: { x: number; y: number; s: number; c: string; ring?: boolean; d: number; dx: number }[] = [
-  { x: 6, y: 34, s: 8, c: '#FF5C8A', d: 0, dx: -10 },
-  { x: 24, y: 8, s: 6, c: '#8B5CF6', d: 0.5, dx: 6 },
-  { x: 128, y: 14, s: 9, c: '#FF8A3D', ring: true, d: 1.1, dx: 10 },
-  { x: 142, y: 62, s: 6, c: '#F8CB46', d: 0.3, dx: 8 },
-  { x: 0, y: 92, s: 10, c: '#F8CB46', ring: true, d: 1.7, dx: -8 },
-  { x: 146, y: 112, s: 7, c: '#FF5C8A', d: 0.9, dx: 12 },
-  { x: 12, y: 128, s: 6, c: '#FF8A3D', d: 2.1, dx: -6 },
-  { x: 70, y: -4, s: 7, c: '#8B5CF6', ring: true, d: 1.4, dx: 0 },
-  { x: 118, y: 140, s: 5, c: '#8B5CF6', d: 2.6, dx: 6 },
-  { x: 40, y: 146, s: 6, c: '#F8CB46', d: 0.7, dx: -4 },
-];
+/** where the six doodles sit and how they lean and bob (the middle column sits lower, so they look scattered, not in a grid) */
+const SPOTS: { r: number; d: number }[] = [{ r: -8, d: 0 }, { r: 6, d: 0.35 }, { r: -5, d: 0.7 }, { r: 7, d: 0.2 }, { r: -7, d: 0.55 }, { r: 5, d: 0.9 }];
+const pickDoodles = (): string[] => { const ids = LOADER_DOODLES.map((d) => d.id); for (let i = ids.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [ids[i], ids[k]] = [ids[k], ids[i]]; } return ids.slice(0, 6); };
 
 const R = 19;
 const CIRC = 2 * Math.PI * R;
@@ -49,6 +41,7 @@ export const NoobSpinner: React.FC<{ size?: number; label?: string; showLabel?: 
 
 export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB', subtitle, tracked = false, z = 50 }) => {
   const quote = getLoadingQuote();
+  const [doodles] = useState(pickDoodles);
   const progress = useSyncExternalStore(subscribeLoadProgress, getLoadProgress, getLoadProgress);
   const [pct, setPct] = useState(() => (tracked ? nextPercent(0, progress, 0) : 0));
   const [slow, setSlow] = useState(false);
@@ -109,13 +102,10 @@ export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB'
     <div ref={rootRef} className="nl-layer edge-own" style={{ zIndex: z }} role="status" aria-live="polite" aria-label={subtitle ? `${title}: ${subtitle}` : `Loading ${title}`}>
       <div className="nl-card">
         <div className="nl-stage" aria-hidden="true">
-          <div className="nl-hero">
-            {CONFETTI.map((f, i) => (
-              <span key={i} className={`nl-dot${f.ring ? ' nl-ring' : ''}`}
-                style={{ left: f.x, top: f.y, width: f.s, height: f.s, background: f.c, color: f.c, animationDelay: `${f.d}s`, ['--dx' as string]: `${f.dx}px` } as React.CSSProperties} />
+          <div className="nl-doodles">
+            {doodles.map((id, i) => (
+              <Doodle key={id} id={id} className="nl-doodle" style={{ ['--r' as string]: `${SPOTS[i].r}deg`, ['--d' as string]: `${SPOTS[i].d}s` } as React.CSSProperties} />
             ))}
-            <div className="nl-shadow" />
-            <div className="nl-runner"><img src="/noob-support-character.png" alt="" width={150} height={150} draggable={false} decoding="async" /></div>
           </div>
         </div>
         <div className="nl-text">

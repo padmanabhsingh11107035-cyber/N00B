@@ -38,14 +38,17 @@ check(/<NoobStackLoader mode="quick" tracked \/>/.test(app) && /subtitle="Signin
 check(/fixed|position: fixed/.test(css) && /edge-own/.test(loader) && /var\(--sat, 0px\)/.test(css) && /safe-area-inset-bottom/.test(css), 'a full-screen layer that reaches the edges and keeps clear of the clock and home bar');
 check(/#0A0A0A/.test(css) && /max-width: 360px/.test(css) && /border-radius: 28px/.test(css) && /#1B1B1F, #0B0B0D/.test(css) && /rgba\(255, 255, 255, \.08\)/.test(css), 'the card: near-black page, 360 px wide, 28 px corners, soft gradient, hairline border');
 check(/R = 19/.test(loader) && /strokeWidth="3"/.test(loader) && /width: 44px/.test(css) && /#FF4D9A/.test(loader) && /#FF8A3D/.test(loader), 'the ring: 44 px, 3 px line, pink to orange');
-check(/noob-support-character\.png/.test(loader) && fs.existsSync('public/noob-support-character.png'), "NOOB's own character is the one that hops");
-check(/#F8CB46/.test(loader) && /#FF5C8A/.test(loader) && /#8B5CF6/.test(loader) && /#FF8A3D/.test(loader), 'confetti in the app colours (pink, violet, orange, yellow)');
+check(!/noob-support-character/.test(loader) && /LoaderDoodles/.test(loader) && /nl-doodles/.test(loader), 'the doll is gone: the stage shows big colourful doodles');
+const doodles = read('src/components/Common/LoaderDoodles.tsx');
+check((doodles.match(/\{ id: '/g) || []).length >= 12 && new Set(doodles.match(/fill="#[0-9A-Fa-f]{6}"/g)).size >= 14 && !/https?:\/\//.test(doodles), 'twelve doodles in many bright colours, drawn in code (no picture files)');
+check(/slice\(0, 6\)/.test(loader) && /Math\.random\(\)/.test(loader), 'six of them, a different six each time'); 
+check(/#F8CB46|#FFC62E/.test(doodles) && /#FF5C8A/.test(doodles) && /#8B5CF6/.test(doodles) && /#FF8A3D/.test(doodles), 'the doodles use the app colours (pink, violet, orange, yellow)');
 
 section('3. Light mode and reduced motion');
 check(/:root\[data-theme="light"\] \.nl-layer \{ background: #F3F3F5/.test(css) && /:root\[data-theme="light"\] \.nl-card \{ background: #FFFFFF/.test(css) && /rgba\(0, 0, 0, \.1\)/.test(css), 'light mode: white card on #F3F3F5, dark text, dark ring track');
-check(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.nl-runner[\s\S]*animation: none/.test(css) && /\.nl-arc \{ transition: none; \}/.test(css), 'with "reduce motion" the character and confetti stand still (the ring still fills)');
+check(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.nl-doodle[\s\S]*animation: none/.test(css) && /\.nl-arc \{ transition: none; \}/.test(css), 'with "reduce motion" the doodles stand still (the ring still fills)');
 const anims = [...css.matchAll(/@keyframes (nl-[a-z]+) \{((?:[^{}]*\{[^{}]*\})+)\s*\}/g)];
-check(anims.length === 6 && anims.every((m) => !/\b(top|left|width|height|margin)\s*:/.test(m[2])), 'the animations only move/fade (transform and opacity)');
+check(anims.length === 4 && anims.every((m) => !/\b(top|left|width|height|margin)\s*:/.test(m[2])), 'the animations only move/fade (transform and opacity)');
 check(/animation: nl-appear \.2s ease-out 400ms both/.test(css), 'nothing is seen for the first 400 ms (a quick load never flashes the page)');
 check(/FADE_MS = 250/.test(loader) && /SLOW_AFTER_MS = 8000/.test(loader) && /Slow connection… still loading/.test(loader), 'fades out in 250 ms; after 8 seconds it says "Slow connection… still loading"');
 

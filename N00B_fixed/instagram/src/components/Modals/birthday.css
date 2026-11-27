@@ -1,0 +1,25 @@
+/* The birthday box (Modals/BirthdayPopup.tsx): a party card of its own colours, the same in dark and light. */
+.bd-layer { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 18px; box-sizing: border-box; }
+.bd-backdrop { position: absolute; inset: 0; background: rgba(8, 6, 18, 0.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: bd-fade .3s ease-out both; }
+.bd-card { position: relative; width: 100%; max-width: 380px; max-height: 100%; overflow: hidden auto; box-sizing: border-box; padding: 54px 22px 22px; text-align: center; color: #fff; border-radius: 30px; background: linear-gradient(160deg, #7c5cff 0%, #ff4d8d 58%, #ffae42 120%); box-shadow: 0 30px 80px -20px rgba(255, 77, 141, 0.55); animation: bd-pop .55s cubic-bezier(.2, 1.2, .3, 1) both; }
+.bd-balloons { position: absolute; left: 0; right: 0; top: 0; height: 70px; pointer-events: none; overflow: hidden; }
+.bd-balloon { position: absolute; top: 8px; width: 26px; height: 32px; border-radius: 50% 50% 48% 48%; box-shadow: inset -5px -6px 0 rgba(0, 0, 0, .12), inset 4px 4px 0 rgba(255, 255, 255, .35); animation: bd-float 3s ease-in-out infinite; }
+.bd-balloon i { position: absolute; left: 50%; top: 100%; width: 2px; height: 22px; margin-left: -1px; opacity: .55; }
+.bd-x, .bd-sound { position: absolute; top: 12px; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, .22); cursor: pointer; z-index: 2; }
+.bd-x { right: 12px; }
+.bd-sound { left: 12px; }
+.bd-cake { font-size: 64px; line-height: 1; margin: 8px 0 2px; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .25)); animation: bd-bob 1.6s ease-in-out infinite; }
+.bd-title { margin: 6px 0 0; font-size: clamp(30px, 9vw, 38px); line-height: 1.05; font-weight: 900; letter-spacing: -.02em; text-shadow: 0 3px 0 rgba(0, 0, 0, .18); overflow-wrap: anywhere; }
+.bd-name { margin: 6px 0 0; font-size: 19px; font-weight: 800; overflow-wrap: anywhere; opacity: .96; }
+.bd-wish { margin: 14px 4px 0; font-size: 15.5px; line-height: 1.5; font-weight: 500; opacity: .95; overflow-wrap: anywhere; }
+.bd-card-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin-top: 18px; padding: 14px 16px; box-sizing: border-box; border: 0; border-radius: 20px; cursor: pointer; color: #3a2400; text-align: left; background: linear-gradient(110deg, #ffd86b 0%, #fff2b8 45%, #ffc233 100%); background-size: 200% 100%; box-shadow: 0 12px 24px -10px rgba(0, 0, 0, .45); animation: bd-shine 2.4s linear infinite; }
+.bd-card-btn span { display: flex; flex-direction: column; min-width: 0; }
+.bd-card-btn b { font-size: 16px; font-weight: 900; }
+.bd-card-btn small { font-size: 12.5px; font-weight: 600; opacity: .8; }
+.bd-thanks { margin-top: 14px; padding: 12px 26px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, .2); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
+@keyframes bd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bd-pop { from { opacity: 0; transform: translateY(24px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes bd-float { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
+@keyframes bd-bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-7px) rotate(4deg); } }
+@keyframes bd-shine { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .bd-backdrop, .bd-card, .bd-balloon, .bd-cake, .bd-card-btn { animation: none; } }

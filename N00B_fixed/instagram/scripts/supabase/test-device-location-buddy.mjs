@@ -74,13 +74,13 @@ section('5. The sign-up city, the character and the app icon');
 const auth = read('src/components/Auth/AuthView.tsx'), api = read('src/services/supabaseApi.ts'), app = read('src/App.tsx'), css = read('src/index.css');
 check(/data-testid="signup-city"/.test(auth) && /\(optional\)/.test(auth) && /city: city\.trim\(\) \|\| undefined/.test(auth) && !/required[^>]*signup-city|signup-city[^>]*required/.test(auth), 'the sign-up form asks for a city and it is optional');
 check(/saveMyLocation\(payload\.city, true\)/.test(api) && /sendDeviceInfo\(\)/.test(api) && /startLastSeenHeartbeat[\s\S]{0,400}saveMyLocation\(\)/.test(api), 'the city is saved right after sign-up, and the device and place on the usual heartbeat');
-check(/src="\/noob-support-character\.png"/.test(app) && /setShowCustomerSupportModal\(true\)/.test(app) && !/>NOOB<\/span>/.test(app.slice(app.indexOf('data-testid="support-buddy"') - 900, app.indexOf('data-testid="support-buddy"') + 900)) && /data-testid="support-buddy"/.test(app), 'the corner button is the character, it opens the help page, and it is only her, with no badge');
+check(/src="\/noob-support-circle\.webp"/.test(app) && /setShowCustomerSupportModal\(true\)/.test(app) && !/>NOOB<\/span>/.test(app.slice(app.indexOf('data-testid="support-buddy"') - 900, app.indexOf('data-testid="support-buddy"') + 900)) && /data-testid="support-buddy"/.test(app), 'the corner button is the round support picture, it opens the help page, and it has no badge');
 check(/\.noob-buddy \{ animation: noob-buddy-float/.test(css) && /prefers-reduced-motion: reduce\) \{ \.noob-buddy \{ animation: none/.test(css), 'it moves (floats, tilts, says hello now and then) and stands still for people who asked for less motion');
 const mk = (await import('node:module')).createRequire(import.meta.url);
 const manifest = JSON.parse(read('public/manifest.json'));
 check(manifest.icons.every((i) => /noob-app-/.test(i.src) && fs.existsSync('public' + i.src)) && manifest.icons.some((i) => i.purpose === 'maskable' && i.sizes === '192x192') && manifest.icons.some((i) => i.purpose === 'any' && i.sizes === '512x512'), 'the installed app uses the round NOOB logo (any and maskable), all files exist');
-const png = fs.readFileSync('public/noob-support-character.png');
-check(png.readUInt32BE(16) === 256 && png[25] === 6, 'the character is a 256 px picture with a see-through background (RGBA)');
+const circle = fs.readFileSync('public/noob-support-circle.webp');
+check(circle.length > 2000 && circle.length < 80000 && circle.toString('ascii', 0, 4) === 'RIFF' && circle.toString('ascii', 8, 12) === 'WEBP', 'the support picture is a small WebP file (512 px round badge)');
 
 
 section('6. The battery at the last visit, in the admin panel');

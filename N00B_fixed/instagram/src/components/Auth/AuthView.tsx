@@ -2126,7 +2126,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           aria-label="Need help? Open NOOB Support"
           data-testid="guest-help-button"
         >
-          <img src="/noob-support-character.png" alt="" width={64} height={64} draggable={false} className="noob-buddy w-16 h-16 object-contain select-none pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.55)]" />
+          <img src="/noob-support-circle.webp" alt="" width={64} height={64} draggable={false} className="noob-buddy w-16 h-16 rounded-full object-cover select-none pointer-events-none shadow-[0_4px_14px_rgba(0,0,0,0.55)]" />
         </button>
       )}
       {guestHelpOpen && (

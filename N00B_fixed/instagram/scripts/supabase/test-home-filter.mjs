@@ -73,6 +73,7 @@ check(/\.hf-dock \{[^}]*linear-gradient\(90deg, transparent/.test(css) && /\.hf-
 check(/header\.hv-top \.hv-seg \{ width: 100%; max-width: 300px/.test(css) && /clamp\(11\.5px, 3\.5vw, 14px\)/.test(css) && /flex: 1 1 0 !important/.test(css), 'the For You / Following switch is wide, equal in width and sized by the screen (it gives way, never overlaps)');
 check(/:root\[data-theme="light"\] \.hf-sheet/.test(css) && /@media/.test(css), 'the filter sheet has a light look too');
 check(/role=\{single \? 'radio' : 'checkbox'\}/.test(sheet) && /aria-checked/.test(sheet) && /useSheetDrag/.test(sheet) && /Escape/.test(sheet), 'the sheet is made for screen readers (radio / checkbox), closes with a drag down, a tap outside and Escape');
+check(/const setDraft = \(f: HomeFilter\): void => \{ setDraft0\(f\); onApply\(f\); \};/.test(sheet) && !/onClick=\{\(\) => \{ onApply\(draft\)/.test(sheet), 'every choice (and Clear all) takes effect at once: closing the sheet never brings an old choice back');
 check(/Clear all/.test(sheet) && /Show \$\{count > 99 \? '99\+' : count\}/.test(sheet), 'Clear all and "Show N" at the bottom');
 
 console.log(`\n${passed} passed, ${failed} failed`);

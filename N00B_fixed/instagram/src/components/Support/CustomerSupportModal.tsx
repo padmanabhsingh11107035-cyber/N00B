@@ -983,7 +983,7 @@ ${description}`.slice(0, 2000));
           <SupportHeader
             title="NOOB Support"
             subtitle="AI support executive"
-            avatar="/noob-support-logo.png"
+            avatar="/noob-support-circle.webp"
             onBack={onBack}
             right={(
               <>
@@ -1089,14 +1089,14 @@ ${description}`.slice(0, 2000));
         <div className="sd-call" data-testid="support-call">
           <div className="sd-call-top">
             <div className="sd-call-who">
-              <img src="/noob-support-logo.png" alt="" />
+              <img src="/noob-support-circle.webp" alt="" />
               <div><strong>NOOB AI voice support</strong><span>Connected to @{currentUser.username}</span></div>
             </div>
             <span className="sd-call-time">{formatDuration(callDuration)}</span>
           </div>
 
           <div className="sd-call-mid">
-            <div className={`sd-call-pic ${isSpeaking || isListening ? 'live' : ''}`}><img src="/noob-support-logo.png" alt="" /></div>
+            <div className={`sd-call-pic ${isSpeaking || isListening ? 'live' : ''}`}><img src="/noob-support-circle.webp" alt="" /></div>
             <div className={`sd-call-status ${callStatus2.cls}`}>{callStatus2.icon}{callStatus2.text}</div>
 
             <div className={`sd-bars ${callActive ? '' : 'idle'}`} aria-hidden="true">

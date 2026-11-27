@@ -163,6 +163,7 @@ import { AppLockGate } from './components/Common/AppLockGate';
 import { applyAppIcon } from './utils/appIcon';
 import { detectPlatform } from './utils/appPlatform';
 import { startVisitTracking, noteVisit } from './services/visitTracker';
+import { pickBirthdayPopup, ageToday, wishFor, readShown, writeShown, type BirthdayNote, type BirthdayPick } from './utils/birthdayPopup';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
 import { initPushNotifications, nativePushNeedsAsk } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
@@ -196,6 +197,7 @@ const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateSto
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
 const CreateChooser = React.lazy(() => import('./components/PostCreation/CreateChooser').then((m) => ({ default: m.CreateChooser })));
 const NotificationsModal = React.lazy(() => import('./components/Modals/NotificationsModal').then((m) => ({ default: m.NotificationsModal })));
+const BirthdayPopup = React.lazy(() => import('./components/Modals/BirthdayPopup').then((m) => ({ default: m.BirthdayPopup })));
 const ScratchCardModal = React.lazy(() => import('./components/Modals/ScratchCardModal').then((m) => ({ default: m.ScratchCardModal })));
 const StatusNoteModal = React.lazy(() => import('./components/Modals/StatusNoteModal').then((m) => ({ default: m.StatusNoteModal })));
 const FindFriendsModal = React.lazy(() => import('./components/Modals/FindFriendsModal').then((m) => ({ default: m.FindFriendsModal })));
@@ -516,6 +518,8 @@ export default function App() {
   // Active Modals & Selected items
   const [activeStoryViewerIndex, setActiveStoryViewerIndex] = useState<number | null>(null);
   const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
+  // the birthday box (utils/birthdayPopup.ts): opens once on the person's birthday, with the wish, the scratch card and a birthday tune
+  const [birthdayPick, setBirthdayPick] = useState<BirthdayPick | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [showStoryCamera, setShowStoryCamera] = useState(false);   // the camera screen that comes before the story editor
   // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
@@ -776,6 +780,15 @@ export default function App() {
   // the admin panel's Visitors page: this device opened NOOB (also with no account), and again once the person logs in so the visit is linked to them
   useEffect(() => { startVisitTracking(); }, []);
   useEffect(() => { if (currentUser?.id) void noteVisit(true, true); }, [currentUser?.id]);
+  // the birthday box: a moment after Home is up, once per birthday on this device
+  useEffect(() => {
+    if (!currentUser?.id || birthdayPick) return;
+    const pick = pickBirthdayPopup({ dob: currentUser.dateOfBirth, notifications: notifications as BirthdayNote[], now: new Date(), shownKey: readShown(currentUser.id) });
+    if (!pick) return;
+    const uid = currentUser.id;
+    const t = window.setTimeout(() => { writeShown(uid, pick.key); setBirthdayPick(pick); }, 1500);
+    return () => window.clearTimeout(t);
+  }, [currentUser?.id, currentUser?.dateOfBirth, notifications, birthdayPick]);
 
   useEffect(() => {
     if (currentUser) {
@@ -2416,12 +2429,12 @@ export default function App() {
         >
           {/* the NOOB support character (no background), always moving a little; a tap opens the help page */}
           <img
-            src="/noob-support-character.png"
+            src="/noob-support-circle.webp"
             alt=""
             width={64}
             height={64}
             draggable={false}
-            className="noob-buddy w-16 h-16 object-contain select-none pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.55)]"
+            className="noob-buddy w-16 h-16 rounded-full object-cover select-none pointer-events-none shadow-[0_4px_14px_rgba(0,0,0,0.55)]"
           />
         </button>
       )}
@@ -2689,6 +2702,17 @@ export default function App() {
             setShowLiveLoungeUpsell(true);
             setShowNotificationsModal(false);
           }}
+        /></React.Suspense>
+      )}
+
+      {birthdayPick && currentUser && (
+        <React.Suspense fallback={null}><BirthdayPopup
+          name={(currentUser.displayName || currentUser.username || '').trim().split(/\s+/)[0] || 'friend'}
+          age={ageToday(currentUser.dateOfBirth, new Date())}
+          wish={wishFor(new Date().getFullYear(), ageToday(currentUser.dateOfBirth, new Date()))}
+          cardId={birthdayPick.cardId}
+          onScratch={(id) => setActiveScratchCardId(id)}
+          onClose={() => setBirthdayPick(null)}
         /></React.Suspense>
       )}
 

@@ -11,12 +11,9 @@
   display: flex; flex-direction: column; align-items: center; padding: 20px 22px 22px; overflow: hidden;
 }
 .nl-stage { position: relative; flex: 1 1 auto; min-height: 150px; width: 100%; display: flex; align-items: center; justify-content: center; }
-.nl-hero { position: relative; width: 150px; height: 170px; }
-.nl-runner { position: absolute; left: 0; right: 0; top: 0; height: 150px; transform-origin: 50% 100%; animation: nl-run .56s ease-in-out infinite; will-change: transform; }
-.nl-runner img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
-.nl-shadow { position: absolute; left: 50%; bottom: 4px; width: 92px; height: 14px; margin-left: -46px; border-radius: 50%; background: rgba(0, 0, 0, .55); animation: nl-shadow .56s ease-in-out infinite; }
-.nl-dot { position: absolute; border-radius: 50%; opacity: 0; animation: nl-drift 3.2s ease-in-out infinite; will-change: transform, opacity; }
-.nl-dot.nl-ring { background: transparent !important; border: 2px solid currentColor; }
+.nl-doodles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; width: 100%; max-width: 330px; margin: 0 auto; padding: 8px 0; align-items: center; }
+.nl-doodle { width: 100%; max-width: 112px; aspect-ratio: 1; justify-self: center; display: block; overflow: visible; transform: rotate(var(--r, 0deg)) scale(var(--s, 1)); animation: nl-bob 2.2s ease-in-out infinite; animation-delay: var(--d, 0s); will-change: transform; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .18)); }
+.nl-doodle:nth-child(3n + 2) { --s: 1.28; margin-top: 18px; }
 .nl-text { width: 100%; text-align: center; flex: 0 0 auto; }
 .nl-quote { margin: 0; font-weight: 700; line-height: 1.25; color: #fff; letter-spacing: -.01em; overflow-wrap: anywhere; min-height: 3.75em; display: flex; align-items: center; justify-content: center; }
 .nl-quote[data-size="l"] { font-size: 24px; }
@@ -40,7 +37,6 @@
 
 :root[data-theme="light"] .nl-layer { background: #F3F3F5; color: #111; }
 :root[data-theme="light"] .nl-card { background: #FFFFFF; border-color: rgba(0, 0, 0, .08); box-shadow: 0 10px 30px -18px rgba(0, 0, 0, .25); }
-:root[data-theme="light"] .nl-shadow { background: rgba(0, 0, 0, .16); }
 :root[data-theme="light"] .nl-quote, :root[data-theme="light"] .nl-pct { color: #111; }
 :root[data-theme="light"] .nl-rule { background: rgba(0, 0, 0, .18); }
 :root[data-theme="light"] .nl-author { color: #5B5B66; }
@@ -52,23 +48,9 @@
 @keyframes nl-appear { from { opacity: 0; } to { opacity: 1; } }
 @keyframes nl-gone { from { opacity: 1; } to { opacity: 0; } }
 @keyframes nl-turn { to { transform: rotate(360deg); } }
-/* a step: down (squash), up (stretch and lean), down again on the other foot */
-@keyframes nl-run {
-  0%   { transform: translateY(0) rotate(-4deg) scale(1.05, .94); }
-  25%  { transform: translateY(-16px) rotate(0deg) scale(.97, 1.04); }
-  50%  { transform: translateY(0) rotate(4deg) scale(1.05, .94); }
-  75%  { transform: translateY(-16px) rotate(0deg) scale(.97, 1.04); }
-  100% { transform: translateY(0) rotate(-4deg) scale(1.05, .94); }
-}
-@keyframes nl-shadow {
-  0%, 50%, 100% { transform: scale(1); opacity: .9; }
-  25%, 75% { transform: scale(.72); opacity: .5; }
-}
-@keyframes nl-drift {
-  0%   { opacity: 0; transform: translate3d(0, 10px, 0) scale(.6); }
-  25%  { opacity: 1; }
-  70%  { opacity: .9; }
-  100% { opacity: 0; transform: translate3d(var(--dx, 0px), -34px, 0) scale(1.1); }
+@keyframes nl-bob {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)) scale(var(--s, 1)); }
+  50% { transform: translateY(-9px) rotate(calc(var(--r, 0deg) * -1)) scale(calc(var(--s, 1) * 1.05)); }
 }
 
 @media (max-width: 359px) {
@@ -78,13 +60,14 @@
   .nl-quote[data-size="s"] { font-size: 17px; }
 }
 @media (max-height: 640px) {
-  .nl-stage { min-height: 110px; }
-  .nl-hero { transform: scale(.78); }
+  .nl-stage { min-height: 96px; }
+  .nl-doodles { grid-template-columns: repeat(3, 1fr); max-width: 250px; gap: 6px 8px; }
+  .nl-doodle:nth-child(n + 4) { display: none; }
+  .nl-doodle:nth-child(3n + 2) { --s: 1.15; margin-top: 6px; }
   .nl-rule { margin: 8px auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nl-runner, .nl-shadow, .nl-dot, .nl-spin, .nl-spinner { animation: none; }
-  .nl-dot { opacity: .8; }
+  .nl-doodle, .nl-spin, .nl-spinner { animation: none; }
   .nl-arc { transition: none; }
   .nl-layer { animation-duration: 1ms; }
 }

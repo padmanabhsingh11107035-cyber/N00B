@@ -232,6 +232,10 @@ async function boot() {
       currentUser, posts, stories: [], storyTray: tray, onToggleLike: noop, onToggleSave: noop, onToggleArchive: noop, onToggleComments: noop, onToggleLikeCount: noop, onDeletePost: noop,
       onOpenStoryViewer: noop, onOpenCreateStory: noop, onOpenStatusNoteModal: noop, onOpenNotifications: noop, onRefreshFeed: noop, onOpenTab: noop, allUsers: [], onNavigateToProfile: noop
     });
+  } else if (page === 'birthday') {
+    // the birthday box: &card=0 = no scratch card (only the wish)
+    const { BirthdayPopup } = await import('../src/components/Modals/BirthdayPopup.tsx');
+    Page = () => h(BirthdayPopup as any, { name: 'Aarav', age: 18, wish: 'Happy 18th birthday! May your day be full of laughter, your people close and your dreams a little closer. We are so glad you are part of NOOB.', cardId: q.get('card') === '0' ? undefined : 'card-1', onScratch: (id: string) => console.info('[harness] scratch', id), onClose: () => console.info('[harness] close') });
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

@@ -297,7 +297,7 @@ export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: Us
           <SupportHeader
             title="NOOB Support"
             subtitle={blocked && !chatCase ? 'Guest help' : `Guest help · ${remaining} of ${GUEST_USES} left`}
-            avatar="/noob-support-logo.png"
+            avatar="/noob-support-circle.webp"
             onBack={onClose}
             closeIcon
             right={chatCase && !ended ? <button type="button" className="sd-head-link red" onClick={() => void endChat()} disabled={busy} data-testid="guest-end">{confirmEnd ? 'Tap again to end' : 'End chat'}</button> : undefined}

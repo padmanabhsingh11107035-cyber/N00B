@@ -25,7 +25,9 @@ interface Props {
 }
 
 export const HomeFilterSheet: React.FC<Props> = ({ value, countFor, onApply, onClose }) => {
-  const [draft, setDraft] = useState<HomeFilter>(value);
+  const [draft, setDraft0] = useState<HomeFilter>(value);
+  // every choice takes effect at once (and is remembered): closing the sheet never throws a choice away, and "Clear all" really clears
+  const setDraft = (f: HomeFilter): void => { setDraft0(f); onApply(f); };
   const [group, setGroup] = useState<GroupId>('kinds');
   const drag = useSheetDrag(onClose);
   useEffect(() => {
@@ -91,7 +93,7 @@ export const HomeFilterSheet: React.FC<Props> = ({ value, countFor, onApply, onC
         </div>
         <div className="hf-foot">
           <button type="button" className="hf-clear" disabled={activeCount(draft) === 0} onClick={() => setDraft(EMPTY_FILTER)} data-testid="hf-clear">Clear all</button>
-          <button type="button" className="hf-apply" onClick={() => { onApply(draft); onClose(); }} data-testid="hf-apply">{count > 0 ? `Show ${count > 99 ? '99+' : count}` : 'Nothing matches'}</button>
+          <button type="button" className="hf-apply" onClick={onClose} data-testid="hf-apply">{count > 0 ? `Show ${count > 99 ? '99+' : count}` : 'Nothing matches'}</button>
         </div>
       </div>
     </div>,

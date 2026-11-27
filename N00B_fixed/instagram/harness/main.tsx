@@ -218,6 +218,20 @@ async function boot() {
       const reels = urls.map((u, i) => ({ id: 'reel-' + i, userId: 'someone', username: 'someone', userAvatar: '', videoUrl: u, thumbnailUrl: '', caption: 'test reel ' + i, hashtags: [], likesCount: 3, commentsCount: 2, viewsCount: 5, isLiked: false, isSaved: false, createdAt: new Date().toISOString() }));
       return h(ReelsView, { reels: reels as any, currentUser, onGoBack: noop, onNavigateToProfile: noop });
     };
+  } else if (page === 'home') {
+    // Home (the header with the For You / Following switch, the story tray, the topic pills with the Filters button, a few posts); &filter=1 opens the Filters sheet; &fav=1 adds the third tab
+    await import('../src/components/Feed/home.css');
+    const { FeedView } = await import('../src/components/Feed/FeedView.tsx');
+    const { buildStoryTray } = await import('../src/utils/storyTray.ts');
+    const pic = (hue: number, label: string): string => { const c = document.createElement('canvas'); c.width = 480; c.height = 600; const g = c.getContext('2d')!; const gr = g.createLinearGradient(0, 0, 480, 600); gr.addColorStop(0, `hsl(${hue} 70% 45%)`); gr.addColorStop(1, `hsl(${(hue + 60) % 360} 70% 30%)`); g.fillStyle = gr; g.fillRect(0, 0, 480, 600); g.fillStyle = '#fff'; g.font = 'bold 48px sans-serif'; g.fillText(label, 30, 90); return c.toDataURL('image/jpeg', 0.7); };
+    const mkPost = (i: number, extra: object = {}) => ({ id: 'p' + i, userId: 'u' + i, username: 'person' + i, displayName: 'Person ' + i, userAvatar: '', isVerified: i % 2 === 0, caption: 'Post number ' + i, createdAt: new Date(Date.now() - i * 3600_000).toISOString(), slides: [{ id: 's' + i, mediaUrl: pic(i * 70, 'POST ' + i), mediaType: 'image' }], likesCount: i * 3, commentsCount: i, sharesCount: 0, savesCount: 0, isLiked: i === 2, isSaved: false, isDisliked: false, hashtags: i % 2 ? ['tech'] : [], ...extra });
+    const posts = [1, 2, 3, 4].map((i) => mkPost(i));
+    const tray = buildStoryTray([], [], (currentUser as any)?.id || '', new Set<string>(), new Set<string>());
+    if (q.get('fav') === '1') { try { localStorage.setItem('noob_favourites_v1', JSON.stringify(['u1'])); } catch { /* none */ } }
+    Page = () => h(FeedView as any, {
+      currentUser, posts, stories: [], storyTray: tray, onToggleLike: noop, onToggleSave: noop, onToggleArchive: noop, onToggleComments: noop, onToggleLikeCount: noop, onDeletePost: noop,
+      onOpenStoryViewer: noop, onOpenCreateStory: noop, onOpenStatusNoteModal: noop, onOpenNotifications: noop, onRefreshFeed: noop, onOpenTab: noop, allUsers: [], onNavigateToProfile: noop
+    });
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');
@@ -268,7 +282,7 @@ async function boot() {
     const { AdminUserDataPage } = await import('../src/components/Modals/AdminUserDataPage.tsx');
     Page = () => h(AdminUserDataPage, { onBack: () => console.info('[harness] onBack') });
   } else if (page === 'studio') {
-    const mod = await import('../src/components/Studio/StudioApp.tsx');
+    const studioPath = '../src/components/Studio/StudioApp.tsx'; const mod = await import(/* @vite-ignore */ studioPath);   // (the Studio page moved: the harness no longer stops on it)
     const StudioApp = mod.StudioApp || mod.default;
     const media = q.get('media') || 'image';
     const files: File[] = [];

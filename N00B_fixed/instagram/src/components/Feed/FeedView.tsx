@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
 import { Repeat2, Clock, ListVideo } from 'lucide-react';
+import { HomeFilterSheet } from './HomeFilterSheet';
+import { EMPTY_FILTER, activeCount, applyHomeFilter, isFiltered, mixPasses, readFilter, type HomeFilter } from '../../utils/homeFilter';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
 import { sendLike } from '../../utils/likeSync';
@@ -308,6 +310,17 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const hiddenAuthorsFrozen = useMemo(() => hiddenAuthorIds(), [refreshNonce, interestTick]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
   const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('videos'), featOn('live'));
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
+  // the Filters sheet next to the topic pills (utils/homeFilter.ts): kept on this phone, so it is still there the next time Home opens
+  const [homeFilter, setHomeFilter] = useState<HomeFilter>(() => { try { return readFilter(JSON.parse(localStorage.getItem('noob_home_filter_v1') || 'null')); } catch { return EMPTY_FILTER; } });
+  const [showFilter, setShowFilter] = useState(false);
+  useEffect(() => { try { if (isFiltered(homeFilter)) localStorage.setItem('noob_home_filter_v1', JSON.stringify(homeFilter)); else localStorage.removeItem('noob_home_filter_v1'); } catch { /* the filter simply is not remembered */ } }, [homeFilter]);
+  // the thoughts, polls, videos and streams that pass the filter (each keeps the place it was given)
+  const mixView = useMemo(() => {
+    if (!isFiltered(homeFilter)) return { items: mix.items, slots: mix.slots };
+    const now = Date.now();
+    const keep = mix.items.map((it) => mixPasses(it, homeFilter, now));
+    return { items: mix.items.filter((_, i) => keep[i]), slots: mix.slots.filter((_, i) => keep[i]) };
+  }, [mix.items, mix.slots, homeFilter]);
   const mixOn = activeFeedFilter === 'foryou' && activeCategory === 'All';
   const lastRefreshNonceRef = useRef(0);
   const postIdsKey = posts.map((p) => p.id).join(',');
@@ -454,6 +467,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
     const following = new Set(currentUser.followingIds || []);
     filteredPosts = filteredPosts.filter((p) => following.has(p.userId));
   }
+
+  // The Filters sheet: the content kinds, the order, your activity, the time, who from and the extras (utils/homeFilter.ts)
+  const filterCtx = { userId: currentUser.id, following: new Set<string>(currentUser.followingIds || []), seen: getSeenSet(currentUser.id, 'posts'), now: Date.now() };
+  const preFilterPosts = filteredPosts;
+  filteredPosts = applyHomeFilter(filteredPosts, homeFilter, filterCtx);
+  const countForFilter = (f: HomeFilter): number => applyHomeFilter(preFilterPosts, f, filterCtx).length + (mixOn ? mix.items.filter((it) => mixPasses(it, f, filterCtx.now)).length : 0);
 
   // What the admin pinned to the top of the Feed: shown above everything in the plain "For You / All" view, and a pinned post is not
   // repeated further down the list.
@@ -961,7 +980,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full px-3 py-1.5 flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar" data-testid="feed-topic-chips">
+      <div className="hf-chips-wrap">
+      <div className="w-full px-3 py-1.5 flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar hf-chips" data-testid="feed-topic-chips">
         {categories.map((c) => { const cat = c.id; return (
           <button
             key={cat}
@@ -976,15 +996,23 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </button>
         ); })}
       </div>
+      <div className="hf-dock">
+        <button type="button" className={`hf-btn${isFiltered(homeFilter) ? ' is-on' : ''}`} onClick={() => setShowFilter(true)} aria-label={isFiltered(homeFilter) ? `Filters, ${activeCount(homeFilter)} on` : 'Filters'} data-testid="home-filter-button">
+          <SlidersHorizontal size={17} strokeWidth={2.4} />{isFiltered(homeFilter) ? <em>{activeCount(homeFilter)}</em> : null}
+        </button>
+      </div>
+      </div>
+      {showFilter && <HomeFilterSheet value={homeFilter} countFor={countForFilter} onApply={(f) => { setHomeFilter(f); }} onClose={() => setShowFilter(false)} />}
 
       {/* 4. Feed Posts Stack */}
       <main ref={postListRef} className="hv-feed w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
-        {filteredPosts.length === 0 && mixOn && mix.items.length > 0 ? (
-          <>{mix.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} onOpenVideo={onNavigateToVideo} onOpenLive={onNavigateToLive} />)}</>
+        {filteredPosts.length === 0 && mixOn && mixView.items.length > 0 ? (
+          <>{mixView.items.map((item) => <HomeMixCard key={mixKey(item)} item={item} currentUser={currentUser} canManage={canManagePolls} onRemoved={mix.remove} onPollChanged={mix.updatePoll} onOpenProfile={onNavigateToProfile} onOpenVideo={onNavigateToVideo} onOpenLive={onNavigateToLive} />)}</>
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
-            <h3 className="text-sm font-bold text-white">No Posts in this feed</h3>
+            <h3 className="text-sm font-bold text-white">{isFiltered(homeFilter) ? 'Nothing matches your filters' : 'No Posts in this feed'}</h3>
+            {isFiltered(homeFilter) && <button type="button" className="hf-empty-clear" onClick={() => setHomeFilter(EMPTY_FILTER)} data-testid="hf-empty-clear">Clear filters</button>}
             <p className="text-xs text-zinc-400 mt-1">
               {activeFeedFilter === 'favourites'
                 ? 'Your favourites have not posted anything here yet.'
@@ -999,8 +1027,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
           <>
             {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={(p) => renderPostCard(postsById.get(p.id) ?? p)} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
             {paginatedPosts.map((post, i) => {
-              const slot = mixOn ? mix.slots.indexOf(i) : -1;
-              const extra = slot >= 0 ? mix.items[slot] : undefined;   // shuffled items at uneven gaps (see useHomeMix)
+              const slot = mixOn ? mixView.slots.indexOf(i) : -1;
+              const extra = slot >= 0 ? mixView.items[slot] : undefined;   // shuffled items at uneven gaps (see useHomeMix)
               return (
                 <React.Fragment key={post.id}>
                   {renderPostCard(post)}

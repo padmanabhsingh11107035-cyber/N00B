@@ -45,9 +45,9 @@ export const NotBackPage: React.FC<PageProps> = ({ ctx, back }) => {
             <div key={u.id} className="nst-row" data-testid="not-back-row">
               <button type="button" onClick={() => ctx.actions.openProfile(u)} className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer touch-manipulation" aria-label={`Open ${u.username}`}>
                 <Avatar user={u} size={40} />
-                <span className="nst-words">
-                  <span className="nst-label text-white truncate">{u.displayName || u.username}</span>
-                  <span className="nst-sub truncate" translate="no">@{u.username}</span>
+                <span className="nst-words min-w-0">
+                  <span className="nst-label text-white block truncate">{u.displayName || u.username}</span>
+                  <span className="nst-sub block truncate" translate="no">@{u.username}</span>
                 </span>
               </button>
               <SmallButton testId="not-back-unnoob" onClick={async () => { await ctx.actions.toggleFollow(u.id); setGone((p) => new Set(p).add(u.id)); }}>Unnoob</SmallButton>

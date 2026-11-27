@@ -234,3 +234,51 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 /* thin line between Home items (posts, videos, thoughts, polls), like X/Twitter */
 .hv-feed > * { position: relative; }
 .hv-feed > *:not(:last-child)::after { content: ''; position: absolute; left: -10px; right: -10px; bottom: -8px; height: 1px; background: var(--hv-line); pointer-events: none; }
+
+/* ---- the For You / Following switch: wide, using the room the header has ----
+   It fills the middle of the header (up to 300 px), the two (or three) sides get the same width, the text grows a little on bigger phones, and on a small phone or with large system text
+   everything gives way inside its own space: the switch never slides under the menu, the Music button or the bell. */
+header.hv-top > div.flex-1 { min-width: 0; }
+header.hv-top .hv-seg { width: 100%; max-width: 300px; flex: 1 1 auto; }
+header.hv-top .hv-seg button { flex: 1 1 0 !important; min-width: 0; text-align: center; font-size: clamp(11.5px, 3.5vw, 14px) !important; padding: 7px clamp(5px, 2.2vw, 14px) !important; }
+
+/* ---- the Filters button on the topic pills: it sits on the right, the pills slide in behind it (they scroll under its soft edge) ---- */
+.hf-chips-wrap { position: relative; width: 100%; max-width: 100%; min-width: 0; }
+.hf-chips-wrap .hf-chips { padding-right: 64px; }
+.hf-dock { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 12px 0 30px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--page, #000) 42%); }
+.hf-btn { pointer-events: auto; position: relative; width: 36px; height: 34px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; background: var(--hv-surface-2); color: var(--hv-text); cursor: pointer; }
+.hf-btn.is-on { background: var(--hv-grad); color: #fff; box-shadow: 0 8px 18px -8px rgba(255, 77, 141, .7); }
+.hf-btn em { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #fff; color: #d6249f; font-style: normal; font-size: 10.5px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--page, #000); }
+.hf-empty-clear { margin-top: 12px; padding: 9px 18px; border: 0; border-radius: 12px; background: var(--hv-grad); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
+
+/* ---- the Filters sheet (Feed/HomeFilterSheet.tsx): groups on the left, choices on the right, Clear all / Show N at the bottom; dark and light ---- */
+.hf-layer { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: flex-end; justify-content: center; }
+.hf-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.hf-sheet { --hf-bg: #121212; --hf-rail: #1d1d20; --hf-line: rgba(255, 255, 255, 0.09); --hf-text: #f5f5f5; --hf-mute: #a8a8b3; position: relative; width: 100%; max-width: 560px; height: min(78vh, 640px); display: flex; flex-direction: column; box-sizing: border-box; background: var(--hf-bg); color: var(--hf-text); border-radius: 24px 24px 0 0; overflow: hidden; }
+:root[data-theme="light"] .hf-sheet { --hf-bg: #ffffff; --hf-rail: #f3f3f6; --hf-line: rgba(0, 0, 0, 0.08); --hf-text: #111111; --hf-mute: #6d6d82; }
+.hf-bar { display: flex; justify-content: center; padding: 10px 0 8px; }
+.hf-bar span { width: 40px; height: 4px; border-radius: 9999px; background: currentColor; opacity: 0.3; }
+.hf-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 16px 12px; }
+.hf-head b { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; }
+.hf-x { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: var(--hf-rail); color: var(--hf-text); cursor: pointer; }
+.hf-body { flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--hf-line); }
+.hf-rail { width: 34%; max-width: 150px; flex: none; overflow-y: auto; background: var(--hf-rail); }
+.hf-tab { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; box-sizing: border-box; padding: 16px 10px 16px 14px; text-align: left; font-size: 13.5px; font-weight: 600; line-height: 1.25; color: var(--hf-mute); background: transparent; border: 0; border-left: 4px solid transparent; cursor: pointer; }
+.hf-tab span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hf-tab.is-on { background: var(--hf-bg); color: var(--hf-text); font-weight: 800; border-left-color: #ff4d8d; }
+.hf-tab em { flex: none; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--hv-grad); color: #fff; font-style: normal; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.hf-opts { flex: 1; min-width: 0; overflow-y: auto; padding: 14px 16px 18px; }
+.hf-opts h3 { margin: 2px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hf-mute); }
+.hf-opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; padding: 13px 2px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--hf-line); color: var(--hf-text); cursor: pointer; }
+.hf-opt-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hf-opt-text b { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.hf-opt-text small { font-size: 12px; color: var(--hf-mute); }
+.hf-opt.is-on .hf-opt-text b { font-weight: 800; }
+.hf-mark { flex: none; width: 22px; height: 22px; box-sizing: border-box; border-radius: 7px; border: 2px solid var(--hf-mute); display: grid; place-items: center; color: #fff; }
+.hf-mark.is-round { border-radius: 50%; }
+.hf-opt.is-on .hf-mark { background: var(--hv-grad); border-color: transparent; }
+.hf-mark i { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.hf-foot { flex: none; display: flex; gap: 12px; padding: 12px 16px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--hf-line); background: var(--hf-bg); }
+.hf-clear { flex: none; height: 50px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--hf-rail); color: var(--hf-text); font-size: 15px; font-weight: 700; cursor: pointer; }
+.hf-clear:disabled { opacity: 0.45; cursor: default; }
+.hf-apply { flex: 1; min-width: 0; height: 50px; border: 0; border-radius: 14px; background: var(--hv-grad); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 22px -10px rgba(255, 77, 141, 0.7); }

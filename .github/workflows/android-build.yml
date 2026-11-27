@@ -131,6 +131,11 @@ jobs:
           grep -q 'IconProBlack' android/app/src/main/AndroidManifest.xml
           grep -q 'IconProWhite' android/app/src/main/AndroidManifest.xml
           grep -q 'IconDefault' android/app/src/main/AndroidManifest.xml
+          # the two Pro icons are adaptive (the phone shapes them like every other icon): a colour behind + the doodle picture in front (scripts/gen-pro-icons.py)
+          test -s android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_pro_black.xml
+          test -s android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_pro_white.xml
+          test -s android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_pro_black_foreground.png
+          test -s android/app/src/main/res/values/ic_launcher_pro_colors.xml
 
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in

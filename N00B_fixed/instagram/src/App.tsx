@@ -160,7 +160,7 @@ import { finishLoadProgress, markLoadStep, resetLoadProgress, type LoadStep } fr
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
 import { AppLockGate } from './components/Common/AppLockGate';
-import { applyAppIcon } from './utils/appIcon';
+import { applyAppIcon, canChangeHomeIcon, setIconChoice } from './utils/appIcon';
 import { detectPlatform } from './utils/appPlatform';
 import { startVisitTracking, noteVisit } from './services/visitTracker';
 import { pickBirthdayPopup, ageToday, wishFor, readShown, writeShown, type BirthdayNote, type BirthdayPick } from './utils/birthdayPopup';
@@ -197,6 +197,7 @@ const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateSto
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
 const CreateChooser = React.lazy(() => import('./components/PostCreation/CreateChooser').then((m) => ({ default: m.CreateChooser })));
 const NotificationsModal = React.lazy(() => import('./components/Modals/NotificationsModal').then((m) => ({ default: m.NotificationsModal })));
+const ProIconPrompt = React.lazy(() => import('./components/Modals/ProIconPrompt').then((m) => ({ default: m.ProIconPrompt })));
 const BirthdayPopup = React.lazy(() => import('./components/Modals/BirthdayPopup').then((m) => ({ default: m.BirthdayPopup })));
 const ScratchCardModal = React.lazy(() => import('./components/Modals/ScratchCardModal').then((m) => ({ default: m.ScratchCardModal })));
 const StatusNoteModal = React.lazy(() => import('./components/Modals/StatusNoteModal').then((m) => ({ default: m.StatusNoteModal })));
@@ -318,6 +319,19 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   // The icon on the phone's home screen follows the NOOB Pro plan: the Pro icon while a plan that chose it runs, the normal one when it ends (utils/appIcon.ts; only the Android app can change it)
   useEffect(() => { if (currentUser) void applyAppIcon(currentUser.proTier); }, [currentUser?.proTier]);
+  // "Feel the Pro privilege": right after somebody becomes a NOOB Pro member, the Android app offers the special Pro icon (once per person on this phone; never for people who were already Pro when the app opened)
+  const [showProIconPrompt, setShowProIconPrompt] = useState(false);
+  const proSeenRef = useRef<{ id: string; pro: boolean } | null>(null);
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const pro = !!currentUser.proTier, prev = proSeenRef.current;
+    proSeenRef.current = { id: currentUser.id, pro };
+    if (!prev || prev.id !== currentUser.id || prev.pro || !pro || !canChangeHomeIcon()) return;
+    const key = `noob_pro_icon_asked_v1_${currentUser.id}`;
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { /* storage blocked: it may ask again once */ }
+    const t = window.setTimeout(() => setShowProIconPrompt(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [currentUser?.id, currentUser?.proTier]);
   // Refresh / reopened app while on the Games page: go straight back to it (with the game that was open, see utils/pageResume.ts).
   // Decided once, as soon as the account is known and before the home screen is ever drawn.
   const restoredTabRef = useRef(false);
@@ -2702,6 +2716,13 @@ export default function App() {
             setShowLiveLoungeUpsell(true);
             setShowNotificationsModal(false);
           }}
+        /></React.Suspense>
+      )}
+
+      {showProIconPrompt && currentUser && (
+        <React.Suspense fallback={null}><ProIconPrompt
+          onNo={() => setShowProIconPrompt(false)}
+          onYes={() => { setIconChoice('pro-black'); void applyAppIcon(currentUser.proTier); setShowProIconPrompt(false); }}
         /></React.Suspense>
       )}
 

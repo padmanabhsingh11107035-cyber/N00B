@@ -42,5 +42,16 @@ check((out.match(/android.intent.category.LAUNCHER/g) || []).length === 3 && /an
 let refused = false; try { execFileSync('python', ['-I', 'android-overrides/add-icon-aliases.py', 'android-overrides/README.md'], { stdio: 'pipe' }); } catch { refused = true; }
 check(refused && /sys\.exit/.test(py), 'a manifest without a single launcher entry is refused (a build can never ship without a launcher)');
 
+
+section('5. The Pro icons are shaped by the phone, and "Feel the Pro privilege"');
+const gen = read('scripts/gen-pro-icons.py'), prompt = read('src/components/Modals/ProIconPrompt.tsx'), pcss = read('src/components/Modals/proIconPrompt.css');
+check(['pro_black', 'pro_white'].every((k) => ['', '_round'].every((r) => fs.existsSync(`android-overrides/icons/mipmap-anydpi-v26/ic_launcher_${k}${r}.xml`) && /<adaptive-icon/.test(read(`android-overrides/icons/mipmap-anydpi-v26/ic_launcher_${k}${r}.xml`)))) && ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'].every((d) => ['pro_black', 'pro_white'].every((k) => fs.existsSync(`android-overrides/icons/mipmap-${d}/ic_launcher_${k}_foreground.png`))) && /ic_launcher_pro_black_background">#000000/.test(read('android-overrides/icons/values/ic_launcher_pro_colors.xml')), 'the two Pro icons are adaptive icons (a colour behind, the doodles in front): the phone cuts them to its own shape, no hard squares');
+const legacy = fs.readFileSync('android-overrides/icons/mipmap-xxxhdpi/ic_launcher_pro_black.png');
+check(legacy.readUInt32BE(16) === 192 && legacy[25] === 6 && /rounded_rectangle/.test(gen) && /CROP = 0\.07/.test(gen), 'older phones get a rounded square with see-through corners (not the old square with white corners)');
+check(/test -s android\/app\/src\/main\/res\/mipmap-anydpi-v26\/ic_launcher_pro_black\.xml/.test(wf) && /ic_launcher_pro_colors\.xml/.test(wf), 'the Android build checks that the adaptive icons are in');
+check(/Feel the Pro privilege/.test(prompt) && /Change your app icon to a special NOOB Pro icon/.test(prompt) && /pro-icon-no/.test(prompt) && /pro-icon-yes/.test(prompt) && /\/app-icons\/default\.png/.test(prompt) && /\/app-icons\/pro-black\.png/.test(prompt), 'the box: "Feel the Pro privilege", the icon now, an arrow, the Pro icon, and No / Yes');
+check(/canChangeHomeIcon\(\)/.test(app) && /noob_pro_icon_asked_v1_/.test(app) && /prev\.pro \|\| !pro/.test(app) && /setIconChoice\('pro-black'\)/.test(app) && /<ProIconPrompt/.test(app), 'it opens only in the Android app, right after somebody becomes Pro (not for people who already were), once per person on a phone; Yes switches the icon');
+check(/:root\[data-theme="light"\] \.pip-card/.test(pcss) && /prefers-reduced-motion/.test(pcss), 'dark and light, and quiet for people who asked for less motion');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

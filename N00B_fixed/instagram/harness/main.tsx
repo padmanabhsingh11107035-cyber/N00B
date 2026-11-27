@@ -243,6 +243,16 @@ async function boot() {
     const group = (q.get('group') || 'all') as any, size = Number(q.get('size') || 150);
     Page = () => h('div', { style: { display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${size}px, 1fr))`, gap: 8, padding: 8, background: '#111', color: '#ddd', font: '11px sans-serif' } },
       ...(group === 'all' ? LENSES : lensesIn(group)).map((l: any) => h('div', { key: l.id, style: { textAlign: 'center' } }, h('img', { src: lensThumb(l, size), width: size, height: size, style: { borderRadius: 12, display: 'block' } }), l.name)));
+  } else if (page === 'avatar3d') {
+    // one 3D avatar as the Avatars page shows it: &id=nova, &bg=%2302c8e2
+    const mod = await import('../src/components/Avatars/AvatarModel3D.tsx');
+    const AvatarModel3D = (mod as any).default || (mod as any).AvatarModel3D;
+    const id = q.get('id') || 'nova', bg = q.get('bg') || '#02c8e2';
+    Page = () => h('div', { style: { position: 'fixed', inset: 0, background: bg } }, h(AvatarModel3D, { src: `/avatars/${id}.glb`, name: id, calm: true }));
+  } else if (page === 'proicon') {
+    // "Feel the Pro privilege" (after upgrading to NOOB Pro, Android app only)
+    const { ProIconPrompt } = await import('../src/components/Modals/ProIconPrompt.tsx');
+    Page = () => h(ProIconPrompt as any, { onYes: () => console.info('[harness] yes'), onNo: () => console.info('[harness] no') });
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

@@ -1562,6 +1562,17 @@ export async function fetchPostLikers(postId: string): Promise<{ users: User[] }
   }
 }
 
+/** how many different people viewed each of these posts (only numbers; empty when the database part is not installed yet or there is no signal) */
+export async function fetchPostViewCounts(ids: string[]): Promise<Record<string, number>> {
+  if (!ids.length) return {};
+  try {
+    const res = await rpc<Record<string, number>>('post_view_counts', { p_ids: ids.slice(0, 200) });
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(res || {})) if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    return out;
+  } catch { return {}; }
+}
+
 export async function recordPostView(postId: string) {
   const session = await currentSession();
   if (session) markSeen(session.user.id, 'posts', postId); // so the Feed stops treating it as new right away

@@ -78,6 +78,7 @@ export {
   toggleLikePost,
   fetchPostLikers,
   recordPostView,
+  fetchPostViewCounts,
   fetchPostViewers,
   toggleSavePost,
   toggleDislikePost,

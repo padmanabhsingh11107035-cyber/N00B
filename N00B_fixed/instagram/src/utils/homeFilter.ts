@@ -3,7 +3,7 @@
 import type { Post } from '../types.ts';
 
 export type HomeKind = 'photos' | 'videos' | 'text' | 'polls' | 'anon' | 'thoughts' | 'longvideos' | 'live';
-export type HomeSort = 'default' | 'newest' | 'oldest' | 'liked' | 'commented' | 'shared' | 'saved';
+export type HomeSort = 'default' | 'newest' | 'oldest' | 'viewed' | 'liked' | 'commented' | 'shared' | 'saved';
 export type HomeTime = 'any' | 'today' | 'week' | 'month';
 export type HomeActivity = 'liked' | 'saved' | 'viewed' | 'unviewed';
 export type HomeFrom = 'following' | 'verified' | 'new';
@@ -35,6 +35,7 @@ export const SORT_OPTIONS: FilterOption<HomeSort>[] = [
   { id: 'default', label: 'For you', hint: 'The usual mix' },
   { id: 'newest', label: 'Newest first' },
   { id: 'oldest', label: 'Oldest first' },
+  { id: 'viewed', label: 'Most viewed', hint: 'By different people' },
   { id: 'liked', label: 'Most liked' },
   { id: 'commented', label: 'Most commented' },
   { id: 'shared', label: 'Most shared' },
@@ -104,7 +105,7 @@ export function readFilter(raw: unknown): HomeFilter {
 }
 
 // ---- posts
-export interface FilterContext { userId: string; following: ReadonlySet<string>; seen: ReadonlySet<string>; now: number }
+export interface FilterContext { userId: string; following: ReadonlySet<string>; seen: ReadonlySet<string>; now: number; /** how many different people viewed each post (asked from the database when "Most viewed" is chosen) */ views?: Readonly<Record<string, number>> }
 
 /** which of the post kinds this post is (a post can be several: pictures and a video) */
 export function postKinds(p: Pick<Post, 'slides' | 'textBgStyle'>): HomeKind[] {
@@ -156,7 +157,8 @@ export function postPasses(p: Post, f: HomeFilter, c: FilterContext): boolean {
   return true;
 }
 
-const SORT_KEY: Record<Exclude<HomeSort, 'default' | 'newest' | 'oldest'>, (p: Post) => number> = {
+const SORT_KEY: Record<Exclude<HomeSort, 'default' | 'newest' | 'oldest'>, (p: Post, c: FilterContext) => number> = {
+  viewed: (p, c) => c.views?.[p.id] || 0,
   liked: (p) => p.likesCount || 0,
   commented: (p) => p.commentsCount || 0,
   shared: (p) => p.sharesCount || 0,
@@ -174,7 +176,7 @@ export function applyHomeFilter(posts: Post[], f: HomeFilter, c: FilterContext):
     if (f.sort === 'newest') return when(b) - when(a);
     if (f.sort === 'oldest') return when(a) - when(b);
     const key = SORT_KEY[f.sort];
-    return key(b) - key(a);
+    return key(b, c) - key(a, c);
   };
   return [...kept].sort((a, b) => by(a, b) || (idx.get(a.id)! - idx.get(b.id)!));
 }

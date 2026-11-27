@@ -81,7 +81,7 @@ import { funFeatureKey } from '../../utils/features';
 import { MoreCreationsPage } from './MoreCreationsPage';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
-import { requestPostBonusOffer, fetchSettings } from '../../services/api';
+import { requestPostBonusOffer, fetchSettings, fetchPostViewCounts } from '../../services/api';
 import { startsInsideOverlay } from '../../utils/pullToRefresh';
 import './home.css';
 import { CONTENT_CATEGORIES } from '../../data/mockData';
@@ -313,6 +313,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // the Filters sheet next to the topic pills (utils/homeFilter.ts): kept on this phone, so it is still there the next time Home opens
   const [homeFilter, setHomeFilter] = useState<HomeFilter>(() => { try { return readFilter(JSON.parse(localStorage.getItem('noob_home_filter_v1') || 'null')); } catch { return EMPTY_FILTER; } });
   const [showFilter, setShowFilter] = useState(false);
+  // "Most viewed": how many different people viewed each post, asked from the database only when that order is chosen (once per post)
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+  const askedViews = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (homeFilter.sort !== 'viewed') return;
+    const need = posts.map((p) => p.id).filter((id) => !askedViews.current.has(id)).slice(0, 200);
+    if (!need.length) return;
+    need.forEach((id) => askedViews.current.add(id));
+    void fetchPostViewCounts(need).then((r) => { if (Object.keys(r).length) setViewCounts((prev) => ({ ...prev, ...r })); });
+  }, [homeFilter.sort, posts]);
   useEffect(() => { try { if (isFiltered(homeFilter)) localStorage.setItem('noob_home_filter_v1', JSON.stringify(homeFilter)); else localStorage.removeItem('noob_home_filter_v1'); } catch { /* the filter simply is not remembered */ } }, [homeFilter]);
   // the thoughts, polls, videos and streams that pass the filter (each keeps the place it was given)
   const mixView = useMemo(() => {
@@ -469,7 +479,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   }
 
   // The Filters sheet: the content kinds, the order, your activity, the time, who from and the extras (utils/homeFilter.ts)
-  const filterCtx = { userId: currentUser.id, following: new Set<string>(currentUser.followingIds || []), seen: getSeenSet(currentUser.id, 'posts'), now: Date.now() };
+  const filterCtx = { userId: currentUser.id, following: new Set<string>(currentUser.followingIds || []), seen: getSeenSet(currentUser.id, 'posts'), now: Date.now(), views: viewCounts };
   const preFilterPosts = filteredPosts;
   filteredPosts = applyHomeFilter(filteredPosts, homeFilter, filterCtx);
   const countForFilter = (f: HomeFilter): number => applyHomeFilter(preFilterPosts, f, filterCtx).length + (mixOn ? mix.items.filter((it) => mixPasses(it, f, filterCtx.now)).length : 0);

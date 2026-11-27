@@ -89,5 +89,7 @@ check(['admin_user_logs', 'admin_accounts_ledger', 'admin_user_transactions', 'a
 const mig = read('supabase/migrations/20261020000002_admin_logs_accounts_visitors.sql');
 check(/cron\.schedule\('noob-weekly-audit', '0 3 \* \* 0'/.test(mig), 'the weekly audit is scheduled for Sundays 03:00');
 
+check(/data-testid="admin-online-now"/.test(admin) && /online now/.test(admin) && /\}, \[canOpenAccounts\]\);/.test(admin), 'the Accounts count at the top is followed by how many people are online now (on every tab)');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

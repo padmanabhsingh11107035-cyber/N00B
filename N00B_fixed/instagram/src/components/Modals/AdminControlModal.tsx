@@ -255,9 +255,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   // the instant anyone connects or disconnects anywhere in the app.
   const [onlinePresence, setOnlinePresence] = useState<Record<string, PresenceEntry[]>>({});
   useEffect(() => {
-    if (activeTab !== 'users' || !canOpenAccounts) return;
+    if (!canOpenAccounts) return;   // (the "online now" count at the top is on every tab, so the live list is followed on every tab)
     return subscribeToOnlinePresence(setOnlinePresence);
-  }, [activeTab, canOpenAccounts]);
+  }, [canOpenAccounts]);
 
   // Notification form states
   const [notifTargetType, setNotifTargetType] = useState<'all' | 'specific'>('all');
@@ -1289,7 +1289,7 @@ They will not be told.`)) return;
             className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors"
           >
             <span className="text-[11px] text-zinc-400 block font-medium">Accounts</span>
-            <span className="text-sm font-black text-white">{usersList.length}</span>
+            <span className="text-sm font-black text-white">{usersList.length}<span className="ml-1.5 text-[11px] font-bold text-emerald-400" data-testid="admin-online-now">{(Object.values(onlinePresence) as PresenceEntry[][]).filter((p) => p && p.length > 0).length} online now</span></span>
           </button>
           <button
             onClick={() => {

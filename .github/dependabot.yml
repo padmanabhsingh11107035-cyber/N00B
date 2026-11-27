@@ -5,7 +5,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/N00B_fixed/instagram"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     # Big (major) version jumps of the building blocks are done by hand, after testing: they break the checks and open a pile of failing pull requests.
     # Security fixes are still opened on their own by GitHub, whatever is listed here.
@@ -18,9 +18,16 @@ updates:
   - package-ecosystem: "gradle"
     directory: "/N00B_fixed/instagram/android"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    # big version jumps of the build tools are done by hand, after testing (they opened a pile of failing pull requests)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

@@ -991,7 +991,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 2b. Live now: the lives that are on right now, in curved boxes with a heart and the live chat */}
-      {featOn('live') && onNavigateToLive && <HomeLiveRail onOpen={onNavigateToLive} />}
+      {featOn('live') && onNavigateToLive && <HomeLiveRail onOpen={onNavigateToLive} meId={currentUser.id} />}
 
       {/* 3. Category Topic Filter Pills */}
       <div className="hf-chips-wrap">

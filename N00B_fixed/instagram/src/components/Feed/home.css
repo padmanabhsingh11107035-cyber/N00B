@@ -311,3 +311,5 @@ header.hv-top .hv-seg button { flex: 1 1 0 !important; min-width: 0; text-align:
 .hl-watch { flex: 1; min-width: 0; height: 40px; border: 0; border-radius: 14px; background: var(--hv-grad); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
 @keyframes hl-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, .28); } 50% { box-shadow: 0 0 0 7px rgba(239, 68, 68, .08); } }
 @media (prefers-reduced-motion: reduce) { .hl-dot { animation: none; } }
+.hl-end { flex: 1; min-width: 0; height: 40px; border: 0; border-radius: 14px; background: rgba(239, 68, 68, .16); color: #ef4444; font-size: 14px; font-weight: 800; cursor: pointer; }
+.hl-end.is-armed { background: #ef4444; color: #fff; }

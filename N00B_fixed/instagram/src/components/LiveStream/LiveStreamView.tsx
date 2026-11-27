@@ -148,10 +148,17 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
         let audioTrack: IMicrophoneAudioTrack | null;
         let videoTrack: ICameraVideoTrack | ILocalVideoTrack;
         if (videoSource === 'screen') {
-          [audioTrack, videoTrack] = await withTimeout(Promise.all([
+          // the screen and the microphone are asked for separately: a computer with no microphone still shares its screen (without sound) instead of failing the whole thing
+          const [micResult, screenResult] = await withTimeout(Promise.allSettled([
             AgoraRTC.createMicrophoneAudioTrack(),
             AgoraRTC.createScreenVideoTrack({}, 'disable')
           ]));
+          if (screenResult.status === 'rejected') {
+            if (micResult.status === 'fulfilled') micResult.value.close();
+            throw screenResult.reason;
+          }
+          videoTrack = screenResult.value;
+          audioTrack = micResult.status === 'fulfilled' ? micResult.value : null;
           // The browser's own "Stop sharing" control ends the track directly — treat that exactly
           // like tapping the in-app end button, instead of leaving a dead, silent stream running.
           videoTrack.on('track-ended', () => { void handleCloseTap(); });
@@ -416,8 +423,13 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   if (phase === 'ended') {
     return (
       <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-white text-base">{error || 'This stream has ended.'}</p>
-        <button onClick={onClose} className="mt-2 bg-white/10 text-white rounded-full px-6 py-2 text-sm">Close</button>
+        <p className="text-white text-base" data-testid="live-ended-text">{error || 'This stream has ended.'}</p>
+        <div className="mt-2 flex items-center gap-3">
+          {mode === 'host' && error && !/30 minutes|admin ended/i.test(error) && (
+            <button onClick={() => { cleanedUpRef.current = false; localTracksRef.current = null; clientRef.current = null; setStreamId(undefined); setStartedAtMs(null); setEndsSoon(false); setError(''); setPhase('setup'); }} className="bg-white text-black rounded-full px-6 py-2 text-sm font-bold" data-testid="live-try-again">Try again</button>
+          )}
+          <button onClick={onClose} className="bg-white/10 text-white rounded-full px-6 py-2 text-sm">Close</button>
+        </div>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Heart, MessageCircle, Users } from 'lucide-react';
-import { fetchLiveStreamComments, fetchLiveStreams, likeLiveStream, type LiveStreamSummary } from '../../services/supabaseApi';
+import { endLiveStream, fetchLiveStreamComments, fetchLiveStreams, likeLiveStream, type LiveStreamSummary } from '../../services/supabaseApi';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 
 // "Live now": the lives that are on right now, in curved boxes at the top of Home (under the stories). Each box shows who is live, how many are watching, the hearts, the newest line of the live chat,
@@ -17,7 +17,7 @@ export const minutesLeft = (startedAt: string, now: number): number => {
 
 interface Line { who: string; text: string }
 
-export const HomeLiveRail: React.FC<{ onOpen: (s: LiveStreamSummary) => void }> = ({ onOpen }) => {
+export const HomeLiveRail: React.FC<{ onOpen: (s: LiveStreamSummary) => void; /** the person looking: their own live gets an End live button, from any phone or computer */ meId?: string }> = ({ onOpen, meId }) => {
   const [streams, setStreams] = useState<LiveStreamSummary[]>([]);
   const [chat, setChat] = useState<Record<string, Line | undefined>>({});
   const [hearts, setHearts] = useState<Record<string, number>>({});   // hearts sent from here (shown at once, before the next look)
@@ -46,6 +46,14 @@ export const HomeLiveRail: React.FC<{ onOpen: (s: LiveStreamSummary) => void }> 
     return () => { alive.current = false; stop(); };
   }, [look]);
 
+  const [arming, setArming] = useState('');   // the live whose End button was pressed once (a second press ends it)
+  const end = async (s: LiveStreamSummary): Promise<void> => {
+    if (arming !== s.id) { setArming(s.id); window.setTimeout(() => setArming((a) => (a === s.id ? '' : a)), 3500); return; }
+    setArming('');
+    await endLiveStream(s.id);
+    setStreams((list) => list.filter((x) => x.id !== s.id));
+    void look();
+  };
   const heart = (s: LiveStreamSummary): void => {
     setHearts((h) => ({ ...h, [s.id]: (h[s.id] || 0) + 1 }));
     void likeLiveStream(s.id);
@@ -78,7 +86,9 @@ export const HomeLiveRail: React.FC<{ onOpen: (s: LiveStreamSummary) => void }> 
               <div className="hl-actions">
                 <button type="button" className="hl-like" onClick={() => heart(s)} aria-label="Send a heart" data-testid="home-live-heart"><Heart size={18} /></button>
                 <button type="button" className="hl-chatbtn" onClick={() => onOpen(s)} aria-label="Open the live chat"><MessageCircle size={18} /></button>
-                <button type="button" className="hl-watch" onClick={() => onOpen(s)}>Watch</button>
+                {meId && s.host.id === meId
+                  ? <button type="button" className={`hl-end${arming === s.id ? ' is-armed' : ''}`} onClick={() => void end(s)} data-testid="home-live-end">{arming === s.id ? 'Tap again to end' : 'End live'}</button>
+                  : <button type="button" className="hl-watch" onClick={() => onOpen(s)}>Watch</button>}
               </div>
             </article>
           );

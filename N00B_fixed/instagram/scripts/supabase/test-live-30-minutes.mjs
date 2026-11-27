@@ -55,5 +55,12 @@ check(/data-testid="home-live-rail"/.test(rail) && /likeLiveStream/.test(rail) &
 check(/<HomeLiveRail/.test(feed) && /featOn\('live'\)/.test(feed), 'the boxes sit on top of Home (under the stories), only while Live is switched on');
 check(/\.hl-card \{[^}]*border-radius: 28px/.test(css) && /:root\[data-theme="light"\] \.hl-card/.test(css), 'curved corners, dark and light');
 
+section('3. When going live fails');
+const err = read('src/utils/agoraError.ts');
+check(/createScreenVideoTrack\(\{\}, 'disable'\)/.test(view) && /screenResult\.status === 'rejected'/.test(view) && /audioTrack = micResult\.status === 'fulfilled' \? micResult\.value : null;/.test(view) && !/\[audioTrack, videoTrack\] = await withTimeout\(Promise\.all/.test(view), 'sharing the screen no longer needs a microphone: the screen and the microphone are asked for separately (a computer without a microphone shares without sound)');
+check(/DEVICE_NOT_FOUND/.test(err) && /NOT_SUPPORTED/.test(err) && /PERMISSION_DENIED/.test(err) && !/Requested device not found"/.test(err.replace(/\/Requested device not found\|NotFoundError\/i/, '')), 'the browser\'s plain message ("Requested device not found") is replaced by a sentence that says what to do');
+check(/data-testid="live-try-again"/.test(view) && /setPhase\('setup'\)/.test(view), 'a host whose live failed gets "Try again" next to "Close"');
+check(/data-testid="home-live-end"/.test(rail) && /endLiveStream\(s\.id\)/.test(rail) && /meId=\{currentUser\.id\}/.test(feed) && /Tap again to end/.test(rail), 'the host\'s own box on Home has an End live button (a second press ends it), from any phone or computer');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

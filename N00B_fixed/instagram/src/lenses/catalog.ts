@@ -2,6 +2,7 @@ import type { FaceFrame } from './types.ts';
 import { clamp } from './faceMath.ts';
 import { TAU, bloom, hash, heart, lin, magnify, rad, rr, scratch, spark, starPath, vignette } from './draw.ts';
 import type { Ctx } from './draw.ts';
+import { MORE_LENSES } from './catalogMore.ts';
 
 // The lenses. Each one is drawn from scratch with the canvas (no pictures to download), around a face in "eye distances" (see types.ts / draw.ts inFace): 0,0 is the spot between the
 // eyes, +x is to the right of the screen, +y is down. The numbers come from Google's average face (types.ts): f.hair is where the hair starts, f.skull the top of the head, f.base is just
@@ -9,7 +10,7 @@ import type { Ctx } from './draw.ts';
 // time `t` (seconds) only, never saved state, so a dropped frame can not leave anything behind.
 // The K-pop and anime lenses are fan-style little things (colours, hearts, hats, hair, headbands) drawn from scratch: no logo, no picture and no real person is copied.
 
-export type Group = 'fun' | 'kpop' | 'anime' | 'looks';
+export type Group = 'fun' | 'animals' | 'funny' | 'beauty' | 'party' | 'kpop' | 'anime' | 'looks';
 
 export interface LensDef {
   id: string;
@@ -30,7 +31,7 @@ export interface LensDef {
 }
 
 export const GROUPS: ReadonlyArray<{ id: Group | 'all'; label: string }> = [
-  { id: 'all', label: 'All' }, { id: 'fun', label: 'Fun' }, { id: 'kpop', label: 'K-Pop' }, { id: 'anime', label: 'Anime' }, { id: 'looks', label: 'Looks' }
+  { id: 'all', label: 'All' }, { id: 'fun', label: 'Fun' }, { id: 'animals', label: 'Animals' }, { id: 'funny', label: 'Funny' }, { id: 'beauty', label: 'Beauty' }, { id: 'party', label: 'Party' }, { id: 'kpop', label: 'K-Pop' }, { id: 'anime', label: 'Anime' }, { id: 'looks', label: 'Looks' }
 ];
 
 /** run `fn` once for the right-hand side (+1) and once mirrored for the left-hand side (-1) */
@@ -842,7 +843,7 @@ const dreamy = (c: Ctx, w: number, h: number): void => {
   tint('rgba(255,240,250,.1)', 'screen')(c, w, h);
 };
 
-export const LENSES: ReadonlyArray<LensDef> = [
+const FIRST_LENSES: ReadonlyArray<LensDef> = [
   { id: 'none', name: 'Normal', group: 'fun', kind: 'look', color: '#8a8f98' },
   { id: 'devil', name: 'Devil', group: 'fun', kind: 'face', color: '#ff5a1f', tags: 'horns fire demon', base: tint('rgba(255,70,40,.3)'), face: devil },
   { id: 'shades', name: 'Shades', group: 'fun', kind: 'face', color: '#ff9f1c', tags: 'sunglasses cool glasses', face: shades },
@@ -880,6 +881,9 @@ export const LENSES: ReadonlyArray<LensDef> = [
   { id: 'neon', name: 'Neon', group: 'looks', kind: 'look', color: '#8a3dff', tags: 'purple cyber glow', base: neon },
   { id: 'dream', name: 'Dreamy', group: 'looks', kind: 'look', color: '#ffc2e6', tags: 'soft pink glow', base: dreamy, top: drift }
 ];
+
+/** every lens: the first thirty-three, then the animals, funny faces, beauty, party and season lenses and the extra looks (catalogMore.ts) */
+export const LENSES: ReadonlyArray<LensDef> = [...FIRST_LENSES, ...MORE_LENSES];
 
 export const DEFAULT_LENS = 'devil';
 export const lensById = (id: string): LensDef => LENSES.find((l) => l.id === id) || LENSES[0];

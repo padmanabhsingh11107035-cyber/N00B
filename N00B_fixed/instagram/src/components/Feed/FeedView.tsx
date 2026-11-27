@@ -40,6 +40,7 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { Repeat2, Clock, ListVideo } from 'lucide-react';
 import { HomeFilterSheet } from './HomeFilterSheet';
+import { HomeLiveRail } from './HomeLiveRail';
 import { EMPTY_FILTER, activeCount, applyHomeFilter, isFiltered, mixPasses, readFilter, type HomeFilter } from '../../utils/homeFilter';
 import { fetchFeedReposts, toggleLikePost, toggleSavePost, type FeedRepost } from '../../services/api';
 import { mergeFeedReposts, type Reposter } from '../../utils/repostFeed';
@@ -308,7 +309,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   useEffect(() => { let alive = true; void syncInterest().then((ok) => { if (alive && ok) setInterestTick((n) => n + 1); }); return () => { alive = false; }; }, []);   // the person's answers from the server (once per start)
   const noInterestFrozen = useMemo(() => notInterestedIds('post'), [refreshNonce, interestTick]);
   const hiddenAuthorsFrozen = useMemo(() => hiddenAuthorIds(), [refreshNonce, interestTick]);   // read again only when Home is refreshed: a post marked "Not interested" folds away in place (with Undo) instead of vanishing
-  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('videos'), featOn('live'));
+  const mix = useHomeMix(featOn('anonymous'), featOn('fun-polls'), refreshNonce, featOn('videos'), false);   // the lives are not in the mix any more: they sit on top of Home (HomeLiveRail)
   const canManagePolls = useCanManagePolls(featOn('fun-polls'));
   // the Filters sheet next to the topic pills (utils/homeFilter.ts): kept on this phone, so it is still there the next time Home opens
   const [homeFilter, setHomeFilter] = useState<HomeFilter>(() => { try { return readFilter(JSON.parse(localStorage.getItem('noob_home_filter_v1') || 'null')); } catch { return EMPTY_FILTER; } });
@@ -988,6 +989,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
         onToggleFollowUser={onToggleFollowUser}
         allUsers={allUsers}
       />
+
+      {/* 2b. Live now: the lives that are on right now, in curved boxes with a heart and the live chat */}
+      {featOn('live') && onNavigateToLive && <HomeLiveRail onOpen={onNavigateToLive} />}
 
       {/* 3. Category Topic Filter Pills */}
       <div className="hf-chips-wrap">

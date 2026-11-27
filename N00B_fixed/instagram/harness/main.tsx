@@ -236,6 +236,13 @@ async function boot() {
     // the birthday box: &card=0 = no scratch card (only the wish)
     const { BirthdayPopup } = await import('../src/components/Modals/BirthdayPopup.tsx');
     Page = () => h(BirthdayPopup as any, { name: 'Aarav', age: 18, wish: 'Happy 18th birthday! May your day be full of laughter, your people close and your dreams a little closer. We are so glad you are part of NOOB.', cardId: q.get('card') === '0' ? undefined : 'card-1', onScratch: (id: string) => console.info('[harness] scratch', id), onClose: () => console.info('[harness] close') });
+  } else if (page === 'lensgrid') {
+    // every lens drawn on the made-up face of the lens list (the very code the camera uses): &group=animals|funny|beauty|party|looks|all, &size=150
+    const { LENSES, lensesIn } = await import('../src/lenses/catalog.ts');
+    const { lensThumb } = await import('../src/lenses/scene.ts');
+    const group = (q.get('group') || 'all') as any, size = Number(q.get('size') || 150);
+    Page = () => h('div', { style: { display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${size}px, 1fr))`, gap: 8, padding: 8, background: '#111', color: '#ddd', font: '11px sans-serif' } },
+      ...(group === 'all' ? LENSES : lensesIn(group)).map((l: any) => h('div', { key: l.id, style: { textAlign: 'center' } }, h('img', { src: lensThumb(l, size), width: size, height: size, style: { borderRadius: 12, display: 'block' } }), l.name)));
   } else if (page === 'homemix') {
     // the anonymous thoughts and polls as they sit on Home: the cards with the like / comment / share bar
     await import('../src/components/Feed/home.css');

@@ -55,6 +55,10 @@ const within = <T,>(p: Promise<T>, ms: number, message: string): Promise<T> =>
 // The video SDK is big (1.6 MB): it is fetched in the background while the setup screen is already showing, not before it.
 const loadAgora = () => import('agora-rtc-sdk-ng').then((m) => m.default);
 
+// A live lasts 30 minutes at most (the database also ends one that is 30 minutes old, migration 20261127000002), and nothing of it is kept after it ends: no replay, the chat is erased.
+const LIVE_MAX_MINUTES = 30;
+const LIVE_WARN_MINUTES = 28;
+
 // Full-screen live video — used both by the host (broadcasting their camera) and by a viewer (watching
 // someone else's). Agora carries the actual video; everything else (privacy, viewer counting, chat,
 // gifts) is the database, reached the same way whether this is a host or a viewer session.
@@ -76,6 +80,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   useEffect(() => { if (error && phase === 'setup') showErrorDialog(error, { onOk: () => setError('') }); }, [error, phase]);   // a problem while setting up opens in a box with an OK button
   const [micOn, setMicOn] = useState(true);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [startedAtMs, setStartedAtMs] = useState<number | null>(null);   // when this host's live began (for the 30 minutes)
+  const [endsSoon, setEndsSoon] = useState(false);
   const isMasterAdmin = can(currentUser, 'moderate_content');
 
   const videoRef = useRef<HTMLDivElement>(null);
@@ -203,6 +209,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       return;
     }
     setStreamId(res.id);
+    const began = Date.parse(String(res.startedAt));
+    setStartedAtMs(Number.isFinite(began) ? began : Date.now());
     await connect(res.id, true);
   };
 
@@ -273,12 +281,12 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   useEffect(() => {
     if (mode !== 'host' || !streamId || phase !== 'live') return;
     const unsub = subscribeToLiveStreamEnded(streamId, () => {
-      setError('An admin ended your live stream.');
+      setError(startedAtMs && Date.now() - startedAtMs >= LIVE_MAX_MINUTES * 60_000 - 5000 ? 'Your live ended: a live can last 30 minutes at most.' : 'An admin ended your live stream.');
       setPhase('ended');
       void cleanup();
     });
     return unsub;
-  }, [mode, streamId, phase, cleanup]);
+  }, [mode, streamId, phase, cleanup, startedAtMs]);
 
   const handleCloseTap = async () => {
     if (mode === 'host' && streamId) {
@@ -298,6 +306,21 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     await cleanup();
     onClose();
   };
+
+  // the 30 minutes: a warning two minutes before, then the host's phone ends the live itself (the database is the safety net for a phone that is gone)
+  useEffect(() => {
+    if (mode !== 'host' || phase !== 'live' || !startedAtMs) return;
+    const now = Date.now();
+    const warnIn = startedAtMs + LIVE_WARN_MINUTES * 60_000 - now;
+    const stopIn = startedAtMs + LIVE_MAX_MINUTES * 60_000 - now;
+    const warn = window.setTimeout(() => setEndsSoon(true), Math.max(0, warnIn));
+    const stop = window.setTimeout(() => {
+      setError('Your live ended: a live can last 30 minutes at most.');
+      void confirmEndStream();
+    }, Math.max(0, stopIn));
+    return () => { window.clearTimeout(warn); window.clearTimeout(stop); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, phase, startedAtMs, streamId]);
 
   const handleSendChat = async () => {
     const text = chatInput.trim();
@@ -403,6 +426,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     <div className="fixed inset-0 z-50 bg-black media-dark flex items-center justify-center" style={minimized ? { display: 'none' } : undefined} data-testid="live-screen" aria-hidden={minimized}>
       <div className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black overflow-hidden">
         <div ref={videoRef} className="absolute inset-0 w-full h-full bg-neutral-950" />
+        {mode === 'host' && endsSoon && <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-amber-500 text-black text-xs font-bold shadow-lg" role="status" data-testid="live-ends-soon">Your live ends in 2 minutes (30 minutes is the longest)</div>}
 
         <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between">
           <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-full pl-1 pr-3 py-1">

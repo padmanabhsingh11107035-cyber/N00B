@@ -282,3 +282,32 @@ header.hv-top .hv-seg button { flex: 1 1 0 !important; min-width: 0; text-align:
 .hf-clear { flex: none; height: 50px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--hf-rail); color: var(--hf-text); font-size: 15px; font-weight: 700; cursor: pointer; }
 .hf-clear:disabled { opacity: 0.45; cursor: default; }
 .hf-apply { flex: 1; min-width: 0; height: 50px; border: 0; border-radius: 14px; background: var(--hv-grad); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 22px -10px rgba(255, 77, 141, 0.7); }
+
+/* ---- "Live now" (Feed/HomeLiveRail.tsx): curved boxes on top of Home with the host, the numbers, the newest chat line, a heart and a way in; dark and light ---- */
+.hl-rail { width: 100%; padding: 4px 0 6px; }
+.hl-head { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; color: var(--hv-text); font-size: 15px; }
+.hl-head b { font-weight: 800; letter-spacing: -.01em; }
+.hl-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, .25); animation: hl-pulse 1.6s ease-in-out infinite; }
+.hl-scroll { display: flex; gap: 12px; padding: 2px 14px 6px; overflow-x: auto; scroll-snap-type: x proximity; }
+.hl-card { flex: 0 0 min(280px, 78vw); scroll-snap-align: start; box-sizing: border-box; display: flex; flex-direction: column; gap: 9px; padding: 14px; border-radius: 28px; color: var(--hv-text); background: linear-gradient(150deg, rgba(239, 68, 68, .2), rgba(124, 92, 255, .14) 55%, rgba(255, 77, 141, .12)); border: 1px solid rgba(248, 113, 113, .4); box-shadow: 0 14px 30px -18px rgba(239, 68, 68, .6); }
+:root[data-theme="light"] .hl-card { background: linear-gradient(150deg, #fff1f1, #f6f1ff 55%, #fff0f6); border-color: rgba(239, 68, 68, .3); box-shadow: 0 12px 26px -18px rgba(239, 68, 68, .45); }
+.hl-main { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.hl-ava { position: relative; flex: none; width: 58px; height: 58px; }
+.hl-ava img, .hl-ph { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 0 0 3px #ef4444; background: var(--hv-surface-2); }
+.hl-pill { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); padding: 1px 8px; border-radius: 9999px; background: #ef4444; color: #fff; font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.hl-who { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.hl-who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15.5px; font-weight: 800; }
+.hl-who small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--hv-muted); }
+.hl-stats { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; color: var(--hv-muted); }
+.hl-stats span { display: inline-flex; align-items: center; gap: 4px; }
+.hl-left { margin-left: auto; color: #ef4444 !important; }
+.hl-chat { margin: 0; min-height: 34px; padding: 8px 12px; border-radius: 16px; background: var(--hv-surface); color: var(--hv-text); font-size: 12.5px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.hl-chat b { font-weight: 800; }
+.hl-chat i { color: var(--hv-muted); font-style: normal; }
+.hl-actions { display: flex; align-items: center; gap: 8px; }
+.hl-like, .hl-chatbtn { flex: none; width: 42px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 14px; background: var(--hv-surface-2); color: var(--hv-text); cursor: pointer; }
+.hl-like { color: #ff4d6d; }
+.hl-like:active { transform: scale(.9); }
+.hl-watch { flex: 1; min-width: 0; height: 40px; border: 0; border-radius: 14px; background: var(--hv-grad); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
+@keyframes hl-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, .28); } 50% { box-shadow: 0 0 0 7px rgba(239, 68, 68, .08); } }
+@media (prefers-reduced-motion: reduce) { .hl-dot { animation: none; } }

@@ -5932,6 +5932,8 @@ export interface LiveStreamSummary {
   id: string;
   title: string;
   viewerCount: number;
+  /** hearts sent so far (the "Live now" boxes on Home show them) */
+  totalLikes?: number;
   startedAt: string;
   host: { id: string; username: string; displayName?: string; avatar?: string };
 }

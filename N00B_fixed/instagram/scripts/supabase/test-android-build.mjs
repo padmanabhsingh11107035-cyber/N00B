@@ -20,5 +20,9 @@ check(/CAMERA/.test(readme) && /RECORD_AUDIO/.test(readme) && /Native parts/.tes
 check(/\.claude\/\*\n!\.claude\/launch\.json/.test(read('.gitignore')) && /\.claude\/\*\n!\.claude\/launch\.json/.test(read('../../.gitignore')), 'the preview shortcuts are shared, personal tool settings stay private');
 check(fs.existsSync('../../.claude/launch.json') && fs.existsSync('.claude/launch.json'), 'both preview shortcut files exist');
 
+
+// Capacitor's own SystemBars plugin shows the status bar and the three buttons at the bottom when it starts, unless it is told to hide them (newer Capacitor does this a moment AFTER MainActivity hides them)
+const capConfig = JSON.parse(fs.readFileSync('capacitor.config.json', 'utf8'));
+check(capConfig.plugins?.SystemBars?.hidden === true, 'the app stays full screen: the SystemBars plugin of Capacitor is told to keep the bars hidden (otherwise it shows the three phone buttons again when the app starts)');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

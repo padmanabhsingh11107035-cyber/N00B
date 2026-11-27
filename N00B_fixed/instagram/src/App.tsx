@@ -187,6 +187,7 @@ const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./compo
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
 import { BackToTop } from './components/Common/BackToTop';
+import { SupportPopup, useWideScreen } from './components/Support/SupportPopup';
 const HashtagPage = React.lazy(() => import('./components/Explore/HashtagPage').then((m) => ({ default: m.HashtagPage })));
 const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
 const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
@@ -568,6 +569,18 @@ export default function App() {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showStatusNoteModal, setShowStatusNoteModal] = useState(false);
   const [showCustomerSupportModal, setShowCustomerSupportModal] = useState(false);
+  // computers and tablets: the small "Hi, how can we help?" chat box above the round support picture (Support/SupportPopup.tsx); it shows itself once per visit, a message typed there opens the chat and goes to the AI
+  const wideScreen = useWideScreen();
+  const [supportPopup, setSupportPopup] = useState(false);
+  const [supportSeed, setSupportSeed] = useState('');
+  useEffect(() => {
+    if (!wideScreen) return;
+    let seen = false;
+    try { seen = sessionStorage.getItem('noob_support_popup_seen') === '1'; } catch { /* private window */ }
+    if (seen) return;
+    const t = window.setTimeout(() => { setSupportPopup(true); try { sessionStorage.setItem('noob_support_popup_seen', '1'); } catch { /* private window */ } }, 6000);
+    return () => window.clearTimeout(t);
+  }, [wideScreen]);
   // "Help" on the Terms / Privacy / encryption pages (components/Legal/LegalShell.tsx) asks the app to open Customer Support
   useEffect(() => {
     const open = () => setShowCustomerSupportModal(true);
@@ -2435,7 +2448,7 @@ export default function App() {
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}
       {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <button
-          onClick={() => setShowCustomerSupportModal(true)}
+          onClick={() => { if (wideScreen) setSupportPopup((o) => !o); else setShowCustomerSupportModal(true); }}
           className="noob-buddy-btn fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-16 h-16 flex items-end cursor-pointer group"
           title="Open NOOB Support"
           aria-label="Open NOOB Support"
@@ -2453,6 +2466,15 @@ export default function App() {
         </button>
       )}
 
+      {wideScreen && supportPopup && !showCustomerSupportModal && activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
+        <SupportPopup
+          open
+          onClose={() => setSupportPopup(false)}
+          onSend={(text) => { setSupportSeed(text); setSupportPopup(false); setShowCustomerSupportModal(true); }}
+          onMore={() => { setSupportSeed(''); setSupportPopup(false); setShowCustomerSupportModal(true); }}
+        />
+      )}
+
       {/* The animated receipt of any payment just made (components/Payments, utils/paymentReceipt.ts) */}
       <PaymentReceiptHost />
 
@@ -2462,7 +2484,8 @@ export default function App() {
         <React.Suspense fallback={<LazyFallback />}>
           <CustomerSupportModal
             currentUser={currentUser}
-            onClose={() => setShowCustomerSupportModal(false)}
+            initialMessage={supportSeed || undefined}
+            onClose={() => { setShowCustomerSupportModal(false); setSupportSeed(''); }}
           />
         </React.Suspense>
       )}

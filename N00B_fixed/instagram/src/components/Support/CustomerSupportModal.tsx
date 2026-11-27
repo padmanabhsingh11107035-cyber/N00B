@@ -30,6 +30,8 @@ interface CustomerSupportModalProps {
   onClose: () => void;
   /** open straight on one screen (the Suggestion Box, from Settings) instead of the "Need help?" screen */
   initialScreen?: SupportScreen;
+  /** a first message typed in the small chat box on computers and tablets: the chat opens and this goes to the AI at once */
+  initialMessage?: string;
 }
 
 interface ChatMessage {
@@ -51,14 +53,15 @@ const PrivacyPolicy = React.lazy(() => import('../Legal/PrivacyPolicy').then((m)
 export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   currentUser,
   onClose,
-  initialScreen
+  initialScreen,
+  initialMessage
 }) => {
   const [legal, setLegal] = useState<null | 'terms' | 'privacy'>(null);
   // Support is a page of its own: while it is open the page behind it is hidden (not just covered), and it fills exactly the visible part of the screen (also when the keyboard is up).
   useFullPage(true);
   const visibleArea = useVisibleArea();
   // Opening support always shows the "Need help?" screen with its coloured options; the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
-  const [activeSupportTab, setActiveSupportTab] = useState<SupportScreen>(initialScreen ?? 'home');
+  const [activeSupportTab, setActiveSupportTab] = useState<SupportScreen>(initialMessage ? 'ai_chat' : (initialScreen ?? 'home'));
   
   // Voice & Speech Synthesis / Recognition State (Used exclusively for Live Voice Call)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -569,11 +572,12 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   };
 
   // Send message to AI Support (Chat assistant does NOT speak, purely text)
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, textOverride?: string) => {
     if (e) e.preventDefault();
-    if (!inputMessage.trim() || isTyping) return;
+    const typed = textOverride ?? inputMessage;
+    if (!typed.trim() || isTyping) return;
 
-    const userText = inputMessage.trim();
+    const userText = typed.trim();
     const userMsgId = `msg_user_${Date.now()}`;
     const userMsg: ChatMessage = {
       id: userMsgId,
@@ -637,6 +641,15 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       setIsTyping(false);
     }
   };
+
+  // A message typed in the small chat box (computers and tablets): sent once, as soon as the chat page is open
+  const seedSent = useRef(false);
+  useEffect(() => {
+    if (!initialMessage || seedSent.current) return;
+    seedSent.current = true;
+    void handleSendMessage(undefined, initialMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // "Payment Issue" quick action — a real, un-invented list of the person's own NOOB Points payments to
   // pick from. Never goes through the AI: fetched straight from the wallet, so there is nothing to hallucinate.

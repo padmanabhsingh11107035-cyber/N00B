@@ -1,6 +1,6 @@
 // The 3D models shown on the NOOB Models page (three-line menu). One entry = one curved box with the model turning inside it.
 // To add a model: put the .glb file in public/models/ (or any public/ folder) and add a line here; nothing else changes.
-// The first box shows Nova (the figure of the avatar page) so the page works from day one; the models made for this page come next.
+// Nova is on the Avatars page, not here.
 export interface NoobModel {
   id: string;
   name: string;
@@ -13,6 +13,5 @@ export interface NoobModel {
 }
 
 export const NOOB_MODELS: ReadonlyArray<NoobModel> = [
-  { id: 'ball', name: 'Noob Ball', blurb: 'A round black buddy with bulging eyes', build: 'ball-eyes' },
-  { id: 'nova', name: 'Nova', blurb: 'The NOOB hero: drag to turn it', src: '/avatars/nova.glb?v=29' }
+  { id: 'ball', name: 'Noob Ball', blurb: 'A round black buddy with bulging eyes', build: 'ball-eyes' }
 ];

@@ -9,12 +9,20 @@ import { isNativeApp } from '../../utils/siteUrl';
 //     Later button; after Later it is asked again the next day.
 // It is checked when the app starts and every time it comes back to the front. A check that fails (offline, file missing) never blocks or bothers anybody.
 const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.noob.social';
+/** straight into the Google Play app, on NOOB's own page (the phone opens it, no browser in between) */
+const PLAY_APP_URL = 'market://details?id=com.noob.social';
 const LATER_KEY = 'noob_update_later';
 const DAY = 24 * 3600 * 1000;
 
 const openPlay = async () => {
-  try { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url: PLAY_URL }); }
-  catch { window.location.href = PLAY_URL; }
+  // 1. the Google Play app itself, on the NOOB page (Update button right there)
+  try { window.location.href = PLAY_APP_URL; } catch { /* the web address below takes over */ }
+  // 2. if the phone did not leave NOOB within a moment (no Play app answered), the same page opens on the web
+  window.setTimeout(async () => {
+    if (document.visibilityState !== 'visible') return;
+    try { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url: PLAY_URL }); }
+    catch { window.location.href = PLAY_URL; }
+  }, 1800);
 };
 
 export const AppUpdateGate: React.FC = () => {

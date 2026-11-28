@@ -17,6 +17,5 @@ export interface FeaturedPost {
 }
 
 export const FEATURED_POSTS: ReadonlyArray<FeaturedPost> = [
-  { id: 'f0f0f0f0-0000-4000-8000-000000000001', type: 'model', title: 'Noob Ball', caption: 'Meet the Noob Ball: black, round and always watching. Drag it to turn it round!', at: '2026-11-28T09:00:00.000Z', build: 'ball-eyes' },
-  { id: 'f0f0f0f0-0000-4000-8000-000000000002', type: 'image', title: 'NOOB tee', caption: 'Wink if you are a NOOB too.', at: '2026-11-28T09:05:00.000Z', image: '/featured/noob-tee-girl.svg', alt: 'A drawing of a girl with long wavy hair winking, her hand behind her head, in a black NOOB t-shirt' }
+  { id: 'f0f0f0f0-0000-4000-8000-000000000001', type: 'model', title: 'Noob Ball', caption: 'Meet the Noob Ball: black, round and always watching. Drag it to turn it round!', at: '2026-11-28T09:00:00.000Z', build: 'ball-eyes' }
 ];

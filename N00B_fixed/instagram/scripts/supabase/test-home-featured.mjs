@@ -63,11 +63,11 @@ const mix = read('src/components/Feed/HomeMix.tsx'), feed = read('src/components
 check(/kind: 'featured'; at: string; featured: FeaturedPost/.test(mix) && /<FeaturedCard post=\{item\.featured\}/.test(mix) && /<MixBar kind="featured"[^>]*extras/.test(mix), 'a featured post is a card between the posts, with the bar plus Repost and Save');
 check(/data-testid="home-mix-repost"/.test(mix) && /data-testid="home-mix-save"/.test(mix) && /setMixRepost\(kind, id, on\)/.test(mix) && /setMixSave\(kind, id, on\)/.test(mix), 'Repost and Save buttons work through the database functions');
 check(/React\.lazy\(\(\) => import\('\.\.\/Featured\/ModelBox3D'\)\)/.test(mix), 'the 3D engine is fetched only when a 3D post is on screen');
-check(/featOn\('featured'\)\);/.test(feed) && /key: 'featured'/.test(feat), 'the administrator can switch them off (Pages tab)');
+check(/featOn\('featured'\), featOn\('ads'\)/.test(feed) && /key: 'featured'/.test(feat), 'the administrator can switch them off (Pages tab)');
 check(/FEATURED_POSTS/.test(data) && !/(upload|fetch|supabase)/i.test(data.replace(/\/\/.*$/gm, '')), 'the list of posts is only a file in the app: nothing is uploaded and nothing is stored on the server');
 check(/type: 'model'[^\n]*build: 'ball-eyes'/.test(data) && !/type: 'image'/.test(data) && !fs.existsSync('public/featured/noob-tee-girl.svg'), 'the Noob Ball is the only post (the 2D picture was removed)');
 check(/\.hm-feat-media \{/.test(css) && /\.hm-ab\.is-on/.test(css), 'styles for the posts');
-check(/item\.kind === 'featured' && f\.kinds\.length/.test(filt), 'a filter on Home by kind hides these posts (they pass only when no kind is chosen)');
+check(/\(item\.kind === 'featured' \|\| item\.kind === 'ad'\) && f\.kinds\.length/.test(filt), 'a filter on Home by kind hides these posts (they pass only when no kind is chosen)');
 check(!fs.existsSync('src/components/Models') && !/NOOB Models/.test(feed), 'the NOOB Models page is gone');
 
 console.log(`\n${passed} passed, ${failed} failed`);

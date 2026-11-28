@@ -51,6 +51,7 @@ import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
 import { safeExternalUrl } from '../../utils/safeUrl';
 import { AdBanner } from '../Ads/AdBanner';
+import { ReelsAdHost } from '../Ads/ReelsAdHost';
 import { ReelFriendsStrip } from './ReelFriendsStrip';
 import { contentUrl } from '../../utils/routes';
 import confetti from 'canvas-confetti';
@@ -133,6 +134,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
+  // Google ads between reels (Android app only, components/Ads/ReelsAdHost.tsx): every sixth swipe an ad page can come up over the reels; it never changes the list of reels
+  const [swipes, setSwipes] = useState(0);
+  const [adOpen, setAdOpen] = useState(false);
   const [reelComments, setReelComments] = useState<any[]>([]);
   // "Load more": comments come 100 at a time (newest first)
   const [reelCommentsMore, setReelCommentsMore] = useState(false);
@@ -754,7 +758,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const progressRef = useRef<HTMLDivElement | null>(null);
   const animatingRef = useRef(false);
   const wheelLockRef = useRef(0);
-  const anyModalOpen = showComments || showReelOptionsMenu || showLikesViewsSheet;
+  const anyModalOpen = showComments || showReelOptionsMenu || showLikesViewsSheet || adOpen;
 
   const snapBack = () => {
     const track = trackRef.current;
@@ -779,6 +783,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     window.setTimeout(() => {
       // the new reel is put in the middle slot and the track goes back to rest in the same moment, so nothing flashes in between
       flushSync(() => setCurrentIndex(target));
+      setSwipes((n) => n + 1);
       track.style.transition = 'none';
       track.style.transform = 'translate3d(0, 0, 0)';
       animatingRef.current = false;
@@ -1434,11 +1439,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           <div className="absolute inset-0" style={{ transform: `translateY(calc(-100% - ${SLOT_GAP}px))` }}>
             {localReels[currentIndex - 1] ? renderCard(localReels[currentIndex - 1], false) : null}
           </div>
-          <div className="absolute inset-0">{renderCard(currentReel, true)}</div>
+          <div className="absolute inset-0">{renderCard(currentReel, !adOpen)}</div>
           <div className="absolute inset-0" style={{ transform: `translateY(calc(100% + ${SLOT_GAP}px))` }}>
             {nextReel ? renderCard(nextReel, false) : null}
           </div>
         </div>
+        <ReelsAdHost swipes={swipes} isAdmin={isMainAdmin(currentUser)} onOpenChange={setAdOpen} />
         {/* An ad at the top of Reels (NOOB Ads), when one is running here; it floats over the top of the reel and never takes a swipe */}
         <div className="absolute top-[72px] inset-x-3 z-30 pointer-events-none"><div className="pointer-events-auto"><AdBanner page="reels" compact /></div></div>
       </div>

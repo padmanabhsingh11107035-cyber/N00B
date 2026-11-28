@@ -97,6 +97,13 @@ jobs:
           cp android-overrides/FamilyStore.java android/app/src/main/java/com/noob/social/FamilyStore.java
           cp android-overrides/FamilyLocationService.java android/app/src/main/java/com/noob/social/FamilyLocationService.java
           cp android-overrides/FamilySenderPlugin.java android/app/src/main/java/com/noob/social/FamilySenderPlugin.java
+          # Google (AdMob) ads: the plugin file, the app id the Google SDK insists on (WITHOUT it the app stops at start-up, so the build is checked for it) and the SDK itself
+          cp android-overrides/NoobAdsPlugin.java android/app/src/main/java/com/noob/social/NoobAdsPlugin.java
+          sed -i 's#</application>#<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1264107433589197~4159216677" /></application>#' android/app/src/main/AndroidManifest.xml
+          grep -q 'com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1264107433589197~4159216677"' android/app/src/main/AndroidManifest.xml
+          grep -q 'registerPlugin(NoobAdsPlugin.class)' android/app/src/main/java/com/noob/social/MainActivity.java
+          printf '\ndependencies {\n    implementation "com.google.android.gms:play-services-ads:23.6.0"\n}\n' >> android/app/build.gradle
+          grep -q 'play-services-ads:23.6.0' android/app/build.gradle
           sed -i 's#</application>#<service android:name=".FamilyLocationService" android:enabled="true" android:exported="false" android:foregroundServiceType="location" android:stopWithTask="false" /></application>#' android/app/src/main/AndroidManifest.xml
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.FOREGROUND_SERVICE" /> <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" /> <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />#' android/app/src/main/AndroidManifest.xml
           grep -q 'android:name=".FamilyLocationService"' android/app/src/main/AndroidManifest.xml

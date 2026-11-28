@@ -14,14 +14,14 @@ const audio = read('src/utils/reelAudio.ts');
 
 section('1. The reels follow the finger');
 check(/const SLOT_GAP = 4;/.test(view) && /translateY\(calc\(-100% - \$\{SLOT_GAP\}px\)\)/.test(view) && /translateY\(calc\(100% \+ \$\{SLOT_GAP\}px\)\)/.test(view), 'the reel before and the reel after sit one screen away on a track, with a hair of gap so no sliver shows at rest');
-check(/renderCard\(localReels\[currentIndex - 1\], false\)/.test(view) && /renderCard\(currentReel, true\)/.test(view) && /renderCard\(nextReel, false\)/.test(view), 'all three are drawn (before / this / after): the next reel is really there under the finger');
+check(/renderCard\(localReels\[currentIndex - 1\], false\)/.test(view) && /renderCard\(currentReel, !adOpen\)/.test(view) && /renderCard\(nextReel, false\)/.test(view), 'all three are drawn (before / this / after): the next reel is really there under the finger');
 check(/el\.addEventListener\('touchmove', onMove, \{ passive: false \}\)/.test(view) && /e\.preventDefault\(\);\s*\n\s*const now = performance\.now\(\);/.test(view), 'a real (non-passive) touchmove moves the track and stops the page from scrolling by itself');
 check(/track\.style\.transform = `translate3d\(0, \$\{y\}px, 0\)`;/.test(view), 'the track moves by exactly how far the finger moved');
 check(/Math\.abs\(dx\) > Math\.abs\(dy\)/.test(view), 'a sideways move is not taken for a swipe');
 check(/\(y > 0 && L\.currentIndex === 0\) \|\| \(y < 0 && !L\.localReels\[L\.currentIndex \+ 1\]\)\) y \*= 0\.25/.test(view), 'where there is no reel (before the first), the page only gives a little');
 check(/Math\.abs\(dy\) > h \* 0\.22/.test(view) && /Math\.abs\(speed\) > 0\.45/.test(view), 'letting go far enough, or with a flick, goes on to that reel; letting go early slides back');
 check(/else L\.snapBack\(\)/.test(view) && /const snapBack = \(\) => \{/.test(view), 'a short drag slides back');
-check(/flushSync\(\(\) => setCurrentIndex\(target\)\);\s*\n\s*track\.style\.transition = 'none';\s*\n\s*track\.style\.transform = 'translate3d\(0, 0, 0\)';/.test(view), 'after the slide the new reel is put in the middle and the track goes back to rest in the same moment (no flash)');
+check(/flushSync\(\(\) => setCurrentIndex\(target\)\);\s*\n\s*setSwipes\(\(n\) => n \+ 1\);\s*\n\s*track\.style\.transition = 'none';\s*\n\s*track\.style\.transform = 'translate3d\(0, 0, 0\)';/.test(view), 'after the slide the new reel is put in the middle and the track goes back to rest in the same moment (no flash)');
 check(/addEventListener\('touchcancel', onCancel/.test(view), 'an interrupted touch slides back');
 
 section('2. Taps, buttons, wheel and keys still work');
@@ -30,7 +30,7 @@ check(/onControl = !!target\?\.closest\('button, a, input, textarea'\)/.test(vie
 check(/const handleWheel = \(e: React\.WheelEvent\) => \{\s*\n\s*if \(anyModalOpen \|\| Date\.now\(\) < wheelLockRef\.current\) return;/.test(view) && /onWheel=\{handleWheel\}/.test(view), 'the mouse wheel steps one reel at a time (with a short lock so one scroll is one step)');
 check(/navKey\(e\)/.test(view) && /slideTo\(1\)/.test(view) && /slideTo\(-1\)/.test(view), 'the arrow / W / S keys slide too');
 check(/live\.current\.slideTo\(1\), 2500/.test(view), 'a broken video moves on by sliding');
-check(/const anyModalOpen = showComments \|\| showReelOptionsMenu \|\| showLikesViewsSheet;/.test(view) && /live\.current\.anyModalOpen/.test(view), 'nothing moves while the comments / likes / menu are open');
+check(/const anyModalOpen = showComments \|\| showReelOptionsMenu \|\| showLikesViewsSheet \|\| adOpen;/.test(view) && /live\.current\.anyModalOpen/.test(view), 'nothing moves while the comments / likes / menu are open');
 
 section('3. The list never ends');
 check(/currentIndex < localReels\.length - 2\) return;/.test(view) && /return \[\.\.\.prev, \.\.\.pass\];/.test(view) && /pass\[0\]\.id === prev\[prev\.length - 1\]\.id/.test(view), 'a little before the last reel the set is added again in a fresh order, never starting with the reel just shown');

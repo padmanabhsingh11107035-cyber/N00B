@@ -43,6 +43,8 @@ import { siteOrigin } from '../../utils/siteUrl';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FEATURED_POSTS, type FeaturedPost } from '../../data/featuredPosts';
+import { AdSlot } from '../Ads/AdSlot';
+import { AD_UNIT_HOME, AD_UNIT_TEST_NATIVE } from '../../ads/noobAds';
 
 // the 3D viewer pulls in the 3D engine: fetched only when a 3D post is on the screen
 const ModelBox3D = React.lazy(() => import('../Featured/ModelBox3D'));
@@ -51,8 +53,10 @@ import { useCommentsBox } from '../../utils/useVisualViewport';
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
 
-export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'video'; at: string; video: LongVideo } | { kind: 'live'; at: string; stream: LiveStreamSummary } | { kind: 'featured'; at: string; featured: FeaturedPost };
-export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : i.kind === 'video' ? 'video-' + i.video.id : i.kind === 'featured' ? 'featured-' + i.featured.id : 'live-' + i.stream.id);
+export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'video'; at: string; video: LongVideo } | { kind: 'live'; at: string; stream: LiveStreamSummary } | { kind: 'featured'; at: string; featured: FeaturedPost } | { kind: 'ad'; at: string; adId: string };
+/** the places for Google ads between the posts (each one is its own box with its own ad) */
+const AD_SLOT_IDS: ReadonlyArray<string> = ['home-1', 'home-2'];
+export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : i.kind === 'video' ? 'video-' + i.video.id : i.kind === 'featured' ? 'featured-' + i.featured.id : i.kind === 'ad' ? 'ad-' + i.adId : 'live-' + i.stream.id);
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -99,7 +103,7 @@ export function loadStats(k: MixKind, ids: string[]): void {
 }
 
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
-export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, videosOn = false, liveOn = false, featuredOn = false) {
+export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, videosOn = false, liveOn = false, featuredOn = false, adsOn = false) {
   const [items, setItems] = useState<MixItem[]>([]);
   const [slots, setSlots] = useState<number[]>([]);   // after which posts each item is shown: uneven gaps, new every load
   useEffect(() => {
@@ -117,18 +121,19 @@ export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number
         ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
         ...videos.map((v): MixItem => ({ kind: 'video', at: v.createdAt, video: v })),
         ...lives.map((st): MixItem => ({ kind: 'live', at: st.startedAt, stream: st })),
-        ...(featuredOn ? FEATURED_POSTS.map((f): MixItem => ({ kind: 'featured', at: f.at, featured: f })) : [])
+        ...(featuredOn ? FEATURED_POSTS.map((f): MixItem => ({ kind: 'featured', at: f.at, featured: f })) : []),
+        ...(adsOn ? AD_SLOT_IDS.map((adId): MixItem => ({ kind: 'ad', at: new Date().toISOString(), adId })) : [])   // Google ads (Android app only): see Ads/AdSlot.tsx
       ]));
       let at = Math.floor(Math.random() * 3);   // the first one comes after the 1st, 2nd or 3rd post
       const next: number[] = [];
-      for (let n = 0; n < anon.length + polls.length + videos.length + lives.length + (featuredOn ? FEATURED_POSTS.length : 0); n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
+      for (let n = 0; n < anon.length + polls.length + videos.length + lives.length + (featuredOn ? FEATURED_POSTS.length : 0) + (adsOn ? AD_SLOT_IDS.length : 0); n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
       setSlots(next);
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
       if (featuredOn) loadStats('featured', FEATURED_POSTS.map((f) => f.id));
     });
     return () => { alive = false; };
-  }, [anonOn, pollsOn, videosOn, liveOn, featuredOn, refreshKey]);
+  }, [anonOn, pollsOn, videosOn, liveOn, featuredOn, adsOn, refreshKey]);
   useEffect(() => {
     const onNew = (e: Event) => {
       const item = (e as CustomEvent<MixItem>).detail;
@@ -556,6 +561,8 @@ export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage
     ? <VideoMixCard video={item.video} onOpen={(id) => onOpenVideo?.(id)} onOpenProfile={onOpenProfile} />
     : item.kind === 'featured'
     ? <FeaturedCard post={item.featured} />
+    : item.kind === 'ad'
+    ? <div className="hm-ad" data-testid="home-ad"><AdSlot slot={item.adId} unit={isMainAdmin(currentUser) ? AD_UNIT_TEST_NATIVE : AD_UNIT_HOME} /></div>
     : item.kind === 'live'
     ? <LiveMixCard stream={item.stream} onOpen={(st) => onOpenLive?.(st)} />
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;

@@ -55,3 +55,10 @@
 .rv-cbar-txt { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: rgba(255, 255, 255, 0.75); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rv-cbar-ico { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .rv-cbar-ico b { font-size: 14px; font-weight: 700; }
+
+/* The ad page between reels (Ads/ReelsAdHost.tsx, Android app only): covers the reels for a moment, the ad sits in a curved box in the middle. While the ad is only being asked for, the box is there but not seen. */
+.rad-hidden { position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.rad-page { position: absolute; inset: 0; z-index: 45; background: rgba(0, 0, 0, 0.94); display: flex; align-items: center; justify-content: center; touch-action: none; }
+.rad-box { width: min(420px, calc(100% - 32px)); }
+.rad-skip { position: absolute; top: calc(max(var(--sat, 0px), env(safe-area-inset-top, 0px)) + 14px); right: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; z-index: 2; }
+.rad-hint { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 28px); display: flex; align-items: center; justify-content: center; gap: 6px; color: rgba(255, 255, 255, 0.7); font-size: 13px; font-weight: 600; pointer-events: none; }

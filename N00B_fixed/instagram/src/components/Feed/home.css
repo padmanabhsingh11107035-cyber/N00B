@@ -140,6 +140,9 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 .hm-ab { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 9999px; background: transparent; color: var(--hv-text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hm-ab:active { background: var(--hv-surface-2); }
 .hm-ab.is-on { color: #ff4d6d; }
+/* the empty curved box that keeps the place of a Google ad (Ads/AdSlot.tsx); the ad itself is drawn over it by the phone */
+.hm-ad { margin: 0 10px 26px; }
+.hm-ad .ad-slot { border-radius: 24px; background: var(--hv-surface); border: 1px solid var(--hv-line); }
 .hm-ab-end { margin-left: auto; }
 /* NOOB's own posts (3D model in a curved box, or a picture): HomeMix.tsx FeaturedCard */
 .hm-feat .hm-ava.is-pic { background: #000; }

@@ -35,6 +35,8 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(PushGuardPlugin.class);
     // Family Map: the phone's own background sender, which keeps sending the (locked) place after the app is swiped away (FamilySenderPlugin / FamilyLocationService).
     registerPlugin(FamilySenderPlugin.class);
+    // Google (AdMob) native ads between the posts on Home, drawn by the phone on top of the page (NoobAdsPlugin; the web side is src/components/Ads/AdSlot.tsx).
+    registerPlugin(NoobAdsPlugin.class);
     super.onCreate(savedInstanceState);
     hideSystemBars();
   }

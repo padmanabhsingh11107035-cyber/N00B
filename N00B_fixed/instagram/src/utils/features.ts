@@ -34,6 +34,7 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'lounge', label: 'Live Lounge / Meetings', blurb: 'Private meeting rooms', group: 'Home menu' },
   { key: 'shop', label: 'Shop NOOB', blurb: 'Products and the cart', group: 'Home menu' },
   { key: 'ai', label: 'NOOB AI', blurb: 'The voice assistant', group: 'Home menu' },
+  { key: 'models', label: 'NOOB Models', blurb: 'The page of 3D models in curved boxes', group: 'Home menu' },
   { key: 'drinks', label: 'NOOB Cold Drinks', blurb: 'The 3D cans page', group: 'Home menu' },
   { key: 'creations', label: 'More of our creations', blurb: 'Our other websites', group: 'Home menu' },
 

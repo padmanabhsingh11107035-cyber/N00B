@@ -38,6 +38,9 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
+import { Box as ModelsIcon } from 'lucide-react';
+import { openNoobModels } from '../Models/modelsStore';
+import { preloadNoobModels } from '../Models/ModelsHost';
 import { Repeat2, Clock, ListVideo } from 'lucide-react';
 import { HomeFilterSheet } from './HomeFilterSheet';
 import { HomeLiveRail } from './HomeLiveRail';
@@ -722,6 +725,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
           : { id: 'food', entryId: 'food', label: 'NOOB Food Stall', icon: <UtensilsCrossed />, hint: 'Burgers, bhel, fries, manchurian & coke', onClick: go('food', () => setShowFoodStall(true)) }),
         featOn('ai') && { id: 'ai', entryId: 'ai', label: 'NOOB AI', icon: <Bot />, hint: 'Talk to your AI friend by voice', onClick: go('ai', () => setShowNoobAi(true)) },
         featOn('support') && { id: 'support', entryId: 'support', label: 'Customer Support', icon: <MessageCircle />, hint: 'Chat with the NOOB support team', onClick: go('support', () => setShowSupportModal(true)) },
+        // NOOB Models: curved boxes with a 3D model turning inside each (Models/NoobModelsPage.tsx)
+        featOn('models') && { id: 'models', entryId: 'models', label: 'NOOB Models', tag: 'NEW', icon: <ModelsIcon />, hint: 'Curved boxes with 3D models you can turn round', onPointerDown: preloadNoobModels, onClick: go('models', openNoobModels) },
         // NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app)
         featOn('drinks') && { id: 'drinks', entryId: 'drinks', label: 'NOOB Cold Drinks', icon: <CupSoda />, hint: 'Ten cans, ten flavours: scroll to explore in 3D', onClick: go('drinks', () => window.location.assign('/cold-drinks/')) },
         featOn('creations') && { id: 'creations', entryId: 'creations', label: 'More of our creations', icon: <Layers />, hint: 'Other websites we made: visit and explore', onClick: go('creations', () => setShowCreations(true)) },

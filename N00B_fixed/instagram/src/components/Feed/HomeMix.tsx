@@ -543,8 +543,8 @@ const FeaturedCard: React.FC<{ post: FeaturedPost }> = ({ post }) => {
         </span>
       </header>
       <div className={`hm-feat-media ${post.type === 'model' ? 'is-model' : 'is-image'}`}>
-        {post.type === 'model' && post.build
-          ? <React.Suspense fallback={<div className="hm-feat-wait">Loading 3D model…</div>}><ModelBox3D build={post.build} name={post.title} /></React.Suspense>
+        {post.type === 'model' && (post.build || post.src)
+          ? <React.Suspense fallback={<div className="hm-feat-wait">Loading 3D model…</div>}><ModelBox3D build={post.build} src={post.src} name={post.title} /></React.Suspense>
           : post.image ? <img src={post.image} alt={post.alt || post.title} loading="lazy" draggable={false} /> : null}
       </div>
       <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]"><b>{post.title}</b> {post.caption}</p>

@@ -1,4 +1,4 @@
-// The free NOOB avatars: forty-two characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: forty-five characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -359,6 +359,30 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['Backwards teal cap', 'Jointed arms and knees', 'Straight fringe'],
     info: { age: 18, height: '95 cm', from: 'Toy Workshop', vibe: 'Curious and cheerful', colour: 'Teal', sound: 'Squeaky sneakers' },
     traits: [['Curious', 'Looks at everything twice.'], ['Cheerful', 'Always smiling.'], ['Sporty', 'Ready to play.']]
+  },
+  {
+    id: 'noobbot', name: 'NOOB Bot', role: 'Mascot', tagline: 'Small robot, big badge', bg: '#ffffff', light: true,
+    intro: 'NOOB Bot is the little yellow robot with the NOOB badge on its chest. It lives inside the app, loves new friends, and blinks its big pink-lit eyes whenever someone says hello. Round, bouncy and always cheerful, it is the face of the whole NOOB family.',
+    clothing: C('A glossy yellow body shell with hot-pink shoulder joints and a black NOOB badge on the chest.', 'Rounded yellow hips and legs with pink knee joints, built like a toy.', 'Chunky yellow feet with pink trim, made to bounce.'),
+    extras: ['Glowing pink eyes', 'Black NOOB badge', 'Pink antennas'],
+    info: { age: 18, height: '95 cm', from: 'The NOOB lab', vibe: 'Cheerful and curious', colour: 'Sun yellow', sound: 'Happy beeps' },
+    traits: [['Friendly', 'Says hello to everyone.'], ['Curious', 'Presses every button twice.'], ['Bouncy', 'Never stands still for long.']]
+  },
+  {
+    id: 'nightguard', name: 'Nightfall', role: 'Guard', tagline: 'Quiet steps, steady watch', bg: '#c5ced5', light: true,
+    intro: 'Nightfall is a guard dressed all in black: a hooded mask with the NOOB name across it, a tactical vest and tall laced boots. Calm and patient, he keeps watch while everyone else sleeps and never loses his post.',
+    clothing: C('A black hooded jacket under a black tactical vest, with a mesh mask that has the NOOB name on it.', 'Black cargo trousers with a utility belt, a leg holster and thigh straps.', 'Tall black laced combat boots.'),
+    extras: ['NOOB mask', 'Orange-and-black rifle', 'Green carry strap'],
+    info: { age: 29, height: '182 cm', from: 'Pune', vibe: 'Calm and watchful', colour: 'Black', sound: 'Slow bass' },
+    traits: [['Patient', 'Waits for the right moment.'], ['Watchful', 'Notices every small thing.'], ['Steady', 'Never loses his post.']]
+  },
+  {
+    id: 'crimsonguard', name: 'Crimson', role: 'Guard', tagline: 'Bright red, never late', bg: '#fbfbfb', light: true,
+    intro: 'Crimson wears a bright red hooded jumpsuit with black straps and a black mask with the NOOB name on it. Proud and punctual, Crimson stands tall in black boots with a rifle held ready across the chest.',
+    clothing: C('A bright red hooded jumpsuit with a long centre zip and black chest straps.', 'Loose red cargo trousers with side pockets, gathered at the ankles.', 'Black laced combat boots and black gloves.'),
+    extras: ['NOOB mask', 'Orange-and-black rifle', 'Olive carry strap'],
+    info: { age: 27, height: '180 cm', from: 'Jaipur', vibe: 'Proud and punctual', colour: 'Crimson red', sound: 'Marching drums' },
+    traits: [['Punctual', 'Never one minute late.'], ['Proud', 'Stands tall in any crowd.'], ['Loyal', 'Sticks with the team.']]
   }
 ];
 
@@ -373,5 +397,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll', 'tuxedo', 'capdoll']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=29`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll', 'tuxedo', 'capdoll', 'noobbot', 'nightguard', 'crimsonguard']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=30`;

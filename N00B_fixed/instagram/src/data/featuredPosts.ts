@@ -11,11 +11,16 @@ export interface FeaturedPost {
   at: string;
   /** type 'model': the key of the model built in code (Featured/ballBuddy.ts, MODEL_BUILDERS) */
   build?: string;
+  /** type 'model': or a model file made outside (a .glb from public/avatars/, the address carries ?v= so a changed file gets a new address) */
+  src?: string;
   /** type 'image': the file (a path on this site) and what it shows */
   image?: string;
   alt?: string;
 }
 
 export const FEATURED_POSTS: ReadonlyArray<FeaturedPost> = [
-  { id: 'f0f0f0f0-0000-4000-8000-000000000001', type: 'model', title: 'Noob Ball', caption: 'Meet the Noob Ball: black, round and always watching. Drag it to turn it round!', at: '2026-11-28T09:00:00.000Z', build: 'ball-eyes' }
+  { id: 'f0f0f0f0-0000-4000-8000-000000000001', type: 'model', title: 'Noob Ball', caption: 'Meet the Noob Ball: black, round and always watching. Drag it to turn it round!', at: '2026-11-28T09:00:00.000Z', build: 'ball-eyes' },
+  { id: 'f0f0f0f0-0000-4000-8000-000000000002', type: 'model', title: 'NOOB Bot', caption: 'Say hi to NOOB Bot, the little yellow robot with the NOOB badge. Drag it to turn it round!', at: '2026-11-28T11:00:00.000Z', src: '/avatars/noobbot.glb?v=1' },
+  { id: 'f0f0f0f0-0000-4000-8000-000000000003', type: 'model', title: 'Night Guard', caption: 'The Night Guard keeps watch in all black with the NOOB mask. Drag to see the whole figure!', at: '2026-11-28T11:10:00.000Z', src: '/avatars/nightguard.glb?v=1' },
+  { id: 'f0f0f0f0-0000-4000-8000-000000000004', type: 'model', title: 'Crimson Guard', caption: 'Crimson Guard, all in red with the NOOB mask. Turn it round with your finger!', at: '2026-11-28T11:20:00.000Z', src: '/avatars/crimsonguard.glb?v=1' }
 ];

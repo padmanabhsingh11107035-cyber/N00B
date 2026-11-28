@@ -1,4 +1,4 @@
-// The free NOOB avatars: forty-five characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
+// The free NOOB avatars: fifty characters (each one of a kind: the colour twins and the repeated poses of the first pictures were left out). A person picks one from the three
 // dots on their profile (Choose an avatar); it becomes the profile picture. The pictures are in public/avatars/<id>.webp, with three close-ups of the clothes (-top, -pants, -boots).
 // The names, the roles and every word below are NOOB's own story for the characters (nothing here is about a real person).
 import { MAIN_SITE } from '../utils/siteUrl.ts';
@@ -383,6 +383,46 @@ export const AVATARS: ReadonlyArray<Avatar> = [
     extras: ['NOOB mask', 'Orange-and-black rifle', 'Olive carry strap'],
     info: { age: 27, height: '180 cm', from: 'Jaipur', vibe: 'Proud and punctual', colour: 'Crimson red', sound: 'Marching drums' },
     traits: [['Punctual', 'Never one minute late.'], ['Proud', 'Stands tall in any crowd.'], ['Loyal', 'Sticks with the team.']]
+  },
+  {
+    id: 'mustardguard', name: 'Sandstorm', role: 'Guard', tagline: 'Dusty suit, steady hand', bg: '#e3e7e8', light: true,
+    intro: 'Sandstorm wears a worn mustard-yellow hooded jumpsuit with black shoulder straps and a mesh mask with the NOOB name across it. He carries a black rifle held ready across his chest and walks the line with quiet patience.',
+    clothing: C('A mustard-yellow hooded jumpsuit with black straps and a mesh mask that has the NOOB name on it.', 'The same mustard jumpsuit with deep pockets and ankle zips.', 'Black laced combat boots and mustard gloves.'),
+    extras: ['NOOB mask', 'Black rifle', 'Mustard gloves'],
+    info: { age: 26, height: '181 cm', from: 'Jodhpur', vibe: 'Quiet and patient', colour: 'Mustard yellow', sound: 'Desert wind' },
+    traits: [['Patient', 'Waits for the right moment.'], ['Steady', 'Never rushes his steps.'], ['Sharp', 'Misses nothing on the line.']]
+  },
+  {
+    id: 'tacticguard', name: 'Warden', role: 'Guard', tagline: 'Loaded for any weather', bg: '#d1e2e9', light: true,
+    intro: 'Warden is the best equipped of the guards: a khaki hooded suit, a full tactical vest with pouches, a thigh holster and a suppressed rifle with a red-dot sight. Calm and prepared, he is always the one who thought of everything.',
+    clothing: C('A khaki hooded suit under a tactical vest full of pouches, with a mesh mask that has the NOOB name on it.', 'Khaki cargo trousers with a utility belt, a leg holster and thigh straps.', 'Black laced combat boots.'),
+    extras: ['NOOB mask', 'Suppressed rifle', 'Tactical vest'],
+    info: { age: 30, height: '184 cm', from: 'Dehradun', vibe: 'Prepared and calm', colour: 'Khaki', sound: 'Low drums' },
+    traits: [['Prepared', 'Carries a plan for everything.'], ['Calm', 'Keeps a level head.'], ['Reliable', 'Always where he says he will be.']]
+  },
+  {
+    id: 'blueguard', name: 'Cobalt', role: 'Guard', tagline: 'Deep blue, sharp focus', bg: '#dce5ec', light: true,
+    intro: 'Cobalt wears a deep blue hooded suit with a navy tactical vest, a thigh holster and a mesh mask with the NOOB name. Cool and focused, he holds his rifle ready and keeps his eyes on the horizon.',
+    clothing: C('A deep blue hooded suit under a navy tactical vest, with a mesh mask that has the NOOB name on it.', 'Blue cargo trousers with a utility belt, a leg holster and thigh straps.', 'Black laced combat boots and navy gloves.'),
+    extras: ['NOOB mask', 'Black rifle', 'Navy vest'],
+    info: { age: 28, height: '182 cm', from: 'Chennai', vibe: 'Cool and focused', colour: 'Cobalt blue', sound: 'Slow synth' },
+    traits: [['Focused', 'Eyes on the horizon.'], ['Cool', 'Never loses his temper.'], ['Loyal', 'Stands by his team.']]
+  },
+  {
+    id: 'whiteguard', name: 'Arctic', role: 'Guard', tagline: 'Pure white, pure calm', bg: '#dde6ef', light: true,
+    intro: 'Arctic is dressed all in white: a hooded suit, a sand-coloured tactical vest, a thigh holster and a mesh mask with the NOOB name across it. Quiet and clean, he moves like snow and holds his rifle with a steady hand.',
+    clothing: C('A white hooded suit under a sand-coloured tactical vest, with a mesh mask that has the NOOB name on it.', 'White cargo trousers with a utility belt, a leg holster and thigh straps.', 'Black laced combat boots and white gloves.'),
+    extras: ['NOOB mask', 'Black rifle', 'White gloves'],
+    info: { age: 27, height: '180 cm', from: 'Shimla', vibe: 'Quiet and clean', colour: 'Snow white', sound: 'Soft piano' },
+    traits: [['Quiet', 'Moves without a sound.'], ['Clean', 'Never a mark on the suit.'], ['Steady', 'Hands that do not shake.']]
+  },
+  {
+    id: 'jumpguard', name: 'Indigo', role: 'Guard', tagline: 'Plain suit, full watch', bg: '#ebeff2', light: true,
+    intro: 'Indigo wears a plain blue hooded jumpsuit with a mesh mask that has the NOOB name across it, a chest harness and black gloves. With no gear at all he stands tall in black boots and watches over the whole place.',
+    clothing: C('A plain blue hooded jumpsuit with a chest harness and a mesh mask that has the NOOB name on it.', 'The same blue jumpsuit with zip pockets on the thighs.', 'Black laced combat boots and black gloves.'),
+    extras: ['NOOB mask', 'Chest harness', 'Black gloves'],
+    info: { age: 25, height: '179 cm', from: 'Mumbai', vibe: 'Plain and proud', colour: 'Indigo blue', sound: 'Heartbeat bass' },
+    traits: [['Proud', 'Stands tall at his post.'], ['Plain', 'No gear, no fuss.'], ['Watchful', 'Sees the whole place.']]
   }
 ];
 
@@ -397,5 +437,5 @@ export const avatarIdOf = (value?: string | null): string | null => {
 /** the character cut out of its picture (transparent background), for the turning 3D view */
 export const avatarCutUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}-cut.webp?v=1`;
 /** the characters that have a real 3D model (public/avatars/<id>.glb); the others show their picture only */
-export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll', 'tuxedo', 'capdoll', 'noobbot', 'nightguard', 'crimsonguard']);
-export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=30`;
+export const AVATARS_3D: ReadonlySet<string> = new Set(['nova', 'blaze', 'roxy', 'zest', 'mira', 'ivory', 'vesper', 'kairo', 'ember', 'frost', 'sakura', 'nyx', 'zane', 'rogue', 'amara', 'kiran', 'orion', 'rowan', 'azura', 'cloud', 'soldier', 'goku', 'vegeta', 'itachi', 'sasuke', 'naruto', 'mask', 'raider', 'frontman', 'squareguard', 'circleguard', 'triangleguard', 'survivor', 'rookie', 'shadowguard', 'gunguard', 'operative', 'daruma', 'pinkdoll', 'sunnydoll', 'tuxedo', 'capdoll', 'noobbot', 'nightguard', 'crimsonguard', 'mustardguard', 'tacticguard', 'blueguard', 'whiteguard', 'jumpguard']);
+export const avatarModelUrl = (id: string, origin = ''): string => `${origin}/avatars/${id}.glb?v=31`;

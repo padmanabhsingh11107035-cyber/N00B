@@ -129,8 +129,6 @@ import { FamilyTracker } from './components/Family/FamilyTracker';
 import { closeBooth } from './components/Booth/boothStore';
 import { closeFamily } from './components/Family/familyStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
-import { ModelsHost } from './components/Models/ModelsHost';
-import { closeNoobModels } from './components/Models/modelsStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { openTeamJoin, rememberTeamJoin, hasRememberedTeamJoin, forgetTeamJoin } from './components/Team/teamJoinStore';
 import { teamJoinRequested } from './utils/ourTeam';
@@ -547,7 +545,7 @@ export default function App() {
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [pickedStoryFile, setPickedStoryFile] = useState<File | null>(null);
   // (the settings arrive a moment after the address opens it: if Draw is switched off for this person it closes again)
-  useEffect(() => { if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); if (featuresOff.has('family')) closeFamily(); if (featuresOff.has('models')) closeNoobModels(); }, [featuresOff]);
+  useEffect(() => { if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); if (featuresOff.has('family')) closeFamily(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -2515,7 +2513,6 @@ export default function App() {
       {currentUser && <RenditionStrip />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
-      <ModelsHost />
       {/* NOOB Lenses: a picture with a face filter goes into the normal Post / Story creator (nothing is published from the camera itself) */}
       <LensHost onUse={(file, target) => {
         if (target === 'story') { setPickedStoryFile(file); setShowCreateStoryModal(true); }

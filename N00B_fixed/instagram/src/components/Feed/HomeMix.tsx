@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Loader2, Send, X, ImagePlus, Heart, MessageCircle, Share2 } from 'lucide-react';
+import { VenetianMask, Flag, Trash2, Check, BarChart3, Clock, Lock, Loader2, Send, X, ImagePlus, Heart, MessageCircle, Share2, Repeat2, Bookmark } from 'lucide-react';
 import type { User } from '../../types';
 import { isMainAdmin } from '../../adminAccess';
 import {
@@ -22,6 +22,8 @@ import {
   MIX_COMMENT_MAX,
   fetchMixStats,
   setMixLike,
+  setMixSave,
+  setMixRepost,
   fetchMixComments,
   addMixComment,
   removeMixComment,
@@ -37,15 +39,20 @@ import type { LongVideo } from '../../types';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { formatCompactCount } from '../../utils/repostBatcher';
 import { funShareUrl } from '../../utils/funRoutes';
+import { siteOrigin } from '../../utils/siteUrl';
 import { percents } from '../../utils/pollMath';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { FEATURED_POSTS, type FeaturedPost } from '../../data/featuredPosts';
+
+// the 3D viewer pulls in the 3D engine: fetched only when a 3D post is on the screen
+const ModelBox3D = React.lazy(() => import('../Featured/ModelBox3D'));
 import { useCommentsBox } from '../../utils/useVisualViewport';
 
 // Anonymous thoughts and public polls live on the Home page now, mixed in between the posts (they used to be two pages of the three-line menu).
 // An anonymous thought is still only {id, body, createdAt}: the database never sends who wrote it, so nothing here can show it. A poll always shows who made it.
 
-export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'video'; at: string; video: LongVideo } | { kind: 'live'; at: string; stream: LiveStreamSummary };
-export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : i.kind === 'video' ? 'video-' + i.video.id : 'live-' + i.stream.id);
+export type MixItem = { kind: 'anon'; at: string; anon: AnonMessage } | { kind: 'poll'; at: string; poll: Poll } | { kind: 'video'; at: string; video: LongVideo } | { kind: 'live'; at: string; stream: LiveStreamSummary } | { kind: 'featured'; at: string; featured: FeaturedPost };
+export const mixKey = (i: MixItem): string => (i.kind === 'anon' ? 'anon-' + i.anon.id : i.kind === 'poll' ? 'poll-' + i.poll.id : i.kind === 'video' ? 'video-' + i.video.id : i.kind === 'featured' ? 'featured-' + i.featured.id : 'live-' + i.stream.id);
 function shuffled<T>(list: T[]): T[] {
   const a = list.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -77,7 +84,7 @@ const timeLeft = (endsAt: string, now: number): string => {
 const votesLabel = (n: number): string => `${n.toLocaleString()} ${n === 1 ? 'vote' : 'votes'}`;
 
 // Likes, comment counts and whether I liked it: fetched once for all the cards (one call per kind) and kept here, so every card draws from the same numbers.
-const NO_STAT: MixStat = { likes: 0, comments: 0, liked: false };
+const NO_STAT: MixStat = { likes: 0, comments: 0, liked: false, reposts: 0, saved: false, reposted: false };
 const statStore = new Map<string, MixStat>();
 const statListeners = new Set<() => void>();
 const statKey = (k: MixKind, id: string): string => `${k}:${id}`;
@@ -92,7 +99,7 @@ export function loadStats(k: MixKind, ids: string[]): void {
 }
 
 /** The anonymous thoughts and the running polls for the Home page: loaded once, again when Home is refreshed (refreshKey), and added to when the person makes one. */
-export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, videosOn = false, liveOn = false) {
+export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number, videosOn = false, liveOn = false, featuredOn = false) {
   const [items, setItems] = useState<MixItem[]>([]);
   const [slots, setSlots] = useState<number[]>([]);   // after which posts each item is shown: uneven gaps, new every load
   useEffect(() => {
@@ -109,21 +116,23 @@ export function useHomeMix(anonOn: boolean, pollsOn: boolean, refreshKey: number
         ...anon.map((m): MixItem => ({ kind: 'anon', at: m.createdAt, anon: m })),
         ...polls.map((p): MixItem => ({ kind: 'poll', at: p.createdAt, poll: p })),
         ...videos.map((v): MixItem => ({ kind: 'video', at: v.createdAt, video: v })),
-        ...lives.map((st): MixItem => ({ kind: 'live', at: st.startedAt, stream: st }))
+        ...lives.map((st): MixItem => ({ kind: 'live', at: st.startedAt, stream: st })),
+        ...(featuredOn ? FEATURED_POSTS.map((f): MixItem => ({ kind: 'featured', at: f.at, featured: f })) : [])
       ]));
       let at = Math.floor(Math.random() * 3);   // the first one comes after the 1st, 2nd or 3rd post
       const next: number[] = [];
-      for (let n = 0; n < anon.length + polls.length + videos.length + lives.length; n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
+      for (let n = 0; n < anon.length + polls.length + videos.length + lives.length + (featuredOn ? FEATURED_POSTS.length : 0); n++) { next.push(at); at += 2 + Math.floor(Math.random() * 3); }   // then 2 to 4 posts between them
       setSlots(next);
       loadStats('anon', anon.map((m) => m.id));
       loadStats('poll', polls.map((p) => p.id));
+      if (featuredOn) loadStats('featured', FEATURED_POSTS.map((f) => f.id));
     });
     return () => { alive = false; };
-  }, [anonOn, pollsOn, videosOn, liveOn, refreshKey]);
+  }, [anonOn, pollsOn, videosOn, liveOn, featuredOn, refreshKey]);
   useEffect(() => {
     const onNew = (e: Event) => {
       const item = (e as CustomEvent<MixItem>).detail;
-      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn) || (item.kind === 'video' && !videosOn) || (item.kind === 'live' && !liveOn)) return;
+      if (!item || (item.kind === 'anon' && !anonOn) || (item.kind === 'poll' && !pollsOn) || (item.kind === 'video' && !videosOn) || (item.kind === 'live' && !liveOn) || (item.kind === 'featured' && !featuredOn)) return;
       setItems((prev) => [item, ...prev.filter((x) => mixKey(x) !== mixKey(item))]);
     };
     window.addEventListener(HOME_MIX_NEW_EVENT, onNew);
@@ -187,7 +196,7 @@ async function shareItem(title: string, text: string, url: string): Promise<stri
   try { await navigator.clipboard.writeText(url); return 'Link copied.'; } catch { return 'Could not share or copy the link.'; }
 }
 
-const MixBar: React.FC<{ kind: MixKind; id: string; title: string; text: string; url: string; canManage: boolean; onNote: (s: string) => void }> = ({ kind, id, title, text, url, canManage, onNote }) => {
+const MixBar: React.FC<{ kind: MixKind; id: string; title: string; text: string; url: string; canManage: boolean; onNote: (s: string) => void; /** NOOB's featured posts also get Repost and Save */ extras?: boolean }> = ({ kind, id, title, text, url, canManage, onNote, extras }) => {
   const stat = useStat(kind, id);
   const [open, setOpen] = useState(false);
   const busy = useRef(false);
@@ -199,6 +208,18 @@ const MixBar: React.FC<{ kind: MixKind; id: string; title: string; text: string;
     putStat(kind, id, { ...before, liked: on, likes: Math.max(0, before.likes + (on ? 1 : -1)) });   // shows at once; put back if it fails
     try { const r = await setMixLike(kind, id, on); putStat(kind, id, { ...statStore.get(statKey(kind, id)) ?? before, liked: r.liked, likes: r.likes }); }
     catch (e) { putStat(kind, id, before); onNote(friendly(e, 'Could not like it. Please try again.')); }
+    finally { busy.current = false; }
+  };
+  const toggleExtra = async (what: 'repost' | 'save') => {
+    if (busy.current) return;
+    busy.current = true;
+    const before = stat;
+    const on = what === 'repost' ? !before.reposted : !before.saved;
+    putStat(kind, id, what === 'repost' ? { ...before, reposted: on, reposts: Math.max(0, (before.reposts || 0) + (on ? 1 : -1)) } : { ...before, saved: on });
+    try {
+      if (what === 'repost') { const r = await setMixRepost(kind, id, on); putStat(kind, id, { ...statStore.get(statKey(kind, id)) ?? before, reposted: r.on, reposts: r.reposts }); onNote(r.on ? 'Reposted.' : 'Repost removed.'); }
+      else { const r = await setMixSave(kind, id, on); putStat(kind, id, { ...statStore.get(statKey(kind, id)) ?? before, saved: r }); onNote(r ? 'Saved.' : 'Removed from saved.'); }
+    } catch (e) { putStat(kind, id, before); onNote(friendly(e, what === 'repost' ? 'Could not repost it. Please try again.' : 'Could not save it. Please try again.')); }
     finally { busy.current = false; }
   };
   return (
@@ -213,6 +234,16 @@ const MixBar: React.FC<{ kind: MixKind; id: string; title: string; text: string;
         <button type="button" onClick={() => void shareItem(title, text, url).then((m) => { if (m) onNote(m); })} aria-label="Share" className="hm-ab" data-testid="home-mix-share">
           <Share2 className="w-[19px] h-[19px]" aria-hidden="true" /><span>Share</span>
         </button>
+        {extras && (
+          <>
+            <button type="button" onClick={() => void toggleExtra('repost')} aria-pressed={!!stat.reposted} aria-label={stat.reposted ? 'Undo repost' : 'Repost'} className={`hm-ab ${stat.reposted ? 'is-on' : ''}`} data-testid="home-mix-repost">
+              <Repeat2 className="w-[19px] h-[19px]" aria-hidden="true" /><span>{countText(stat.reposts || 0)}</span>
+            </button>
+            <button type="button" onClick={() => void toggleExtra('save')} aria-pressed={!!stat.saved} aria-label={stat.saved ? 'Unsave' : 'Save'} className={`hm-ab hm-ab-end ${stat.saved ? 'is-on' : ''}`} data-testid="home-mix-save">
+              <Bookmark className="w-[19px] h-[19px]" fill={stat.saved ? 'currentColor' : 'none'} aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
       {open && createPortal(<MixComments kind={kind} id={id} title={title} canManage={canManage} onClose={() => setOpen(false)} />, document.body)}
     </>
@@ -494,11 +525,37 @@ const LiveMixCard: React.FC<{ stream: LiveStreamSummary; onOpen: (s: LiveStreamS
   </article>
 );
 
+// NOOB's own post on Home: a 3D model (curved box, turns by itself, drag to turn it) or a picture. Posted by NOOB only: the list is data/featuredPosts.ts. Like, comment, share, repost, save.
+const FeaturedCard: React.FC<{ post: FeaturedPost }> = ({ post }) => {
+  const [note, setNote] = useState('');
+  return (
+    <article className="hm-card hm-feat" data-testid="home-featured-card" aria-label={`NOOB: ${post.title}`}>
+      <header className="hm-head">
+        <img className="hm-ava is-pic" src="/noob-logo-circle.png" alt="" width={40} height={40} draggable={false} />
+        <span className="min-w-0 flex-1">
+          <span className="hm-who">NOOB<VerifiedBadge size="xs" /></span>
+          <span className="hm-sub">{post.type === 'model' ? '3D model' : 'Picture'} · {ago(post.at)}</span>
+        </span>
+      </header>
+      <div className={`hm-feat-media ${post.type === 'model' ? 'is-model' : 'is-image'}`}>
+        {post.type === 'model' && post.build
+          ? <React.Suspense fallback={<div className="hm-feat-wait">Loading 3D model…</div>}><ModelBox3D build={post.build} name={post.title} /></React.Suspense>
+          : post.image ? <img src={post.image} alt={post.alt || post.title} loading="lazy" draggable={false} /> : null}
+      </div>
+      <p className="hm-body whitespace-pre-wrap break-words [overflow-wrap:anywhere]"><b>{post.title}</b> {post.caption}</p>
+      <MixBar kind="featured" id={post.id} title={`NOOB: ${post.title}`} text={post.caption.slice(0, 140)} url={siteOrigin() + '/'} canManage={false} onNote={setNote} extras />
+      {note && <p className="hm-note" role="status">{note}</p>}
+    </article>
+  );
+};
+
 export const HomeMixCard: React.FC<{ item: MixItem; currentUser: User; canManage: boolean; onRemoved: (key: string) => void; onPollChanged: (p: Poll) => void; onOpenProfile?: (u: User) => void; onOpenVideo?: (id: string) => void; onOpenLive?: (s: LiveStreamSummary) => void }> = ({ item, currentUser, canManage, onRemoved, onPollChanged, onOpenProfile, onOpenVideo, onOpenLive }) =>
   item.kind === 'anon'
     ? <AnonCard m={item.anon} currentUser={currentUser} canManage={canManage} onRemoved={() => onRemoved(mixKey(item))} />
     : item.kind === 'video'
     ? <VideoMixCard video={item.video} onOpen={(id) => onOpenVideo?.(id)} onOpenProfile={onOpenProfile} />
+    : item.kind === 'featured'
+    ? <FeaturedCard post={item.featured} />
     : item.kind === 'live'
     ? <LiveMixCard stream={item.stream} onOpen={(st) => onOpenLive?.(st)} />
     : <PollCard poll={item.poll} canManage={canManage} onChanged={onPollChanged} onRemoved={() => onRemoved(mixKey(item))} onOpenProfile={onOpenProfile} />;

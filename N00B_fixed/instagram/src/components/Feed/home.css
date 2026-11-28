@@ -139,6 +139,16 @@ article.hv-card { background: transparent !important; border: 0 !important; box-
 .hm-bar-row { display: flex; align-items: center; gap: 4px; margin: 8px -6px 0; }
 .hm-ab { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 9999px; background: transparent; color: var(--hv-text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hm-ab:active { background: var(--hv-surface-2); }
+.hm-ab.is-on { color: #ff4d6d; }
+.hm-ab-end { margin-left: auto; }
+/* NOOB's own posts (3D model in a curved box, or a picture): HomeMix.tsx FeaturedCard */
+.hm-feat .hm-ava.is-pic { background: #000; }
+.hm-feat-media { margin: 12px 0 0; border-radius: 24px; overflow: hidden; background: var(--hv-surface-2); }
+.hm-feat-media.is-model { aspect-ratio: 1 / 1; position: relative; }
+.hm-feat-media.is-image { background: #d8d3ce; }
+.hm-feat-media.is-image img { display: block; width: 100%; height: auto; }
+.hm-feat-stage { position: absolute; inset: 0; }
+.hm-feat-wait, .hm-feat-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--hv-muted); pointer-events: none; }
 .hm-ab.is-liked { color: #ff3b6b; }
 .hm-ab.is-liked svg { animation: hm-pop .28s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes hm-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }

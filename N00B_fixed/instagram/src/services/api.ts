@@ -549,6 +549,8 @@ export {
   fetchPostAiInfo,
   fetchMixStats,
   setMixLike,
+  setMixSave,
+  setMixRepost,
   fetchMixComments,
   addMixComment,
   removeMixComment,

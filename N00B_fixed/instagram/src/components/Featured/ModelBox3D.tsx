@@ -97,9 +97,9 @@ const ModelBox3D: React.FC<Props> = ({ src, build, name }) => {
   }, [src, build, visible]);
 
   return (
-    <div ref={box} className="nm-stage" role="img" aria-label={`${name}, a 3D model you can turn round`} data-testid="model-box-3d">
-      {visible && state === 'loading' && <div className="nm-state" aria-live="polite">Loading 3D model…</div>}
-      {state === 'error' && <div className="nm-state" role="alert">The 3D model could not load</div>}
+    <div ref={box} className="hm-feat-stage" role="img" aria-label={`${name}, a 3D model you can turn round`} data-testid="model-box-3d">
+      {visible && state === 'loading' && <div className="hm-feat-state" aria-live="polite">Loading 3D model…</div>}
+      {state === 'error' && <div className="hm-feat-state" role="alert">The 3D model could not load</div>}
     </div>
   );
 };

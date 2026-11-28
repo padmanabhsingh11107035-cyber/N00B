@@ -249,11 +249,12 @@ async function boot() {
     const AvatarModel3D = (mod as any).default || (mod as any).AvatarModel3D;
     const id = q.get('id') || 'nova', bg = q.get('bg') || '#02c8e2';
     Page = () => h('div', { style: { position: 'fixed', inset: 0, background: bg } }, h(AvatarModel3D, { src: `/avatars/${id}.glb`, name: id, calm: true }));
-  } else if (page === 'models') {
-    // the NOOB Models page (three-line menu): curved boxes with a 3D model in each
-    const mod = await import('../src/components/Models/NoobModelsPage.tsx');
-    const NoobModelsPage = (mod as any).default || (mod as any).NoobModelsPage;
-    Page = () => h(NoobModelsPage, { onClose: () => console.info('[harness] close') });
+  } else if (page === 'featured') {
+    // NOOB's own posts on Home (3D model + picture) with the like / comment / share / repost / save bar
+    await import('../src/components/Feed/home.css');
+    const hm = await import('../src/components/Feed/HomeMix.tsx');
+    const { FEATURED_POSTS } = await import('../src/data/featuredPosts.ts');
+    Page = () => h('div', { style: { maxWidth: 480, margin: '0 auto', padding: '16px 0' } }, ...FEATURED_POSTS.map((f: any) => h(hm.HomeMixCard, { key: f.id, item: { kind: 'featured', at: f.at, featured: f }, currentUser, canManage: false, onRemoved: () => {}, onPollChanged: () => {} })));
   } else if (page === 'proicon') {
     // "Feel the Pro privilege" (after upgrading to NOOB Pro, Android app only)
     const { ProIconPrompt } = await import('../src/components/Modals/ProIconPrompt.tsx');

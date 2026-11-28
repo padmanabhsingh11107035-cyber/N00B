@@ -7157,8 +7157,8 @@ export async function fetchPollReports(): Promise<PollReport[]> {
 export async function dismissPollReports(pollId: string): Promise<void> { await rpc('poll_admin_dismiss', { p_poll: pollId }); }
 
 // ---- Likes and comments on the anonymous thoughts and polls of the Home page (migration 20261116000005) ----
-export type MixKind = 'anon' | 'poll';
-export interface MixStat { likes: number; comments: number; liked: boolean }
+export type MixKind = 'anon' | 'poll' | 'featured';
+export interface MixStat { likes: number; comments: number; liked: boolean; /** featured items only (migration 20261128000001) */ reposts?: number; saved?: boolean; reposted?: boolean }
 export interface MixComment { id: string; body: string; createdAt: string; mine: boolean; user: PollCreator }
 export const MIX_COMMENT_MAX = 500;
 const mapMixComment = (c: MixComment): MixComment => ({ ...c, user: { ...c.user, avatar: resolveMedia(c.user.avatar) } });
@@ -7170,6 +7170,15 @@ export async function fetchMixStats(kind: MixKind, ids: string[]): Promise<Recor
 export async function setMixLike(kind: MixKind, id: string, on: boolean): Promise<{ liked: boolean; likes: number }> {
   const res = await rpc<{ liked: boolean; likes: number }>('mix_like', { p_kind: kind, p_id: id, p_on: on });
   return { liked: !!res?.liked, likes: Number(res?.likes) || 0 };
+}
+// Save / repost one of NOOB's featured Home items (migration 20261128000001): a private bookmark, and a counted repost.
+export async function setMixSave(kind: MixKind, id: string, on: boolean): Promise<boolean> {
+  const res = await rpc<{ on: boolean }>('mix_save', { p_kind: kind, p_id: id, p_on: on });
+  return !!res?.on;
+}
+export async function setMixRepost(kind: MixKind, id: string, on: boolean): Promise<{ on: boolean; reposts: number }> {
+  const res = await rpc<{ on: boolean; reposts: number }>('mix_repost', { p_kind: kind, p_id: id, p_on: on });
+  return { on: !!res?.on, reposts: Number(res?.reposts) || 0 };
 }
 export async function fetchMixComments(kind: MixKind, id: string, after?: { at: string; id: string }): Promise<{ comments: MixComment[]; hasMore: boolean }> {
   const res = await rpc<{ comments: MixComment[]; hasMore: boolean }>('mix_comments_list', { p_kind: kind, p_id: id, p_limit: 30, p_after: after?.at ?? null, p_after_id: after?.id ?? null });

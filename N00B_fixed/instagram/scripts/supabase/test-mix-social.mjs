@@ -11,7 +11,7 @@ check(/c\.user_id is distinct from me and not public\.fun_can_manage\(\)/.test(s
 check(!/author_id/.test(sql.replace(/--.*$/gm, '')), 'nothing here reads who wrote an anonymous thought (author_id is never touched)');
 for (const fn of ['mix_stats', 'mix_like', 'mix_comments_list', 'mix_comment_add', 'mix_comment_remove']) check(api.includes(`'${fn}'`), `the app calls ${fn}`);
 check(/data-testid="home-mix-like"/.test(mix) && /data-testid="home-mix-comment"/.test(mix) && /data-testid="home-mix-share"/.test(mix), 'every card has Like, Comment and Share buttons');
-check((mix.match(/<MixBar /g) || []).length === 2 && /kind="anon"/.test(mix) && /kind="poll"/.test(mix), 'both the anonymous thought card and the poll card use the bar');
+check((mix.match(/<MixBar /g) || []).length === 3 && /kind="anon"/.test(mix) && /kind="poll"/.test(mix) && /kind="featured"/.test(mix), 'the thought card, the poll card and the featured NOOB post use the bar');
 check(/navigator\.share/.test(mix) && /clipboard\.writeText\(url\)/.test(mix), 'Share opens the phone share sheet, and copies the link where there is none');
 check(/createPortal\(<MixComments/.test(mix) && /MIX_COMMENT_MAX/.test(mix), 'the comments sheet is drawn over the whole page, with the length limit');
 check(/\.hm-ab \{/.test(css) && /\.hm-cm-input \{/.test(css), 'styles for the bar and the comments sheet');

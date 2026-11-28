@@ -182,16 +182,18 @@ export function applyHomeFilter(posts: Post[], f: HomeFilter, c: FilterContext):
 }
 
 // ---- the anonymous thoughts, polls, long videos and live streams that sit between the posts
-export type MixLike = { kind: 'anon'; at: string; anon: { mediaKey?: string | null; mediaKeys?: string[] | null } } | { kind: 'poll'; at: string } | { kind: 'video'; at: string } | { kind: 'live'; at: string };
+export type MixLike = { kind: 'anon'; at: string; anon: { mediaKey?: string | null; mediaKeys?: string[] | null } } | { kind: 'poll'; at: string } | { kind: 'video'; at: string } | { kind: 'live'; at: string } | { kind: 'featured'; at: string };
 
 export function mixKindOf(item: MixLike): HomeKind {
   if (item.kind === 'anon') return item.anon.mediaKey || (item.anon.mediaKeys && item.anon.mediaKeys.length) ? 'anon' : 'thoughts';
+  if (item.kind === 'featured') return 'photos';   // (never used: a featured item passes only when no kind is chosen, see mixPasses)
   return item.kind === 'poll' ? 'polls' : item.kind === 'video' ? 'longvideos' : 'live';
 }
 
 /** a thought, poll, video or stream passes when its kind is chosen (or none is) and the time fits; choices that only posts have (activity, from, extras) hide them */
 export function mixPasses(item: MixLike, f: HomeFilter, now: number): boolean {
   if (f.activity.length || f.from.length || f.extras.length) return false;
+  if (item.kind === 'featured' && f.kinds.length) return false;
   if (f.kinds.length && !f.kinds.includes(mixKindOf(item))) return false;
   return within(item.at, f.time, now);
 }

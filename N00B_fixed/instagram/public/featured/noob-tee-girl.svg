@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="A drawing of a girl with long wavy hair winking, her hand behind her head, in a black NOOB t-shirt">
+  <!-- wall and door -->
+  <rect width="800" height="1000" fill="#d9d4cf"/>
+  <rect x="650" width="150" height="1000" fill="#3a2c28"/>
+  <rect x="650" width="14" height="1000" fill="#271c19"/>
+
+  <!-- raised arm: forearm and hand behind the head -->
+  <path d="M0 470 C92 444 196 392 300 340 L304 436 C222 474 122 540 44 604 L0 604 Z" fill="#eebf9f"/>
+
+  <!-- long hair behind everything -->
+  <path d="M255 262 C236 150 350 62 482 70 C600 78 680 160 664 300 C654 384 696 452 656 566 C636 636 594 664 566 684 L300 704 C200 784 222 884 152 936 C108 966 78 902 98 840 C120 760 160 702 172 600 C182 500 244 420 255 250 Z" fill="#1c1311"/>
+  <path d="M190 560 C170 650 130 740 120 830" stroke="#3b2a23" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M236 500 C210 620 180 700 170 800" stroke="#2b1e19" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M600 430 C640 520 640 600 610 680" stroke="#2b1e19" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+  <!-- neck -->
+  <path d="M424 470 L424 566 Q504 612 594 566 L574 452 Z" fill="#e5b08e"/>
+  <path d="M424 500 Q504 540 584 494 L584 470 L424 470 Z" fill="#d49e7c" opacity=".75"/>
+
+  <!-- black t-shirt -->
+  <path d="M122 648 C204 596 332 566 424 548 Q504 612 594 548 C684 566 774 604 794 704 L800 1000 L122 1000 Z" fill="#0e0e10"/>
+  <path d="M18 612 C68 562 170 548 236 592 L252 792 C172 834 82 834 30 802 Z" fill="#0e0e10"/>
+  <path d="M640 566 C720 580 780 626 800 700 L800 812 C748 776 700 756 650 756 Z" fill="#0e0e10"/>
+  <path d="M708 800 L800 812 L800 1000 L742 1000 Z" fill="#eebf9f"/>
+  <path d="M300 880 C340 840 330 780 350 740 M560 900 C590 850 620 800 640 770 M200 820 C230 800 250 790 258 760" stroke="#1d1d22" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M424 548 Q504 612 594 548" stroke="#1d1d22" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <!-- the NOOB logo on the shirt: the two O's are white eyes with a black pupil and a shine -->
+  <g transform="translate(0 6)">
+    <path d="M300 792 V724 L350 792 V724" stroke="#fff" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="398" cy="756" r="37" fill="#fff"/><circle cx="398" cy="756" r="19" fill="#0e0e10"/><circle cx="405" cy="749" r="5.5" fill="#fff"/>
+    <circle cx="474" cy="756" r="37" fill="#fff"/><circle cx="474" cy="756" r="19" fill="#0e0e10"/><circle cx="481" cy="749" r="5.5" fill="#fff"/>
+    <path d="M534 726 H554 C588 726 588 756 554 756 H534 M554 756 C596 756 596 790 554 790 H534 V726" stroke="#fff" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- hair falling over the shoulders -->
+  <path d="M252 420 C204 520 232 622 182 724 C142 804 162 884 122 934 C204 902 262 800 274 700 C284 600 304 520 334 450 Z" fill="#1c1311"/>
+  <path d="M606 400 C646 480 656 562 626 642 C606 702 626 762 604 806 C562 764 562 702 572 642 C582 562 582 482 562 422 Z" fill="#1c1311"/>
+  <path d="M232 560 C214 650 196 720 170 800" stroke="#3b2a23" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- ear with a bow stud (her right ear) -->
+  <ellipse cx="618" cy="344" rx="20" ry="30" fill="#eebf9f" transform="rotate(8 618 344)"/>
+  <path d="M606 378 l12 -6 l12 6 l-12 6 Z M618 378 l-9 -9 M618 378 l9 -9" stroke="#e9e9f2" stroke-width="3" fill="#f6f6fb" stroke-linejoin="round"/>
+  <circle cx="618" cy="378" r="3.5" fill="#bfc0d0"/>
+
+  <!-- face -->
+  <ellipse cx="490" cy="334" rx="132" ry="168" fill="#eebf9f" transform="rotate(8 490 334)"/>
+  <ellipse cx="438" cy="400" rx="38" ry="22" fill="#f0968a" opacity=".32"/>
+  <ellipse cx="572" cy="386" rx="34" ry="20" fill="#f0968a" opacity=".32"/>
+
+  <!-- eyebrows, the open eye and the winking eye, bindi, nose, smile -->
+  <path d="M380 296 Q428 266 474 290" stroke="#1c1311" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M526 270 Q572 246 612 270" stroke="#1c1311" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M386 330 Q430 300 474 324 Q430 354 386 330 Z" fill="#fff"/>
+  <circle cx="432" cy="326" r="16" fill="#2a1a14"/><circle cx="432" cy="326" r="8" fill="#0a0606"/><circle cx="438" cy="320" r="4" fill="#fff"/>
+  <path d="M380 332 Q430 294 478 324" stroke="#120a08" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M530 304 Q566 326 604 298" stroke="#120a08" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M538 308 l-8 8 M556 318 l-3 11 M578 316 l4 11 M598 304 l9 8" stroke="#120a08" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <circle cx="504" cy="262" r="5.5" fill="#0a0a0a"/>
+  <path d="M506 340 Q498 378 488 388 Q506 398 524 390" stroke="#c98f70" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M458 436 Q484 424 506 430 Q530 420 552 430 Q506 466 458 436 Z" fill="#d9807f"/>
+  <path d="M458 436 Q506 470 552 430" stroke="#b6605f" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M556 424 Q566 428 566 438" stroke="#c98f70" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- hair on top: a side parting and the front strands -->
+  <path d="M340 282 C344 172 456 118 548 150 C600 170 622 232 612 296 C572 226 490 196 410 236 C378 254 358 284 340 282 Z" fill="#1c1311"/>
+  <path d="M356 270 C380 196 450 160 520 168" stroke="#3b2a23" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M352 292 C340 330 332 360 344 400 C330 340 334 300 352 292 Z" fill="#1c1311"/>
+</svg>

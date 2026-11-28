@@ -294,6 +294,25 @@ jobs:
             echo "No release keystore configured yet (ANDROID_KEYSTORE_BASE64 secret not set) — skipping signed AAB build."
           fi
 
+      # The same signed release as a plain APK file, for the other app stores (Samsung Galaxy Store, Indus Appstore, Aptoide ...): they ask for an APK, not a Play bundle. A failure here never stops the build.
+      - name: Build signed release APK (for other app stores)
+        working-directory: N00B_fixed/instagram/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -f "app/release.keystore" ]; then
+            ./gradlew assembleRelease --no-daemon > /tmp/apk.log 2>&1 || echo "::warning title=Store APK::the signed APK for other stores could not be built (the Play bundle is not affected)"
+          fi
+
+      - name: Upload release APK (other stores)
+        uses: actions/upload-artifact@v4
+        with:
+          name: noob-release-apk
+          path: N00B_fixed/instagram/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
+
       - name: Upload release AAB
         uses: actions/upload-artifact@v4
         with:

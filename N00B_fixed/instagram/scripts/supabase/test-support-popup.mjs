@@ -14,5 +14,11 @@ check(/setSupportSeed\(text\); closeSupportPopup\(\); setShowCustomerSupportModa
 check(/initialMessage \? 'ai_chat'/.test(modal) && /handleSendMessage\(undefined, initialMessage\)/.test(modal) && /seedSent\.current/.test(modal) && /askAiSupportAssistant\(messageForAssistant, history\)/.test(modal), 'the chat opens on the AI chat and the message is sent once, to the AI');
 check(/noob_support_popup_closed/.test(app) && /if \(!closed\) setSupportPopup\(true\)/.test(app) && !/6000/.test(app.slice(app.indexOf('supportPopup, setSupportPopup'), app.indexOf('supportPopup, setSupportPopup') + 900)), 'the box is there from the start and stays until its cross is pressed');
 
+const auth = read('src/components/Auth/AuthView.tsx'), guest = read('src/components/Support/GuestSupport.tsx');
+check(/<SupportPopup open low onClose=\{closeGuestPopup\}/.test(auth) && /wideLogin && guestPopup && guestHelpOn/.test(auth) && /noob_guest_popup_closed/.test(auth) && /if \(!closed\) setGuestPopup\(true\)/.test(auth), 'the login page has the same box (computers and tablets), there from the start until its cross is pressed');
+check(/setGuestSeed\(text\); closeGuestPopup\(\); setGuestHelpOpen\(true\)/.test(auth) && /initialMessage=\{guestSeed \|\| undefined\}/.test(auth), 'a message typed on the login page opens the help chat with it');
+check(/initialMessage\?: string/.test(guest) && /step === 'issue' && !busy/.test(guest) && /void submitIssue\(text, 'other'\)/.test(guest) && /seed\.current = ''/.test(guest), 'the help chat keeps that message, asks for the email first, then sends it as the problem once');
+check(/open && !low/.test(pop), 'on the login page the box does not take the cursor from the login form');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

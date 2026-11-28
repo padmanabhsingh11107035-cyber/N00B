@@ -103,7 +103,7 @@ const api = read('src/services/api.ts');
 const sapi = read('src/services/supabaseApi.ts');
 const css = read('src/components/Support/guestSupport.css');
 const feats = read('src/utils/features.ts');
-check(/const GuestSupport = React\.lazy\(\(\) => import\('\.\.\/Support\/GuestSupport'\)/.test(auth) && /<React\.Suspense fallback=/.test(auth) && /<GuestSupport onClose=\{\(\) => setGuestHelpOpen\(false\)\}/.test(auth), 'the login page loads the chat only when it is opened');
+check(/const GuestSupport = React\.lazy\(\(\) => import\('\.\.\/Support\/GuestSupport'\)/.test(auth) && /<React\.Suspense fallback=/.test(auth) && /<GuestSupport initialMessage=\{guestSeed \|\| undefined\} onClose=\{\(\) => \{ setGuestHelpOpen\(false\); setGuestSeed\(''\); \}\}/.test(auth), 'the login page loads the chat only when it is opened');
 check(/data-testid="guest-help-button"/.test(auth) && /\/noob-support-circle\.webp/.test(auth.slice(auth.indexOf('guest-help-button') - 400, auth.indexOf('guest-help-button') + 900)), 'the login page has the round support picture as a button');
 check(/\(s\.disabledFeatures \?\? \[\]\)\.includes\('support'\)/.test(auth) && /guestHelpOn && !guestHelpOpen && !deviceConflict/.test(auth), 'the button is hidden while the administrator has the Support page switched off');
 check(/key: 'support'/.test(feats), 'and that switch exists (Admin > Pages)');

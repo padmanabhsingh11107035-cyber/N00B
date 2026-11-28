@@ -1,6 +1,7 @@
 import { LoginHero } from './LoginHero';
 import { LoginScene } from './LoginScene';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { SupportPopup, useWideScreen } from '../Support/SupportPopup';
 import { HatBoy } from './HatBoy';
 
 import { ANDROID_APK_URL } from '../../utils/appVersion';
@@ -264,6 +265,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // The help chat for people who are not logged in: its button is hidden while the administrator has switched the Support page off (Admin > Pages)
   const [guestHelpOn, setGuestHelpOn] = useState(true);
   const [guestHelpOpen, setGuestHelpOpen] = useState(false);
+  // computers and tablets: the small "Hi, how can we help?" box above the round picture, there from the start until its cross is pressed; a message typed there opens the help chat (see Support/SupportPopup.tsx)
+  const wideLogin = useWideScreen();
+  const [guestPopup, setGuestPopup] = useState(false);
+  const [guestSeed, setGuestSeed] = useState('');
+  useEffect(() => {
+    if (!wideLogin) return;
+    let closed = false;
+    try { closed = sessionStorage.getItem('noob_guest_popup_closed') === '1'; } catch { /* private window */ }
+    if (!closed) setGuestPopup(true);
+  }, [wideLogin]);
+  const closeGuestPopup = (): void => {
+    setGuestPopup(false);
+    try { sessionStorage.setItem('noob_guest_popup_closed', '1'); } catch { /* private window */ }
+  };
   // "Help" on the Terms / Privacy pages opens this login page's help chat
   useEffect(() => {
     const open = () => setGuestHelpOpen(true);
@@ -2120,7 +2135,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       {guestHelpOn && !guestHelpOpen && !deviceConflict && (
         <button
           type="button"
-          onClick={() => setGuestHelpOpen(true)}
+          onClick={() => { if (wideLogin) { if (guestPopup) closeGuestPopup(); else { setGuestPopup(true); try { sessionStorage.removeItem('noob_guest_popup_closed'); } catch { /* private window */ } } } else setGuestHelpOpen(true); }}
           className="noob-buddy-btn fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-8 right-4 sm:right-8 z-40 w-16 h-16 flex items-end cursor-pointer"
           title="Need help logging in? Chat with NOOB Support"
           aria-label="Need help? Open NOOB Support"
@@ -2129,9 +2144,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           <img src="/noob-support-circle.webp" alt="" width={64} height={64} draggable={false} className="noob-buddy w-16 h-16 rounded-full object-cover select-none pointer-events-none shadow-[0_4px_14px_rgba(0,0,0,0.55)]" />
         </button>
       )}
+      {wideLogin && guestPopup && guestHelpOn && !guestHelpOpen && !deviceConflict && (
+        <SupportPopup open low onClose={closeGuestPopup} onSend={(text) => { setGuestSeed(text); closeGuestPopup(); setGuestHelpOpen(true); }} />
+      )}
       {guestHelpOpen && (
         <React.Suspense fallback={<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-white" /></div>}>
-          <GuestSupport onClose={() => setGuestHelpOpen(false)} onLoggedIn={(u) => { setGuestHelpOpen(false); void proceedAfterAuth(u); }} />
+          <GuestSupport initialMessage={guestSeed || undefined} onClose={() => { setGuestHelpOpen(false); setGuestSeed(''); }} onLoggedIn={(u) => { setGuestHelpOpen(false); void proceedAfterAuth(u); }} />
         </React.Suspense>
       )}
     </div>

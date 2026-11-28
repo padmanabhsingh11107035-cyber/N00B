@@ -35,7 +35,7 @@ const COOLDOWN_MS = 45000;
 /** after these answers nothing more can be done with the code box, so it is closed */
 const PANEL_CLOSING = ['case_locked', 'bad_case', 'suspended', 'rate_limited'];
 
-export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: User) => void }> = ({ onClose, onLoggedIn }) => {
+export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: User) => void; /** a message typed in the small chat box of the login page: it is sent as the problem as soon as the email step is done */ initialMessage?: string }> = ({ onClose, onLoggedIn, initialMessage }) => {
   useFullPage(true);
   const visibleArea = useVisibleArea();
   const browser = useRef(browserId());
@@ -206,6 +206,15 @@ export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: Us
     say(idAnswer(res.status, masked).text);
     if (res.status === 'match') { setIdState('matched'); setStep('chat'); } else if (res.status === 'mismatch') setIdState('mismatch');
   };
+  // a message typed in the small chat box of the login page: say that it is kept, and send it as the problem right after the email step
+  const seed = useRef((initialMessage || '').trim());
+  const seedTold = useRef(false);
+  useEffect(() => {
+    if (!seed.current || !ready || blocked || down) return;
+    if (step === 'email' && !seedTold.current) { seedTold.current = true; say('Thanks for your message! I have kept it. First, what email address is on your NOOB account? Then I will send your message on.'); return; }
+    if (step === 'issue' && !busy) { const text = seed.current; seed.current = ''; void submitIssue(text, 'other'); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, ready, blocked, down]);
   const skipId = (): void => { hear('Just answer my question'); setStep('chat'); say('Sure. Ask me anything about NOOB. If you want me to log you in later, just say "send me a code".'); };
 
   // ---- 4. the emailed code, and the box it is typed in

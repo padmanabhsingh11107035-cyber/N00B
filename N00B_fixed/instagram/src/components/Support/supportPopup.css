@@ -1,6 +1,7 @@
 /* The small support chat box above the round support picture (computers and tablets): Support/SupportPopup.tsx. Dark and light. */
 .spp-wrap { --spp-bg: #1f1f23; --spp-text: #f4f4f6; --spp-mute: #b4b4bf; --spp-line: rgba(255, 255, 255, 0.14); position: fixed; right: 32px; bottom: 176px; z-index: 41; width: min(340px, calc(100vw - 48px)); display: flex; flex-direction: column; gap: 10px; animation: spp-in .25s cubic-bezier(.2, 1.1, .3, 1) both; }
 @media (min-width: 1024px) { .spp-wrap { bottom: 112px; } }
+.spp-wrap.spp-low { bottom: 112px; }
 :root[data-theme="light"] .spp-wrap { --spp-bg: #ffffff; --spp-text: #1d1d22; --spp-mute: #565662; --spp-line: rgba(0, 0, 0, 0.14); }
 .spp-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--spp-bg); color: var(--spp-text); box-shadow: 0 14px 38px -12px rgba(0, 0, 0, .55); }
 .spp-ava { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }

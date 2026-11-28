@@ -4,12 +4,12 @@ import './supportPopup.css';
 
 // The small "Hi, how can we help?" box above the round support picture, on computers and tablets (wide screens). It shows itself a few seconds after the app opens (once per visit), or when the round
 // picture is pressed. Typing a message and sending it opens the support chat page and the message goes to the AI at once (CustomerSupportModal initialMessage). The phone keeps its picture only.
-interface Props { open: boolean; onClose: () => void; onSend: (text: string) => void; onMore: () => void }
+interface Props { open: boolean; onClose: () => void; onSend: (text: string) => void; onMore?: () => void; /** the login page has no bottom bar: the box sits just above the round picture on every wide screen */ low?: boolean }
 
-export const SupportPopup: React.FC<Props> = ({ open, onClose, onSend, onMore }) => {
+export const SupportPopup: React.FC<Props> = ({ open, onClose, onSend, onMore, low }) => {
   const [text, setText] = useState('');
   const box = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (open) { const t = window.setTimeout(() => box.current?.focus(), 120); return () => window.clearTimeout(t); } }, [open]);
+  useEffect(() => { if (open && !low) { const t = window.setTimeout(() => box.current?.focus(), 120); return () => window.clearTimeout(t); } }, [open, low]);   // (on the login page it does not take the cursor away from the login form)
   if (!open) return null;
   const submit = (e: React.FormEvent): void => {
     e.preventDefault();
@@ -19,7 +19,7 @@ export const SupportPopup: React.FC<Props> = ({ open, onClose, onSend, onMore })
     onSend(t);
   };
   return (
-    <div className="spp-wrap" data-testid="support-popup" role="dialog" aria-label="NOOB Support">
+    <div className={`spp-wrap${low ? ' spp-low' : ''}`} data-testid="support-popup" role="dialog" aria-label="NOOB Support">
       <div className="spp-card">
         <img src="/noob-support-circle.webp" alt="" width={44} height={44} draggable={false} className="spp-ava" />
         <div className="spp-who"><b>NOOB Support</b><span>Hi, how can we help?</span></div>
@@ -29,7 +29,7 @@ export const SupportPopup: React.FC<Props> = ({ open, onClose, onSend, onMore })
         <input ref={box} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write your message..." maxLength={500} aria-label="Write your message" data-testid="support-popup-input" />
         <button type="submit" disabled={!text.trim()} aria-label="Send" data-testid="support-popup-send"><Send size={17} /></button>
       </form>
-      <button type="button" className="spp-more" onClick={onMore}>More help options</button>
+      {onMore && <button type="button" className="spp-more" onClick={onMore}>More help options</button>}
     </div>
   );
 };

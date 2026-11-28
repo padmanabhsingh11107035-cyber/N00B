@@ -14,7 +14,7 @@ check(/key: 'models'/.test(feat) && /featuresOff\.has\('models'\)\) closeNoobMod
 check(/NOOB_MODELS\.map/.test(page) && /nm-box/.test(page) && /<ModelBox3D/.test(page) && /Escape/.test(page), 'every model of the list gets a box with the model inside; Escape and the back button close the page');
 check(/\.nm-box \{[^}]*border-radius: 28px/.test(css) && /:root\[data-theme="light"\] \.nm-root/.test(css) && /repeat\(3, 1fr\)/.test(css), 'curved boxes, in a grid (1, 2 or 3 across), dark and light');
 check(/IntersectionObserver/.test(box) && /renderer\.dispose\(\)/.test(box) && /touch-action:pan-y/.test(box) && /autoRotate = true/.test(box) && /enableZoom = false/.test(box), 'a model is drawn only while its box is on screen, turns by itself, turns by hand, and up/down still scrolls the page; all released afterwards');
-check(/id: 'nova'/.test(data) && fs.existsSync('public/avatars/nova.glb'), 'the first box shows Nova, whose file exists');
+check(/id: 'ball'/.test(data) && /build: 'ball-eyes'/.test(data) && /ball-eyes/.test(read('src/components/Models/ballBuddy.ts')) && /id: 'nova'/.test(data) && fs.existsSync('public/avatars/nova.glb'), 'the boxes: Noob Ball (black sphere, bulging eyes, made in code) and Nova (file exists)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

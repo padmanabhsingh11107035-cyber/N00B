@@ -7,9 +7,12 @@ export interface NoobModel {
   /** a short line under the name */
   blurb: string;
   /** the .glb file (a path on this site) */
-  src: string;
+  src?: string;
+  /** or a model made in code (Models/ballBuddy.ts, MODEL_BUILDERS): the key of the builder */
+  build?: string;
 }
 
 export const NOOB_MODELS: ReadonlyArray<NoobModel> = [
+  { id: 'ball', name: 'Noob Ball', blurb: 'A round black buddy with bulging eyes', build: 'ball-eyes' },
   { id: 'nova', name: 'Nova', blurb: 'The NOOB hero: drag to turn it', src: '/avatars/nova.glb?v=29' }
 ];

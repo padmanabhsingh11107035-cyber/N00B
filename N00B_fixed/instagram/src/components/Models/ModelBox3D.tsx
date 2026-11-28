@@ -4,12 +4,13 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { fetchAvatarModel } from '../Avatars/modelCache';
+import { MODEL_BUILDERS } from './ballBuddy';
 
 // One 3D model inside a curved box of the NOOB Models page. The whole model is framed to fit the box, it turns slowly by itself, and a finger or the mouse turns it by hand (up and down on a
 // phone still scrolls the page). It is only drawn while its box is on the screen, and everything is released when it leaves the screen or the page closes (a phone allows only a few 3D views at once).
-interface Props { src: string; name: string }
+interface Props { src?: string; build?: string; name: string }
 
-const ModelBox3D: React.FC<Props> = ({ src, name }) => {
+const ModelBox3D: React.FC<Props> = ({ src, build, name }) => {
   const box = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -64,7 +65,12 @@ const ModelBox3D: React.FC<Props> = ({ src, name }) => {
       const saved = w.createImageBitmap; w.createImageBitmap = undefined;
       try { new GLTFLoader().parse(buf, '', resolve, reject); } catch (e) { reject(e); } finally { w.createImageBitmap = saved; }
     });
-    fetchAvatarModel(src).then((buf) => (disposed ? undefined : parse(buf))).then((g) => {
+    const rim = new THREE.DirectionalLight(0x9db8ff, 0.6); rim.position.set(-2.5, 1.2, -2.5); scene.add(rim);   // a cool light from behind so a black model keeps its outline
+    const made = build ? MODEL_BUILDERS[build] : undefined;
+    const loading: Promise<{ scene: THREE.Object3D } | undefined> = made
+      ? Promise.resolve({ scene: made() })
+      : src ? fetchAvatarModel(src).then((buf) => (disposed ? undefined : parse(buf))) : Promise.reject(new Error('no model'));
+    loading.then((g) => {
       if (!g || disposed) return;
       const next = g.scene;
       next.traverse((o) => {
@@ -76,7 +82,7 @@ const ModelBox3D: React.FC<Props> = ({ src, name }) => {
       const sphere = bb.getBoundingSphere(new THREE.Sphere());
       next.position.sub(sphere.center);
       model = next; scene.add(model);
-      const dist = (sphere.radius * 1.15) / Math.sin(THREE.MathUtils.degToRad(Math.min(camera.fov, camera.fov * camera.aspect) / 2));
+      const dist = (sphere.radius * 0.98) / Math.sin(THREE.MathUtils.degToRad(Math.min(camera.fov, camera.fov * camera.aspect) / 2));
       camera.position.set(0, sphere.radius * 0.25, dist); controls.target.set(0, 0, 0); controls.update();
       setState('ready');
     }).catch(() => { if (!disposed) setState('error'); });
@@ -88,7 +94,7 @@ const ModelBox3D: React.FC<Props> = ({ src, name }) => {
       if (model) release(model);
       envTex.dispose(); pmrem.dispose(); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [src, visible]);
+  }, [src, build, visible]);
 
   return (
     <div ref={box} className="nm-stage" role="img" aria-label={`${name}, a 3D model you can turn round`} data-testid="model-box-3d">

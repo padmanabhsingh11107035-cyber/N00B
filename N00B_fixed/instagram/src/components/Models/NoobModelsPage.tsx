@@ -23,7 +23,7 @@ export const NoobModelsPage: React.FC<Props> = ({ onClose }) => {
         <div className="nm-grid">
           {NOOB_MODELS.map((m) => (
             <article key={m.id} className="nm-box" data-testid="noob-model-box">
-              <ModelBox3D src={m.src} name={m.name} />
+              <ModelBox3D src={m.src} build={m.build} name={m.name} />
               <div className="nm-cap"><b>{m.name}</b><span>{m.blurb}</span></div>
             </article>
           ))}
